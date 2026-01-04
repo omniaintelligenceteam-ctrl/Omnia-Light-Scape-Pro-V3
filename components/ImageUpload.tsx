@@ -52,7 +52,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   return (
     <div 
-      className="group relative w-full aspect-video bg-[#0a0a0a] rounded-2xl border border-dashed border-gray-800 hover:border-[#F6B45A]/50 hover:bg-[#111] flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden shadow-inner"
+      className="group relative w-full aspect-video bg-[#0a0a0a] rounded-2xl border border-dashed border-gray-700 hover:border-[#F6B45A]/50 hover:bg-[#111] flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden shadow-inner"
     >
       {/* Background Grid Pattern */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
@@ -69,8 +69,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       
       {/* Visual Content - Low Z-Index/Pointer Events None to allow click through to input */}
       <div className="relative z-20 flex flex-col items-center pointer-events-none">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-black shadow-lg border border-gray-800 group-hover:border-[#F6B45A]/50 group-hover:scale-105 transition-all duration-300 flex items-center justify-center mb-6">
-            <Upload className="w-8 h-8 text-gray-600 group-hover:text-[#F6B45A] transition-colors" />
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-black shadow-lg border border-gray-700 group-hover:border-[#F6B45A]/50 group-hover:scale-105 transition-all duration-300 flex items-center justify-center mb-6">
+            <Upload className="w-8 h-8 text-gray-300 group-hover:text-[#F6B45A] transition-colors" />
         </div>
         
         <p className="text-xl font-bold text-white tracking-tight font-serif">Upload Photo</p>

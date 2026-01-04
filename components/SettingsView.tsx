@@ -45,7 +45,7 @@ const SectionHeader: React.FC<{
       </div>
       <div>
         <h3 className={`text-lg font-bold font-serif tracking-wide ${isOpen ? 'text-white' : 'text-gray-300'}`}>{title}</h3>
-        <p className="text-xs text-gray-400 font-mono uppercase tracking-wider mt-1">{subtitle}</p>
+        <p className="text-xs text-gray-300 font-mono uppercase tracking-wider mt-1">{subtitle}</p>
       </div>
     </div>
     <div className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#F6B45A]' : 'text-gray-400'}`}>
@@ -147,7 +147,7 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <h3 className="font-bold text-white text-sm">Omnia Assistant</h3>
                     <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                        <span className="text-[10px] text-gray-400 font-mono">ONLINE</span>
+                        <span className="text-[10px] text-gray-300 font-mono">ONLINE</span>
                     </div>
                 </div>
             </div>
@@ -167,7 +167,7 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <div className={`max-w-[80%] rounded-2xl p-3 text-sm leading-relaxed ${
                         msg.role === 'user' 
                         ? 'bg-[#F6B45A] text-black font-medium rounded-tr-sm' 
-                        : 'bg-[#1a1a1a] text-gray-300 border border-white/5 rounded-tl-sm'
+                        : 'bg-[#1a1a1a] text-gray-200 border border-white/5 rounded-tl-sm'
                     }`}>
                         {msg.text}
                     </div>
@@ -184,9 +184,9 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <Bot className="w-4 h-4 text-[#F6B45A]" />
                     </div>
                     <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl rounded-tl-sm p-3 flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
-                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-75"></span>
-                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-150"></span>
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75"></span>
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150"></span>
                     </div>
                  </div>
             )}
@@ -201,7 +201,7 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="Ask about pricing or design..."
-                    className="w-full bg-black border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 font-mono transition-all"
+                    className="w-full bg-black border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 font-mono transition-all"
                 />
                 <button 
                     onClick={handleSend}
@@ -272,12 +272,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Logo Upload */}
                         <div className="flex flex-col gap-4">
-                            <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Company Logo</label>
+                            <label className="text-xs font-bold uppercase tracking-widest text-gray-300">Company Logo</label>
                             <div className="relative group w-32 h-32 bg-black border border-dashed border-white/20 rounded-xl flex items-center justify-center overflow-hidden hover:border-[#F6B45A] transition-colors cursor-pointer">
                                 {profile.logo ? (
                                     <img src={profile.logo} alt="Logo" className="w-full h-full object-contain p-2" />
                                 ) : (
-                                    <div className="flex flex-col items-center gap-2 text-gray-600 group-hover:text-[#F6B45A] transition-colors">
+                                    <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-[#F6B45A] transition-colors">
                                         <Upload className="w-6 h-6" />
                                         <span className="text-[9px] font-bold uppercase">Upload</span>
                                     </div>
@@ -289,7 +289,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         {/* Fields */}
                         <div className="space-y-5">
                             <div>
-                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 block mb-2">Company Name</label>
+                                <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-2">Company Name</label>
                                 <input 
                                     type="text" 
                                     value={profile.name}
@@ -298,7 +298,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 block mb-2">Contact Email</label>
+                                <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-2">Contact Email</label>
                                 <input 
                                     type="email" 
                                     value={profile.email}
@@ -309,7 +309,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
 
                          <div className="md:col-span-2">
-                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 block mb-2">Business Address</label>
+                                <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-2">Business Address</label>
                                 <textarea 
                                     value={profile.address}
                                     onChange={(e) => handleProfileUpdate('address', e.target.value)}
@@ -335,7 +335,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {activeSection === 'lighting' && (
                 <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
                      <div className="mb-6">
-                        <label className="text-xs font-bold uppercase tracking-widest text-gray-500 block mb-4">Default Color Temperature</label>
+                        <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Default Color Temperature</label>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             {COLOR_TEMPERATURES.slice(0, 4).map((temp) => (
                                 <button
@@ -376,7 +376,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                      </div>
                      <div>
                         <h3 className="font-bold text-white text-lg font-serif">Omnia AI Consultant</h3>
-                        <p className="text-xs text-gray-400">Ask questions about pricing, app usage, or design tips.</p>
+                        <p className="text-xs text-gray-300">Ask questions about pricing, app usage, or design tips.</p>
                      </div>
                  </div>
              </div>

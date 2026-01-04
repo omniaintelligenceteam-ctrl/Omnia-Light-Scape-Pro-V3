@@ -107,13 +107,13 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                 <span className="sm:hidden">Save</span>
             </button>
             <div className="w-px h-6 bg-white/10 mx-1"></div>
-            <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors hidden md:block" title="Print" onClick={() => window.print()}>
+            <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors hidden md:block" title="Print" onClick={() => window.print()}>
                 <Printer className="w-4 h-4" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Email">
+            <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Email">
                 <Mail className="w-4 h-4" />
             </button>
-            <button className="text-gray-400 hover:text-white hover:bg-white/10 px-3 py-2 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10">
+            <button className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10">
                 <Download className="w-3 h-3 md:w-4 md:h-4" />
                 <span className="hidden sm:inline">PDF</span>
             </button>
@@ -137,7 +137,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                         )}
                     </div>
                     {/* Address & Date */}
-                    <div className="text-xs md:text-sm text-gray-300 space-y-0.5 md:space-y-1 whitespace-pre-line print:text-gray-600">
+                    <div className="text-xs md:text-sm text-gray-200 space-y-0.5 md:space-y-1 whitespace-pre-line print:text-gray-600">
                         {companyProfile.address}
                     </div>
                     <div className="mt-4 flex items-center gap-2 text-sm">
@@ -152,34 +152,34 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
           <div className="grid grid-cols-2 gap-4 md:gap-12 mb-8 md:mb-12">
              <div className="bg-[#111]/50 p-4 rounded-xl border border-white/5 print:border-none print:p-0 print:bg-transparent">
                 <h3 className="text-[10px] md:text-xs font-bold text-[#F6B45A] uppercase tracking-[0.2em] mb-3 md:mb-4 border-b border-white/10 pb-2 print:text-gray-800 print:border-gray-200">Quote For</h3>
-                <div className="text-gray-300 text-sm space-y-2 print:text-black">
-                    <div className="flex items-center gap-3 text-gray-400 pt-1">
+                <div className="text-gray-200 text-sm space-y-2 print:text-black">
+                    <div className="flex items-center gap-3 text-gray-300 pt-1">
                         <User className="w-3 h-3 md:w-4 md:h-4 shrink-0 text-[#F6B45A] print:text-gray-400" />
                         <input 
                             type="text" 
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
-                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-base font-bold text-white bg-transparent placeholder-gray-500 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
+                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-base font-bold text-white bg-transparent placeholder-gray-400 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
                             placeholder="Client Name"
                         />
                     </div>
-                    <div className="flex items-center gap-3 text-gray-400">
-                        <Mail className="w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-400 print:text-gray-400" />
+                    <div className="flex items-center gap-3 text-gray-300">
+                        <Mail className="w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-300 print:text-gray-400" />
                          <input 
                             type="text" 
                             value={clientEmail}
                             onChange={(e) => setClientEmail(e.target.value)}
-                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-xs md:text-sm text-gray-200 bg-transparent placeholder-gray-600 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
+                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-xs md:text-sm text-gray-200 bg-transparent placeholder-gray-400 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
                             placeholder="Client Email"
                         />
                     </div>
-                    <div className="flex items-center gap-3 text-gray-400">
-                        <Phone className="w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-400 print:text-gray-400" />
+                    <div className="flex items-center gap-3 text-gray-300">
+                        <Phone className="w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-300 print:text-gray-400" />
                          <input 
                             type="text" 
                             value={clientPhone}
                             onChange={(e) => setClientPhone(e.target.value)}
-                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-xs md:text-sm text-gray-200 bg-transparent placeholder-gray-600 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
+                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-xs md:text-sm text-gray-200 bg-transparent placeholder-gray-400 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
                             placeholder="Cell Phone"
                         />
                     </div>
@@ -187,11 +187,11 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
              </div>
              <div className="bg-[#111]/50 p-4 rounded-xl border border-white/5 print:border-none print:p-0 print:bg-transparent">
                 <h3 className="text-[10px] md:text-xs font-bold text-[#F6B45A] uppercase tracking-[0.2em] mb-3 md:mb-4 border-b border-white/10 pb-2 print:text-gray-800 print:border-gray-200">Project Site</h3>
-                <div className="text-gray-300 text-sm space-y-1 print:text-black">
-                    <div className="flex items-start gap-3 text-gray-400 pt-1">
+                <div className="text-gray-200 text-sm space-y-1 print:text-black">
+                    <div className="flex items-start gap-3 text-gray-300 pt-1">
                         <MapPin className="w-3 h-3 md:w-4 md:h-4 mt-1.5 shrink-0 text-[#F6B45A] print:text-gray-400" />
                         <textarea 
-                            className="w-full border-none focus:ring-0 p-1 text-xs md:text-sm text-gray-200 resize-none h-20 bg-transparent placeholder-gray-600 leading-relaxed print:text-black print:p-0"
+                            className="w-full border-none focus:ring-0 p-1 text-xs md:text-sm text-gray-200 resize-none h-20 bg-transparent placeholder-gray-400 leading-relaxed print:text-black print:p-0"
                             value={projectAddress}
                             onChange={(e) => setProjectAddress(e.target.value)}
                             placeholder="Project Address"
@@ -206,10 +206,10 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
             <table className="w-full text-left border-collapse">
                 <thead>
                     <tr className="border-b border-white/10 print:border-black">
-                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 w-[50%] print:text-black">Description</th>
-                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 text-center w-[10%] print:text-black">Qty</th>
-                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 text-right w-[15%] print:text-black">Rate</th>
-                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 text-right w-[15%] print:text-black">Amount</th>
+                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 w-[50%] print:text-black">Description</th>
+                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 text-center w-[10%] print:text-black">Qty</th>
+                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 text-right w-[15%] print:text-black">Rate</th>
+                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 text-right w-[15%] print:text-black">Amount</th>
                         <th className="py-4 w-[5%] print:hidden"></th>
                     </tr>
                 </thead>
@@ -226,7 +226,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                                 <textarea 
                                     value={item.description}
                                     onChange={(e) => handleUpdateItem(index, 'description', e.target.value)}
-                                    className="text-gray-400 text-xs whitespace-pre-line leading-relaxed w-full bg-transparent border-none p-0 focus:ring-0 rounded px-1 -ml-1 resize-y min-h-[40px] font-mono print:text-gray-600"
+                                    className="text-gray-300 text-xs whitespace-pre-line leading-relaxed w-full bg-transparent border-none p-0 focus:ring-0 rounded px-1 -ml-1 resize-y min-h-[40px] font-mono print:text-gray-600"
                                     rows={2}
                                 />
                             </td>
@@ -241,7 +241,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                             </td>
                             <td className="py-4 text-right align-top">
                                 <div className="flex items-center justify-end gap-1">
-                                    <span className="text-gray-500 text-xs font-mono">$</span>
+                                    <span className="text-gray-400 text-xs font-mono">$</span>
                                     <input 
                                         type="number" 
                                         value={item.unitPrice}
@@ -258,7 +258,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                             <td className="py-4 text-right align-top print:hidden">
                                 <button 
                                     onClick={() => handleRemoveItem(index)}
-                                    className="p-1 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                    className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -271,13 +271,13 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
 
           {/* Line Items - MOBILE CARDS */}
           <div className="md:hidden space-y-4 mb-8">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 border-b border-white/10 pb-2">Line Items</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-300 border-b border-white/10 pb-2">Line Items</h3>
             {lineItems.map((item, index) => (
                 <div key={index} className="bg-[#111] border border-white/10 rounded-xl p-4 shadow-lg relative print:bg-transparent print:border-gray-200">
                     {/* Remove Button */}
                     <button 
                         onClick={() => handleRemoveItem(index)}
-                        className="absolute top-3 right-3 p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors print:hidden"
+                        className="absolute top-3 right-3 p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors print:hidden"
                     >
                         <Trash2 className="w-4 h-4" />
                     </button>
@@ -288,13 +288,13 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                             type="text" 
                             value={item.name}
                             onChange={(e) => handleUpdateItem(index, 'name', e.target.value)}
-                            className="font-bold text-white text-sm mb-1 w-full bg-transparent border-none p-0 focus:ring-0 placeholder-gray-500 print:text-black"
+                            className="font-bold text-white text-sm mb-1 w-full bg-transparent border-none p-0 focus:ring-0 placeholder-gray-400 print:text-black"
                             placeholder="Item Name"
                         />
                         <textarea 
                             value={item.description}
                             onChange={(e) => handleUpdateItem(index, 'description', e.target.value)}
-                            className="text-gray-400 text-xs w-full bg-transparent border-none p-0 focus:ring-0 resize-none min-h-[40px] font-mono print:text-gray-600"
+                            className="text-gray-300 text-xs w-full bg-transparent border-none p-0 focus:ring-0 resize-none min-h-[40px] font-mono print:text-gray-600"
                             rows={2}
                             placeholder="Description"
                         />
@@ -303,7 +303,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                     {/* Controls Grid */}
                     <div className="grid grid-cols-3 gap-3 border-t border-white/5 pt-3">
                         <div className="bg-[#1a1a1a] rounded-lg p-2 border border-white/5 print:bg-transparent print:border-gray-100">
-                            <label className="text-[9px] font-bold uppercase text-gray-400 block mb-1">Qty</label>
+                            <label className="text-[9px] font-bold uppercase text-gray-300 block mb-1">Qty</label>
                             <input 
                                 type="number" 
                                 value={item.quantity}
@@ -313,7 +313,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                             />
                         </div>
                         <div className="bg-[#1a1a1a] rounded-lg p-2 border border-white/5 print:bg-transparent print:border-gray-100">
-                            <label className="text-[9px] font-bold uppercase text-gray-400 block mb-1">Rate</label>
+                            <label className="text-[9px] font-bold uppercase text-gray-300 block mb-1">Rate</label>
                             <div className="flex items-center">
                                 <span className="text-[10px] text-gray-400 mr-0.5">$</span>
                                 <input 
@@ -349,13 +349,13 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
 
           {/* Totals */}
           <div className="flex flex-col md:items-end gap-3 mb-12 md:mb-16 bg-[#111]/30 p-6 rounded-2xl border border-white/5 print:bg-transparent print:border-none print:p-0">
-             <div className="w-full md:w-1/2 flex justify-between py-2 text-sm text-gray-300 print:text-gray-600">
+             <div className="w-full md:w-1/2 flex justify-between py-2 text-sm text-gray-200 print:text-gray-600">
                 <span>Subtotal</span>
                 <span className="font-medium font-mono text-white print:text-black">${subtotal.toFixed(2)}</span>
              </div>
              
              {/* Discount Row */}
-             <div className="w-full md:w-1/2 flex justify-between items-center py-2 text-sm text-gray-300 print:text-gray-600">
+             <div className="w-full md:w-1/2 flex justify-between items-center py-2 text-sm text-gray-200 print:text-gray-600">
                 <span className="flex items-center gap-2 text-white font-medium print:text-black"><MinusCircle className="w-3 h-3 text-red-400" /> Discount</span>
                 <div className="flex items-center gap-1">
                     <span className="text-gray-400 text-xs">-$</span>
@@ -370,7 +370,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                 </div>
              </div>
 
-             <div className="w-full md:w-1/2 flex justify-between items-center py-2 text-sm text-gray-300 border-b border-white/10 print:border-gray-200 print:text-gray-600">
+             <div className="w-full md:w-1/2 flex justify-between items-center py-2 text-sm text-gray-200 border-b border-white/10 print:border-gray-200 print:text-gray-600">
                 <div className="flex items-center gap-2">
                     <span>Tax Rate</span>
                     <div className="flex items-center bg-[#1a1a1a] rounded px-2 py-1 border border-white/5 print:bg-gray-50 print:border-none">
@@ -402,10 +402,10 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
 
              <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 md:gap-12">
                 <div className="w-full md:flex-1 border-b border-white/20 pb-2 print:border-gray-300">
-                    <p className="text-xs text-gray-400 uppercase tracking-widest mb-8 md:mb-8 mt-4 md:mt-0 print:text-gray-400">Authorized Signature</p>
+                    <p className="text-xs text-gray-300 uppercase tracking-widest mb-8 md:mb-8 mt-4 md:mt-0 print:text-gray-400">Authorized Signature</p>
                 </div>
                 <div className="w-full md:flex-1 border-b border-white/20 pb-2 print:border-gray-300">
-                     <p className="text-xs text-gray-400 uppercase tracking-widest mb-8 md:mb-8 mt-4 md:mt-0 print:text-gray-400">Date</p>
+                     <p className="text-xs text-gray-300 uppercase tracking-widest mb-8 md:mb-8 mt-4 md:mt-0 print:text-gray-400">Date</p>
                 </div>
              </div>
           </div>

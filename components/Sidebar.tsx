@@ -19,7 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       {/* Left side spacer to balance the layout if needed, currently empty or could hold status */}
       <div className="w-32 hidden md:block">
         {/* Potential status indicator or version number */}
-        <span className="text-[10px] text-gray-600 font-mono">v1.0.4</span>
+        <span className="text-[10px] text-gray-400 font-mono">v1.0.4</span>
       </div>
 
       {/* Center Navigation Pills */}
@@ -33,10 +33,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               className={`flex items-center justify-center gap-1.5 md:gap-2 px-0 py-2.5 md:px-6 md:py-2.5 rounded-full transition-all duration-300 flex-1 md:flex-none ${
                 isActive 
                   ? 'bg-[#F6B45A] text-[#111] shadow-[0_0_20px_rgba(246,180,90,0.2)] font-bold translate-y-[-1px]' 
-                  : 'text-gray-400 hover:text-white hover:bg-white/10'
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
               }`}
             >
-              <item.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isActive ? 'text-[#111]' : 'text-gray-400'}`} />
+              <item.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isActive ? 'text-[#111]' : 'text-gray-300'}`} />
               <span className="text-[9px] md:text-xs font-bold uppercase tracking-wide truncate">{item.label}</span>
             </button>
           );
@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       
       {/* Right Side Actions - Hidden on Mobile */}
       <div className="w-32 hidden md:flex justify-end">
-        <button className="flex items-center gap-2 text-gray-500 hover:text-red-400 transition-colors px-2 py-2 group">
+        <button className="flex items-center gap-2 text-gray-300 hover:text-red-400 transition-colors px-2 py-2 group">
           <LogOut className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           <span className="text-xs font-bold uppercase tracking-wider hidden md:inline">Sign Out</span>
         </button>

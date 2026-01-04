@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade }) => {
         <div className="flex items-center gap-6">
            {/* System Status - Desktop Only */}
            <div className="hidden md:flex flex-col items-end">
-              <span className="text-[9px] text-gray-400 uppercase tracking-widest font-bold mb-0.5">System Status</span>
+              <span className="text-[9px] text-gray-300 uppercase tracking-widest font-bold mb-0.5">System Status</span>
               <div className="flex items-center gap-1.5">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>

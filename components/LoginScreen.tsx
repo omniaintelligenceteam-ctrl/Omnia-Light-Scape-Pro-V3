@@ -178,7 +178,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                 type="email" 
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className={`w-full bg-[#050505] border border-white/10 rounded-xl py-3.5 pl-8 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 transition-all font-mono ${
+                                className={`w-full bg-[#050505] border border-white/10 rounded-xl py-3.5 pl-8 pr-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-1 transition-all font-mono ${
                                     mode === 'SETUP' 
                                     ? 'focus:border-blue-400/50 focus:ring-blue-400/50' 
                                     : 'focus:border-[#F6B45A]/50 focus:ring-[#F6B45A]/50'
@@ -199,7 +199,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                 type="password" 
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className={`w-full bg-[#050505] border border-white/10 rounded-xl py-3.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 transition-all font-mono ${
+                                className={`w-full bg-[#050505] border border-white/10 rounded-xl py-3.5 pl-10 pr-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-1 transition-all font-mono ${
                                     mode === 'SETUP' 
                                     ? 'focus:border-blue-400/50 focus:ring-blue-400/50' 
                                     : 'focus:border-[#F6B45A]/50 focus:ring-[#F6B45A]/50'
@@ -221,7 +221,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                     type="password" 
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full bg-[#050505] border border-white/10 rounded-xl py-3.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/50 font-mono transition-all"
+                                    className="w-full bg-[#050505] border border-white/10 rounded-xl py-3.5 pl-10 pr-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/50 font-mono transition-all"
                                     placeholder="••••••••••••"
                                 />
                             </div>
@@ -259,7 +259,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                             onClick={toggleMode}
                             className={`text-xs font-bold uppercase tracking-wider transition-all border py-2 px-4 rounded-lg flex items-center justify-center gap-2 w-full ${
                                 mode === 'SETUP'
-                                ? 'border-white/10 text-gray-400 hover:text-white hover:bg-white/5'
+                                ? 'border-white/10 text-gray-300 hover:text-white hover:bg-white/5'
                                 : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400'
                             }`}
                          >

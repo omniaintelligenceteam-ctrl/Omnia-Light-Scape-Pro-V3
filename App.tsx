@@ -294,10 +294,10 @@ const App: React.FC = () => {
             <div className="max-w-md text-center space-y-8 p-12 bg-[#111] rounded-[28px] shadow-2xl border border-white/10">
                 <div className="flex flex-col items-center gap-2">
                      <h1 className="text-4xl font-bold text-[#F6B45A] tracking-tight font-serif">Omnia</h1>
-                     <span className="text-gray-400 font-bold italic text-sm tracking-[0.2em] uppercase font-serif">Light Scape Pro</span>
+                     <span className="text-gray-300 font-bold italic text-sm tracking-[0.2em] uppercase font-serif">Light Scape Pro</span>
                 </div>
                 <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
-                  <p className="text-gray-400 text-sm leading-relaxed">
+                  <p className="text-gray-300 text-sm leading-relaxed">
                       To access the advanced <span className="text-[#F6B45A] font-bold">Gemini 3 Pro</span> model, please configure your API Key in the application settings.
                   </p>
                 </div>
@@ -447,7 +447,7 @@ const App: React.FC = () => {
                             <div className="w-full max-w-md bg-[#111] rounded-2xl p-6 shadow-2xl border border-white/10">
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="font-bold text-lg text-white font-serif">Refine Scene</h3>
-                                    <button onClick={() => setShowFeedback(false)} className="p-2 hover:bg-white/10 rounded-full text-gray-500 hover:text-white">
+                                    <button onClick={() => setShowFeedback(false)} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white">
                                         <X className="w-5 h-5"/>
                                     </button>
                                 </div>
@@ -488,7 +488,7 @@ const App: React.FC = () => {
                             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-30 rounded-2xl flex flex-col items-center justify-center text-white border border-white/10">
                                 <Loader2 className="w-12 h-12 animate-spin mb-4 text-[#F6B45A]" />
                                 <h3 className="text-xl font-bold tracking-tight text-[#F6B45A] font-serif mb-2">Omnia AI</h3>
-                                <p className="font-mono text-xs uppercase text-gray-400 tracking-widest">Processing High-Res Model...</p>
+                                <p className="font-mono text-xs uppercase text-gray-300 tracking-widest">Processing High-Res Model...</p>
                             </div>
                         )}
                     </div>
@@ -498,7 +498,7 @@ const App: React.FC = () => {
                         
                         {/* NEW: Button-Based Fixture Selection */}
                         <div className="flex flex-col gap-3">
-                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 ml-1 flex items-center gap-2">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 ml-1 flex items-center gap-2">
                                 <Sparkles className="w-3 h-3 text-[#F6B45A]" />
                                 Active Fixtures
                             </label>
@@ -514,7 +514,7 @@ const App: React.FC = () => {
                                             className={`py-3 px-4 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all duration-200 border flex items-center justify-center text-center ${
                                                 isSelected 
                                                 ? 'bg-[#F6B45A] text-[#111] border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.3)] scale-[1.02]' 
-                                                : 'bg-[#111] text-gray-400 border-white/10 hover:bg-[#1a1a1a] hover:border-white/20 hover:text-white'
+                                                : 'bg-[#111] text-gray-300 border-white/10 hover:bg-[#1a1a1a] hover:border-white/20 hover:text-white'
                                             }`}
                                         >
                                             {ft.label}
@@ -527,12 +527,12 @@ const App: React.FC = () => {
                         {/* Description Textarea */}
                         <div className="relative group mt-2">
                             <textarea
-                                className="w-full h-16 bg-[#0F0F0F] border border-white/10 rounded-xl p-4 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 transition-all resize-none font-mono"
+                                className="w-full h-16 bg-[#0F0F0F] border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 transition-all resize-none font-mono"
                                 placeholder="> Enter specific instructions (e.g. 'Add moonlighting to the oak tree')..."
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
                             />
-                            <div className="absolute right-3 bottom-3 text-[10px] text-gray-700 font-mono uppercase tracking-widest">
+                            <div className="absolute right-3 bottom-3 text-[10px] text-gray-400 font-mono uppercase tracking-widest">
                                 Custom Notes
                             </div>
                         </div>
@@ -585,20 +585,20 @@ const App: React.FC = () => {
                         <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Project Library</h2>
                         <div className="flex items-center gap-2">
                              <div className="w-2 h-2 rounded-full bg-[#F6B45A] animate-pulse"></div>
-                             <span className="text-[10px] text-gray-400 font-mono uppercase tracking-widest">Database // Active Systems: {projects.length}</span>
+                             <span className="text-[10px] text-gray-300 font-mono uppercase tracking-widest">Database // Active Systems: {projects.length}</span>
                         </div>
                      </div>
 
                      {/* Search Bar Simulation */}
                      <div className="w-full md:w-96 relative group">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-500 group-focus-within:text-[#F6B45A] transition-colors" />
+                            <Search className="h-4 w-4 text-gray-400 group-focus-within:text-[#F6B45A] transition-colors" />
                         </div>
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-[#111] text-gray-300 placeholder-gray-600 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 sm:text-sm font-mono transition-all"
+                            className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-[#111] text-gray-200 placeholder-gray-400 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 sm:text-sm font-mono transition-all"
                             placeholder="Search by ID or Client..."
                         />
                      </div>
@@ -607,10 +607,10 @@ const App: React.FC = () => {
                  {filteredProjects.length === 0 ? (
                      <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm">
                          <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                            <FolderPlus className="w-8 h-8 text-gray-600" />
+                            <FolderPlus className="w-8 h-8 text-gray-500" />
                          </div>
                          <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">System Empty</p>
-                         <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">No rendered scenes found in database</p>
+                         <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">No rendered scenes found in database</p>
                      </div>
                  ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
@@ -646,7 +646,7 @@ const App: React.FC = () => {
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-600 bg-[#0a0a0a]">
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
                                             <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
                                             <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
                                         </div>
@@ -663,7 +663,7 @@ const App: React.FC = () => {
                                         <div className="flex items-center gap-1">
                                             <button 
                                                 onClick={() => handleDeleteProject(p.id)}
-                                                className="p-2 text-gray-500 hover:text-red-500 hover:bg-white/5 rounded-full transition-colors"
+                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-full transition-colors"
                                                 title="Delete"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -674,8 +674,8 @@ const App: React.FC = () => {
                                     {/* Stats Grid */}
                                     <div className="grid grid-cols-2 gap-3 mt-auto">
                                         <div className="bg-[#151515] p-2 rounded-lg border border-white/5">
-                                            <span className="text-[9px] text-gray-500 uppercase font-bold block mb-0.5">Created</span>
-                                            <span className="text-xs text-gray-300 font-mono">{p.date}</span>
+                                            <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Created</span>
+                                            <span className="text-xs text-gray-200 font-mono">{p.date}</span>
                                         </div>
                                         <div 
                                             onClick={() => {
@@ -687,8 +687,8 @@ const App: React.FC = () => {
                                             }}
                                             className={`bg-[#151515] p-2 rounded-lg border border-white/5 relative group/quote transition-colors ${p.quote ? 'cursor-pointer hover:border-[#F6B45A]/30 hover:bg-[#F6B45A]/5' : ''}`}
                                         >
-                                            <span className="text-[9px] text-gray-500 uppercase font-bold block mb-0.5">Estimate</span>
-                                            <span className={`text-xs font-mono font-bold ${p.quote ? 'text-[#F6B45A]' : 'text-gray-600'}`}>
+                                            <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Estimate</span>
+                                            <span className={`text-xs font-mono font-bold ${p.quote ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
                                                 {p.quote ? `$${p.quote.total.toFixed(0)}` : 'N/A'}
                                             </span>
                                             {p.quote && (

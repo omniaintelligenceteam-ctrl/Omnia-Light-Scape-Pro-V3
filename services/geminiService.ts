@@ -9,9 +9,18 @@ export const generateNightScene = async (
   imageMimeType: string = 'image/jpeg'
 ): Promise<string> => {
   
-  // Use process.env.API_KEY as per coding guidelines.
-  // The API key MUST be obtained exclusively from the environment variable process.env.API_KEY.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // --- THE FIX IS HERE ---
+  // 1. Try to get the key from Vercel/Vite (import.meta.env.VITE_GEMINI_API_KEY)
+  // 2. If that fails, try the old way (process.env.API_KEY) for backup
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
+
+  if (!apiKey) {
+    console.error("API Key Check Failed. VITE_GEMINI_API_KEY is missing.");
+    throw new Error("Missing API Key. Please check Vercel Environment Variables.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+  // -----------------------
 
   // Construct a prompt that enforces the Day-to-Night conversion rules with strict structural fidelity
   const systemPrompt = `
