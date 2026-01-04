@@ -50,7 +50,7 @@ export const FIXTURE_TYPES = [
     id: 'up',
     label: 'Up Lights',
     description: 'Ground-mounted accent lights for walls, columns & trees.',
-    positivePrompt: "Place ground-mounted up lights at the base of the front facade walls aimed upward to wash light across the brick or stone. IF AND ONLY IF there are EXISTING prominent trees in the image, place up lights at their base aimed upward into the canopy. DO NOT add trees if none exist. Space wall-washing up lights symmetrically across the home.",
+    positivePrompt: "Place ground-mounted up lights at the base of the front facade walls aimed upward to wash light across the brick or stone. CRITICAL PRIORITY: If there are architectural COLUMNS, PILLARS, or POSTS, you MUST place an up light at the base of EACH one, grazing the light upward to highlight the vertical structure. IF AND ONLY IF there are EXISTING prominent trees in the image, place up lights at their base aimed upward into the canopy. DO NOT add trees if none exist. Space wall-washing up lights symmetrically across the home.",
     negativePrompt: "Do not generate any ground-mounted up lights. Do not place fixtures at the base of walls, columns, or trees aimed upward."
   },
   {

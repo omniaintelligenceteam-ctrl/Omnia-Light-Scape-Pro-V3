@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Sliders, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { COLOR_TEMPERATURES, DEFAULT_PRICING } from '../constants';
 import { FixturePricing, CompanyProfile } from '../types';
@@ -363,43 +363,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             ))}
                         </div>
                      </div>
-                </div>
-            )}
-        </div>
-
-        {/* --- SECTION 3: SYSTEM --- */}
-        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
-            <SectionHeader 
-                icon={Sliders} 
-                title="System Preferences" 
-                subtitle="Application settings and AI configuration"
-                isOpen={activeSection === 'system'}
-                onToggle={() => setActiveSection(activeSection === 'system' ? null : 'system')}
-            />
-            
-            {activeSection === 'system' && (
-                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
-                    <div className="flex items-center justify-between py-4 border-b border-white/5">
-                        <div>
-                            <h4 className="font-bold text-white text-sm">High-Res Output (4K)</h4>
-                            <p className="text-xs text-gray-500 mt-1">Force max resolution for all generations</p>
-                        </div>
-                        <Toggle checked={true} onChange={() => {}} />
-                    </div>
-                     <div className="flex items-center justify-between py-4 border-b border-white/5">
-                        <div>
-                            <h4 className="font-bold text-white text-sm">Auto-Enhance Prompts</h4>
-                            <p className="text-xs text-gray-500 mt-1">Use AI to rewrite simple instructions</p>
-                        </div>
-                        <Toggle checked={true} onChange={() => {}} />
-                    </div>
-                     <div className="flex items-center justify-between py-4">
-                        <div>
-                            <h4 className="font-bold text-white text-sm">Debug Mode</h4>
-                            <p className="text-xs text-gray-500 mt-1">Show raw API logs in console</p>
-                        </div>
-                        <Toggle checked={false} onChange={() => {}} />
-                    </div>
                 </div>
             )}
         </div>

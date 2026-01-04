@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
+import { LoginScreen } from './components/LoginScreen';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw } from 'lucide-react';
@@ -11,6 +12,9 @@ import { FIXTURE_TYPES, COLOR_TEMPERATURES } from './constants';
 import { SavedProject, QuoteData, CompanyProfile } from './types';
 
 const App: React.FC = () => {
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
   const [activeTab, setActiveTab] = useState<string>('editor');
   
   // Editor State
@@ -49,7 +53,7 @@ const App: React.FC = () => {
     logo: null
   });
 
-  // Auth State
+  // Auth State (API Key)
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
 
@@ -143,14 +147,14 @@ const App: React.FC = () => {
     if (!file) return;
 
     // Construct Composite Prompt
-    let activePrompt = "Generate a comprehensive landscape lighting design.\n\nFIXTURE INSTRUCTIONS:\n";
+    let activePrompt = "EDITING TASK: Apply specific lighting to the EXISTING photo content. Do not add new objects.\n\nFIXTURE CONFIGURATION:\n";
     
     // Add positive instructions for selected fixtures
     FIXTURE_TYPES.forEach(ft => {
         if (selectedFixtures.includes(ft.id)) {
-            activePrompt += `\n[INCLUDE ${ft.label.toUpperCase()}]: ${ft.positivePrompt}`;
+            activePrompt += `\n[APPLY TO EXISTING]: ${ft.positivePrompt}`;
         } else {
-            activePrompt += `\n[EXCLUDE ${ft.label.toUpperCase()}]: ${ft.negativePrompt}`;
+            activePrompt += `\n[DO NOT ADD]: ${ft.negativePrompt}`;
         }
     });
 
@@ -273,11 +277,17 @@ const App: React.FC = () => {
       setProjects(projects.filter(p => p.id !== id));
   };
 
-  if (isCheckingAuth) {
-    return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">Loading...</div>;
+  // 1. Show Login Screen if not authenticated
+  if (!isAuthenticated) {
+      return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
   }
 
-  // If NOT authorized (no env var AND no IDX shim key)
+  // 2. Show Loading State while checking API Key
+  if (isCheckingAuth) {
+    return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">Loading System...</div>;
+  }
+
+  // 3. Show API Key Setup if authorized (no env var AND no IDX shim key)
   if (!isAuthorized) {
     return (
         <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8">

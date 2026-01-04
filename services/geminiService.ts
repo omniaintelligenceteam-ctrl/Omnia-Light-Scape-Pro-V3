@@ -9,55 +9,31 @@ export const generateNightScene = async (
   imageMimeType: string = 'image/jpeg'
 ): Promise<string> => {
   
-  // Use process.env.API_KEY as per Google GenAI SDK guidelines.
-  // This is populated by vite.config.ts from VITE_GEMINI_API_KEY or API_KEY.
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey) {
-    // If running in a dev environment with the AI Studio shim (Project IDX), 
-    // we might not have the env var set yet if the user hasn't selected it.
-    // However, strictly speaking, we should have it. 
-    // If it's missing, the SDK will likely throw or we can throw a clear error here.
-    if (typeof window !== 'undefined' && (window as any).aistudio) {
-        console.warn("API Key is missing in process.env. Ensure the key is selected or VITE_GEMINI_API_KEY is set.");
-    }
-    // We proceed, letting the SDK handle the missing key (or passing undefined which might throw)
-    // But better to throw here for clarity
-    throw new Error("Missing API Key. Please set VITE_GEMINI_API_KEY in environment variables.");
-  }
-
-  // Initialize the client with the retrieved key
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  // Use process.env.API_KEY as per coding guidelines.
+  // The API key MUST be obtained exclusively from the environment variable process.env.API_KEY.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // Construct a prompt that enforces the Day-to-Night conversion rules with strict structural fidelity
   const systemPrompt = `
-    Task: Transform this daylight landscape photo into a high-end photorealistic night scene.
-    
-    *** CRITICAL ZERO-TOLERANCE RULES (STRICT ADHERENCE REQUIRED) ***
-    1.  **ABSOLUTE STRUCTURAL FIDELITY**: The input image is the GROUND TRUTH. You must NOT change the physical structure of the home or yard.
-    2.  **NO ADDED LANDSCAPING**: Do NOT add trees, bushes, shrubs, flowers, or plants that are not in the original photo. If there is open grass, it MUST remain open grass.
-    3.  **NO ADDED ARCHITECTURE**: Do NOT add columns, pillars, posts, fences, walls, dormers, or architectural details.
-    4.  **NO ADDED HARDSCAPE**: Do NOT add walkways, paths, stepping stones, or driveways.
-    5.  **PERSPECTIVE LOCK**: Keep the exact camera angle, zoom, and perspective of the original image. Do not crop or rotate.
-    6.  **STRICT LIGHTING ADHERENCE**: Do NOT add any lighting to the house or landscape that is not explicitly selected in the 'User Design Request'. If a lighting type is not requested, it must remain dark.
-    7.  **EXISTENCE CHECK**: If the instructions ask to light an object (e.g., "light the trees" or "light the path") but that object does NOT exist in the image, IGNORE THAT INSTRUCTION. Do NOT create the object just to light it.
-    
-    Operational Role:
-    You are a **Lighting Designer**, not a Landscape Architect. 
-    - You apply light to *existing* surfaces.
-    - You create shadows based on *existing* objects.
-    - You illuminate what is *already there*.
-    - If the user asks for tree lights and there are no trees, you do NOTHING for that specific request.
-    
-    Styling Instructions:
-    1.  **Day-to-Night Conversion**: Drastically lower the exposure to simulate night time.
-    2.  **Sky Appearance**: STRICTLY choose one of two specific sky types:
-        - **Deep Night**: An all-black sky with clear stars and a visible half-to-full moon.
-        - **Vibrant Twilight**: A deep, dark late-twilight sky (indigo/royal purple) with a faint hint of deep orange on the horizon.
-    3.  **Color Temperature**: STRICTLY use Warm White (3000K) for all artificial lights unless the prompt explicitly requests Holiday colors.
-    4.  **Realism**: Ensure light spread conforms to the physics of the fixtures (e.g., up lights wash up, path lights cast down).
-    
-    User Design Request: "${userInstructions}"
+    Role: Professional Architectural Photo Retoucher.
+    Task: Retouch the provided daylight photograph to simulate a night-time landscape lighting installation.
+
+    *** STRICT CONSTRAINT: PRESERVE ORIGINAL IMAGE CONTENT ***
+    1.  **NO NEW OBJECTS**: You are FORBIDDEN from adding trees, plants, walkways, structures, furniture, or architectural details that are not present in the original input image.
+    2.  **PIXEL-PERFECT GEOMETRY**: The house structure, roofline, windows, and landscape layout must remain EXACTLY as they are in the input image. Do not hallucinate new features.
+    3.  **ONLY LIGHTING**: Your ONLY modification allowed is changing the exposure (day to night) and adding light sources to EXISTING objects.
+
+    *** LIGHTING LOGIC ***
+    - **Global Atmosphere**: Convert the scene to night. Darken the sky and ambient environment.
+    - **Application**: Apply the requested lighting fixtures to the objects that ALREADY EXIST in the photo.
+    - **Columns & Pillars**: If the user requests "Up Lights", you MUST place lights at the base of any visible architectural columns or pillars grazing upward.
+    - **Conditional Execution**: 
+        - If the user asks for "Tree Lights" but there are no trees in the photo -> DO NOT add lights, DO NOT add trees.
+        - If the user asks for "Path Lights" but there is no path -> DO NOT add lights, DO NOT add a path.
+        - If the user asks for "Gutter Lights" -> Only place them on existing gutters.
+
+    *** REQUESTED DESIGN ***
+    ${userInstructions}
   `;
 
   try {
