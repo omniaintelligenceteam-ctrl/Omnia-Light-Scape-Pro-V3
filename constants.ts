@@ -50,14 +50,14 @@ export const FIXTURE_TYPES = [
     id: 'up',
     label: 'Up Lights',
     description: 'Ground-mounted accent lights for walls, columns & trees.',
-    positivePrompt: "Place ground-mounted up lights at the base of the front facade walls aimed upward to wash light across the brick or stone. CRITICAL PRIORITY: If there are architectural COLUMNS, PILLARS, or POSTS, you MUST place an up light at the base of EACH one, grazing the light upward to highlight the vertical structure. IF AND ONLY IF there are EXISTING prominent trees in the image, place up lights at their base aimed upward into the canopy. DO NOT add trees if none exist. Space wall-washing up lights symmetrically across the home.",
+    positivePrompt: "PRIORITY 1: Place up lights at the base of ARCHITECTURAL COLUMNS, PILLARS, or POSTS, grazing the light upward. PRIORITY 2: Place up lights at the base of facade walls or under windows depending on landscaping. PRIORITY 3 (STRICT): ONLY IF there are EXISTING TREES in the original photo, place lights at their base. WARNING: DO NOT GENERATE TREES. If the lawn is empty, KEEP IT EMPTY.",
     negativePrompt: "Do not generate any ground-mounted up lights. Do not place fixtures at the base of walls, columns, or trees aimed upward."
   },
   {
     id: 'path',
     label: 'Path Lights',
     description: 'Post-mounted lights for walkways & driveways.',
-    positivePrompt: "Identify any EXISTING walkways or driveways. IF a walkway exists, place post-mounted path lights along its edges spaced 6-8 feet apart. IF a driveway exists, place lights along the edge. DO NOT create new walkways or paths to place lights on.",
+    positivePrompt: "Identify any EXISTING walkways or driveways. IF a walkway exists, place post-mounted path lights along its edges spaced 6-8 feet apart. IF a driveway exists, place lights along the edge. DO NOT create new walkways or paths to place lights on. If no path exists, skip this step.",
     negativePrompt: "Do not generate any post-mounted path lights along walkways or driveways. Do not generate bollard lights."
   },
   {
@@ -79,7 +79,7 @@ export const FIXTURE_TYPES = [
     label: 'Soffit Lights',
     description: 'Recessed lights installed in the roof overhang.',
     positivePrompt: "Install recessed soffit lights (downlights) in the roof overhangs/eaves to wash light down onto the house facade. Place them symmetrically along the roofline to create a soft down-washing effect on the walls.",
-    negativePrompt: "Do not generate any soffit lights or downlights from the roof eaves."
+    negativePrompt: "STRICTLY FORBIDDEN: Do NOT install soffit lights. Do NOT place downlights in the roof eaves or overhangs. Do NOT wash light down onto the house facade from the roof. The upper sections of the house/roofline must remain dark unless illuminated from below."
   },
   {
     id: 'hardscape',

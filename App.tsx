@@ -8,8 +8,33 @@ import { LoginScreen } from './components/LoginScreen';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw } from 'lucide-react';
-import { FIXTURE_TYPES, COLOR_TEMPERATURES } from './constants';
-import { SavedProject, QuoteData, CompanyProfile } from './types';
+import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING } from './constants';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing } from './types';
+
+// Helper to parse fixture quantities from text
+const parsePromptForQuantities = (text: string): Record<string, number> => {
+    const counts: Record<string, number> = {};
+    const t = text.toLowerCase();
+    
+    // Mapping patterns to DEFAULT_PRICING IDs
+    const patterns = [
+       { id: 'default_up', regex: /(\d+)\s*(?:x\s*)?(?:up|accent)/ },
+       { id: 'default_path', regex: /(\d+)\s*(?:x\s*)?(?:path|walk)/ },
+       { id: 'default_gutter', regex: /(\d+)\s*(?:x\s*)?(?:gutter|roof)/ },
+       { id: 'default_soffit', regex: /(\d+)\s*(?:x\s*)?(?:soffit|down|eave|can)/ },
+       { id: 'default_hardscape', regex: /(\d+)\s*(?:x\s*)?(?:hardscape|wall|step|tread)/ },
+       { id: 'default_coredrill', regex: /(\d+)\s*(?:x\s*)?(?:core|drill|in-grade|well)/ }
+    ];
+
+    patterns.forEach(p => {
+       const match = t.match(p.regex);
+       if (match) {
+           counts[p.id] = parseInt(match[1], 10);
+       }
+    });
+
+    return counts;
+};
 
 const App: React.FC = () => {
   // Authentication State
@@ -26,6 +51,8 @@ const App: React.FC = () => {
   const [selectedFixtures, setSelectedFixtures] = useState<string[]>(['up']);
   // Lifted Setting State
   const [colorTemp, setColorTemp] = useState<string>('3000k');
+  // Lifted Pricing State
+  const [pricing, setPricing] = useState<FixturePricing[]>(DEFAULT_PRICING);
   
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -244,7 +271,57 @@ const App: React.FC = () => {
   };
 
   const handleGenerateQuote = () => {
-    setCurrentQuote(null);
+    // 1. Parse prompt for quantities
+    const parsedCounts = parsePromptForQuantities(prompt);
+    
+    // Default fallback quantities if no parsing found but user toggled buttons
+    const defaultQuantities: Record<string, number> = {
+        'up': 12, 'path': 6, 'gutter': 4, 'soffit': 4, 'hardscape': 8, 'coredrill': 4, 'transformer': 1
+    };
+
+    const hasParsedCounts = Object.keys(parsedCounts).length > 0;
+
+    // Generate Line Items using CURRENT pricing state
+    const lineItems = pricing.map(def => {
+         // RULE: Always add a transformer
+         if (def.fixtureType === 'transformer') {
+             return { ...def, quantity: 1 };
+         }
+
+         if (hasParsedCounts) {
+             // If we found numbers in text, use them strictly. 
+             // If ID not found in text, quantity is 0.
+             const qty = parsedCounts[def.id] || 0;
+             return { ...def, quantity: qty };
+         } else {
+             // Fallback to Toggle Buttons
+             if (selectedFixtures.includes(def.fixtureType)) {
+                 return { ...def, quantity: defaultQuantities[def.fixtureType] || 1 };
+             }
+             return { ...def, quantity: 0 };
+         }
+    }).filter(item => item.quantity > 0);
+
+    const newQuote: QuoteData = {
+        lineItems: lineItems.map(i => ({
+            id: i.id,
+            name: i.name,
+            description: i.description,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice
+        })),
+        taxRate: 0.07,
+        discount: 0,
+        clientDetails: {
+            name: "",
+            email: "",
+            phone: "",
+            address: ""
+        },
+        total: 0 // View will calculate
+    };
+    
+    setCurrentQuote(newQuote);
     setActiveTab('quotes');
   };
 
@@ -528,7 +605,7 @@ const App: React.FC = () => {
                         <div className="relative group mt-2">
                             <textarea
                                 className="w-full h-16 bg-[#0F0F0F] border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 transition-all resize-none font-mono"
-                                placeholder="> Enter specific instructions (e.g. 'Add moonlighting to the oak tree')..."
+                                placeholder="Type of Fixtures and Number of fixtures (e.g. '10 Up lights, 3 Gutter up lights, 6 Path lights')"
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
                             />
@@ -567,6 +644,7 @@ const App: React.FC = () => {
                 onSave={handleSaveProjectFromQuote} 
                 initialData={currentQuote} 
                 companyProfile={companyProfile}
+                defaultPricing={pricing}
              />
           )}
 
@@ -712,6 +790,8 @@ const App: React.FC = () => {
                 onProfileChange={setCompanyProfile}
                 colorTemp={colorTemp}
                 onColorTempChange={setColorTemp}
+                pricing={pricing}
+                onPricingChange={setPricing}
              />
           )}
 

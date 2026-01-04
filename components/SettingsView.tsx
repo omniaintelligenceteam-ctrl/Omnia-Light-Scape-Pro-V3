@@ -9,6 +9,8 @@ interface SettingsViewProps {
   onProfileChange?: (profile: CompanyProfile) => void;
   colorTemp?: string;
   onColorTempChange?: (tempId: string) => void;
+  pricing?: FixturePricing[];
+  onPricingChange?: (pricing: FixturePricing[]) => void;
 }
 
 // --- UI COMPONENTS ---
@@ -222,7 +224,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     profile, 
     onProfileChange, 
     colorTemp = '3000k',
-    onColorTempChange 
+    onColorTempChange,
+    pricing,
+    onPricingChange
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('company');
   
@@ -234,6 +238,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       if (onProfileChange && profile) {
           onProfileChange({ ...profile, [key]: value });
       }
+  };
+
+  const handlePriceUpdate = (index: number, field: keyof FixturePricing, value: any) => {
+    if (!pricing || !onPricingChange) return;
+    const newPricing = [...pricing];
+    newPricing[index] = { ...newPricing[index], [field]: value };
+    onPricingChange(newPricing);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -322,7 +333,78 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
         </div>
 
-        {/* --- SECTION 2: LIGHTING PREFERENCES --- */}
+        {/* --- SECTION 2: COMPANY PRICING (NEW) --- */}
+        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
+            <SectionHeader 
+                icon={DollarSign} 
+                title="Company Pricing" 
+                subtitle="Set your standard unit prices for auto-quotes"
+                isOpen={activeSection === 'pricing'}
+                onToggle={() => setActiveSection(activeSection === 'pricing' ? null : 'pricing')}
+            />
+            
+            {activeSection === 'pricing' && pricing && (
+                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300 space-y-6">
+                    {pricing.map((item, index) => (
+                        <div key={item.id} className="bg-[#0a0a0a] border border-white/5 rounded-xl p-6 relative group hover:border-[#F6B45A]/30 transition-colors">
+                            <div className="absolute -top-3 left-6">
+                                <span className="text-[10px] font-bold uppercase bg-[#F6B45A] text-black px-3 py-1 rounded-full shadow-lg">
+                                    {item.fixtureType.toUpperCase()}
+                                </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                                {/* Display Name */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                        Display Name
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        value={item.name}
+                                        onChange={(e) => handlePriceUpdate(index, 'name', e.target.value)}
+                                        className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-3 text-white text-sm font-bold focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                    />
+                                </div>
+
+                                {/* Unit Price */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                        Unit Price
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span className="text-gray-500 font-bold">$</span>
+                                        </div>
+                                        <input 
+                                            type="number" 
+                                            value={item.unitPrice}
+                                            onChange={(e) => handlePriceUpdate(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                            className="w-full bg-[#111] border border-white/10 rounded-lg pl-8 pr-4 py-3 text-white text-sm font-mono font-bold focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Product Details */}
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                        Product Details / Warranty Info
+                                    </label>
+                                    <textarea 
+                                        value={item.description}
+                                        onChange={(e) => handlePriceUpdate(index, 'description', e.target.value)}
+                                        rows={3}
+                                        className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-3 text-gray-300 text-xs leading-relaxed focus:border-[#F6B45A] focus:outline-none transition-colors resize-none font-mono"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+
+        {/* --- SECTION 3: LIGHTING PREFERENCES --- */}
         <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
             <SectionHeader 
                 icon={Lightbulb} 
