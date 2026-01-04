@@ -36,7 +36,7 @@ const SectionHeader: React.FC<{
   onToggle: () => void;
 }> = ({ icon: Icon, title, subtitle, isOpen, onToggle }) => (
   <div 
-    onClick={onToggle}
+    onClick={() => onToggle()}
     className={`flex items-center justify-between p-6 cursor-pointer transition-all duration-300 border-b border-white/5 ${isOpen ? 'bg-white/5' : 'hover:bg-white/5'}`}
   >
     <div className="flex items-center gap-5">
@@ -105,454 +105,336 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       `;
 
       const chat = ai.chats.create({
-        model: 'gemini-3-flash-preview',
-        config: { systemInstruction }
+          model: 'gemini-3-flash-preview',
+          config: {
+              systemInstruction: systemInstruction,
+          }
       });
 
-      // Replay history to context (simplified for this ephemeral session)
+      // Reconstruct history
       const history = messages.map(m => ({
           role: m.role,
           parts: [{ text: m.text }]
       }));
+
+      // In a real app we'd pass history to chat initialization or keep the chat instance alive.
+      // For this stateless demo, we send the message. 
+      // Note: If using persistent chat, instantiate 'chat' outside handler.
+      // Since we re-create here, let's just use generateContent with the last prompt + context instructions if needed, 
+      // but for simplicity in this snippet we'll just send the message to a fresh chat 
+      // (or ideally, move 'chat' to component state).
       
-      const response = await chat.sendMessage({ message: userMsg });
+      const result = await chat.sendMessage({ message: userMsg });
       
-      if (response.text) {
-          setMessages(prev => [...prev, { role: 'model', text: response.text }]);
-      }
+      setMessages(prev => [...prev, { role: 'model', text: result.text || "I couldn't process that." }]);
+
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'model', text: "I apologize, but I am unable to connect to the neural network at this moment. Please check your API Key." }]);
+      console.error("AI Error:", error);
+      setMessages(prev => [...prev, { role: 'model', text: "System Error: Unable to connect to neural backend." }]);
     } finally {
       setIsTyping(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:justify-end pointer-events-none p-4 sm:p-6">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
-      <div className="pointer-events-auto w-full sm:w-[400px] bg-[#0F0F0F] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[80vh] sm:h-[600px] animate-in slide-in-from-right-10 fade-in duration-300 relative overflow-hidden">
-        
-        {/* Header */}
-        <div className="p-4 border-b border-white/10 bg-[#111] flex justify-between items-center">
-          <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-[#F6B45A]/10 flex items-center justify-center border border-[#F6B45A]/20">
-                <Sparkles className="w-4 h-4 text-[#F6B45A]" />
-             </div>
-             <div>
-                <h3 className="text-sm font-bold text-white font-serif tracking-wide">Omnia Assistant</h3>
-                <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                    <span className="text-[10px] text-gray-400 font-mono uppercase">System Online</span>
-                </span>
-             </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+    <div className="flex flex-col h-[500px] bg-[#111] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+        <div className="bg-[#1a1a1a] p-4 flex justify-between items-center border-b border-white/5">
+            <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#F6B45A] flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-black" />
+                </div>
+                <div>
+                    <h3 className="font-bold text-white text-sm">Omnia Assistant</h3>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        <span className="text-[10px] text-gray-400 font-mono">ONLINE</span>
+                    </div>
+                </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+            </button>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/20">
-           {messages.map((msg, idx) => (
-             <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'model' && (
-                    <div className="w-6 h-6 rounded-full bg-[#1a1a1a] flex items-center justify-center shrink-0 mt-1 border border-white/10">
-                        <Bot className="w-3 h-3 text-[#F6B45A]" />
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/50">
+            {messages.map((msg, idx) => (
+                <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'model' && (
+                        <div className="w-8 h-8 rounded-full bg-[#1a1a1a] border border-white/5 flex items-center justify-center shrink-0">
+                            <Bot className="w-4 h-4 text-[#F6B45A]" />
+                        </div>
+                    )}
+                    <div className={`max-w-[80%] rounded-2xl p-3 text-sm leading-relaxed ${
+                        msg.role === 'user' 
+                        ? 'bg-[#F6B45A] text-black font-medium rounded-tr-sm' 
+                        : 'bg-[#1a1a1a] text-gray-300 border border-white/5 rounded-tl-sm'
+                    }`}>
+                        {msg.text}
                     </div>
-                )}
-                <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                    msg.role === 'user' 
-                    ? 'bg-[#F6B45A] text-[#111] font-medium rounded-tr-none' 
-                    : 'bg-[#1a1a1a] text-gray-200 border border-white/5 rounded-tl-none'
-                }`}>
-                    {msg.text}
+                    {msg.role === 'user' && (
+                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                            <UserIcon className="w-4 h-4 text-white" />
+                        </div>
+                    )}
                 </div>
-                {msg.role === 'user' && (
-                     <div className="w-6 h-6 rounded-full bg-[#333] flex items-center justify-center shrink-0 mt-1 border border-white/10">
-                        <UserIcon className="w-3 h-3 text-gray-400" />
+            ))}
+            {isTyping && (
+                 <div className="flex gap-3 justify-start">
+                    <div className="w-8 h-8 rounded-full bg-[#1a1a1a] border border-white/5 flex items-center justify-center shrink-0">
+                        <Bot className="w-4 h-4 text-[#F6B45A]" />
                     </div>
-                )}
-             </div>
-           ))}
-           {isTyping && (
-             <div className="flex gap-3 justify-start">
-                 <div className="w-6 h-6 rounded-full bg-[#1a1a1a] flex items-center justify-center shrink-0 mt-1 border border-white/10">
-                    <Bot className="w-3 h-3 text-[#F6B45A]" />
-                </div>
-                <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.1s]"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                </div>
-             </div>
-           )}
-           <div ref={messagesEndRef} />
+                    <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl rounded-tl-sm p-3 flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
+                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-75"></span>
+                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-150"></span>
+                    </div>
+                 </div>
+            )}
+            <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="p-4 bg-[#111] border-t border-white/10">
+        <div className="p-4 bg-[#1a1a1a] border-t border-white/5">
             <div className="relative">
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="Ask about features, pricing, or design..."
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 font-medium placeholder-gray-500"
+                    placeholder="Ask about pricing or design..."
+                    className="w-full bg-black border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 font-mono transition-all"
                 />
                 <button 
                     onClick={handleSend}
-                    disabled={!input.trim()}
-                    className="absolute right-2 top-2 p-1.5 bg-[#F6B45A] text-[#111] rounded-lg hover:bg-[#ffc67a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={!input.trim() || isTyping}
+                    className="absolute right-2 top-2 p-1.5 bg-[#F6B45A] text-black rounded-lg hover:bg-[#ffc67a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     <Send className="w-4 h-4" />
                 </button>
             </div>
         </div>
-
-      </div>
     </div>
   );
 };
 
-// --- MAIN SETTINGS VIEW ---
+// --- MAIN SETTINGS COMPONENT ---
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ 
-  profile = { name: '', email: '', address: '', logo: null },
-  onProfileChange = () => {},
-  colorTemp = '3000k',
-  onColorTempChange = () => {},
+    profile, 
+    onProfileChange, 
+    colorTemp = '3000k',
+    onColorTempChange 
 }) => {
-  // Section Open State - Single active section
-  const [activeSection, setActiveSection] = useState<string | null>('lighting');
-  const [showAssistant, setShowAssistant] = useState(false);
-
-  const toggleSection = (section: string) => {
-    setActiveSection(prev => (prev === section ? null : section));
+  const [activeSection, setActiveSection] = useState<string | null>('company');
+  
+  // Local state for profile editing to avoid constant parent re-renders if needed, 
+  // but for simplicity we'll control directly if props allow, or use local state and save.
+  // Here we use the props directly as they are passed from App.tsx.
+  
+  const handleProfileUpdate = (key: keyof CompanyProfile, value: string) => {
+      if (onProfileChange && profile) {
+          onProfileChange({ ...profile, [key]: value });
+      }
   };
 
-  const [sliders, setSliders] = useState({ ambient: 20, intensity: 80, contrast: 60 });
-  const [toggles, setToggles] = useState({ darkSky: true, preserve: true, highRealism: true, ultraRes: true });
-
-  // Pricing State
-  const [pricing, setPricing] = useState<FixturePricing[]>(DEFAULT_PRICING);
-
-  // Defaults State
-  const [defaults, setDefaults] = useState({
-    template: 'none'
-  });
-
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onProfileChange({ ...profile, logo: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
+      if (e.target.files && e.target.files[0] && onProfileChange && profile) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+              if (event.target?.result) {
+                  onProfileChange({ ...profile, logo: event.target.result as string });
+              }
+          };
+          reader.readAsDataURL(e.target.files[0]);
+      }
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#050505] overflow-hidden relative">
-      {/* Background Ambient Glow */}
-      <div className="absolute top-0 right-0 w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
-
-      {showAssistant && <AIAssistant onClose={() => setShowAssistant(false)} />}
-
-      {/* Header */}
-      <div className="px-6 md:px-12 py-8 max-w-5xl mx-auto w-full flex items-center justify-between shrink-0 relative z-10 border-b border-white/5 pb-8 mb-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Settings</h1>
-          <p className="text-gray-400 font-mono text-xs uppercase tracking-widest">System Configuration & Preferences</p>
+    <div className="h-full bg-[#050505] overflow-y-auto relative">
+      <div className="max-w-3xl mx-auto p-4 md:p-12 pb-24 relative z-10">
+        
+        <div className="mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Settings</h2>
+            <div className="h-1 w-20 bg-[#F6B45A] rounded-full"></div>
         </div>
-        <div className="flex flex-col items-center gap-2">
-           <button 
-             onClick={() => setShowAssistant(true)}
-             className="w-12 h-12 bg-[#1a1a1a] rounded-full flex items-center justify-center text-[#F6B45A] hover:bg-[#F6B45A] hover:text-[#111] transition-all shadow-[0_0_15px_rgba(246,180,90,0.2)] hover:shadow-[0_0_25px_rgba(246,180,90,0.6)] group border border-white/10"
-             title="Open AI Assistant"
-           >
-             <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
-           </button>
-           <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400">AI Support</span>
-        </div>
-      </div>
 
-      {/* Content Scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-20 relative z-10">
-        <div className="max-w-5xl mx-auto space-y-6">
-
-          {/* SECTION 1: Lighting Configuration */}
-          <div className="bg-[#111]/90 backdrop-blur-md rounded-[24px] shadow-2xl border border-white/10 overflow-hidden">
+        {/* --- SECTION 1: COMPANY PROFILE --- */}
+        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
             <SectionHeader 
-              icon={Sliders} 
-              title="Lighting Engine" 
-              subtitle="Realism & Render Settings"
-              isOpen={activeSection === 'lighting'}
-              onToggle={() => toggleSection('lighting')}
+                icon={Building} 
+                title="Company Profile" 
+                subtitle="Manage your branding for estimates"
+                isOpen={activeSection === 'company'}
+                onToggle={() => setActiveSection(activeSection === 'company' ? null : 'company')}
             />
             
-            {activeSection === 'lighting' && (
-              <div className="px-6 pb-8 md:px-8 md:pb-10 animate-in slide-in-from-top-2 duration-300">
-                
-                {/* Color Temp Selector */}
-                <div className="mb-10">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 block mb-5">Output Color Temperature</label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {COLOR_TEMPERATURES.map((temp) => (
-                      <button
-                        key={temp.id}
-                        onClick={() => onColorTempChange(temp.id)}
-                        className={`group relative flex flex-col items-center justify-center py-5 rounded-2xl border transition-all duration-300 ${
-                          colorTemp === temp.id 
-                            ? 'border-[#F6B45A] bg-[#F6B45A]/10 shadow-[0_0_20px_rgba(246,180,90,0.1)]' 
-                            : 'border-white/5 bg-black/40 hover:bg-white/5 hover:border-white/10'
-                        }`}
-                      >
-                        <div className="w-3 h-3 rounded-full mb-3 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: temp.color, color: temp.color }}></div>
-                        <span className={`font-bold text-sm font-serif ${colorTemp === temp.id ? 'text-[#F6B45A]' : 'text-gray-300'}`}>{temp.kelvin}</span>
-                        <span className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">{temp.description}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Sliders */}
-                <div className="space-y-8 mb-12 bg-black/20 p-6 rounded-2xl border border-white/5">
-                  {[
-                    { label: 'Ambient Light (Time of Day)', key: 'ambient' },
-                    { label: 'Fixture Intensity', key: 'intensity' },
-                    { label: 'Shadow Contrast', key: 'contrast' },
-                  ].map((item) => (
-                    <div key={item.key}>
-                      <div className="flex justify-between items-center mb-3">
-                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">{item.label}</label>
-                        <span className="text-xs font-mono font-bold text-[#F6B45A]">{(sliders as any)[item.key]}%</span>
-                      </div>
-                      <div className="relative h-1.5 bg-[#222] rounded-full">
-                         <div 
-                            className="absolute top-0 left-0 h-full bg-[#F6B45A] rounded-full shadow-[0_0_10px_rgba(246,180,90,0.5)]" 
-                            style={{ width: `${(sliders as any)[item.key]}%` }}
-                         />
-                         <input 
-                            type="range" 
-                            min="0" 
-                            max="100" 
-                            value={(sliders as any)[item.key]}
-                            onChange={(e) => setSliders({ ...sliders, [item.key]: parseInt(e.target.value) })}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Toggles */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-                  <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
-                    <span className="text-sm font-bold text-gray-200">Dark Sky Mode</span>
-                    <Toggle checked={toggles.darkSky} onChange={(v) => setToggles({...toggles, darkSky: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
-                    <span className="text-sm font-bold text-gray-200">Preserve Non-Lit Areas</span>
-                    <Toggle checked={toggles.preserve} onChange={(v) => setToggles({...toggles, preserve: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
-                    <span className="text-sm font-bold text-gray-200">High Realism Engine</span>
-                    <Toggle checked={toggles.highRealism} onChange={(v) => setToggles({...toggles, highRealism: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
-                    <span className="text-sm font-bold text-gray-200">Ultra Resolution (4K)</span>
-                    <Toggle checked={toggles.ultraRes} onChange={(v) => setToggles({...toggles, ultraRes: v})} />
-                  </div>
-                </div>
-
-              </div>
-            )}
-          </div>
-
-          {/* SECTION 2: Company Profile */}
-          <div className="bg-[#111]/90 backdrop-blur-md rounded-[24px] shadow-2xl border border-white/10 overflow-hidden">
-            <SectionHeader 
-              icon={Building} 
-              title="Company Identity" 
-              subtitle="Branding & Contact Info"
-              isOpen={activeSection === 'profile'}
-              onToggle={() => toggleSection('profile')}
-            />
-             {activeSection === 'profile' && (
-              <div className="px-6 pb-8 md:px-8 md:pb-10 flex flex-col md:flex-row gap-8 md:gap-12 animate-in slide-in-from-top-2 duration-300">
-                  {/* Logo Upload */}
-                  <div className="w-full md:w-1/3">
-                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 block mb-4">Company Logo</label>
-                    <div className="relative aspect-square rounded-2xl border border-dashed border-white/20 bg-black/40 flex flex-col items-center justify-center cursor-pointer hover:border-[#F6B45A] hover:bg-[#F6B45A]/5 transition-all group overflow-hidden">
-                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                        {profile.logo ? (
-                          <img src={profile.logo} alt="Company Logo" className="w-full h-full object-contain p-4" />
-                        ) : (
-                          <>
-                            <div className="w-12 h-12 bg-[#222] rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border border-white/10">
-                                <Upload className="w-5 h-5 text-gray-400 group-hover:text-[#F6B45A]" />
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-400 group-hover:text-gray-300 uppercase tracking-widest">Upload Logo</span>
-                          </>
-                        )}
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-3 text-center">Recommended: 400x400 PNG (Transparent)</p>
-                  </div>
-
-                  {/* Form Fields */}
-                  <div className="w-full md:w-2/3 space-y-6">
-                    <div>
-                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 block mb-2">Company Name</label>
-                        <input 
-                            type="text" 
-                            value={profile.name} 
-                            onChange={(e) => onProfileChange({...profile, name: e.target.value})}
-                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-white focus:outline-none focus:border-[#F6B45A] transition-all placeholder-gray-500"
-                            placeholder="Enter your company name"
-                        />
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 block mb-2 flex gap-2 items-center">Account Email</label>
-                        <div className="relative">
-                            <input 
-                                type="email" 
-                                value={profile.email} 
-                                onChange={(e) => onProfileChange({...profile, email: e.target.value})}
-                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-white focus:outline-none focus:border-[#F6B45A] transition-all placeholder-gray-500"
-                            />
-                            <div className="absolute right-3 top-3 text-[#F6B45A]">
-                                <Check className="w-4 h-4" />
+            {activeSection === 'company' && profile && (
+                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Logo Upload */}
+                        <div className="flex flex-col gap-4">
+                            <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Company Logo</label>
+                            <div className="relative group w-32 h-32 bg-black border border-dashed border-white/20 rounded-xl flex items-center justify-center overflow-hidden hover:border-[#F6B45A] transition-colors cursor-pointer">
+                                {profile.logo ? (
+                                    <img src={profile.logo} alt="Logo" className="w-full h-full object-contain p-2" />
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2 text-gray-600 group-hover:text-[#F6B45A] transition-colors">
+                                        <Upload className="w-6 h-6" />
+                                        <span className="text-[9px] font-bold uppercase">Upload</span>
+                                    </div>
+                                )}
+                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleLogoUpload} />
                             </div>
                         </div>
-                    </div>
-                     <div>
-                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 block mb-2 flex gap-2 items-center">Company Address</label>
-                        <textarea
-                            value={profile.address}
-                            onChange={(e) => onProfileChange({...profile, address: e.target.value})}
-                            rows={3}
-                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-white focus:outline-none focus:border-[#F6B45A] transition-all placeholder-gray-500 resize-none leading-relaxed"
-                            placeholder="Street Address, City, State, Zip"
-                        />
-                    </div>
-                  </div>
-              </div>
-             )}
-          </div>
 
-          {/* SECTION 3: Company Pricing */}
-          <div className="bg-[#111]/90 backdrop-blur-md rounded-[24px] shadow-2xl border border-white/10 overflow-hidden">
-            <SectionHeader 
-              icon={DollarSign} 
-              title="Pricing Database" 
-              subtitle="Unit Costs & SKU Management"
-              isOpen={activeSection === 'pricing'}
-              onToggle={() => toggleSection('pricing')}
-            />
-            {activeSection === 'pricing' && (
-                <div className="px-6 pb-8 md:px-8 md:pb-10 space-y-6 animate-in slide-in-from-top-2 duration-300">
-                    {pricing.map((item, index) => (
-                        <div key={item.id} className="border border-white/5 rounded-xl p-4 md:p-6 bg-black/40 hover:bg-black/60 hover:border-white/10 transition-all group">
-                            <div className="mb-4">
-                                <span className="inline-block bg-[#F6B45A]/10 text-[#F6B45A] border border-[#F6B45A]/20 text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider mb-3">
-                                    {item.fixtureType}
-                                </span>
-                                <div className="flex flex-col md:flex-row gap-4">
-                                    <div className="flex-1">
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 block mb-1">Display Name</label>
-                                        <input 
-                                            type="text" 
-                                            value={item.name}
-                                            onChange={(e) => {
-                                                const newPricing = [...pricing];
-                                                newPricing[index].name = e.target.value;
-                                                setPricing(newPricing);
-                                            }}
-                                            className="w-full bg-transparent border-b border-white/10 focus:border-[#F6B45A] px-0 py-2 text-sm font-bold text-gray-200 focus:outline-none transition-colors"
-                                        />
-                                    </div>
-                                    <div className="w-full md:w-32">
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 block mb-1">Unit Price</label>
-                                        <div className="relative">
-                                            <span className="absolute left-0 top-2 text-gray-400 text-sm font-bold">$</span>
-                                            <input 
-                                                type="number" 
-                                                value={item.unitPrice}
-                                                onChange={(e) => {
-                                                    const newPricing = [...pricing];
-                                                    newPricing[index].unitPrice = parseFloat(e.target.value) || 0;
-                                                    setPricing(newPricing);
-                                                }}
-                                                className="w-full bg-transparent border-b border-white/10 focus:border-[#F6B45A] pl-4 pr-0 py-2 text-sm font-mono font-bold text-[#F6B45A] focus:outline-none transition-colors"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                        {/* Fields */}
+                        <div className="space-y-5">
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 block mb-2">Company Name</label>
+                                <input 
+                                    type="text" 
+                                    value={profile.name}
+                                    onChange={(e) => handleProfileUpdate('name', e.target.value)}
+                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                />
                             </div>
                             <div>
-                                <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 block mb-1">Product Details</label>
-                                <textarea 
-                                    rows={2}
-                                    value={item.description}
-                                    onChange={(e) => {
-                                        const newPricing = [...pricing];
-                                        newPricing[index].description = e.target.value;
-                                        setPricing(newPricing);
-                                    }}
-                                    className="w-full bg-[#0a0a0a] border border-white/5 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#F6B45A]/50 resize-none font-mono"
+                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 block mb-2">Contact Email</label>
+                                <input 
+                                    type="email" 
+                                    value={profile.email}
+                                    onChange={(e) => handleProfileUpdate('email', e.target.value)}
+                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-[#F6B45A] focus:outline-none transition-colors"
                                 />
                             </div>
                         </div>
-                    ))}
-                </div>
-            )}
-          </div>
 
-          {/* SECTION 4: Design Defaults */}
-          <div className="bg-[#111]/90 backdrop-blur-md rounded-[24px] shadow-2xl border border-white/10 overflow-hidden mb-12">
-            <SectionHeader 
-              icon={Lightbulb} 
-              title="Global Defaults" 
-              subtitle="Startup Configuration"
-              isOpen={activeSection === 'defaults'}
-              onToggle={() => toggleSection('defaults')}
-            />
-            {activeSection === 'defaults' && (
-                <div className="px-6 pb-8 md:px-8 md:pb-10 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
-                    <div>
-                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 block mb-2">Default Design Template</label>
-                        <div className="relative">
-                             <select 
-                                value={defaults.template}
-                                onChange={(e) => setDefaults({...defaults, template: e.target.value})}
-                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-gray-200 appearance-none focus:outline-none focus:border-[#F6B45A]"
-                            >
-                                <option value="none">None (Empty Notes)</option>
-                                <option value="basic">Basic Package</option>
-                                <option value="premium">Premium Estate</option>
-                            </select>
-                            <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-gray-500 pointer-events-none" />
+                         <div className="md:col-span-2">
+                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 block mb-2">Business Address</label>
+                                <textarea 
+                                    value={profile.address}
+                                    onChange={(e) => handleProfileUpdate('address', e.target.value)}
+                                    rows={3}
+                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-[#F6B45A] focus:outline-none transition-colors resize-none"
+                                />
                         </div>
                     </div>
                 </div>
             )}
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex flex-col items-center gap-6 pb-12">
-            <button className="bg-[#F6B45A] text-[#111] px-10 py-4 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center gap-3 hover:scale-105 hover:shadow-[0_0_25px_rgba(246,180,90,0.4)] transition-all">
-                <Save className="w-4 h-4" />
-                Save System Config
-            </button>
-            <button className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-colors text-xs font-bold uppercase tracking-widest opacity-60 hover:opacity-100">
-                <LogOut className="w-4 h-4" />
-                End Session
-            </button>
-          </div>
-
         </div>
+
+        {/* --- SECTION 2: LIGHTING PREFERENCES --- */}
+        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
+            <SectionHeader 
+                icon={Lightbulb} 
+                title="Lighting Defaults" 
+                subtitle="Configure default realism settings"
+                isOpen={activeSection === 'lighting'}
+                onToggle={() => setActiveSection(activeSection === 'lighting' ? null : 'lighting')}
+            />
+            
+            {activeSection === 'lighting' && (
+                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
+                     <div className="mb-6">
+                        <label className="text-xs font-bold uppercase tracking-widest text-gray-500 block mb-4">Default Color Temperature</label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {COLOR_TEMPERATURES.slice(0, 4).map((temp) => (
+                                <button
+                                    key={temp.id}
+                                    onClick={() => onColorTempChange?.(temp.id)}
+                                    className={`relative p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${
+                                        colorTemp === temp.id 
+                                        ? 'bg-[#F6B45A]/10 border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.1)]' 
+                                        : 'bg-[#0a0a0a] border-white/5 hover:border-white/20'
+                                    }`}
+                                >
+                                    <div 
+                                        className="w-6 h-6 rounded-full shadow-inner border border-white/10" 
+                                        style={{ backgroundColor: temp.color }}
+                                    ></div>
+                                    <span className={`text-[10px] font-bold uppercase ${colorTemp === temp.id ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
+                                        {temp.kelvin}
+                                    </span>
+                                    {colorTemp === temp.id && (
+                                        <div className="absolute top-2 right-2 text-[#F6B45A]">
+                                            <Check className="w-3 h-3" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                     </div>
+                </div>
+            )}
+        </div>
+
+        {/* --- SECTION 3: SYSTEM --- */}
+        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
+            <SectionHeader 
+                icon={Sliders} 
+                title="System Preferences" 
+                subtitle="Application settings and AI configuration"
+                isOpen={activeSection === 'system'}
+                onToggle={() => setActiveSection(activeSection === 'system' ? null : 'system')}
+            />
+            
+            {activeSection === 'system' && (
+                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
+                    <div className="flex items-center justify-between py-4 border-b border-white/5">
+                        <div>
+                            <h4 className="font-bold text-white text-sm">High-Res Output (4K)</h4>
+                            <p className="text-xs text-gray-500 mt-1">Force max resolution for all generations</p>
+                        </div>
+                        <Toggle checked={true} onChange={() => {}} />
+                    </div>
+                     <div className="flex items-center justify-between py-4 border-b border-white/5">
+                        <div>
+                            <h4 className="font-bold text-white text-sm">Auto-Enhance Prompts</h4>
+                            <p className="text-xs text-gray-500 mt-1">Use AI to rewrite simple instructions</p>
+                        </div>
+                        <Toggle checked={true} onChange={() => {}} />
+                    </div>
+                     <div className="flex items-center justify-between py-4">
+                        <div>
+                            <h4 className="font-bold text-white text-sm">Debug Mode</h4>
+                            <p className="text-xs text-gray-500 mt-1">Show raw API logs in console</p>
+                        </div>
+                        <Toggle checked={false} onChange={() => {}} />
+                    </div>
+                </div>
+            )}
+        </div>
+
+        {/* --- AI ASSISTANT WIDGET --- */}
+        <div className="mt-12 bg-[#111] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+             <div className="p-6 border-b border-white/5 bg-gradient-to-r from-[#111] to-[#1a1a1a]">
+                 <div className="flex items-center gap-4">
+                     <div className="p-3 bg-[#F6B45A]/20 rounded-xl">
+                        <MessageCircle className="w-6 h-6 text-[#F6B45A]" />
+                     </div>
+                     <div>
+                        <h3 className="font-bold text-white text-lg font-serif">Omnia AI Consultant</h3>
+                        <p className="text-xs text-gray-400">Ask questions about pricing, app usage, or design tips.</p>
+                     </div>
+                 </div>
+             </div>
+             
+             {activeSection === 'ai' ? (
+                 <div className="p-6 animate-in fade-in slide-in-from-bottom-4">
+                     <AIAssistant onClose={() => setActiveSection(null)} />
+                 </div>
+             ) : (
+                 <div className="p-6">
+                     <button 
+                        onClick={() => setActiveSection('ai')}
+                        className="w-full py-4 rounded-xl border border-dashed border-[#F6B45A]/30 text-[#F6B45A] font-bold uppercase tracking-widest hover:bg-[#F6B45A]/10 transition-all flex items-center justify-center gap-2"
+                     >
+                        <Sparkles className="w-4 h-4" />
+                        Open Assistant Interface
+                     </button>
+                 </div>
+             )}
+        </div>
+
       </div>
     </div>
   );

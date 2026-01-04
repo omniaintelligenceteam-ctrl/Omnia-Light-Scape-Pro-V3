@@ -23,11 +23,11 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   if (currentImage && previewUrl) {
     return (
-      <div className="relative w-full aspect-video rounded-2xl overflow-hidden group shadow-2xl border border-white/10 bg-black">
+      <div className="relative w-full h-[50vh] md:h-[60vh] rounded-2xl overflow-hidden group shadow-2xl border border-white/10 bg-black">
         <img 
           src={previewUrl} 
           alt="Original" 
-          className="w-full h-full object-cover pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity duration-500"
+          className="w-full h-full object-contain pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity duration-500"
         />
         
         {/* Tech Overlay lines */}

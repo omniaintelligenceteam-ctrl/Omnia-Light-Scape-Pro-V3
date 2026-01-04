@@ -50,14 +50,14 @@ export const FIXTURE_TYPES = [
     id: 'up',
     label: 'Up Lights',
     description: 'Ground-mounted accent lights for walls, columns & trees.',
-    positivePrompt: "Place ground-mounted up lights at the base of the front facade walls aimed upward to wash light across the brick or stone. Place up lights at the base of each exterior column or pillar aimed upward. Place up lights at the base of prominent trees in the front yard aimed upward into the canopy. Space wall-washing up lights symmetrically across the home. IMPORTANT: Up lights must be on the ground, never on roof/concrete.",
+    positivePrompt: "Place ground-mounted up lights at the base of the front facade walls aimed upward to wash light across the brick or stone. IF AND ONLY IF there are EXISTING prominent trees in the image, place up lights at their base aimed upward into the canopy. DO NOT add trees if none exist. Space wall-washing up lights symmetrically across the home.",
     negativePrompt: "Do not generate any ground-mounted up lights. Do not place fixtures at the base of walls, columns, or trees aimed upward."
   },
   {
     id: 'path',
     label: 'Path Lights',
     description: 'Post-mounted lights for walkways & driveways.',
-    positivePrompt: "Place post-mounted path lights along both sides of the front walkway leading to the front door spaced approximately 6 to 8 feet apart in a staggered pattern. Place path lights along the driveway edge where it meets landscaping. Path lights should aim downward to illuminate the ground.",
+    positivePrompt: "Identify any EXISTING walkways or driveways. IF a walkway exists, place post-mounted path lights along its edges spaced 6-8 feet apart. IF a driveway exists, place lights along the edge. DO NOT create new walkways or paths to place lights on.",
     negativePrompt: "Do not generate any post-mounted path lights along walkways or driveways. Do not generate bollard lights."
   },
   {
@@ -78,7 +78,7 @@ export const FIXTURE_TYPES = [
     id: 'hardscape',
     label: 'Hardscape Lights',
     description: 'Linear or puck lights for retaining walls & steps.',
-    positivePrompt: "Install hardscape lighting under the capstones of retaining walls, seating walls, and fire pits. Install tread lights on any visible outdoor steps or stairs to illuminate the tread below. These should be linear or small puck lights concealed by the hardscape overhang.",
+    positivePrompt: "IF there are EXISTING retaining walls or stone steps, install hardscape lighting under the capstones. DO NOT create walls or steps. Install tread lights on any visible outdoor steps to illuminate the tread below.",
     negativePrompt: "Do not generate hardscape lighting on walls or steps."
   }
 ];

@@ -264,25 +264,25 @@ const App: React.FC = () => {
   };
 
   if (isCheckingAuth) {
-    return <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center text-[#111]">Loading...</div>;
+    return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">Loading...</div>;
   }
 
   if (!isAuthorized) {
     return (
-        <div className="min-h-screen bg-[#FDFCFB] flex flex-col items-center justify-center p-8">
-            <div className="max-w-md text-center space-y-8 p-12 bg-white rounded-[28px] shadow-2xl border border-gray-100">
+        <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8">
+            <div className="max-w-md text-center space-y-8 p-12 bg-[#111] rounded-[28px] shadow-2xl border border-white/10">
                 <div className="flex flex-col items-center gap-2">
                      <h1 className="text-4xl font-bold text-[#F6B45A] tracking-tight font-serif">Omnia</h1>
                      <span className="text-gray-400 font-bold italic text-sm tracking-[0.2em] uppercase font-serif">Light Scape Pro</span>
                 </div>
-                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                  <p className="text-gray-600 text-sm leading-relaxed">
+                <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
+                  <p className="text-gray-400 text-sm leading-relaxed">
                       To access the advanced <span className="text-[#F6B45A] font-bold">Gemini 3 Pro</span> model, please connect your API Key.
                   </p>
                 </div>
                 <button 
                     onClick={requestApiKey} 
-                    className="w-full bg-[#111] text-white rounded-xl py-4 font-bold text-xs uppercase tracking-[0.2em] hover:bg-black shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all"
+                    className="w-full bg-[#F6B45A] text-[#050505] rounded-xl py-4 font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all"
                 >
                     Connect API Key
                 </button>
@@ -298,7 +298,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#FDFCFB]">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#050505]">
       <Header onRequestUpgrade={requestApiKey} />
       
       {/* Full Screen Image Modal */}
@@ -327,11 +327,12 @@ const App: React.FC = () => {
               {/* Background Ambient Glow */}
               <div className="absolute top-[-10%] left-[20%] w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-              <div className="max-w-4xl mx-auto h-full p-4 md:p-8 flex flex-col justify-center relative z-10">
+              {/* Fix: Use min-h-full instead of h-full, and justify-start on mobile to allow scrolling */}
+              <div className="max-w-4xl mx-auto min-h-full p-4 md:p-8 flex flex-col justify-start md:justify-center relative z-10">
                 
                 {/* MODE 1: RESULT VIEW (Generated Image Only) */}
                 {generatedImage ? (
-                <div className="flex-1 flex flex-col relative bg-black rounded-[32px] overflow-hidden border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex-1 flex flex-col relative bg-black rounded-[32px] overflow-hidden border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-500 min-h-[500px]">
                     
                     {/* Top Action Bar */}
                     <div className="absolute top-6 left-0 right-0 z-40 flex justify-center gap-3 px-4">
