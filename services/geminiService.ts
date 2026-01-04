@@ -11,7 +11,8 @@ export const generateNightScene = async (
   
   // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
   // It is polyfilled in vite.config.ts to include VITE_GEMINI_API_KEY if present.
-  const apiKey = process.env.API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
+
 
   if (!apiKey) {
     console.error("API Key Check Failed. API_KEY is missing.");
