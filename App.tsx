@@ -171,7 +171,7 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = async () => {
-    if (!file) return;
+    if (!file || !previewUrl) return;
 
     // Construct Composite Prompt
     let activePrompt = "EDITING TASK: Apply specific lighting to the EXISTING photo content. Do not add new objects.\n\nFIXTURE CONFIGURATION:\n";
@@ -210,9 +210,28 @@ const App: React.FC = () => {
     setError(null);
     setIsFullScreen(false);
 
+    // Dynamic Aspect Ratio Detection
+    let targetRatio = "1:1";
+    try {
+        const img = new Image();
+        img.src = previewUrl;
+        await img.decode();
+        const ratio = img.width / img.height;
+        // Select closest supported ratio to avoid cropping
+        if (ratio >= 1.5) targetRatio = "16:9";
+        else if (ratio >= 1.15) targetRatio = "4:3";
+        else if (ratio >= 0.85) targetRatio = "1:1";
+        else if (ratio >= 0.65) targetRatio = "3:4";
+        else targetRatio = "9:16";
+        
+        console.log(`Detected Ratio: ${ratio.toFixed(2)} | Target: ${targetRatio}`);
+    } catch (e) {
+        console.warn("Aspect ratio detection failed, defaulting to 1:1", e);
+    }
+
     try {
       const base64 = await fileToBase64(file);
-      const result = await generateNightScene(base64, activePrompt, file.type);
+      const result = await generateNightScene(base64, activePrompt, file.type, targetRatio);
       setGeneratedImage(result);
     } catch (err: any) {
       console.error(err);

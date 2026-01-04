@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Printer, Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, MinusCircle, FileText } from 'lucide-react';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, MinusCircle, FileText, Loader2 } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 
@@ -31,6 +31,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
 
   const [taxRate, setTaxRate] = useState<number>(initialData?.taxRate ?? 0.07);
   const [discount, setDiscount] = useState<number>(initialData?.discount || 0);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Client Details State (Controlled)
   const [clientName, setClientName] = useState(initialData?.clientDetails.name || "John & Jane Smith");
@@ -84,10 +85,44 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
       onSave(data);
   };
 
+  const handleDownloadPdf = async () => {
+    const element = document.getElementById('quote-content');
+    if (!element) return;
+
+    setIsGeneratingPdf(true);
+
+    // Apply specific class to container to force "Light Mode" styles defined in index.html
+    element.classList.add('pdf-mode');
+
+    const opt = {
+        margin: [0.3, 0.3, 0.3, 0.3], // top, left, bottom, right in inches
+        filename: `Omnia_Quote_${clientName.replace(/[^a-z0-9]/gi, '_').substring(0, 20)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    try {
+        // html2pdf is loaded via CDN in index.html, so we access it via window
+        if ((window as any).html2pdf) {
+            await (window as any).html2pdf().set(opt).from(element).save();
+        } else {
+            console.error("html2pdf library not loaded");
+            alert("PDF generation library not loaded. Please refresh.");
+        }
+    } catch (e) {
+        console.error("PDF Generation failed:", e);
+        alert("Failed to generate PDF. Please try again.");
+    } finally {
+        element.classList.remove('pdf-mode');
+        setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#050505] p-2 md:p-8 overflow-y-auto relative">
       {/* Background Ambient Glow */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none print:hidden"></div>
+      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none print:hidden ambient-glow"></div>
 
       <div className="max-w-4xl mx-auto w-full space-y-4 md:space-y-6 relative z-10">
         
@@ -110,21 +145,29 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                 <span className="sm:hidden">Save</span>
             </button>
             <div className="w-px h-6 bg-white/10 mx-1"></div>
-            <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors hidden md:block" title="Print" onClick={() => window.print()}>
-                <Printer className="w-4 h-4" />
-            </button>
+            {/* Email Button */}
             <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Email">
                 <Mail className="w-4 h-4" />
             </button>
-            <button className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10">
-                <Download className="w-3 h-3 md:w-4 md:h-4" />
-                <span className="hidden sm:inline">PDF</span>
+            {/* Download PDF Button */}
+            <button 
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Download PDF"
+            >
+                {isGeneratingPdf ? (
+                    <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
+                ) : (
+                    <Download className="w-3 h-3 md:w-4 md:h-4" />
+                )}
+                <span className="hidden sm:inline">{isGeneratingPdf ? 'Generating...' : 'Download PDF'}</span>
             </button>
           </div>
         </div>
 
         {/* Paper Document / Digital Datapad */}
-        <div className="bg-[#0F0F0F] rounded-xl md:rounded-[24px] shadow-2xl border border-white/5 min-h-auto md:min-h-[1000px] p-4 md:p-12 relative print:shadow-none print:border-none print:m-0 print:w-full print:bg-white print:text-black">
+        <div id="quote-content" className="bg-[#0F0F0F] rounded-xl md:rounded-[24px] shadow-2xl border border-white/5 min-h-auto md:min-h-[1000px] p-4 md:p-12 relative print:shadow-none print:border-none print:m-0 print:w-full print:bg-white print:text-black">
           
           {/* Header */}
           <header className="mb-8 md:mb-12 border-b border-white/10 pb-6 print:border-gray-200">
@@ -340,10 +383,10 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
           </div>
 
           {/* Add Item Button */}
-          <div className="mb-12">
+          <div className="mb-12 print:hidden">
              <button 
                 onClick={handleAddItem}
-                className="w-full md:w-auto flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#e5a040] hover:bg-[#F6B45A]/10 px-6 py-3 rounded-xl border border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A] transition-colors print:hidden"
+                className="w-full md:w-auto flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#e5a040] hover:bg-[#F6B45A]/10 px-6 py-3 rounded-xl border border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A] transition-colors"
             >
                 <Plus className="w-4 h-4" />
                 ADD ITEM

@@ -24,6 +24,8 @@
         }
       }
     </script>
+    <!-- html2pdf.js for Client-Side PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
       body {
@@ -45,6 +47,64 @@
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #F6B45A; 
+      }
+
+      /* PDF Generation Overrides (Light Mode Simulation) */
+      .pdf-mode {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          border: none !important;
+          box-shadow: none !important;
+          margin: 0 !important;
+          border-radius: 0 !important;
+      }
+      .pdf-mode * {
+          border-color: #e5e7eb !important; /* gray-200 */
+      }
+      /* Override dark backgrounds */
+      .pdf-mode .bg-\[\#111\], 
+      .pdf-mode .bg-\[\#111\]\/30,
+      .pdf-mode .bg-\[\#111\]\/50,
+      .pdf-mode .bg-\[\#0F0F0F\],
+      .pdf-mode .bg-\[\#1a1a1a\] {
+          background-color: transparent !important;
+          color: #000000 !important;
+      }
+      /* Ensure text is black */
+      .pdf-mode input, 
+      .pdf-mode textarea, 
+      .pdf-mode span, 
+      .pdf-mode p, 
+      .pdf-mode h1, 
+      .pdf-mode h2, 
+      .pdf-mode h3, 
+      .pdf-mode h4,
+      .pdf-mode td,
+      .pdf-mode th,
+      .pdf-mode div {
+          color: #000000 !important;
+      }
+      /* Adjust light gray text to darker gray */
+      .pdf-mode .text-gray-300, 
+      .pdf-mode .text-gray-200, 
+      .pdf-mode .text-gray-400 {
+           color: #4b5563 !important; /* gray-600 */
+      }
+      .pdf-mode .text-white {
+          color: #000000 !important;
+      }
+      /* Hide elements not needed in PDF */
+      .pdf-mode .print\:hidden,
+      .pdf-mode .ambient-glow {
+          display: none !important;
+      }
+      /* Preserve Gold Color for Branding */
+      .pdf-mode .text-\[\#F6B45A\] {
+          color: #d97706 !important; /* darker amber/gold for white paper readability */
+      }
+      .pdf-mode input::placeholder, 
+      .pdf-mode textarea::placeholder {
+          color: transparent !important;
       }
     </style>
   <script type="importmap">

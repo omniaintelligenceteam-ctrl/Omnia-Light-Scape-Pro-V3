@@ -6,12 +6,13 @@ const MODEL_NAME = 'gemini-3-pro-image-preview';
 export const generateNightScene = async (
   imageBase64: string,
   userInstructions: string,
-  imageMimeType: string = 'image/jpeg'
+  imageMimeType: string = 'image/jpeg',
+  aspectRatio: string = '1:1'
 ): Promise<string> => {
   
   // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
   // It is polyfilled in vite.config.ts to include VITE_GEMINI_API_KEY if present.
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
+  const apiKey = process.env.API_KEY;
 
 
   if (!apiKey) {
@@ -35,6 +36,7 @@ export const generateNightScene = async (
 
     *** LIGHTING APPLICATION LOGIC ***
     - **Global Atmosphere**: Convert the scene to night. Darken the sky and ambient environment.
+    - **DESIGN RULE (OUTER SECTIONS)**: Always light up the outer sections of the house (the far left and far right corners/edges). Illuminating the full width ensures the home looks bigger at night. Never leave the outer corners in complete darkness.
     - **Columns & Pillars (PRIORITY)**: If the user requests "Up Lights", you MUST place lights at the base of any visible architectural columns or pillars grazing upward.
     - **Quantity Adherence**: If the user instructions specify exact numbers (e.g. "10 up lights", "4 path lights"), you MUST attempt to distribute that approximate number of light sources visible in the scene, consistent with professional spacing.
     - **Conflict Resolution**: 
@@ -64,7 +66,7 @@ export const generateNightScene = async (
       config: {
         imageConfig: {
             imageSize: "1K", 
-            aspectRatio: "1:1", 
+            aspectRatio: aspectRatio, 
         }
       },
     });
