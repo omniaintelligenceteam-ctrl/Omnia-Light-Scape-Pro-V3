@@ -61,6 +61,13 @@ export const FIXTURE_TYPES = [
     negativePrompt: "Do not generate any post-mounted path lights along walkways or driveways. Do not generate bollard lights."
   },
   {
+    id: 'coredrill',
+    label: 'Core Drill Lights',
+    description: 'Flush-mounted in-grade lights for hardscapes.',
+    positivePrompt: "Identify paved hardscape surfaces (concrete, stone). Install flush-mounted 'Core Drill' lights embedded directly INTO the concrete. Priority 1: Place at the base of GARAGE walls/pillars grazing up. Priority 2: Place at the base of ARCHITECTURAL COLUMNS grazing up. Priority 3: Place along the edges of DRIVEWAYS and WALKWAYS flush with the surface. The fixture MUST be flush with the ground.",
+    negativePrompt: "Do not place in soil, mulch, or grass. Do not generate raised fixtures."
+  },
+  {
     id: 'gutter',
     label: 'Gutter Up Lights',
     description: 'Roofline accent lights for dormers & peaks.',
@@ -99,6 +106,14 @@ export const DEFAULT_PRICING: FixturePricing[] = [
     description:
       "Color: Light Bronze OR Gun Metal Black\nLIFETIME warranty on the fixture\nLabor, LED Bulb, Wire, Waterproof Wire Nuts, Etc. Included in the fixture price.",
     unitPrice: 210.0,
+  },
+  {
+    id: "default_coredrill",
+    fixtureType: "coredrill",
+    name: "Core Drill / In-Grade Recessed Light: COMPLETELY INSTALLED PRICE",
+    description:
+      "Flush-mounted fixtures installed directly into hardscapes (stone, concrete, pavers).\nSpecs: Solid Brass/Stainless Steel Body, IP67 Waterproof, Drive-Over Rated.\nBest for: Driveways, Pool Decks, Architectural Columns.\nNote: Includes diamond-bit coring and wire channeling.",
+    unitPrice: 285.0,
   },
   {
     id: "default_gutter",

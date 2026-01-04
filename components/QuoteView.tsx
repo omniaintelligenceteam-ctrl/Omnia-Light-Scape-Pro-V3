@@ -15,13 +15,15 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     companyProfile = { name: 'Omnia Light Scape Pro', email: '', address: '123 Landscape Lane\nDesign District, CA 90210', logo: null } 
 }) => {
   // Line Items State
+  // Note: DEFAULT_PRICING indices have changed due to insertion of Core Drill at index 2.
+  // 0: Up, 1: Path, 2: Core Drill, 3: Gutter, 4: Soffit, 5: Hardscape, 6: Transformer
   const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || [
     { ...DEFAULT_PRICING[0], quantity: 12 }, // Up Lights
     { ...DEFAULT_PRICING[1], quantity: 6 },  // Path Lights
-    { ...DEFAULT_PRICING[2], quantity: 4 },  // Gutter Lights
-    { ...DEFAULT_PRICING[3], quantity: 4 },  // Soffit Lights
-    { ...DEFAULT_PRICING[4], quantity: 8 },  // Hardscape Lights
-    { ...DEFAULT_PRICING[5], quantity: 1 },  // Transformer
+    { ...DEFAULT_PRICING[3], quantity: 4 },  // Gutter Lights
+    { ...DEFAULT_PRICING[4], quantity: 4 },  // Soffit Lights
+    { ...DEFAULT_PRICING[5], quantity: 8 },  // Hardscape Lights
+    { ...DEFAULT_PRICING[6], quantity: 1 },  // Transformer
   ]);
 
   const [taxRate, setTaxRate] = useState<number>(initialData?.taxRate ?? 0.07);

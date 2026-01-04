@@ -9,7 +9,7 @@ export interface ColorTemperature {
 
 export interface FixturePricing {
   id: string;
-  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'transformer';
+  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'transformer' | 'coredrill';
   name: string;
   description: string;
   unitPrice: number;

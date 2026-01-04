@@ -10,16 +10,6 @@ import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight,
 import { FIXTURE_TYPES, COLOR_TEMPERATURES } from './constants';
 import { SavedProject, QuoteData, CompanyProfile } from './types';
 
-// Add type definition for window.aistudio to avoid TS errors
-declare global {
-  interface Window {
-    aistudio?: {
-      hasSelectedApiKey: () => Promise<boolean>;
-      openSelectKey: () => Promise<void>;
-    };
-  }
-}
-
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('editor');
   
@@ -66,9 +56,8 @@ const App: React.FC = () => {
   // Check for API key on mount
   useEffect(() => {
     const checkAuth = async () => {
-      // 1. First check if we have a Vercel/Vite Environment Variable (Production Mode)
-      // This is crucial for the deployed app to work without asking for a key
-      if (import.meta.env.VITE_GEMINI_API_KEY) {
+      // 1. First check if we have an Environment Variable mapped to process.env.API_KEY
+      if (process.env.API_KEY) {
         console.log("Omnia: Using Environment Variable Key");
         setIsAuthorized(true);
         setIsCheckingAuth(false);
@@ -76,9 +65,9 @@ const App: React.FC = () => {
       }
 
       // 2. If not, try the Google AI Studio shim (Project IDX Mode)
-      if (window.aistudio) {
+      if ((window as any).aistudio) {
         try {
-          const hasKey = await window.aistudio.hasSelectedApiKey();
+          const hasKey = await (window as any).aistudio.hasSelectedApiKey();
           setIsAuthorized(hasKey);
         } catch (e) {
           console.error("Auth check failed", e);
@@ -86,7 +75,6 @@ const App: React.FC = () => {
         }
       } else {
         // Fallback: No env var and no AI Studio shim -> Not Authorized
-        // This will show the "Connect API Key" screen
         setIsAuthorized(false);
       }
       setIsCheckingAuth(false);
@@ -96,9 +84,9 @@ const App: React.FC = () => {
 
   const requestApiKey = async () => {
     // Only try to use the window shim if we don't have an env var
-    if (!import.meta.env.VITE_GEMINI_API_KEY && window.aistudio) {
+    if (!process.env.API_KEY && (window as any).aistudio) {
         try {
-            await window.aistudio.openSelectKey();
+            await (window as any).aistudio.openSelectKey();
             setIsAuthorized(true);
             setError(null);
         } catch (e) {
@@ -106,7 +94,7 @@ const App: React.FC = () => {
         }
     } else {
       // If we are on Vercel but the key is missing from settings
-      setError("API Key missing in configuration. Please check Vercel Environment Variables.");
+      setError("API Key missing in configuration. Please check Vercel Environment Variables (VITE_GEMINI_API_KEY).");
     }
   };
 
@@ -201,7 +189,7 @@ const App: React.FC = () => {
       if (errorMessage.includes('403') || errorMessage.includes('permission_denied') || errorMessage.includes('permission denied')) {
         setError("Permission denied. Please check your API Key configuration.");
         // Only try to open the modal if we are in the AI Studio environment
-        if (window.aistudio) await requestApiKey();
+        if ((window as any).aistudio) await requestApiKey();
       } else {
         setError("Failed to generate night scene. Please try again.");
       }
@@ -231,7 +219,7 @@ const App: React.FC = () => {
         const errorMessage = err.toString().toLowerCase();
         if (errorMessage.includes('403') || errorMessage.includes('permission_denied')) {
             setError("Permission denied. Please check your API Key configuration.");
-            if (window.aistudio) await requestApiKey();
+            if ((window as any).aistudio) await requestApiKey();
         } else {
             setError("Failed to regenerate. Please try again.");
         }
@@ -304,7 +292,7 @@ const App: React.FC = () => {
                   </p>
                 </div>
                 {/* Only show the connect button if we are in a dev environment that supports it */}
-                {window.aistudio ? (
+                {(window as any).aistudio ? (
                     <button 
                         onClick={requestApiKey} 
                         className="w-full bg-[#F6B45A] text-[#050505] rounded-xl py-4 font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all"
