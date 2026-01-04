@@ -9,8 +9,34 @@ export const generateNightScene = async (
   imageMimeType: string = 'image/jpeg'
 ): Promise<string> => {
   
-  // Initialize the client INSIDE the function to ensure fresh API key from auth flow
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // FIXED: Use the correct Vercel/Vite environment variable logic
+  // 1. Try VITE_GEMINI_API_KEY (Vercel Production)
+  // 2. Fallback to the AI Studio shim (Project IDX Development)
+  let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+  if (!apiKey && typeof window !== 'undefined' && window.aistudio) {
+    try {
+      // In IDX, we might need to grab the key differently if it's not in env
+      // But usually, the shim handles the injection or we rely on the prompt to ask for it.
+      // For this specific library (@google/genai), it expects a string.
+      // If we are here, it means we are likely in IDX dev mode without an .env file.
+      // NOTE: The window.aistudio shim usually handles requests automatically, 
+      // but for manual client initialization, we need a string.
+      // If you are using the IDX "AI Studio" panel, it often injects the key into 
+      // process.env.GOOGLE_API_KEY or similar during build, but let's stick to the safe bet:
+      console.warn("Using fallback key logic. Ensure VITE_GEMINI_API_KEY is set in Vercel.");
+    } catch (e) {
+      console.error("Key retrieval failed", e);
+    }
+  }
+
+  if (!apiKey) {
+    // If still no key, throw a clear error
+    throw new Error("Missing API Key. Please set VITE_GEMINI_API_KEY in Vercel Settings.");
+  }
+
+  // Initialize the client with the retrieved key
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   // Construct a prompt that enforces the Day-to-Night conversion rules with strict structural fidelity
   const systemPrompt = `

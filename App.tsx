@@ -6,9 +6,19 @@ import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, Download, RefreshCw, AlertCircle, Wand2, ChevronDown, ThumbsUp, ThumbsDown, X, ArrowLeft, FolderPlus, FileText, Maximize2, Trash2, Calendar, Sparkles, Search, MoreHorizontal, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES } from './constants';
 import { SavedProject, QuoteData, CompanyProfile } from './types';
+
+// Add type definition for window.aistudio to avoid TS errors
+declare global {
+  interface Window {
+    aistudio?: {
+      hasSelectedApiKey: () => Promise<boolean>;
+      openSelectKey: () => Promise<void>;
+    };
+  }
+}
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('editor');
@@ -56,6 +66,16 @@ const App: React.FC = () => {
   // Check for API key on mount
   useEffect(() => {
     const checkAuth = async () => {
+      // 1. First check if we have a Vercel/Vite Environment Variable (Production Mode)
+      // This is crucial for the deployed app to work without asking for a key
+      if (import.meta.env.VITE_GEMINI_API_KEY) {
+        console.log("Omnia: Using Environment Variable Key");
+        setIsAuthorized(true);
+        setIsCheckingAuth(false);
+        return;
+      }
+
+      // 2. If not, try the Google AI Studio shim (Project IDX Mode)
       if (window.aistudio) {
         try {
           const hasKey = await window.aistudio.hasSelectedApiKey();
@@ -65,8 +85,9 @@ const App: React.FC = () => {
           setIsAuthorized(false);
         }
       } else {
-        // Fallback for environments without the shim
-        setIsAuthorized(true);
+        // Fallback: No env var and no AI Studio shim -> Not Authorized
+        // This will show the "Connect API Key" screen
+        setIsAuthorized(false);
       }
       setIsCheckingAuth(false);
     };
@@ -74,7 +95,8 @@ const App: React.FC = () => {
   }, []);
 
   const requestApiKey = async () => {
-    if (window.aistudio) {
+    // Only try to use the window shim if we don't have an env var
+    if (!import.meta.env.VITE_GEMINI_API_KEY && window.aistudio) {
         try {
             await window.aistudio.openSelectKey();
             setIsAuthorized(true);
@@ -82,6 +104,9 @@ const App: React.FC = () => {
         } catch (e) {
             console.error("Key selection cancelled or failed", e);
         }
+    } else {
+      // If we are on Vercel but the key is missing from settings
+      setError("API Key missing in configuration. Please check Vercel Environment Variables.");
     }
   };
 
@@ -119,8 +144,6 @@ const App: React.FC = () => {
   const toggleFixture = (fixtureId: string) => {
     setSelectedFixtures(prev => {
         if (prev.includes(fixtureId)) {
-            // Don't allow deselecting the last one? Or allow it but button disabled. 
-            // Let's allow empty, but maybe show warning or handle in logic.
             return prev.filter(id => id !== fixtureId);
         } else {
             return [...prev, fixtureId];
@@ -135,7 +158,6 @@ const App: React.FC = () => {
     let activePrompt = "Generate a comprehensive landscape lighting design.\n\nFIXTURE INSTRUCTIONS:\n";
     
     // Add positive instructions for selected fixtures
-    // Add negative instructions for unselected fixtures to prevent hallucinations
     FIXTURE_TYPES.forEach(ft => {
         if (selectedFixtures.includes(ft.id)) {
             activePrompt += `\n[INCLUDE ${ft.label.toUpperCase()}]: ${ft.positivePrompt}`;
@@ -177,7 +199,8 @@ const App: React.FC = () => {
       console.error(err);
       const errorMessage = err.toString().toLowerCase();
       if (errorMessage.includes('403') || errorMessage.includes('permission_denied') || errorMessage.includes('permission denied')) {
-        setError("Permission denied. Please select a valid API Key.");
+        setError("Permission denied. Please check your API Key configuration.");
+        // Only try to open the modal if we are in the AI Studio environment
         if (window.aistudio) await requestApiKey();
       } else {
         setError("Failed to generate night scene. Please try again.");
@@ -206,8 +229,8 @@ const App: React.FC = () => {
     } catch (err: any) {
         console.error(err);
         const errorMessage = err.toString().toLowerCase();
-        if (errorMessage.includes('403') || errorMessage.includes('permission_denied') || errorMessage.includes('permission denied')) {
-            setError("Permission denied. Please select a valid API Key.");
+        if (errorMessage.includes('403') || errorMessage.includes('permission_denied')) {
+            setError("Permission denied. Please check your API Key configuration.");
             if (window.aistudio) await requestApiKey();
         } else {
             setError("Failed to regenerate. Please try again.");
@@ -229,7 +252,6 @@ const App: React.FC = () => {
   };
 
   const handleGenerateQuote = () => {
-    // Reset quote state for a new quote
     setCurrentQuote(null);
     setActiveTab('quotes');
   };
@@ -252,7 +274,7 @@ const App: React.FC = () => {
           id: crypto.randomUUID(),
           name: quoteData.clientDetails.name || `Quote ${projects.length + 1}`,
           date: new Date().toLocaleDateString(),
-          image: generatedImage, // Uses current generated image if available
+          image: generatedImage, 
           quote: quoteData
       };
       setProjects([newProject, ...projects]);
@@ -267,6 +289,7 @@ const App: React.FC = () => {
     return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">Loading...</div>;
   }
 
+  // If NOT authorized (no env var AND no IDX shim key)
   if (!isAuthorized) {
     return (
         <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8">
@@ -277,15 +300,22 @@ const App: React.FC = () => {
                 </div>
                 <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
                   <p className="text-gray-400 text-sm leading-relaxed">
-                      To access the advanced <span className="text-[#F6B45A] font-bold">Gemini 3 Pro</span> model, please connect your API Key.
+                      To access the advanced <span className="text-[#F6B45A] font-bold">Gemini 3 Pro</span> model, please configure your API Key in the application settings.
                   </p>
                 </div>
-                <button 
-                    onClick={requestApiKey} 
-                    className="w-full bg-[#F6B45A] text-[#050505] rounded-xl py-4 font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all"
-                >
-                    Connect API Key
-                </button>
+                {/* Only show the connect button if we are in a dev environment that supports it */}
+                {window.aistudio ? (
+                    <button 
+                        onClick={requestApiKey} 
+                        className="w-full bg-[#F6B45A] text-[#050505] rounded-xl py-4 font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all"
+                    >
+                        Connect API Key (Dev Mode)
+                    </button>
+                ) : (
+                    <div className="text-red-400 text-xs mt-4 border border-red-900/50 p-2 rounded bg-red-900/20">
+                        Environment Variable <code>VITE_GEMINI_API_KEY</code> is missing.
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -327,7 +357,6 @@ const App: React.FC = () => {
               {/* Background Ambient Glow */}
               <div className="absolute top-[-10%] left-[20%] w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-              {/* Fix: Use min-h-full instead of h-full, and justify-start on mobile to allow scrolling */}
               <div className="max-w-4xl mx-auto min-h-full p-4 md:p-8 flex flex-col justify-start md:justify-center relative z-10">
                 
                 {/* MODE 1: RESULT VIEW (Generated Image Only) */}
