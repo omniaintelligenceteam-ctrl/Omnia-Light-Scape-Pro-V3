@@ -71,15 +71,15 @@ export const FIXTURE_TYPES = [
     id: 'gutter',
     label: 'Gutter Up Lights',
     description: 'Roofline accent lights for dormers & peaks.',
-    positivePrompt: "Install Gutter Mounted Up Lights on the gutter edge/fascia of the first floor shining upwards. These fixtures aim up and wash light up to highlight dormers and the 2nd story home features. Use exactly 1 light per dormer centered directly below it. Gutter Mounted Up Lights only highlight features directly above them.",
+    positivePrompt: "Install Gutter Mounted Up Lights on the OUTER gutter edge/fascia of the first floor. These lights MUST shine UPWARDS only. Use them to wash light UP onto the dormers and 2nd story home features. Do NOT let them shine down. Do NOT illuminate the eaves below the gutter.",
     negativePrompt: "Do not generate any gutter-mounted lights. Do not generate fixtures attached to the roofline or fascia."
   },
   {
     id: 'soffit',
     label: 'Soffit Lights',
     description: 'Recessed lights installed in the roof overhang.',
-    positivePrompt: "Install recessed soffit lights (downlights) in the roof overhangs/eaves to wash light down onto the house facade. Place them symmetrically along the roofline to create a soft down-washing effect on the walls.",
-    negativePrompt: "STRICTLY FORBIDDEN: Do NOT install soffit lights. Do NOT place downlights in the roof eaves or overhangs. Do NOT wash light down onto the house facade from the roof. The upper sections of the house/roofline must remain dark unless illuminated from below."
+    positivePrompt: "Install recessed soffit lights (downlights) in the roof overhangs/eaves to wash light down onto the house facade. Place them symmetrically along the roofline.",
+    negativePrompt: "STRICTLY FORBIDDEN: Do NOT install soffit lights. Do NOT place downlights in the roof eaves or overhangs. Do NOT wash light down onto the house facade from the roof. The upper sections of the house/roofline must remain PITCH DARK. If there are existing recessed cans, keep them OFF/DARK."
   },
   {
     id: 'hardscape',

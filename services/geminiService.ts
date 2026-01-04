@@ -10,9 +10,11 @@ export const generateNightScene = async (
   aspectRatio: string = '1:1'
 ): Promise<string> => {
   
-  // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-  // It is polyfilled in vite.config.ts to include VITE_GEMINI_API_KEY if present.
+  // DO NOT CHANGE THIS LINE.
+  // We need import.meta.env for Vercel/Vite production build.
+  // @ts-ignore
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
+
 
 
 
@@ -35,9 +37,15 @@ export const generateNightScene = async (
     4.  **PIXEL FIDELITY**: The geometry of the house and landscape must match the original image exactly.
     5.  **NEGATIVE CONSTRAINT ENFORCEMENT**: If the prompt says "[DO NOT ADD]" regarding Soffit Lights, the roof eaves and overhangs MUST remain dark and unlit. Do not apply downlighting unless explicitly requested.
 
-    *** LIGHTING APPLICATION LOGIC ***
+    *** CRITICAL LIGHTING PHYSICS & RULES ***
     - **Global Atmosphere**: Convert the scene to night. Darken the sky and ambient environment.
     - **DESIGN RULE (OUTER SECTIONS)**: Always light up the outer sections of the house (the far left and far right corners/edges). Illuminating the full width ensures the home looks bigger at night. Never leave the outer corners in complete darkness.
+    
+    *** SPECIFIC FIXTURE RULES (HARD CONSTRAINTS) ***
+    - **GUTTER UP LIGHTS**: These fixtures mount on the *outside* lip of the gutter and shine **UPWARDS ONLY** at the dormers or second story peaks. Use on for every dormer directly under it. They do **NOT** shine down. They do **NOT** light the soffit.
+    - **SOFFIT/EAVE LIGHTS**: These are downlights recessed in the overhangs.
+    - **MUTUAL EXCLUSIVITY RULE**: If "Gutter Up Lights" are ON and "Soffit Lights" are OFF, you must **STRICTLY** keep the underside of the roof (the soffits/eaves) PITCH DARK. Do not allow any light to bleed under the roof. Only the face of the dormers above the gutter should be lit.
+    
     - **Columns & Pillars (PRIORITY)**: If the user requests "Up Lights", you MUST place lights at the base of any visible architectural columns or pillars grazing upward.
     - **Quantity Adherence**: If the user instructions specify exact numbers (e.g. "10 up lights", "4 path lights"), you MUST attempt to distribute that approximate number of light sources visible in the scene, consistent with professional spacing.
     - **Conflict Resolution**: 

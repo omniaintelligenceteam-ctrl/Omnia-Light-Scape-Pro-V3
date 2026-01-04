@@ -185,6 +185,12 @@ const App: React.FC = () => {
         }
     });
 
+    // --- LOGIC GATE FOR GUTTER vs SOFFIT ---
+    // Rule: If Gutter is ON and Soffit is OFF -> Strictly forbid soffit lighting.
+    if (selectedFixtures.includes('gutter') && !selectedFixtures.includes('soffit')) {
+        activePrompt += `\n\n[HARD CONSTRAINT]: GUTTER LIGHTS ARE ACTIVE, BUT SOFFIT LIGHTS ARE DISABLED. You must ONLY generate lights shining UP from the gutter lip. The underside of the roof eaves (soffits) MUST remain completely dark. Do not allow any light bleed under the roof overhangs. Do NOT turn on existing soffit lights.`;
+    }
+
     // Add Global Color Temperature / Theme
     const selectedColor = COLOR_TEMPERATURES.find(c => c.id === colorTemp);
     if (selectedColor && selectedColor.prompt) {
