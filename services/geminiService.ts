@@ -11,7 +11,21 @@ export const generateNightScene = async (
   lightIntensity: number = 45,
   beamAngle: number = 30
 ): Promise<string> => {
-  
+  // ... inside generateNightScene ...
+
+  // @ts-ignore
+  let apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
+
+  // --- ADD THIS DEBUG BLOCK ---
+  console.log("DEBUG: Vercel Key is:", import.meta.env.VITE_GEMINI_API_KEY);
+  console.log("DEBUG: Process Key is:", process.env.API_KEY);
+  console.log("DEBUG: Final API Key used:", apiKey);
+  // ----------------------------
+
+  if (!apiKey) {
+      // ... existing error logic
+  }
+
   // Robust API Key retrieval to prevent 'undefined' access errors
   let apiKey: string | undefined = process.env.API_KEY;
   
