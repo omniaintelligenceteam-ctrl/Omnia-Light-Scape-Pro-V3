@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
-import { COLOR_TEMPERATURES, DEFAULT_PRICING } from '../constants';
+import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES } from '../constants';
 import { FixturePricing, CompanyProfile } from '../types';
 
 interface SettingsViewProps {
@@ -9,6 +9,10 @@ interface SettingsViewProps {
   onProfileChange?: (profile: CompanyProfile) => void;
   colorTemp?: string;
   onColorTempChange?: (tempId: string) => void;
+  lightIntensity?: number;
+  onLightIntensityChange?: (val: number) => void;
+  beamAngle?: number;
+  onBeamAngleChange?: (angle: number) => void;
   pricing?: FixturePricing[];
   onPricingChange?: (pricing: FixturePricing[]) => void;
 }
@@ -28,6 +32,34 @@ const Toggle: React.FC<{ checked: boolean; onChange: (checked: boolean) => void 
       }`}
     />
   </button>
+);
+
+const RangeSlider: React.FC<{ label: string; value: number; onChange: (val: number) => void; min?: number; max?: number }> = ({ label, value, onChange, min = 0, max = 100 }) => (
+  <div className="flex flex-col gap-3">
+    <div className="flex justify-between items-center">
+      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">{label}</label>
+      <span className="text-xs font-mono font-bold text-[#F6B45A]">{value}%</span>
+    </div>
+    <div className="relative h-2 w-full">
+        <div className="absolute top-0 left-0 bottom-0 right-0 bg-white/10 rounded-full"></div>
+        <div 
+            className="absolute top-0 left-0 bottom-0 bg-[#F6B45A] rounded-full transition-all duration-75"
+            style={{ width: `${(value / max) * 100}%` }}
+        ></div>
+        <input 
+            type="range" 
+            min={min} 
+            max={max} 
+            value={value} 
+            onChange={(e) => onChange(parseInt(e.target.value))} 
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        />
+        <div 
+            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg pointer-events-none transition-all duration-75"
+            style={{ left: `calc(${(value / max) * 100}% - 8px)` }}
+        ></div>
+    </div>
+  </div>
 );
 
 const SectionHeader: React.FC<{
@@ -112,19 +144,6 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               systemInstruction: systemInstruction,
           }
       });
-
-      // Reconstruct history
-      const history = messages.map(m => ({
-          role: m.role,
-          parts: [{ text: m.text }]
-      }));
-
-      // In a real app we'd pass history to chat initialization or keep the chat instance alive.
-      // For this stateless demo, we send the message. 
-      // Note: If using persistent chat, instantiate 'chat' outside handler.
-      // Since we re-create here, let's just use generateContent with the last prompt + context instructions if needed, 
-      // but for simplicity in this snippet we'll just send the message to a fresh chat 
-      // (or ideally, move 'chat' to component state).
       
       const result = await chat.sendMessage({ message: userMsg });
       
@@ -225,14 +244,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onProfileChange, 
     colorTemp = '3000k',
     onColorTempChange,
+    lightIntensity = 50,
+    onLightIntensityChange,
+    beamAngle = 45,
+    onBeamAngleChange,
     pricing,
     onPricingChange
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('company');
-  
-  // Local state for profile editing to avoid constant parent re-renders if needed, 
-  // but for simplicity we'll control directly if props allow, or use local state and save.
-  // Here we use the props directly as they are passed from App.tsx.
   
   const handleProfileUpdate = (key: keyof CompanyProfile, value: string) => {
       if (onProfileChange && profile) {
@@ -415,8 +434,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             />
             
             {activeSection === 'lighting' && (
-                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
-                     <div className="mb-6">
+                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300 space-y-8">
+                     {/* Color Temperature */}
+                     <div>
                         <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Default Color Temperature</label>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             {COLOR_TEMPERATURES.slice(0, 4).map((temp) => (
@@ -444,6 +464,47 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 </button>
                             ))}
                         </div>
+                     </div>
+                     
+                     {/* Beam Angle */}
+                     <div>
+                        <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Default Beam Spread Angle</label>
+                        <div className="grid grid-cols-4 gap-3">
+                            {BEAM_ANGLES.map((angle) => (
+                                <button
+                                    key={angle.id}
+                                    onClick={() => onBeamAngleChange?.(angle.id)}
+                                    className={`relative p-3 rounded-xl border flex flex-col items-center gap-1 transition-all ${
+                                        beamAngle === angle.id 
+                                        ? 'bg-[#F6B45A]/10 border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.1)]' 
+                                        : 'bg-[#0a0a0a] border-white/5 hover:border-white/20'
+                                    }`}
+                                >
+                                    <span className={`text-lg font-bold font-serif ${beamAngle === angle.id ? 'text-[#F6B45A]' : 'text-white'}`}>
+                                        {angle.label}
+                                    </span>
+                                    <span className="text-[9px] text-gray-400 font-mono uppercase tracking-wider">{angle.description}</span>
+                                    
+                                    {beamAngle === angle.id && (
+                                        <div className="absolute top-1 right-1 text-[#F6B45A]">
+                                            <Check className="w-2 h-2" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                     </div>
+
+                     {/* New Adjustment Sliders */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-white/5">
+                        {onLightIntensityChange && lightIntensity !== undefined && (
+                            <RangeSlider 
+                                label="Lighting Intensity" 
+                                value={lightIntensity} 
+                                onChange={onLightIntensityChange}
+                            />
+                        )}
+                        {/* Darkness Level Slider REMOVED */}
                      </div>
                 </div>
             )}

@@ -51,6 +51,10 @@ const App: React.FC = () => {
   const [selectedFixtures, setSelectedFixtures] = useState<string[]>(['up']);
   // Lifted Setting State
   const [colorTemp, setColorTemp] = useState<string>('3000k');
+  const [lightIntensity, setLightIntensity] = useState<number>(45);
+  // Darkness Level State removed - hardcoded in service
+  const [beamAngle, setBeamAngle] = useState<number>(30);
+
   // Lifted Pricing State
   const [pricing, setPricing] = useState<FixturePricing[]>(DEFAULT_PRICING);
   
@@ -237,7 +241,7 @@ const App: React.FC = () => {
 
     try {
       const base64 = await fileToBase64(file);
-      const result = await generateNightScene(base64, activePrompt, file.type, targetRatio);
+      const result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle);
       setGeneratedImage(result);
     } catch (err: any) {
       console.error(err);
@@ -265,7 +269,7 @@ const App: React.FC = () => {
         // Construct a refinement prompt
         const refinementPrompt = `${lastUsedPrompt}\n\nCRITICAL MODIFICATION REQUEST: ${feedbackText}\n\nRe-generate the night scene keeping the original design but applying the modification request.`;
         
-        const result = await generateNightScene(base64, refinementPrompt, file.type);
+        const result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle);
         setGeneratedImage(result);
         setShowFeedback(false);
         setFeedbackText('');
@@ -574,6 +578,16 @@ const App: React.FC = () => {
                 </div>
                 ) : (
                 // MODE 2: INPUT VIEW
+                isLoading ? (
+                    <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-500">
+                        <div className="w-24 h-24 border-4 border-[#F6B45A]/20 border-t-[#F6B45A] rounded-full animate-spin mb-8 shadow-[0_0_50px_rgba(246,180,90,0.2)]"></div>
+                        <h2 className="text-4xl font-bold text-white font-serif tracking-tight mb-4">Omnia AI</h2>
+                        <div className="flex flex-col items-center gap-2">
+                             <p className="text-[#F6B45A] font-bold text-sm uppercase tracking-[0.25em] animate-pulse">Processing Scene</p>
+                             <p className="text-gray-500 text-xs font-mono uppercase tracking-widest">Analyzing Geometry & Light Paths</p>
+                        </div>
+                    </div>
+                ) : (
                 <div className="flex flex-col gap-8 animate-in slide-in-from-bottom-4 fade-in duration-500 pb-20 md:pb-0">
                     
                     {/* Image Upload Area */}
@@ -584,19 +598,10 @@ const App: React.FC = () => {
                             onImageSelect={handleImageSelect}
                             onClear={handleClear}
                         />
-                        
-                        {/* Loading Screen ON THE PICTURE */}
-                        {isLoading && (
-                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-30 rounded-2xl flex flex-col items-center justify-center text-white border border-white/10">
-                                <Loader2 className="w-12 h-12 animate-spin mb-4 text-[#F6B45A]" />
-                                <h3 className="text-xl font-bold tracking-tight text-[#F6B45A] font-serif mb-2">Omnia AI</h3>
-                                <p className="font-mono text-xs uppercase text-gray-300 tracking-widest">Processing High-Res Model...</p>
-                            </div>
-                        )}
                     </div>
 
                     {/* Controls */}
-                    <div className={`flex flex-col gap-6 transition-all duration-300 ${isLoading ? 'opacity-30 pointer-events-none filter blur-[1px]' : 'opacity-100'}`}>
+                    <div className="flex flex-col gap-6">
                         
                         {/* NEW: Button-Based Fixture Selection */}
                         <div className="flex flex-col gap-3">
@@ -658,6 +663,7 @@ const App: React.FC = () => {
                         </button>
                     </div>
                 </div>
+                )
                 )}
               </div>
             </div>
@@ -815,6 +821,11 @@ const App: React.FC = () => {
                 onProfileChange={setCompanyProfile}
                 colorTemp={colorTemp}
                 onColorTempChange={setColorTemp}
+                lightIntensity={lightIntensity}
+                onLightIntensityChange={setLightIntensity}
+                // darknessLevel removed from props
+                beamAngle={beamAngle}
+                onBeamAngleChange={setBeamAngle}
                 pricing={pricing}
                 onPricingChange={setPricing}
              />

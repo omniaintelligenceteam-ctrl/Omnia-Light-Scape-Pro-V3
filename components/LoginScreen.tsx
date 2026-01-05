@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ChevronRight, Lock, KeyRound, UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, ChevronRight, KeyRound, AlertCircle, ArrowLeft, UserPlus } from 'lucide-react';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -135,20 +135,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent ${mode === 'SETUP' ? 'via-blue-400/50' : 'via-[#F6B45A]/50'} to-transparent transition-all duration-500`}></div>
 
             {/* Logo Section */}
-            <div className="text-center mb-8">
-                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl border mb-4 shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-colors duration-500 ${
-                    mode === 'SETUP' 
-                    ? 'bg-blue-500/10 border-blue-500/20' 
-                    : 'bg-[#F6B45A]/10 border-[#F6B45A]/20'
-                }`}>
-                    {mode === 'SETUP' ? (
-                        <UserPlus className="w-6 h-6 text-blue-400" />
-                    ) : (
-                        <Lock className="w-6 h-6 text-[#F6B45A]" />
-                    )}
+            <div className="text-center mb-10 mt-2">
+                <div className="flex flex-col items-center">
+                    <h1 className="text-6xl md:text-7xl font-bold text-[#F6B45A] font-serif tracking-tight leading-none mb-2 drop-shadow-lg">Omnia</h1>
+                    <span className="text-white font-serif italic font-extrabold tracking-[0.25em] text-sm md:text-lg opacity-90 leading-tight">
+                        LIGHT SCAPE PRO
+                    </span>
                 </div>
-                <h1 className="text-4xl font-bold text-white font-serif tracking-tight mb-1">Omnia</h1>
-                <p className={`text-[10px] font-bold uppercase tracking-[0.3em] transition-colors duration-500 ${mode === 'SETUP' ? 'text-blue-400' : 'text-[#F6B45A]'}`}>
+
+                <p className={`text-[10px] font-bold uppercase tracking-[0.3em] transition-colors duration-500 mt-8 ${mode === 'SETUP' ? 'text-blue-400' : 'text-gray-500'}`}>
                     {mode === 'SETUP' ? 'Create Account' : 'Secure Login'}
                 </p>
             </div>
