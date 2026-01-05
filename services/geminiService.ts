@@ -12,8 +12,17 @@ export const generateNightScene = async (
   beamAngle: number = 30
 ): Promise<string> => {
   
-  // Initialization: The API key must be obtained exclusively from process.env.API_KEY.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // --- FIXED API KEY LOGIC ---
+  // We must check for the Vercel/Vite environment variable first.
+  // @ts-ignore
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing API Key. Please check Vercel Environment Variables.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+  // ---------------------------
 
   // Map sliders (0-100) to descriptive prompt instructions
   const getIntensityPrompt = (val: number) => {
@@ -56,11 +65,11 @@ export const generateNightScene = async (
     - **DEPTH**: Allow deep shadows to exist *between* the lights. This darkness is required to show architectural depth.
     - **Lighting Power**: ${getIntensityPrompt(lightIntensity)}
     - **Beam Physics**: ${getBeamAnglePrompt(beamAngle)}
-    - **DESIGN RULE (OUTER SECTIONS)**: Always light up the outer sections of the house (the far left and far right sections. Illuminating the full width ensures the home looks bigger at night.
+    - **DESIGN RULE (OUTER SECTIONS)**: Always light up the outer sections of the house (the far left and far right sections). Illuminating the full width ensures the home looks bigger at night.
     - **NO SECURITY LIGHTS**: Do NOT generate floodlights, motion sensor lights, or high-intensity security lighting on walls or corners. If such fixtures exist in the photo, keep them OFF and DARK.
     
     *** SPECIFIC FIXTURE RULES (HARD CONSTRAINTS) ***
-    - **GUTTER UP LIGHTS**: These fixtures mount on the *inside* lip of the gutter facia and shine **UPWARDS ONLY**. The physical fixture must be **SMALL, DISCRETE, and LOW-PROFILE**. CRITICAL ALIGNMENT: If a dormer window exists, the light MUST be placed DIRECTLY CENTERED under the window and shine STRAIGHT UP to it. They do **NOT** shine down. They do **NOT** light the soffit.
+    - **GUTTER UP LIGHTS**: These fixtures mount on the *inside* lip of the gutter fascia and shine **UPWARDS ONLY**. The physical fixture must be **SMALL, DISCRETE, and LOW-PROFILE**. CRITICAL ALIGNMENT: If a dormer window exists, the light MUST be placed DIRECTLY CENTERED under the window and shine STRAIGHT UP to it. They do **NOT** shine down. They do **NOT** light the soffit.
     - **SOFFIT/EAVE LIGHTS**: These are downlights recessed in the soffit overhangs.
     - **MUTUAL EXCLUSIVITY RULE**: If "Gutter Up Lights" are ON and "Soffit Lights" are OFF, you must **STRICTLY** keep the underside of the roof (the soffits/eaves) PITCH DARK. Do not allow any light to bleed under the roof. Only the face of the dormers above the gutter should be lit.
     
