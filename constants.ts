@@ -57,7 +57,7 @@ export const FIXTURE_TYPES = [
     id: 'up',
     label: 'Up Lights',
     description: 'Ground-mounted accent lights for walls, columns & trees.',
-    positivePrompt: "HARD RULE DO: Place ground-mounted up lights at the base of ARCHITECTURAL COLUMNS, HOME SIDING, PILLARS, and POSTS to graze light upward. Place at the base of facade walls. IF AND ONLY IF there are EXISTING TREES, place lights at their base. HARD RULE DO NOT: Do NOT generate new trees. Do NOT place lights in open grass without a vertical target.",
+    positivePrompt: "HARD RULE DO: Place ground-mounted up lights TIGHT against the house foundation. PRIORITY TARGETS: 1. Directly CENTERED under windows grazing up. 2. On the wall sections on EACH SIDE of windows (flanking). 3. At the base of Columns/Pillars. The light must originate from the ground next to the wall. IF AND ONLY IF there are EXISTING TREES, place lights at their base. HARD RULE DO NOT: Do NOT generate new trees. Do NOT place lights in open grass without a vertical target.",
     negativePrompt: "HARD RULE DO NOT: Do NOT generate any ground-mounted up lights. Do NOT place fixtures at the base of walls, columns, or trees aimed upward."
   },
   {

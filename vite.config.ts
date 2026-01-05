@@ -10,10 +10,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Polyfill process.env for the Google GenAI SDK and general usage
-      'process.env': {
-        API_KEY: JSON.stringify(apiKey)
-      }
+      // Polyfill process.env.API_KEY for the Google GenAI SDK
+      'process.env.API_KEY': JSON.stringify(apiKey)
     }
   };
 });

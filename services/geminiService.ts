@@ -12,32 +12,8 @@ export const generateNightScene = async (
   beamAngle: number = 30
 ): Promise<string> => {
   
-  // --- ROBUST API KEY RETRIEVAL (Defined Only Once) ---
-  let apiKey: string | undefined;
-
-  // 1. Try to get it from Vercel/Vite (The Production Way)
-  try {
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env) {
-          // @ts-ignore
-          apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      }
-  } catch (e) {
-      // Ignore
-  }
-
-  // 2. If not found, try process.env (The Dev/Backup Way)
-  if (!apiKey && typeof process !== 'undefined' && process.env) {
-      apiKey = process.env.API_KEY;
-  }
-  // ----------------------------------------------------
-
-  if (!apiKey) {
-    console.error("API Key Check Failed. API_KEY is missing.");
-    throw new Error("Missing API Key. Please check Vercel Environment Variables.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  // Initialization: The API key must be obtained exclusively from process.env.API_KEY.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // Map sliders (0-100) to descriptive prompt instructions
   const getIntensityPrompt = (val: number) => {
@@ -55,8 +31,8 @@ export const generateNightScene = async (
 
   // Construct a prompt that enforces the Day-to-Night conversion rules with strict structural fidelity
   const systemPrompt = `
-    Role: Professional Architectural Photo Retoucher.
-    Task: Retouch the provided daylight photograph to simulate a night-time landscape lighting installation.
+    Role: Professional Architectural Photo Retoucher & Lighting Designer.
+    Task: Retouch the provided daylight photograph to simulate a high-end, dramatic night-time landscape lighting installation.
 
     *** CRITICAL SECURITY PROTOCOL: ANTI-HALLUCINATION (ABSOLUTE HARD RULES) ***
     1.  **NO NEW FEATURES**: DO NOT generate any new features to the home, trees, dormers, or landscape. Anything that isn't in the original picture MUST NOT appear.
@@ -72,21 +48,29 @@ export const generateNightScene = async (
     3. **NO SUBSTITUTION**: Do not substitute unselected lights to fill dark spots. If a spot is dark because the appropriate fixture was not selected, LEAVE IT DARK.
     4. **RULE HIERARCHY**: The specific placement rules for selected fixtures must be followed strictly unless specific guidance is given in the "ADDITIONAL CUSTOM NOTES" that explicitly goes against them.
 
-    *** CRITICAL LIGHTING PHYSICS & REALISM (HIGH CONTRAST) ***
-    - **Global Atmosphere**: Sky/Environment: PITCH BLACK NIGHT SKY. The sky must be black. It must contain visible STARS and a FULL MOON.
-    - **CHIAROSCURO EFFECT (CONTRAST)**: The image MUST exhibit high dynamic range (light and dark). Do NOT evenly light the whole house or wash it out. You must allow DARK SHADOWS to exist *between* the cones of light to create architectural depth and dimension.
-    - **PHYSICAL LIGHT FALL-OFF**: Light MUST obey physics. It is brightest at the source (bottom) and fades gradually as it goes up the wall. Do NOT paint a solid, uniform bar of light. The top of the light cone should fade softly into darkness.
+    *** VISUAL STYLE: DRAMATIC CHIAROSCURO (THE "LOOK") ***
+    - **CRUSH THE BLACKS**: The default state of the image must be PITCH BLACK. Do not simply dim the daylight photo. Unlit areas must be truly dark to create contrast.
+    - **NO AMBIENT WASH**: Do NOT uniformly light the whole house. Only the specific architectural features hit by a beam of light should be visible.
+    - **HARD EDGES**: Create distinct, defined "cones" or "scallops" of light. Avoid soft, messy washes. The beam should be visible on the wall surface.
+    - **HOT SPOTS**: The light must be brightest (almost overexposed) at the source fixture and fade exponentially as it travels.
+    - **DEPTH**: Allow deep shadows to exist *between* the lights. This darkness is required to show architectural depth.
     - **Lighting Power**: ${getIntensityPrompt(lightIntensity)}
     - **Beam Physics**: ${getBeamAnglePrompt(beamAngle)}
-    - **DESIGN RULE (OUTER SECTIONS)**: Always light up the outer sections of the house (the far left and far right corners/edges). Illuminating the full width ensures the home looks bigger at night.
+    - **DESIGN RULE (OUTER SECTIONS)**: Always light up the outer sections of the house (the far left and far right sections. Illuminating the full width ensures the home looks bigger at night.
     - **NO SECURITY LIGHTS**: Do NOT generate floodlights, motion sensor lights, or high-intensity security lighting on walls or corners. If such fixtures exist in the photo, keep them OFF and DARK.
     
     *** SPECIFIC FIXTURE RULES (HARD CONSTRAINTS) ***
-    - **GUTTER UP LIGHTS**: These fixtures mount on the *outside* lip of the gutter and shine **UPWARDS ONLY**. The physical fixture must be **SMALL, DISCRETE, and LOW-PROFILE**. CRITICAL ALIGNMENT: If a dormer window exists, the light MUST be placed DIRECTLY CENTERED under the window and shine STRAIGHT UP to it. They do **NOT** shine down. They do **NOT** light the soffit.
-    - **SOFFIT/EAVE LIGHTS**: These are downlights recessed in the overhangs.
+    - **GUTTER UP LIGHTS**: These fixtures mount on the *inside* lip of the gutter facia and shine **UPWARDS ONLY**. The physical fixture must be **SMALL, DISCRETE, and LOW-PROFILE**. CRITICAL ALIGNMENT: If a dormer window exists, the light MUST be placed DIRECTLY CENTERED under the window and shine STRAIGHT UP to it. They do **NOT** shine down. They do **NOT** light the soffit.
+    - **SOFFIT/EAVE LIGHTS**: These are downlights recessed in the soffit overhangs.
     - **MUTUAL EXCLUSIVITY RULE**: If "Gutter Up Lights" are ON and "Soffit Lights" are OFF, you must **STRICTLY** keep the underside of the roof (the soffits/eaves) PITCH DARK. Do not allow any light to bleed under the roof. Only the face of the dormers above the gutter should be lit.
     
     - **Columns & Pillars (PRIORITY)**: If the user requests "Up Lights", you MUST place lights at the base of any visible architectural columns or pillars grazing upward.
+    
+    - **UP LIGHT PLACEMENT (WINDOWS)**: If "Up Lights" are requested, you must place the physical light source on the ground **TIGHT AGAINST THE HOUSE FOUNDATION**.
+        1. **CENTERED**: Place a light directly CENTERED under the window sill, grazing the light straight up the glass/trim.
+        2. **FLANKING**: Alternatively, place lights on the wall sections to the LEFT and RIGHT of the window (between windows).
+        3. **PROXIMITY**: The light must originate from the ground *immediately next* to the wall. Do not place up lights far out in the grass.
+
     - **Quantity Adherence**: If the user instructions specify exact numbers (e.g. "10 up lights", "4 path lights"), you MUST attempt to distribute that approximate number of light sources visible in the scene, consistent with professional spacing.
     - **Conflict Resolution**: 
         - If the user asks for "Tree Lights" but the image contains no trees -> **IGNORE THE REQUEST**. Do not add a tree.
