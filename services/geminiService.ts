@@ -11,35 +11,26 @@ export const generateNightScene = async (
   lightIntensity: number = 45,
   beamAngle: number = 30
 ): Promise<string> => {
-  // ... inside generateNightScene ...
-
-  // @ts-ignore
-  let apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
-
-  // --- ADD THIS DEBUG BLOCK ---
-  console.log("DEBUG: Vercel Key is:", import.meta.env.VITE_GEMINI_API_KEY);
-  console.log("DEBUG: Process Key is:", process.env.API_KEY);
-  console.log("DEBUG: Final API Key used:", apiKey);
-  // ----------------------------
-
-  if (!apiKey) {
-      // ... existing error logic
-  }
-
-  // Robust API Key retrieval to prevent 'undefined' access errors
-  let apiKey: string | undefined = process.env.API_KEY;
   
-  if (!apiKey) {
-      try {
+  // --- ROBUST API KEY RETRIEVAL (Defined Only Once) ---
+  let apiKey: string | undefined;
+
+  // 1. Try to get it from Vercel/Vite (The Production Way)
+  try {
+      // @ts-ignore
+      if (typeof import.meta !== 'undefined' && import.meta.env) {
           // @ts-ignore
-          if (typeof import.meta !== 'undefined' && import.meta.env) {
-              // @ts-ignore
-              apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-          }
-      } catch (e) {
-          // Ignore errors if import.meta is not available
+          apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       }
+  } catch (e) {
+      // Ignore
   }
+
+  // 2. If not found, try process.env (The Dev/Backup Way)
+  if (!apiKey && typeof process !== 'undefined' && process.env) {
+      apiKey = process.env.API_KEY;
+  }
+  // ----------------------------------------------------
 
   if (!apiKey) {
     console.error("API Key Check Failed. API_KEY is missing.");
