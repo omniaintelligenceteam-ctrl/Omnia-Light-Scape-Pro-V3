@@ -12,17 +12,8 @@ export const generateNightScene = async (
   beamAngle: number = 30
 ): Promise<string> => {
   
-  // --- FIXED API KEY LOGIC ---
-  // We must check for the Vercel/Vite environment variable first.
-  // @ts-ignore
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
-
-  if (!apiKey) {
-    throw new Error("Missing API Key. Please check Vercel Environment Variables.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: apiKey });
-  // ---------------------------
+  // Initialization: The API key must be obtained exclusively from process.env.API_KEY.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // Map sliders (0-100) to descriptive prompt instructions
   const getIntensityPrompt = (val: number) => {
@@ -50,6 +41,8 @@ export const generateNightScene = async (
     4.  **NO GHOST TREES**: Do not generate silhouettes of trees in the background or foreground to justify a light source. If there is no tree, there is no light.
     5.  **LIGHTING ONLY**: Your ONLY job is to adjust lighting (brightness/contrast/shadows). Do not act as a remodeler.
     6.  **NO BACKGROUND TREES**: **HARD RULE**: Do NOT light up trees that are located behind the house or on the "other side" of the structure. Trees visible above the roofline or in the far distance must remain DARK SILHOUETTES. Only light trees explicitly in the foreground/front yard.
+    7.  **FRAME INTEGRITY**: **HARD RULE**: Keep the WHOLE PICTURE in frame. Do not crop the image. Do not zoom in. Do not zoom out. The output aspect ratio and field of view must match the input exactly.
+    8.  **VISIBLE REALISM**: **HARD RULE**: Do not create something that you don't see a majority of in the original image. If an object is cut off by the frame, do not hallucinate the rest of it. If a path ends, do not extend it. Work ONLY with pixels present in the source.
 
     *** CRITICAL EXCLUSIVITY RULE (HARD RULES) ***
     1. **ONLY SELECTED FIXTURES ALLOWED**: You are strictly limited to generating the fixtures explicitly listed under [APPLY TO EXISTING] in the "REQUESTED DESIGN" section below.
@@ -65,13 +58,13 @@ export const generateNightScene = async (
     - **DEPTH**: Allow deep shadows to exist *between* the lights. This darkness is required to show architectural depth.
     - **Lighting Power**: ${getIntensityPrompt(lightIntensity)}
     - **Beam Physics**: ${getBeamAnglePrompt(beamAngle)}
-    - **DESIGN RULE (OUTER SECTIONS)**: Always light up the outer sections of the house (the far left and far right sections). Illuminating the full width ensures the home looks bigger at night.
+    - **DESIGN RULE (OUTER SECTIONS)**: Always light up the outer sections of the house (the far left and far right sections. Illuminating the full width ensures the home looks bigger at night.
     - **NO SECURITY LIGHTS**: Do NOT generate floodlights, motion sensor lights, or high-intensity security lighting on walls or corners. If such fixtures exist in the photo, keep them OFF and DARK.
     
     *** SPECIFIC FIXTURE RULES (HARD CONSTRAINTS) ***
-    - **GUTTER UP LIGHTS**: These fixtures mount on the *inside* lip of the gutter fascia and shine **UPWARDS ONLY**. The physical fixture must be **SMALL, DISCRETE, and LOW-PROFILE**. CRITICAL ALIGNMENT: If a dormer window exists, the light MUST be placed DIRECTLY CENTERED under the window and shine STRAIGHT UP to it. They do **NOT** shine down. They do **NOT** light the soffit.
+    - **GUTTER UP LIGHTS**: These fixtures mount on the *inside* lip of the gutter facia and shine **UPWARDS ONLY**. The physical fixture must be **SMALL, DISCRETE, and LOW-PROFILE**. CRITICAL ALIGNMENT: If a dormer window exists, the light MUST be placed DIRECTLY CENTERED under the window and shine STRAIGHT UP to it. They do **NOT** shine down. They do **NOT** light the soffit.
     - **SOFFIT/EAVE LIGHTS**: These are downlights recessed in the soffit overhangs.
-    - **MUTUAL EXCLUSIVITY RULE**: If "Gutter Up Lights" are ON and "Soffit Lights" are OFF, you must **STRICTLY** keep the underside of the roof (the soffits/eaves) PITCH DARK. Do not allow any light to bleed under the roof. Only the face of the dormers above the gutter should be lit.
+    - **MUTUAL EXCLUSIVITY RULE**: If "Gutter Up Lights" are ON and "Soffit Lights" are OFF, you must **STRICTLY** keep the underside of the roof (the soffits/eaves) PITCH DARK. Do not allow any light bleed under the roof. Only the face of the dormers above the gutter should be lit.
     
     - **Columns & Pillars (PRIORITY)**: If the user requests "Up Lights", you MUST place lights at the base of any visible architectural columns or pillars grazing upward.
     
