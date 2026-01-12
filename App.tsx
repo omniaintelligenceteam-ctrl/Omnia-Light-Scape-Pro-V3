@@ -401,45 +401,76 @@ const App: React.FC = () => {
     setActiveTab('quotes');
   };
 
-  const handleSaveProjectFromEditor = () => {
-      if (!generatedImage) return;
+   const handleSaveProjectFromEditor = () => {
+      if (!generatedImage || !user) return; 
+      
       const newProject: SavedProject = {
           id: crypto.randomUUID(),
           name: `Night Scene ${projects.length + 1}`,
           date: new Date().toLocaleDateString(),
           image: generatedImage,
-          quote: null
+          quote: null,
+          userId: user.id 
       };
+
+      // 1. Load ALL data from disk (everyone's projects)
+      const allRawProjects = JSON.parse(localStorage.getItem("lumina_projects") || "[]");
+      
+      // 2. Add new project to the master list
+      const updatedMasterList = [newProject, ...allRawProjects];
+      
+      // 3. Save master list back to disk
+      localStorage.setItem("lumina_projects", JSON.stringify(updatedMasterList));
+      
+      // 4. Update your screen (just your projects)
       setProjects([newProject, ...projects]);
       setActiveTab('projects');
   };
-
-  const handleSaveProjectFromQuote = (quoteData: QuoteData) => {
+    const handleSaveProjectFromQuote = (quoteData: QuoteData) => {
+      if (!user) return;
+      
       const newProject: SavedProject = {
           id: crypto.randomUUID(),
           name: quoteData.clientDetails.name || `Quote ${projects.length + 1}`,
           date: new Date().toLocaleDateString(),
           image: generatedImage, 
-          quote: quoteData
+          quote: quoteData,
+          userId: user.id
       };
+
+      // 1. Load ALL data
+      const allRawProjects = JSON.parse(localStorage.getItem("lumina_projects") || "[]");
+      
+      // 2. Add and Save
+      localStorage.setItem("lumina_projects", JSON.stringify([newProject, ...allRawProjects]));
+      
+      // 3. Update UI
       setProjects([newProject, ...projects]);
       setActiveTab('projects');
   };
 
-  const handleDeleteProject = (id: string) => {
+
+    const handleDeleteProject = (id: string) => {
+      // 1. Get Master List from Disk
+      const allRawProjects = JSON.parse(localStorage.getItem("lumina_projects") || "[]");
+      
+      // 2. Remove the specific project from the Master List
+      const updatedMasterList = allRawProjects.filter((p: SavedProject) => p.id !== id);
+      
+      // 3. Save the new list back to Disk
+      localStorage.setItem("lumina_projects", JSON.stringify(updatedMasterList));
+      
+      // 4. Update UI
       setProjects(projects.filter(p => p.id !== id));
   };
 
   // Logout Function - UPDATED for Clerk
   const handleLogout = async () => {
-    // 1. Clear Persistence
+    // 1. Clear any legacy persistence
     localStorage.removeItem('lumina_active_user');
 
     // 2. Reset UI & Feature State
     setActiveTab('editor');
-    // setShowPaywall(false); // undefined in this version, ignoring
-    // setIsChatOpen(false); // undefined in this version, ignoring
-    
     setFile(null);
     setPreviewUrl(null);
     setGeneratedImage(null);
@@ -447,19 +478,16 @@ const App: React.FC = () => {
     setCritiques([]);
     setFeedbackStatus('none');
     setCurrentCritiqueInput("");
-    // setUserInstructions(""); // undefined
-    // setSelectedQuickPromptLabel(null); // undefined
-    // setActiveQuote(null); // undefined
-    // setCurrentProjectId(null); // undefined
     
     // 3. Reset User Data
     setProjects([]);
-    // setUserSettings(null); // undefined
-    // setUser(null); // undefined
+    setUser(null);
+    setUserSettings(null);
 
     // 4. CLERK SIGN OUT
     await signOut();
   };
+
 
   // Filter projects for the search bar
   const filteredProjects = projects.filter(p => 
