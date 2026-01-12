@@ -7,7 +7,7 @@ import { SettingsView } from './components/SettingsView';
 import { LoginScreen } from './components/LoginScreen';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Download } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing } from './types';
 
@@ -60,7 +60,8 @@ const App: React.FC = () => {
   
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, useStateError] = useState<string | null>(null);
+  const setError = (msg: string | null) => useStateError(msg);
 
   // Full Screen State
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
@@ -75,6 +76,9 @@ const App: React.FC = () => {
   const [projects, setProjects] = useState<SavedProject[]>([]);
   const [currentQuote, setCurrentQuote] = useState<QuoteData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // PDF Generation State for Projects Tab
+  const [pdfProject, setPdfProject] = useState<SavedProject | null>(null);
 
   // Company Profile State
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile>({
@@ -116,6 +120,38 @@ const App: React.FC = () => {
     };
     checkAuth();
   }, []);
+
+  // Effect to handle invisible PDF generation from Projects List
+  useEffect(() => {
+    if (pdfProject && pdfProject.quote) {
+        const timer = setTimeout(async () => {
+             const elementId = `quote-pdf-${pdfProject.id}`;
+             const element = document.getElementById(elementId);
+             
+             if (element && (window as any).html2pdf) {
+                 // Force light mode styles for PDF
+                 element.classList.add('pdf-mode');
+                 const opt = {
+                    margin: [0.3, 0.3, 0.3, 0.3],
+                    filename: `${pdfProject.name.replace(/\s+/g, '_')}_Quote.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                };
+                
+                try {
+                    await (window as any).html2pdf().set(opt).from(element).save();
+                } catch (e) {
+                    console.error("PDF Fail", e);
+                } finally {
+                    element.classList.remove('pdf-mode');
+                    setPdfProject(null);
+                }
+             }
+        }, 500); // Wait for render
+        return () => clearTimeout(timer);
+    }
+  }, [pdfProject]);
 
   const requestApiKey = async () => {
     // Only try to use the window shim if we don't have an env var
@@ -298,6 +334,16 @@ const App: React.FC = () => {
       document.body.removeChild(link);
     }
   };
+  
+  const handleDownloadImage = (project: SavedProject) => {
+    if (!project.image) return;
+    const link = document.createElement('a');
+    link.href = project.image;
+    link.download = `${project.name.replace(/\s+/g, '_')}_Scene.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleGenerateQuote = () => {
     // 1. Parse prompt for quantities
@@ -435,6 +481,20 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen overflow-hidden bg-[#050505]">
       <Header onRequestUpgrade={requestApiKey} />
       
+      {/* Hidden PDF Generation Container */}
+      <div style={{ position: 'absolute', left: '-5000px', top: 0, width: '1000px', height: '0', overflow: 'hidden' }}>
+          {pdfProject && pdfProject.quote && (
+              <QuoteView 
+                  onSave={() => {}} 
+                  initialData={pdfProject.quote}
+                  companyProfile={companyProfile}
+                  defaultPricing={pricing}
+                  containerId={`quote-pdf-${pdfProject.id}`}
+                  hideToolbar={true}
+              />
+          )}
+      </div>
+
       {/* Full Screen Image Modal */}
       {isFullScreen && generatedImage && (
         <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center animate-in fade-in duration-200">
@@ -728,18 +788,20 @@ const App: React.FC = () => {
                                 
                                 {/* Image Section - Hero */}
                                 <div 
-                                    onClick={() => {
-                                        if (p.image) {
-                                            setGeneratedImage(p.image);
-                                            setActiveTab('editor');
-                                        }
-                                    }}
                                     className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}
                                 >
                                     {p.image ? (
                                         <>
-                                            <img src={p.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" alt="Scene" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90"></div>
+                                            <img 
+                                                src={p.image} 
+                                                onClick={() => {
+                                                    setGeneratedImage(p.image);
+                                                    setActiveTab('editor');
+                                                }}
+                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" 
+                                                alt="Scene" 
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
                                             
                                             {/* Tech Corners */}
                                             <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
@@ -804,6 +866,30 @@ const App: React.FC = () => {
                                                 <ArrowUpRight className="absolute top-2 right-2 w-3 h-3 text-[#F6B45A] opacity-0 group-hover/quote:opacity-100 transition-opacity" />
                                             )}
                                         </div>
+                                    </div>
+
+                                    {/* Download Actions Row */}
+                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                                        <button 
+                                            onClick={() => handleDownloadImage(p)}
+                                            className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
+                                            title="Download Image"
+                                            disabled={!p.image}
+                                        >
+                                            <ImageIcon className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
+                                            Save Img
+                                        </button>
+                                        
+                                        {p.quote && (
+                                            <button 
+                                                onClick={() => setPdfProject(p)}
+                                                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
+                                                title="Download Quote PDF"
+                                            >
+                                                <FileText className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
+                                                Save Quote
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

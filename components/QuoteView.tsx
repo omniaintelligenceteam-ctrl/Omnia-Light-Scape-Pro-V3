@@ -8,13 +8,17 @@ interface QuoteViewProps {
     initialData?: QuoteData | null;
     companyProfile?: CompanyProfile;
     defaultPricing?: FixturePricing[];
+    containerId?: string;
+    hideToolbar?: boolean;
 }
 
 export const QuoteView: React.FC<QuoteViewProps> = ({ 
     onSave, 
     initialData, 
     companyProfile = { name: 'Omnia Light Scape Pro', email: '', address: '123 Landscape Lane\nDesign District, CA 90210', logo: null },
-    defaultPricing = DEFAULT_PRICING
+    defaultPricing = DEFAULT_PRICING,
+    containerId = "quote-content",
+    hideToolbar = false
 }) => {
   // Helper to find pricing by type
   const getPrice = (type: string) => defaultPricing.find(p => p.fixtureType === type) || DEFAULT_PRICING.find(p => p.fixtureType === type)!;
@@ -86,7 +90,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   };
 
   const handleDownloadPdf = async () => {
-    const element = document.getElementById('quote-content');
+    const element = document.getElementById(containerId);
     if (!element) return;
 
     setIsGeneratingPdf(true);
@@ -127,59 +131,61 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
       <div className="max-w-4xl mx-auto w-full space-y-4 md:space-y-6 relative z-10">
         
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#111]/90 backdrop-blur-xl p-3 md:p-4 rounded-xl border border-white/10 shadow-2xl print:hidden sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-             <div className="p-2 bg-[#F6B45A]/10 rounded-lg border border-[#F6B45A]/20">
-                <FileText className="w-5 h-5 text-[#F6B45A]" />
-             </div>
-             <h2 className="text-sm md:text-lg font-bold text-white tracking-wide font-serif">QUOTE <span className="text-[#F6B45A]">GENERATOR</span></h2>
-          </div>
-          
-          <div className="flex items-center gap-1 md:gap-2">
-            <button 
-                onClick={handleSaveClick}
-                className="bg-[#F6B45A] text-[#111] px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-[#ffc67a] hover:scale-105 transition-all shadow-[0_0_15px_rgba(246,180,90,0.3)]"
-            >
-                <Save className="w-3 h-3 md:w-4 md:h-4" />
-                <span className="hidden sm:inline">Save Project</span>
-                <span className="sm:hidden">Save</span>
-            </button>
-            <div className="w-px h-6 bg-white/10 mx-1"></div>
-            {/* Email Button */}
-            <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Email">
-                <Mail className="w-4 h-4" />
-            </button>
-            {/* Download PDF Button */}
-            <button 
-                onClick={handleDownloadPdf}
-                disabled={isGeneratingPdf}
-                className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Download PDF"
-            >
-                {isGeneratingPdf ? (
-                    <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
-                ) : (
-                    <Download className="w-3 h-3 md:w-4 md:h-4" />
-                )}
-                <span className="hidden sm:inline">{isGeneratingPdf ? 'Generating...' : 'Download PDF'}</span>
-            </button>
-          </div>
-        </div>
+        {!hideToolbar && (
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#111]/90 backdrop-blur-xl p-3 md:p-4 rounded-xl border border-white/10 shadow-2xl print:hidden sticky top-0 z-20">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#F6B45A]/10 rounded-lg border border-[#F6B45A]/20">
+                    <FileText className="w-5 h-5 text-[#F6B45A]" />
+                </div>
+                <h2 className="text-sm md:text-lg font-bold text-white tracking-wide font-serif">QUOTE <span className="text-[#F6B45A]">GENERATOR</span></h2>
+            </div>
+            
+            <div className="flex items-center gap-1 md:gap-2">
+                <button 
+                    onClick={handleSaveClick}
+                    className="bg-[#F6B45A] text-[#111] px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-[#ffc67a] hover:scale-105 transition-all shadow-[0_0_15px_rgba(246,180,90,0.3)]"
+                >
+                    <Save className="w-3 h-3 md:w-4 md:h-4" />
+                    <span className="hidden sm:inline">Save Project</span>
+                    <span className="sm:hidden">Save</span>
+                </button>
+                <div className="w-px h-6 bg-white/10 mx-1"></div>
+                {/* Email Button */}
+                <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Email">
+                    <Mail className="w-4 h-4" />
+                </button>
+                {/* Download PDF Button */}
+                <button 
+                    onClick={handleDownloadPdf}
+                    disabled={isGeneratingPdf}
+                    className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Download PDF"
+                >
+                    {isGeneratingPdf ? (
+                        <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
+                    ) : (
+                        <Download className="w-3 h-3 md:w-4 md:h-4" />
+                    )}
+                    <span className="hidden sm:inline">{isGeneratingPdf ? 'Generating...' : 'Download PDF'}</span>
+                </button>
+            </div>
+            </div>
+        )}
 
         {/* Paper Document / Digital Datapad */}
-        <div id="quote-content" className="bg-[#0F0F0F] rounded-xl md:rounded-[24px] shadow-2xl border border-white/5 min-h-auto md:min-h-[1000px] p-4 md:p-12 relative print:shadow-none print:border-none print:m-0 print:w-full print:bg-white print:text-black">
+        <div id={containerId} className="bg-[#0F0F0F] rounded-xl md:rounded-[24px] shadow-2xl border border-white/5 min-h-auto md:min-h-[1000px] p-4 md:p-12 relative print:shadow-none print:border-none print:m-0 print:w-full print:bg-white print:text-black">
           
           {/* Header */}
           <header className="mb-8 md:mb-12 border-b border-white/10 pb-6 print:border-gray-200">
              <div className="flex justify-between items-start">
                  <div className="w-full">
                     {/* Company Name & Logo Row */}
-                    <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center gap-6 mb-4">
                         <h1 className="text-2xl md:text-3xl font-bold text-[#F6B45A] tracking-tight font-serif print:text-[#111]">
                              {companyProfile.name}
                         </h1>
                         {companyProfile.logo && (
-                            <img src={companyProfile.logo} alt="Logo" className="h-10 w-10 md:h-12 md:w-12 object-contain" />
+                            <img src={companyProfile.logo} alt="Logo" className="h-16 w-16 md:h-24 md:w-24 object-contain" />
                         )}
                     </div>
                     {/* Address & Date */}
@@ -383,15 +389,17 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
           </div>
 
           {/* Add Item Button */}
-          <div className="mb-12 print:hidden">
-             <button 
-                onClick={handleAddItem}
-                className="w-full md:w-auto flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#e5a040] hover:bg-[#F6B45A]/10 px-6 py-3 rounded-xl border border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A] transition-colors"
-            >
-                <Plus className="w-4 h-4" />
-                ADD ITEM
-            </button>
-          </div>
+          {!hideToolbar && (
+            <div className="mb-12 print:hidden">
+                <button 
+                    onClick={handleAddItem}
+                    className="w-full md:w-auto flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#e5a040] hover:bg-[#F6B45A]/10 px-6 py-3 rounded-xl border border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A] transition-colors"
+                >
+                    <Plus className="w-4 h-4" />
+                    ADD ITEM
+                </button>
+            </div>
+          )}
 
           {/* Totals */}
           <div className="flex flex-col md:items-end gap-3 mb-12 md:mb-16 bg-[#111]/30 p-6 rounded-2xl border border-white/5 print:bg-transparent print:border-none print:p-0">
