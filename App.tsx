@@ -48,6 +48,7 @@ const App: React.FC = () => {
 
   const loadUserProjects = (userId: string) => {
     const allProjects = JSON.parse(localStorage.getItem("lumina_projects") || "[]");
+    // Filter projects so we only see ones belonging to THIS user
     const userProjects = allProjects.filter((p: SavedProject) => p.userId === userId); 
     setProjects(userProjects);
   };
@@ -337,16 +338,16 @@ const App: React.FC = () => {
     setActiveTab('quotes');
   };
 
-  // HELPER: Safe Save to LocalStorage (preserves other users' data)
+  // --- SAFE STORAGE HELPERS ---
   const saveToStorageSafe = (newProject: SavedProject) => {
-      // 1. Get ALL data
+      // 1. Get ALL data from storage
       const allProjects = JSON.parse(localStorage.getItem("lumina_projects") || "[]");
-      // 2. Add new project
+      // 2. Add new project to the list (preserves other users' data)
       const updatedAllProjects = [newProject, ...allProjects];
-      // 3. Save back ALL data
+      // 3. Save back ALL data to storage
       localStorage.setItem("lumina_projects", JSON.stringify(updatedAllProjects));
       
-      // 4. Update LOCAL state (only current user's projects)
+      // 4. Update LOCAL state (only this user's projects)
       setProjects([newProject, ...projects]);
   };
 
@@ -358,7 +359,7 @@ const App: React.FC = () => {
           date: new Date().toLocaleDateString(),
           image: generatedImage,
           quote: null,
-          userId: user.id 
+          userId: user.id // Tag with Clerk ID
       };
       saveToStorageSafe(newProject);
       setActiveTab('projects');
@@ -417,11 +418,33 @@ const App: React.FC = () => {
       p.date.includes(searchTerm)
   );
 
+  // RESTORED: Loading Screen
+  // If Clerk is still loading, show the black loading screen
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 border-4 border-[#F6B45A]/20 border-t-[#F6B45A] rounded-full animate-spin"></div>
+        <p className="text-white font-serif tracking-widest text-sm uppercase">Loading System...</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <SignedOut>
         <div className="flex h-screen w-full items-center justify-center bg-[#050505]">
-          <SignIn />
+          <SignIn appearance={{
+            elements: {
+              formButtonPrimary: 'bg-[#F6B45A] hover:bg-[#ffc67a] text-black',
+              card: 'bg-[#111] border border-white/10',
+              headerTitle: 'text-white font-serif',
+              headerSubtitle: 'text-gray-400',
+              socialButtonsBlockButton: 'text-white border-white/20 hover:bg-white/5',
+              formFieldLabel: 'text-gray-300',
+              formFieldInput: 'bg-[#050505] border-white/10 text-white',
+              footerActionLink: 'text-[#F6B45A]'
+            }
+          }} />
         </div>
       </SignedOut>
 
