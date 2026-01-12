@@ -91,15 +91,21 @@ const App: React.FC = () => {
 
   // Load projects from localStorage on mount
   useEffect(() => {
+    console.log("Loading projects from localStorage...");
     const savedProjects = localStorage.getItem("lumina_projects");
+    console.log("Raw data from localStorage:", savedProjects);
     if (savedProjects) {
       try {
-        setProjects(JSON.parse(savedProjects));
+        const parsed = JSON.parse(savedProjects);
+        console.log("Parsed projects:", parsed);
+        setProjects(parsed);
       } catch (e) {
         console.error("Failed to parse saved projects", e);
       }
+    } else {
+      console.log("No saved projects found in localStorage");
     }
-  }, []);
+}, []);
 
   // Check for API key on mount
   useEffect(() => {
