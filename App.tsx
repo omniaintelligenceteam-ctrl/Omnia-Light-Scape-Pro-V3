@@ -392,23 +392,40 @@ const App: React.FC = () => {
   };
 
   const handleSaveProjectFromEditor = () => {
-      if (!generatedImage) return;
-      const newProject: SavedProject = {
-          id: crypto.randomUUID(),
-          name: `Night Scene ${projects.length + 1}`,
-          date: new Date().toLocaleDateString(),
-          image: generatedImage,
-          quote: null
-      };
-      
-      // Get existing projects from storage, add new one, save back
-      const existingProjects = JSON.parse(localStorage.getItem("lumina_projects") || "[]");
-      const updatedProjects = [newProject, ...existingProjects];
-      localStorage.setItem("lumina_projects", JSON.stringify(updatedProjects));
-      
-      setProjects(updatedProjects);
-      setActiveTab('projects');
-  };
+    console.log("Save button clicked");
+    console.log("generatedImage exists:", !!generatedImage);
+    
+    if (!generatedImage) {
+      console.log("No image to save, returning early");
+      return;
+    }
+    
+    const newProject: SavedProject = {
+        id: crypto.randomUUID(),
+        name: `Night Scene ${projects.length + 1}`,
+        date: new Date().toLocaleDateString(),
+        image: generatedImage,
+        quote: null
+    };
+    console.log("New project created:", newProject.id, newProject.name);
+
+    const existingProjects = JSON.parse(localStorage.getItem("lumina_projects") || "[]");
+    console.log("Existing projects count:", existingProjects.length);
+    
+    const updatedProjects = [newProject, ...existingProjects];
+    console.log("Updated projects count:", updatedProjects.length);
+    
+    localStorage.setItem("lumina_projects", JSON.stringify(updatedProjects));
+    console.log("Saved to localStorage");
+    
+    // Verify it saved
+    const verify = localStorage.getItem("lumina_projects");
+    console.log("Verification - data in localStorage:", verify ? "YES" : "NO");
+
+    setProjects(updatedProjects);
+    setActiveTab('projects');
+};
+
 
   const handleSaveProjectFromQuote = (quoteData: QuoteData) => {
       const newProject: SavedProject = {
