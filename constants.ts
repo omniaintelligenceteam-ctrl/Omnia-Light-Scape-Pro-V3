@@ -6,42 +6,42 @@ export const COLOR_TEMPERATURES: ColorTemperature[] = [
     kelvin: "2700K",
     color: "#FFB46B",
     description: "Warm White",
-    prompt: "Use Warm White (2700K) for all lights. Warm and cozy."
+    prompt: "Use Warm White (2700K) for all lights. The light should be very warm, cozy, and golden."
   },
   {
     id: "3000k",
     kelvin: "3000K",
     color: "#FFD18E",
     description: "Soft White",
-    prompt: "Use Soft White (3000K) for all lights. Professional standard."
+    prompt: "Use Soft White (3000K) for all lights. This is the standard professional landscape lighting color."
   },
   {
     id: "4000k",
     kelvin: "4000K",
     color: "#FFF2D7",
     description: "Cool White",
-    prompt: "Use Cool White (4000K) for all lights. Crisp and neutral."
+    prompt: "Use Cool White (4000K) for all lights. The light should be crisp and neutral."
   },
   {
     id: "5000k",
     kelvin: "5000K",
     color: "#E3F2FD",
     description: "Daylight",
-    prompt: "Use Daylight (5000K) for all lights. Bright white."
+    prompt: "Use Daylight (5000K) for all lights. The light should be bright white, mimicking noon daylight."
   },
   {
     id: "christmas",
     kelvin: "Festive",
     color: "#D32F2F",
     description: "Christmas",
-    prompt: "Use Red and Green colors for all lights." 
+    prompt: "Use Red and Green colors for all lights for a festive Christmas look. Alternate colors or group them by section." 
   },
   { 
     id: "halloween", 
     kelvin: "Spooky",
     color: "#9C27B0",
     description: "Halloween",
-    prompt: "Use Orange and Purple colors for all lights." 
+    prompt: "Use Orange and Purple colors for all lights for a spooky Halloween look. Create a haunting atmosphere." 
   }
 ];
 
@@ -57,43 +57,43 @@ export const FIXTURE_TYPES = [
     id: 'up',
     label: 'Up Lights',
     description: 'Ground-mounted accent lights for walls, columns & trees.',
-    positivePrompt: "Instruction: Place ground-mounted up lights TIGHT against the foundation. Targets: Under windows, flanking windows, base of columns. Light must graze the surface.",
-    negativePrompt: "Restriction: Do NOT generate ground-mounted up lights."
+    positivePrompt: "HARD RULE DO: Place ground-mounted up lights TIGHT against the house foundation. PRIORITY TARGETS: 1. Directly CENTERED under windows grazing up. 2. On the wall sections on EACH SIDE of windows (flanking). 3. At the base of Columns/Pillars. The light must originate from the ground next to the wall. IF AND ONLY IF there are EXISTING TREES, place lights at their base. HARD RULE DO NOT: Do NOT generate new trees. Do NOT place lights in open grass without a vertical target.",
+    negativePrompt: "HARD RULE DO NOT: Do NOT generate any ground-mounted up lights. Do NOT place fixtures at the base of walls, columns, or trees aimed upward."
   },
   {
     id: 'path',
     label: 'Path Lights',
     description: 'Post-mounted lights for walkways.',
-    positivePrompt: "Instruction: Place post-mounted path lights along existing walkways spaced 6-8 feet apart.",
-    negativePrompt: "Restriction: Do NOT generate path lights."
+    positivePrompt: "HARD RULE DO: Identify EXISTING walkways. Place post-mounted path lights along the edges spaced 6-8 feet apart. HARD RULE DO NOT: Do NOT create new paths. Do NOT place path lights in the middle of the lawn. Do NOT place path lights if no path exists.",
+    negativePrompt: "HARD RULE DO NOT: Do NOT generate any post-mounted path lights. Do NOT place lights along walkways or driveways."
   },
   {
     id: 'coredrill',
     label: 'Core Drill Lights',
     description: 'Flush-mounted in-grade lights for hardscapes.',
-    positivePrompt: "Instruction: Install flush-mounted 'Core Drill' lights in concrete/hardscape at the base of columns or garage pillars.",
-    negativePrompt: "Restriction: Do NOT generate flush-mounted core drill lights."
+    positivePrompt: "HARD RULE DO: Identify paved hardscape surfaces (concrete) at the base of vertical structures. Install flush-mounted 'Core Drill' lights embedded directly INTO the concrete. TARGETS: Base of GARAGE door pillars and ARCHITECTURAL COLUMNS grazing light UP. HARD RULE DO NOT: Do NOT place on open driveways as markers. Do NOT place in grass. They MUST graze a vertical surface.",
+    negativePrompt: "HARD RULE DO NOT: Do NOT generate flush-mounted core drill lights. Do NOT place lights in concrete or hardscapes."
   },
   {
     id: 'gutter',
     label: 'Gutter Up Lights',
     description: 'Roofline accent lights for dormers & peaks.',
-    positivePrompt: "Instruction: Install small fixtures on the gutter lip shining UPWARDS to illuminate dormers/peaks. No downlight.",
-    negativePrompt: "Restriction: Do NOT generate gutter-mounted lights."
+    positivePrompt: "HARD RULE DO: Install VERY SMALL, DISCRETE fixtures on the OUTER gutter edge of the first floor. These lights MUST shine UPWARDS ONLY to illuminate dormers and 2nd story peaks. When lighting up dormers only place one gutter mounted up light DIRECTLY centered under the dormer. The fixture itself should be barely visible. HARD RULE DO NOT: Do NOT allow light to shine down. Do NOT illuminate the soffit or eaves below the gutter.",
+    negativePrompt: "HARD RULE DO NOT: Do NOT generate gutter-mounted lights. Do NOT place lights on the roofline shining up."
   },
   {
     id: 'soffit',
     label: 'Soffit Lights',
     description: 'Recessed lights installed in the roof overhang.',
-    positivePrompt: "Instruction: Install recessed downlights in the roof overhangs/eaves.",
-    negativePrompt: "Restriction: The roof eaves and soffits must be PITCH BLACK. Zero light on the upper facade from above."
+    positivePrompt: "HARD RULE DO: Install recessed downlights in the roof overhangs/eaves to wash light down onto the house facade. HARD RULE DO NOT: Do NOT place lights on the walls or ground. Only in the roof overhangs.",
+    negativePrompt: "CRITICAL NEGATIVE CONSTRAINT: The roof eaves, overhangs, and soffits must be PITCH BLACK. Turn OFF any existing soffit lights found in the image. ZERO LIGHT allowed on the upper facade. If no soffit lights are requested, the house walls must NOT have downward scallops of light. Force the upper architecture into shadow."
   },
   {
     id: 'hardscape',
     label: 'Hardscape Lights',
     description: 'Linear or puck lights for retaining walls & steps.',
-    positivePrompt: "Instruction: Install linear lights under capstones of existing retaining walls or on steps.",
-    negativePrompt: "Restriction: Do NOT generate hardscape lighting."
+    positivePrompt: "HARD RULE DO: Install linear lights under the capstones of EXISTING retaining walls. Install tread lights on EXISTING stone steps. HARD RULE DO NOT: Do NOT create walls or steps. Do NOT place these lights on the house facade.",
+    negativePrompt: "HARD RULE DO NOT: Do NOT generate hardscape lighting on walls."
   }
 ];
 

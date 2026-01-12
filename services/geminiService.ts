@@ -17,40 +17,43 @@ export const generateNightScene = async (
 
   // Map sliders (0-100) to descriptive prompt instructions
   const getIntensityPrompt = (val: number) => {
-    if (val < 30) return "Lighting Intensity: Low/Subtle. Soft accents.";
-    if (val > 70) return "Lighting Intensity: High/Bright. Strong contrast.";
-    return "Lighting Intensity: Medium/Balanced. Professional standard.";
+    if (val < 30) return "Lighting Intensity: SUBTLE, SOFT, DIM. The lights should be faint accents.";
+    if (val > 70) return "Lighting Intensity: BRIGHT, HIGH LUMEN, INTENSE. High contrast.";
+    return "Lighting Intensity: BALANCED, STANDARD professional levels.";
   };
 
   const getBeamAnglePrompt = (angle: number) => {
-    if (angle <= 15) return "Beam Angle: Narrow Spot (15°). Tight columns.";
-    if (angle <= 30) return "Beam Angle: Spot (30°). Focused.";
-    if (angle >= 60) return "Beam Angle: Wide Flood (60°). Soft wash.";
-    return "Beam Angle: Flood (45°). Standard spread.";
+    if (angle <= 15) return "Beam Angle: 15 DEGREES (NARROW SPOT). Tight columns of light.";
+    if (angle <= 30) return "Beam Angle: 30 DEGREES (SPOT). Focused beams with defined edges.";
+    if (angle >= 60) return "Beam Angle: 60 DEGREES (WIDE FLOOD). Broad soft wash.";
+    return "Beam Angle: 45 DEGREES (FLOOD). Standard spread.";
   };
 
   // Simplified prompt structure to avoid adversarial trigger patterns while maintaining instruction density.
   const systemPrompt = `
-    You are a professional Architectural Lighting Designer.
-    Task: Create a photorealistic night-time rendering of the provided house photo.
+    You are a professional Architectural Lighting Designer and Photo Retoucher.
+    Task: Transform the provided daylight photograph into a realistic, high-end night-time landscape lighting scene.
 
-    **Visual Requirements:**
-    1.  **Sky**: The night sky must feature a visible Full Moon and Stars.
-    2.  **Style**: High-contrast, dramatic night lighting.
-    3.  **Intensity**: ${getIntensityPrompt(lightIntensity)}
-    4.  **Beam**: ${getBeamAnglePrompt(beamAngle)}
+    # CORE CONSTRAINTS (STRICT)
+    1. **Structure**: Keep the original image geometry, architecture, and landscaping exactly as is. Do not crop or zoom.
+    2. **No Hallucinations**: Do not add new trees, plants, or buildings unless explicitly requested.
+    3. **Background**: Trees in the background must remain dark silhouettes.
+    4. **Sky**: The night sky must feature a visible FULL MOON and STARS.
 
-    **Structural Integrity:**
-    -   Keep original house geometry and landscaping exactly as is.
-    -   Do not add new trees, plants, or buildings.
-    -   Background trees must remain dark silhouettes.
+    # LIGHTING SPECIFICATIONS
+    - **Style**: High-contrast Chiaroscuro. Pitch black environment with specific light sources. No generic ambient wash.
+    - **Intensity**: ${getIntensityPrompt(lightIntensity)}
+    - **Beam**: ${getBeamAnglePrompt(beamAngle)}
+    
+    # FIXTURE RULES
+    - **Up Lights**: Place at the base of columns/pillars and centered on wall sections between windows, tight to the foundation.
+    - **Gutter Lights**: Mount on the gutter lip shining UP only.
+    - **Soffit/Eave Lights**: DEFAULT OFF. The roof overhangs must be pitch black unless soffit lights are requested.
+    - **Path Lights**: Only along existing walkways.
 
-    **Fixture Guidelines:**
-    -   **Soffit/Eave Lights**: Default to OFF. Roof overhangs should be dark unless soffit lights are requested.
-    -   **Gutter Lights**: Mount on gutter lip shining UP only.
-    -   **Up Lights**: Place at foundation grazing up walls/columns.
-
-    **Specific Configuration:**
+    # DESIGN REQUEST
+    Apply the following specific configuration to the scene. These instructions override default placement rules if they conflict:
+    
     ${userInstructions}
   `;
 
@@ -84,6 +87,7 @@ export const generateNightScene = async (
       // Check for finishReason to debug safety blocks
       if (candidate.finishReason && candidate.finishReason !== 'STOP') {
           console.warn(`Gemini generation stopped with reason: ${candidate.finishReason}`);
+          // We don't throw immediately, as there might still be content, but it's a good indicator of issues.
       }
 
       if (candidate.content && candidate.content.parts) {
@@ -104,7 +108,12 @@ export const generateNightScene = async (
       }
     }
 
-    throw new Error("No image generated. The model returned an empty response (Possible Safety Filter Trigger). Please try a different photo or simpler instructions.");
+    // Capture safety ratings if available for debugging
+    if (response.candidates && response.candidates[0] && response.candidates[0].safetyRatings) {
+        console.warn("Safety Ratings:", response.candidates[0].safetyRatings);
+    }
+
+    throw new Error("No image generated. The model returned an empty response (Possible Safety Filter Trigger).");
   } catch (error) {
     console.error("Gemini Generation Error:", error);
     throw error;
