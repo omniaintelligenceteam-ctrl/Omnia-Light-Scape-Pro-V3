@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
-import { LoginScreen } from './components/LoginScreen';
+// Removed LoginScreen import
+import { SignedIn, SignedOut, SignIn, useClerk } from "@clerk/clerk-react"; 
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Download } from 'lucide-react';
@@ -37,8 +38,8 @@ const parsePromptForQuantities = (text: string): Record<string, number> => {
 };
 
 const App: React.FC = () => {
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  // Clerk Hook
+  const { signOut } = useClerk();
 
   const [activeTab, setActiveTab] = useState<string>('editor');
   
@@ -429,47 +430,36 @@ const App: React.FC = () => {
       setProjects(projects.filter(p => p.id !== id));
   };
 
-  // 1. Show Login Screen if not authenticated
-  if (!isAuthenticated) {
-      return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
-  }
+  // Logout Function - UPDATED for Clerk
+  const handleLogout = async () => {
+    // 1. Clear Persistence
+    localStorage.removeItem('lumina_active_user');
 
-  // 2. Show Loading State while checking API Key
-  if (isCheckingAuth) {
-    return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">Loading System...</div>;
-  }
+    // 2. Reset UI & Feature State
+    setActiveTab('editor');
+    // setShowPaywall(false); // undefined in this version, ignoring
+    // setIsChatOpen(false); // undefined in this version, ignoring
+    
+    setFile(null);
+    setPreviewUrl(null);
+    setGeneratedImage(null);
+    setPrompt('');
+    setCritiques([]);
+    setFeedbackStatus('none');
+    setCurrentCritiqueInput("");
+    // setUserInstructions(""); // undefined
+    // setSelectedQuickPromptLabel(null); // undefined
+    // setActiveQuote(null); // undefined
+    // setCurrentProjectId(null); // undefined
+    
+    // 3. Reset User Data
+    setProjects([]);
+    // setUserSettings(null); // undefined
+    // setUser(null); // undefined
 
-  // 3. Show API Key Setup if authorized (no env var AND no IDX shim key)
-  if (!isAuthorized) {
-    return (
-        <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8">
-            <div className="max-w-md text-center space-y-8 p-12 bg-[#111] rounded-[28px] shadow-2xl border border-white/10">
-                <div className="flex flex-col items-center gap-2">
-                     <h1 className="text-4xl font-bold text-[#F6B45A] tracking-tight font-serif">Omnia</h1>
-                     <span className="text-gray-300 font-bold italic text-sm tracking-[0.2em] uppercase font-serif">Light Scape Pro</span>
-                </div>
-                <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
-                  <p className="text-gray-300 text-sm leading-relaxed">
-                      To access the advanced <span className="text-[#F6B45A] font-bold">Gemini 3 Pro</span> model, please configure your API Key in the application settings.
-                  </p>
-                </div>
-                {/* Only show the connect button if we are in a dev environment that supports it */}
-                {(window as any).aistudio ? (
-                    <button 
-                        onClick={requestApiKey} 
-                        className="w-full bg-[#F6B45A] text-[#050505] rounded-xl py-4 font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all"
-                    >
-                        Connect API Key (Dev Mode)
-                    </button>
-                ) : (
-                    <div className="text-red-400 text-xs mt-4 border border-red-900/50 p-2 rounded bg-red-900/20">
-                        Environment Variable <code>VITE_GEMINI_API_KEY</code> is missing.
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-  }
+    // 4. CLERK SIGN OUT
+    await signOut();
+  };
 
   // Filter projects for the search bar
   const filteredProjects = projects.filter(p => 
@@ -478,450 +468,460 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#050505]">
-      <Header onRequestUpgrade={requestApiKey} />
-      
-      {/* Hidden PDF Generation Container */}
-      <div style={{ position: 'absolute', left: '-5000px', top: 0, width: '1000px', height: '0', overflow: 'hidden' }}>
-          {pdfProject && pdfProject.quote && (
-              <QuoteView 
-                  onSave={() => {}} 
-                  initialData={pdfProject.quote}
-                  companyProfile={companyProfile}
-                  defaultPricing={pricing}
-                  containerId={`quote-pdf-${pdfProject.id}`}
-                  hideToolbar={true}
-              />
-          )}
-      </div>
-
-      {/* Full Screen Image Modal */}
-      {isFullScreen && generatedImage && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center animate-in fade-in duration-200">
-          <button 
-            onClick={() => setIsFullScreen(false)}
-            className="absolute top-4 right-4 md:top-8 md:right-8 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 hover:scale-110 transition-all z-[101]"
-          >
-            <X className="w-6 h-6 md:w-8 md:h-8" />
-          </button>
-          <img 
-            src={generatedImage} 
-            alt="Full Screen Result" 
-            className="w-full h-full object-contain p-4 select-none"
-          />
+    <>
+      <SignedOut>
+        <div className="flex h-screen w-full items-center justify-center bg-[#050505]">
+          <SignIn />
         </div>
-      )}
+      </SignedOut>
 
-      <div className="flex-1 overflow-hidden relative flex flex-col">
-        <main className="flex-1 overflow-hidden">
+      <SignedIn>
+        <div className="flex flex-col h-screen overflow-hidden bg-[#050505]">
+          <Header onRequestUpgrade={requestApiKey} />
           
-          {/* TAB: EDITOR */}
-          {activeTab === 'editor' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative">
-              {/* Background Ambient Glow */}
-              <div className="absolute top-[-10%] left-[20%] w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
+          {/* Hidden PDF Generation Container */}
+          <div style={{ position: 'absolute', left: '-5000px', top: 0, width: '1000px', height: '0', overflow: 'hidden' }}>
+              {pdfProject && pdfProject.quote && (
+                  <QuoteView 
+                      onSave={() => {}} 
+                      initialData={pdfProject.quote}
+                      companyProfile={companyProfile}
+                      defaultPricing={pricing}
+                      containerId={`quote-pdf-${pdfProject.id}`}
+                      hideToolbar={true}
+                  />
+              )}
+          </div>
 
-              <div className="max-w-4xl mx-auto min-h-full p-4 md:p-8 flex flex-col justify-start md:justify-center relative z-10">
-                
-                {/* MODE 1: RESULT VIEW (Generated Image Only) */}
-                {generatedImage ? (
-                <div className="flex-1 flex flex-col relative bg-black rounded-[32px] overflow-hidden border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-500 min-h-[500px]">
-                    
-                    {/* Top Action Bar */}
-                    <div className="absolute top-6 left-0 right-0 z-40 flex justify-center gap-3 px-4">
-                        <button 
-                            onClick={handleSaveProjectFromEditor}
-                            className="bg-black/40 backdrop-blur-md text-white border border-white/10 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-white/10 hover:scale-105 transition-all shadow-lg flex items-center gap-2"
-                        >
-                            <FolderPlus className="w-4 h-4 text-[#F6B45A]" />
-                            Save Project
-                        </button>
-                        <button 
-                            onClick={handleGenerateQuote}
-                            className="bg-[#F6B45A] text-[#111] px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-[#ffc67a] hover:scale-105 transition-all shadow-[0_0_20px_rgba(246,180,90,0.3)] flex items-center gap-2"
-                        >
-                            <FileText className="w-4 h-4" />
-                            Generate Quote
-                        </button>
-                    </div>
-
-                    {/* Main Image */}
-                    <div className="flex-1 relative flex items-center justify-center bg-[#050505] overflow-hidden group">
-                        <img 
-                            src={generatedImage} 
-                            alt="Generated Result" 
-                            className="w-full h-full object-contain cursor-zoom-in transition-transform duration-300"
-                            onClick={() => setIsFullScreen(true)}
-                        />
-                        
-                        {/* Feedback / Loading Overlay */}
-                        {isLoading && (
-                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white">
-                                <Loader2 className="w-10 h-10 animate-spin mb-4 text-[#F6B45A]" />
-                                <p className="font-bold tracking-widest uppercase text-sm font-mono text-[#F6B45A]">Processing...</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Floating Controls Bar */}
-                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3 w-full px-4">
-                        
-                        <div className="flex items-center gap-3 bg-black/80 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-2xl">
-                            
-                            <button 
-                                onClick={() => {
-                                    setIsLiked(!isLiked);
-                                    if (!isLiked) handleDownload();
-                                }}
-                                className={`p-3 rounded-full transition-all duration-200 ${isLiked ? 'bg-[#F6B45A] text-[#111]' : 'hover:bg-white/10 text-white'}`}
-                                title="Like & Download"
-                            >
-                                <ThumbsUp className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                            </button>
-                            
-                            <button 
-                                onClick={() => setShowFeedback(true)}
-                                className={`p-3 rounded-full transition-all duration-200 ${showFeedback ? 'bg-red-500/90 text-white' : 'hover:bg-white/10 text-white'}`}
-                                title="Changes Needed"
-                            >
-                                <ThumbsDown className="w-5 h-5" />
-                            </button>
-
-                            <div className="w-px h-5 bg-white/10 mx-1"></div>
-
-                            <button 
-                                onClick={handleCloseResult}
-                                className="p-3 rounded-full hover:bg-white/10 text-white transition-all"
-                                title="Start Over"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                         <button 
-                            onClick={() => setIsFullScreen(true)}
-                            className="flex items-center gap-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/50 hover:text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
-                        >
-                            <Maximize2 className="w-3 h-3" />
-                            Expand View
-                        </button>
-                    </div>
-
-                    {/* Feedback Modal Overlay */}
-                    {showFeedback && (
-                        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
-                            <div className="w-full max-w-md bg-[#111] rounded-2xl p-6 shadow-2xl border border-white/10">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold text-lg text-white font-serif">Refine Scene</h3>
-                                    <button onClick={() => setShowFeedback(false)} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white">
-                                        <X className="w-5 h-5"/>
-                                    </button>
-                                </div>
-                                <textarea 
-                                    value={feedbackText}
-                                    onChange={(e) => setFeedbackText(e.target.value)}
-                                    className="w-full h-32 p-4 rounded-xl border border-white/10 bg-black/50 text-white text-sm focus:border-[#F6B45A] focus:ring-1 focus:ring-[#F6B45A] outline-none resize-none mb-4 font-mono"
-                                    placeholder="Describe specific changes (e.g., 'Remove the tree light', 'Make it warmer')..."
-                                    autoFocus
-                                />
-                                <button 
-                                    onClick={handleFeedbackRegenerate}
-                                    disabled={!feedbackText.trim() || isLoading}
-                                    className="w-full bg-[#F6B45A] text-[#111] py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#ffc67a] flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
-                                >
-                                    <RefreshCw className="w-4 h-4" />
-                                    Regenerate
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-                ) : (
-                // MODE 2: INPUT VIEW
-                isLoading ? (
-                    <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-500">
-                        <div className="w-24 h-24 border-4 border-[#F6B45A]/20 border-t-[#F6B45A] rounded-full animate-spin mb-8 shadow-[0_0_50px_rgba(246,180,90,0.2)]"></div>
-                        <h2 className="text-4xl font-bold text-white font-serif tracking-tight mb-4">Omnia AI</h2>
-                        <div className="flex flex-col items-center gap-2">
-                             <p className="text-[#F6B45A] font-bold text-sm uppercase tracking-[0.25em] animate-pulse">Processing Scene</p>
-                             <p className="text-gray-500 text-xs font-mono uppercase tracking-widest">Analyzing Geometry & Light Paths</p>
-                        </div>
-                    </div>
-                ) : (
-                <div className="flex flex-col gap-8 animate-in slide-in-from-bottom-4 fade-in duration-500 pb-20 md:pb-0">
-                    
-                    {/* Image Upload Area */}
-                    <div className="relative">
-                        <ImageUpload 
-                            currentImage={file}
-                            previewUrl={previewUrl}
-                            onImageSelect={handleImageSelect}
-                            onClear={handleClear}
-                        />
-                    </div>
-
-                    {/* Controls */}
-                    <div className="flex flex-col gap-6">
-                        
-                        {/* NEW: Button-Based Fixture Selection */}
-                        <div className="flex flex-col gap-3">
-                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 ml-1 flex items-center gap-2">
-                                <Sparkles className="w-3 h-3 text-[#F6B45A]" />
-                                Active Fixtures
-                            </label>
-                            
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-1">
-                                {FIXTURE_TYPES.map((ft) => {
-                                    const isSelected = selectedFixtures.includes(ft.id);
-                                    
-                                    return (
-                                        <button
-                                            key={ft.id}
-                                            onClick={() => toggleFixture(ft.id)}
-                                            className={`py-3 px-4 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all duration-200 border flex items-center justify-center text-center ${
-                                                isSelected 
-                                                ? 'bg-[#F6B45A] text-[#111] border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.3)] scale-[1.02]' 
-                                                : 'bg-[#111] text-gray-300 border-white/10 hover:bg-[#1a1a1a] hover:border-white/20 hover:text-white'
-                                            }`}
-                                        >
-                                            {ft.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Description Textarea */}
-                        <div className="relative group mt-2">
-                            <textarea
-                                className="w-full h-16 bg-[#0F0F0F] border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 transition-all resize-none font-mono"
-                                placeholder="Type of Fixtures and Number of fixtures (e.g. '10 Up lights, 3 Gutter up lights, 6 Path lights')"
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                            />
-                            <div className="absolute right-3 bottom-3 text-[10px] text-gray-400 font-mono uppercase tracking-widest">
-                                Custom Notes
-                            </div>
-                        </div>
-
-                        {/* Error Message */}
-                        {error && (
-                            <div className="p-3 bg-red-900/20 border border-red-900/50 rounded-xl flex items-center gap-3 animate-pulse">
-                                <AlertCircle className="w-4 h-4 text-red-500" />
-                                <p className="text-xs text-red-400 font-bold">{error}</p>
-                            </div>
-                        )}
-
-                        {/* Generate Button */}
-                        <button 
-                            onClick={handleGenerate}
-                            disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
-                            className="w-full bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] rounded-xl py-4 font-black text-xs uppercase tracking-[0.25em] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-3 group"
-                        >
-                            <Wand2 className="w-4 h-4 text-black group-hover:rotate-12 transition-transform" />
-                            Generate Scene
-                        </button>
-                    </div>
-                </div>
-                )
-                )}
-              </div>
+          {/* Full Screen Image Modal */}
+          {isFullScreen && generatedImage && (
+            <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center animate-in fade-in duration-200">
+              <button 
+                onClick={() => setIsFullScreen(false)}
+                className="absolute top-4 right-4 md:top-8 md:right-8 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 hover:scale-110 transition-all z-[101]"
+              >
+                <X className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+              <img 
+                src={generatedImage} 
+                alt="Full Screen Result" 
+                className="w-full h-full object-contain p-4 select-none"
+              />
             </div>
           )}
 
-          {/* TAB: QUOTES */}
-          {activeTab === 'quotes' && (
-             <QuoteView 
-                onSave={handleSaveProjectFromQuote} 
-                initialData={currentQuote} 
-                companyProfile={companyProfile}
-                defaultPricing={pricing}
-             />
-          )}
+          <div className="flex-1 overflow-hidden relative flex flex-col">
+            <main className="flex-1 overflow-hidden">
+              
+              {/* TAB: EDITOR */}
+              {activeTab === 'editor' && (
+                <div className="h-full overflow-y-auto bg-[#050505] relative">
+                  {/* Background Ambient Glow */}
+                  <div className="absolute top-[-10%] left-[20%] w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-          {/* TAB: PROJECTS */}
-          {activeTab === 'projects' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative">
-              {/* Background Tech Mesh/Glow */}
-              <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
-              <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-
-             <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
-                 
-                 {/* High-End Header */}
-                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
-                     <div>
-                        <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Project Library</h2>
-                        <div className="flex items-center gap-2">
-                             <div className="w-2 h-2 rounded-full bg-[#F6B45A] animate-pulse"></div>
-                             <span className="text-[10px] text-gray-300 font-mono uppercase tracking-widest">Database // Active Systems: {projects.length}</span>
+                  <div className="max-w-4xl mx-auto min-h-full p-4 md:p-8 flex flex-col justify-start md:justify-center relative z-10">
+                    
+                    {/* MODE 1: RESULT VIEW (Generated Image Only) */}
+                    {generatedImage ? (
+                    <div className="flex-1 flex flex-col relative bg-black rounded-[32px] overflow-hidden border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-500 min-h-[500px]">
+                        
+                        {/* Top Action Bar */}
+                        <div className="absolute top-6 left-0 right-0 z-40 flex justify-center gap-3 px-4">
+                            <button 
+                                onClick={handleSaveProjectFromEditor}
+                                className="bg-black/40 backdrop-blur-md text-white border border-white/10 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-white/10 hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+                            >
+                                <FolderPlus className="w-4 h-4 text-[#F6B45A]" />
+                                Save Project
+                            </button>
+                            <button 
+                                onClick={handleGenerateQuote}
+                                className="bg-[#F6B45A] text-[#111] px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-[#ffc67a] hover:scale-105 transition-all shadow-[0_0_20px_rgba(246,180,90,0.3)] flex items-center gap-2"
+                            >
+                                <FileText className="w-4 h-4" />
+                                Generate Quote
+                            </button>
                         </div>
-                     </div>
 
-                     {/* Search Bar Simulation */}
-                     <div className="w-full md:w-96 relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400 group-focus-within:text-[#F6B45A] transition-colors" />
-                        </div>
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-[#111] text-gray-200 placeholder-gray-400 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 sm:text-sm font-mono transition-all"
-                            placeholder="Search by ID or Client..."
-                        />
-                     </div>
-                 </div>
-                 
-                 {filteredProjects.length === 0 ? (
-                     <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm">
-                         <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                            <FolderPlus className="w-8 h-8 text-gray-500" />
-                         </div>
-                         <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">System Empty</p>
-                         <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">No rendered scenes found in database</p>
-                     </div>
-                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                        {filteredProjects.map((p, index) => (
-                            <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(246,180,90,0.1)] flex flex-col">
-                                
-                                {/* Image Section - Hero */}
-                                <div 
-                                    className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}
-                                >
-                                    {p.image ? (
-                                        <>
-                                            <img 
-                                                src={p.image} 
-                                                onClick={() => {
-                                                    setGeneratedImage(p.image);
-                                                    setActiveTab('editor');
-                                                }}
-                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" 
-                                                alt="Scene" 
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
-                                            
-                                            {/* Tech Corners */}
-                                            <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                            <div className="absolute top-2 right-2 w-3 h-3 border-r border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                            <div className="absolute bottom-2 left-2 w-3 h-3 border-l border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                            <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-
-                                            {/* Hover Action */}
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                                                <div className="bg-[#F6B45A] text-black px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
-                                                    Load Scene
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
-                                            <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
-                                            <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
-                                        </div>
-                                    )}
+                        {/* Main Image */}
+                        <div className="flex-1 relative flex items-center justify-center bg-[#050505] overflow-hidden group">
+                            <img 
+                                src={generatedImage} 
+                                alt="Generated Result" 
+                                className="w-full h-full object-contain cursor-zoom-in transition-transform duration-300"
+                                onClick={() => setIsFullScreen(true)}
+                            />
+                            
+                            {/* Feedback / Loading Overlay */}
+                            {isLoading && (
+                                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white">
+                                    <Loader2 className="w-10 h-10 animate-spin mb-4 text-[#F6B45A]" />
+                                    <p className="font-bold tracking-widest uppercase text-sm font-mono text-[#F6B45A]">Processing...</p>
                                 </div>
+                            )}
+                        </div>
 
-                                {/* Info Section */}
-                                <div className="p-5 flex flex-col flex-1 border-t border-white/5 bg-[#0a0a0a]">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <div className="text-[9px] text-[#F6B45A] font-mono mb-1">ID: PRJ-{p.id.substring(0,6).toUpperCase()}</div>
-                                            <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate w-48">{p.name}</h3>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <button 
-                                                onClick={() => handleDeleteProject(p.id)}
-                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-full transition-colors"
-                                                title="Delete"
+                        {/* Floating Controls Bar */}
+                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3 w-full px-4">
+                            
+                            <div className="flex items-center gap-3 bg-black/80 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-2xl">
+                                
+                                <button 
+                                    onClick={() => {
+                                        setIsLiked(!isLiked);
+                                        if (!isLiked) handleDownload();
+                                    }}
+                                    className={`p-3 rounded-full transition-all duration-200 ${isLiked ? 'bg-[#F6B45A] text-[#111]' : 'hover:bg-white/10 text-white'}`}
+                                    title="Like & Download"
+                                >
+                                    <ThumbsUp className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                                </button>
+                                
+                                <button 
+                                    onClick={() => setShowFeedback(true)}
+                                    className={`p-3 rounded-full transition-all duration-200 ${showFeedback ? 'bg-red-500/90 text-white' : 'hover:bg-white/10 text-white'}`}
+                                    title="Changes Needed"
+                                >
+                                    <ThumbsDown className="w-5 h-5" />
+                                </button>
+
+                                <div className="w-px h-5 bg-white/10 mx-1"></div>
+
+                                <button 
+                                    onClick={handleCloseResult}
+                                    className="p-3 rounded-full hover:bg-white/10 text-white transition-all"
+                                    title="Start Over"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                             <button 
+                                onClick={() => setIsFullScreen(true)}
+                                className="flex items-center gap-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/50 hover:text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+                            >
+                                <Maximize2 className="w-3 h-3" />
+                                Expand View
+                            </button>
+                        </div>
+
+                        {/* Feedback Modal Overlay */}
+                        {showFeedback && (
+                            <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
+                                <div className="w-full max-w-md bg-[#111] rounded-2xl p-6 shadow-2xl border border-white/10">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-bold text-lg text-white font-serif">Refine Scene</h3>
+                                        <button onClick={() => setShowFeedback(false)} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white">
+                                            <X className="w-5 h-5"/>
+                                        </button>
+                                    </div>
+                                    <textarea 
+                                        value={feedbackText}
+                                        onChange={(e) => setFeedbackText(e.target.value)}
+                                        className="w-full h-32 p-4 rounded-xl border border-white/10 bg-black/50 text-white text-sm focus:border-[#F6B45A] focus:ring-1 focus:ring-[#F6B45A] outline-none resize-none mb-4 font-mono"
+                                        placeholder="Describe specific changes (e.g., 'Remove the tree light', 'Make it warmer')..."
+                                        autoFocus
+                                    />
+                                    <button 
+                                        onClick={handleFeedbackRegenerate}
+                                        disabled={!feedbackText.trim() || isLoading}
+                                        className="w-full bg-[#F6B45A] text-[#111] py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#ffc67a] flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                                    >
+                                        <RefreshCw className="w-4 h-4" />
+                                        Regenerate
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    ) : (
+                    // MODE 2: INPUT VIEW
+                    isLoading ? (
+                        <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-500">
+                            <div className="w-24 h-24 border-4 border-[#F6B45A]/20 border-t-[#F6B45A] rounded-full animate-spin mb-8 shadow-[0_0_50px_rgba(246,180,90,0.2)]"></div>
+                            <h2 className="text-4xl font-bold text-white font-serif tracking-tight mb-4">Omnia AI</h2>
+                            <div className="flex flex-col items-center gap-2">
+                                 <p className="text-[#F6B45A] font-bold text-sm uppercase tracking-[0.25em] animate-pulse">Processing Scene</p>
+                                 <p className="text-gray-500 text-xs font-mono uppercase tracking-widest">Analyzing Geometry & Light Paths</p>
+                            </div>
+                        </div>
+                    ) : (
+                    <div className="flex flex-col gap-8 animate-in slide-in-from-bottom-4 fade-in duration-500 pb-20 md:pb-0">
+                        
+                        {/* Image Upload Area */}
+                        <div className="relative">
+                            <ImageUpload 
+                                currentImage={file}
+                                previewUrl={previewUrl}
+                                onImageSelect={handleImageSelect}
+                                onClear={handleClear}
+                            />
+                        </div>
+
+                        {/* Controls */}
+                        <div className="flex flex-col gap-6">
+                            
+                            {/* NEW: Button-Based Fixture Selection */}
+                            <div className="flex flex-col gap-3">
+                                <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 ml-1 flex items-center gap-2">
+                                    <Sparkles className="w-3 h-3 text-[#F6B45A]" />
+                                    Active Fixtures
+                                </label>
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-1">
+                                    {FIXTURE_TYPES.map((ft) => {
+                                        const isSelected = selectedFixtures.includes(ft.id);
+                                        
+                                        return (
+                                            <button
+                                                key={ft.id}
+                                                onClick={() => toggleFixture(ft.id)}
+                                                className={`py-3 px-4 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all duration-200 border flex items-center justify-center text-center ${
+                                                    isSelected 
+                                                    ? 'bg-[#F6B45A] text-[#111] border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.3)] scale-[1.02]' 
+                                                    : 'bg-[#111] text-gray-300 border-white/10 hover:bg-[#1a1a1a] hover:border-white/20 hover:text-white'
+                                                }`}
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                {ft.label}
                                             </button>
-                                        </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Description Textarea */}
+                            <div className="relative group mt-2">
+                                <textarea
+                                    className="w-full h-16 bg-[#0F0F0F] border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 transition-all resize-none font-mono"
+                                    placeholder="Type of Fixtures and Number of fixtures (e.g. '10 Up lights, 3 Gutter up lights, 6 Path lights')"
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                />
+                                <div className="absolute right-3 bottom-3 text-[10px] text-gray-400 font-mono uppercase tracking-widest">
+                                    Custom Notes
+                                </div>
+                            </div>
+
+                            {/* Error Message */}
+                            {error && (
+                                <div className="p-3 bg-red-900/20 border border-red-900/50 rounded-xl flex items-center gap-3 animate-pulse">
+                                    <AlertCircle className="w-4 h-4 text-red-500" />
+                                    <p className="text-xs text-red-400 font-bold">{error}</p>
+                                </div>
+                            )}
+
+                            {/* Generate Button */}
+                            <button 
+                                onClick={handleGenerate}
+                                disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
+                                className="w-full bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] rounded-xl py-4 font-black text-xs uppercase tracking-[0.25em] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-3 group"
+                            >
+                                <Wand2 className="w-4 h-4 text-black group-hover:rotate-12 transition-transform" />
+                                Generate Scene
+                            </button>
+                        </div>
+                    </div>
+                    )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: QUOTES */}
+              {activeTab === 'quotes' && (
+                 <QuoteView 
+                    onSave={handleSaveProjectFromQuote} 
+                    initialData={currentQuote} 
+                    companyProfile={companyProfile}
+                    defaultPricing={pricing}
+                 />
+              )}
+
+              {/* TAB: PROJECTS */}
+              {activeTab === 'projects' && (
+                <div className="h-full overflow-y-auto bg-[#050505] relative">
+                  {/* Background Tech Mesh/Glow */}
+                  <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
+                  <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+
+                 <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
+                     
+                     {/* High-End Header */}
+                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+                         <div>
+                            <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Project Library</h2>
+                            <div className="flex items-center gap-2">
+                                 <div className="w-2 h-2 rounded-full bg-[#F6B45A] animate-pulse"></div>
+                                 <span className="text-[10px] text-gray-300 font-mono uppercase tracking-widest">Database // Active Systems: {projects.length}</span>
+                            </div>
+                         </div>
+
+                         {/* Search Bar Simulation */}
+                         <div className="w-full md:w-96 relative group">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-4 w-4 text-gray-400 group-focus-within:text-[#F6B45A] transition-colors" />
+                            </div>
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-[#111] text-gray-200 placeholder-gray-400 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 sm:text-sm font-mono transition-all"
+                                placeholder="Search by ID or Client..."
+                            />
+                         </div>
+                     </div>
+                     
+                     {filteredProjects.length === 0 ? (
+                         <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm">
+                             <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                                <FolderPlus className="w-8 h-8 text-gray-500" />
+                             </div>
+                             <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">System Empty</p>
+                             <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">No rendered scenes found in database</p>
+                         </div>
+                     ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                            {filteredProjects.map((p, index) => (
+                                <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(246,180,90,0.1)] flex flex-col">
+                                    
+                                    {/* Image Section - Hero */}
+                                    <div 
+                                        className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}
+                                    >
+                                        {p.image ? (
+                                            <>
+                                                <img 
+                                                    src={p.image} 
+                                                    onClick={() => {
+                                                        setGeneratedImage(p.image);
+                                                        setActiveTab('editor');
+                                                    }}
+                                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" 
+                                                    alt="Scene" 
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
+                                                
+                                                {/* Tech Corners */}
+                                                <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                <div className="absolute top-2 right-2 w-3 h-3 border-r border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                <div className="absolute bottom-2 left-2 w-3 h-3 border-l border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+
+                                                {/* Hover Action */}
+                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                                    <div className="bg-[#F6B45A] text-black px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                                                        Load Scene
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
+                                                <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
+                                                <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Stats Grid */}
-                                    <div className="grid grid-cols-2 gap-3 mt-auto">
-                                        <div className="bg-[#151515] p-2 rounded-lg border border-white/5">
-                                            <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Created</span>
-                                            <span className="text-xs text-gray-200 font-mono">{p.date}</span>
+                                    {/* Info Section */}
+                                    <div className="p-5 flex flex-col flex-1 border-t border-white/5 bg-[#0a0a0a]">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <div className="text-[9px] text-[#F6B45A] font-mono mb-1">ID: PRJ-{p.id.substring(0,6).toUpperCase()}</div>
+                                                <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate w-48">{p.name}</h3>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <button 
+                                                    onClick={() => handleDeleteProject(p.id)}
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-full transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div 
-                                            onClick={() => {
-                                                if (p.quote) {
-                                                    setCurrentQuote(p.quote);
-                                                    if (p.image) setGeneratedImage(p.image);
-                                                    setActiveTab('quotes');
-                                                }
-                                            }}
-                                            className={`bg-[#151515] p-2 rounded-lg border border-white/5 relative group/quote transition-colors ${p.quote ? 'cursor-pointer hover:border-[#F6B45A]/30 hover:bg-[#F6B45A]/5' : ''}`}
-                                        >
-                                            <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Estimate</span>
-                                            <span className={`text-xs font-mono font-bold ${p.quote ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
-                                                {p.quote ? `$${p.quote.total.toFixed(0)}` : 'N/A'}
-                                            </span>
+
+                                        {/* Stats Grid */}
+                                        <div className="grid grid-cols-2 gap-3 mt-auto">
+                                            <div className="bg-[#151515] p-2 rounded-lg border border-white/5">
+                                                <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Created</span>
+                                                <span className="text-xs text-gray-200 font-mono">{p.date}</span>
+                                            </div>
+                                            <div 
+                                                onClick={() => {
+                                                    if (p.quote) {
+                                                        setCurrentQuote(p.quote);
+                                                        if (p.image) setGeneratedImage(p.image);
+                                                        setActiveTab('quotes');
+                                                    }
+                                                }}
+                                                className={`bg-[#151515] p-2 rounded-lg border border-white/5 relative group/quote transition-colors ${p.quote ? 'cursor-pointer hover:border-[#F6B45A]/30 hover:bg-[#F6B45A]/5' : ''}`}
+                                            >
+                                                <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Estimate</span>
+                                                <span className={`text-xs font-mono font-bold ${p.quote ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
+                                                    {p.quote ? `$${p.quote.total.toFixed(0)}` : 'N/A'}
+                                                </span>
+                                                {p.quote && (
+                                                    <ArrowUpRight className="absolute top-2 right-2 w-3 h-3 text-[#F6B45A] opacity-0 group-hover/quote:opacity-100 transition-opacity" />
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Download Actions Row */}
+                                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                                            <button 
+                                                onClick={() => handleDownloadImage(p)}
+                                                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
+                                                title="Download Image"
+                                                disabled={!p.image}
+                                            >
+                                                <ImageIcon className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
+                                                Save Img
+                                            </button>
+                                            
                                             {p.quote && (
-                                                <ArrowUpRight className="absolute top-2 right-2 w-3 h-3 text-[#F6B45A] opacity-0 group-hover/quote:opacity-100 transition-opacity" />
+                                                <button 
+                                                    onClick={() => setPdfProject(p)}
+                                                    className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
+                                                    title="Download Quote PDF"
+                                                >
+                                                    <FileText className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
+                                                    Save Quote
+                                                </button>
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* Download Actions Row */}
-                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
-                                        <button 
-                                            onClick={() => handleDownloadImage(p)}
-                                            className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
-                                            title="Download Image"
-                                            disabled={!p.image}
-                                        >
-                                            <ImageIcon className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
-                                            Save Img
-                                        </button>
-                                        
-                                        {p.quote && (
-                                            <button 
-                                                onClick={() => setPdfProject(p)}
-                                                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
-                                                title="Download Quote PDF"
-                                            >
-                                                <FileText className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
-                                                Save Quote
-                                            </button>
-                                        )}
-                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                 )}
-             </div>
-            </div>
-          )}
+                            ))}
+                        </div>
+                     )}
+                 </div>
+                </div>
+              )}
 
-           {/* TAB: SETTINGS */}
-           {activeTab === 'settings' && (
-             <SettingsView 
-                profile={companyProfile}
-                onProfileChange={setCompanyProfile}
-                colorTemp={colorTemp}
-                onColorTempChange={setColorTemp}
-                lightIntensity={lightIntensity}
-                onLightIntensityChange={setLightIntensity}
-                // darknessLevel removed from props
-                beamAngle={beamAngle}
-                onBeamAngleChange={setBeamAngle}
-                pricing={pricing}
-                onPricingChange={setPricing}
-             />
-          )}
+               {/* TAB: SETTINGS */}
+               {activeTab === 'settings' && (
+                 <SettingsView 
+                    profile={companyProfile}
+                    onProfileChange={setCompanyProfile}
+                    colorTemp={colorTemp}
+                    onColorTempChange={setColorTemp}
+                    lightIntensity={lightIntensity}
+                    onLightIntensityChange={setLightIntensity}
+                    // darknessLevel removed from props
+                    beamAngle={beamAngle}
+                    onBeamAngleChange={setBeamAngle}
+                    pricing={pricing}
+                    onPricingChange={setPricing}
+                 />
+              )}
 
-        </main>
-      </div>
+            </main>
+          </div>
 
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-    </div>
+          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} onLogout={handleLogout} />
+        </div>
+      </SignedIn>
+    </>
   );
 };
 

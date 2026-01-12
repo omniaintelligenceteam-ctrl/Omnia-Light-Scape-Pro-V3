@@ -4,9 +4,10 @@ import { Wand2, FolderOpen, FileText, Settings, LogOut } from 'lucide-react';
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  onLogout: () => void; // Added this line
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) => {
   const menuItems = [
     { id: 'editor', label: 'Editor', icon: Wand2 },
     { id: 'projects', label: 'Projects', icon: FolderOpen },
@@ -16,9 +17,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
   return (
     <nav className="w-full bg-[#111] text-white flex items-center justify-between px-3 md:px-8 py-3 md:py-4 border-t border-gray-800 shrink-0 z-50">
-      {/* Left side spacer to balance the layout if needed, currently empty or could hold status */}
+      {/* Left side spacer to balance the layout */}
       <div className="w-32 hidden md:block">
-        {/* Potential status indicator or version number */}
         <span className="text-[10px] text-gray-400 font-mono">v1.0.4</span>
       </div>
 
@@ -43,9 +43,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         })}
       </div>
       
-      {/* Right Side Actions - Hidden on Mobile */}
+      {/* Right Side Actions - Wired up to onLogout */}
       <div className="w-32 hidden md:flex justify-end">
-        <button className="flex items-center gap-2 text-gray-300 hover:text-red-400 transition-colors px-2 py-2 group">
+        <button 
+          onClick={onLogout}
+          className="flex items-center gap-2 text-gray-300 hover:text-red-400 transition-colors px-2 py-2 group"
+        >
           <LogOut className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           <span className="text-xs font-bold uppercase tracking-wider hidden md:inline">Sign Out</span>
         </button>
