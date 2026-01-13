@@ -4,7 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
-import { SignedIn, SignedOut, SignIn, useClerk } from "@clerk/clerk-react"; 
+import { SignedIn, SignedOut, SignIn, useClerk, useUser } from "@clerk/clerk-react"; 
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Download } from 'lucide-react';
