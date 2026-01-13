@@ -68,8 +68,6 @@ const App: React.FC = () => {
     }
   }, [isLoaded, clerkUser]);
 
-
-  const [activeTab, setActiveTab] = useState<string>('editor');
   
   // Editor State
   const [file, setFile] = useState<File | null>(null);
