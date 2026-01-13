@@ -39,6 +39,36 @@ const App: React.FC = () => {
   // Clerk Hook
   const { signOut } = useClerk();
 
+    const App: React.FC = () => {
+  // Clerk Hook
+  const { signOut } = useClerk();
+  // NEW: Get the current user data
+  const { user: clerkUser, isLoaded } = useUser(); 
+
+  const [activeTab, setActiveTab] = useState<string>('editor');
+  
+  // ... (Keep your existing state variables: file, previewUrl, etc.) ...
+  
+  // [PASTE THIS NEW USE EFFECT HERE]
+  // This bridges Clerk -> Your App's "User" State
+  useEffect(() => {
+    if (isLoaded && clerkUser) {
+      // Create a user object that matches your App's internal format
+      const mappedUser: User = {
+        id: clerkUser.id,
+        name: clerkUser.fullName || "User",
+        email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        // Add defaults if your User type has other required fields
+      };
+
+      setUser(mappedUser);
+      // Load data specifically for THIS Clerk ID
+      loadUserSettings(mappedUser.id);
+      loadUserProjects(mappedUser.id);
+    }
+  }, [isLoaded, clerkUser]);
+
+
   const [activeTab, setActiveTab] = useState<string>('editor');
   
   // Editor State
