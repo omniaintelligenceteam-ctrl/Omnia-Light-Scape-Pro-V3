@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
@@ -9,7 +10,8 @@ export const generateNightScene = async (
   imageMimeType: string = 'image/jpeg',
   aspectRatio: string = '1:1',
   lightIntensity: number = 45,
-  beamAngle: number = 30
+  beamAngle: number = 30,
+  colorTemperaturePrompt: string = "Use Soft White (3000K) for all lights."
 ): Promise<string> => {
   
   // Initialization: The API key must be obtained exclusively from process.env.API_KEY.
@@ -38,18 +40,20 @@ export const generateNightScene = async (
     1. **Structure**: Keep the original image geometry, architecture, and landscaping exactly as is. Do not crop or zoom.
     2. **No Hallucinations**: Do not add new trees, plants, or buildings unless explicitly requested.
     3. **Background**: Trees in the background must remain dark silhouettes.
-    4. **Sky**: The night sky must feature a visible FULL MOON and STARS.
+    4. **Sky**: The night sky must feature a photorealistic FULL MOON and STARS. The moon should look natural with crater details and realistic luminance, avoiding cartoonish or clip-art styles.
+    5. **Exclusive Generation Protocol**: If a lighting type or location is NOT explicitly listed in "DESIGN REQUEST" as "ALLOWED", it is FORBIDDEN. The default state for all unmentioned surfaces (roofs, paths, walls) is DARKNESS.
 
     # LIGHTING SPECIFICATIONS
     - **Style**: High-contrast Chiaroscuro. Pitch black environment with specific light sources. No generic ambient wash.
+    - **Color Temperature**: ${colorTemperaturePrompt}
     - **Intensity**: ${getIntensityPrompt(lightIntensity)}
     - **Beam**: ${getBeamAnglePrompt(beamAngle)}
     
-    # FIXTURE RULES
-    - **Up Lights**: Place at the base of columns/pillars and centered on wall sections between windows, tight to the foundation.
-    - **Gutter Lights**: Mount on the gutter lip shining UP only.
-    - **Soffit/Eave Lights**: DEFAULT OFF. The roof overhangs must be pitch black unless soffit lights are requested.
-    - **Path Lights**: Only along existing walkways.
+    # EXCLUSIVE GENERATION RULES
+    - **PLACEMENT PRIORITY**: The "DESIGN REQUEST" below contains a strict ALLOW-LIST.
+    - **Zero Hallucination**: If the user selects "Trees" only, the House MUST remain DARK. If the user selects "Path" only, the House and Trees MUST remain DARK.
+    - **Soffit/Eave Defaults**: DEFAULT OFF. Unless explicitly requested in "DESIGN REQUEST".
+    - **Beam Hygiene**: Light sources must be realistic (cone shape, falloff).
 
     # DESIGN REQUEST
     Apply the following specific configuration to the scene. These instructions override default placement rules if they conflict:

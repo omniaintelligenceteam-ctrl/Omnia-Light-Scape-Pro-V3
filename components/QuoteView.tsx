@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, MinusCircle, FileText, Loader2 } from 'lucide-react';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2 } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 
@@ -293,18 +293,18 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                             </td>
                             <td className="py-4 text-right align-top">
                                 <div className="flex items-center justify-end gap-1">
-                                    <span className="text-gray-400 text-xs font-mono">$</span>
+                                    <span className="text-gray-400 text-xs">$</span>
                                     <input 
                                         type="number" 
                                         value={item.unitPrice}
                                         min="0"
                                         step="0.01"
                                         onChange={(e) => handleUpdateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                        className="w-20 text-right font-medium text-gray-200 bg-transparent border-none p-0 focus:ring-0 rounded font-mono print:text-black"
+                                        className="w-24 text-right font-bold text-white text-base bg-transparent border-none p-0 focus:ring-0 rounded print:text-black"
                                     />
                                 </div>
                             </td>
-                            <td className="py-4 text-right font-bold text-white align-top pt-5 font-mono print:text-black">
+                            <td className="py-4 text-right font-bold text-white text-base align-top pt-5 print:text-black">
                                 ${(item.unitPrice * item.quantity).toFixed(2)}
                             </td>
                             <td className="py-4 text-right align-top print:hidden">
@@ -340,7 +340,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                             type="text" 
                             value={item.name}
                             onChange={(e) => handleUpdateItem(index, 'name', e.target.value)}
-                            className="font-bold text-white text-sm mb-1 w-full bg-transparent border-none p-0 focus:ring-0 placeholder-gray-400 print:text-black"
+                            className="font-bold text-white text-base mb-1 w-full bg-transparent border-none p-0 focus:ring-0 placeholder-gray-400 print:text-black"
                             placeholder="Item Name"
                         />
                         <textarea 
@@ -361,7 +361,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                                 value={item.quantity}
                                 min="0"
                                 onChange={(e) => handleUpdateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                                className="w-full text-sm font-bold text-[#F6B45A] bg-transparent border-none p-0 focus:ring-0 print:text-black"
+                                className="w-full text-base font-bold text-[#F6B45A] bg-transparent border-none p-0 focus:ring-0 print:text-black"
                             />
                         </div>
                         <div className="bg-[#1a1a1a] rounded-lg p-2 border border-white/5 print:bg-transparent print:border-gray-100">
@@ -373,13 +373,13 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                                     value={item.unitPrice}
                                     step="0.01"
                                     onChange={(e) => handleUpdateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                    className="w-full text-sm font-bold text-gray-200 bg-transparent border-none p-0 focus:ring-0 font-mono print:text-black"
+                                    className="w-full text-base font-bold text-white bg-transparent border-none p-0 focus:ring-0 print:text-black"
                                 />
                             </div>
                         </div>
                         <div className="bg-[#F6B45A]/10 rounded-lg p-2 border border-[#F6B45A]/20 flex flex-col justify-center items-end print:bg-gray-100 print:border-gray-200">
                             <label className="text-[9px] font-bold uppercase text-[#F6B45A] block mb-0.5 print:text-gray-600">Total</label>
-                            <span className="text-sm font-black text-white font-mono print:text-black">
+                            <span className="text-base font-black text-white print:text-black">
                                 ${(item.unitPrice * item.quantity).toFixed(2)}
                             </span>
                         </div>
@@ -405,19 +405,19 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
           <div className="flex flex-col md:items-end gap-3 mb-12 md:mb-16 bg-[#111]/30 p-6 rounded-2xl border border-white/5 print:bg-transparent print:border-none print:p-0">
              <div className="w-full md:w-1/2 flex justify-between py-2 text-sm text-gray-200 print:text-gray-600">
                 <span>Subtotal</span>
-                <span className="font-medium font-mono text-white print:text-black">${subtotal.toFixed(2)}</span>
+                <span className="font-bold text-base text-white print:text-black">${subtotal.toFixed(2)}</span>
              </div>
              
              {/* Discount Row */}
              <div className="w-full md:w-1/2 flex justify-between items-center py-2 text-sm text-gray-200 print:text-gray-600">
-                <span className="flex items-center gap-2 text-white font-medium print:text-black"><MinusCircle className="w-3 h-3 text-red-400" /> Discount</span>
+                <span className="flex items-center gap-2 text-white font-medium print:text-black"><Tag className="w-3 h-3 text-gray-400" /> Discount</span>
                 <div className="flex items-center gap-1">
-                    <span className="text-gray-400 text-xs">-$</span>
+                    <span className="text-gray-400 text-sm">$</span>
                     <input
                         type="number"
                         value={discount}
                         onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                        className="w-24 text-right bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1 text-sm text-red-400 focus:ring-0 focus:border-red-400 font-bold placeholder-red-800 font-mono print:bg-transparent print:border-gray-200 print:text-red-600"
+                        className="w-28 text-right bg-[#1a1a1a] border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:ring-0 focus:border-[#F6B45A] font-bold placeholder-gray-600 print:bg-transparent print:border-gray-200 print:text-black"
                         min="0"
                         placeholder="0.00"
                     />
@@ -438,7 +438,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                         <Percent className="w-3 h-3 ml-0.5 text-gray-400" />
                     </div>
                 </div>
-                <span className="font-medium font-mono text-white print:text-black">${tax.toFixed(2)}</span>
+                <span className="font-bold text-base text-white print:text-black">${tax.toFixed(2)}</span>
              </div>
              <div className="w-full md:w-1/2 flex justify-between py-4 text-2xl font-serif font-bold text-[#F6B45A] print:text-black">
                 <span>Total</span>

@@ -62,3 +62,5 @@ export interface SavedProject {
   image: string | null;
   quote: QuoteData | null;
 }
+
+export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';
