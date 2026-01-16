@@ -278,6 +278,14 @@ const App: React.FC = () => {
     // Construct Composite Prompt
     let activePrompt = "EDITING TASK: Apply specific lighting to the EXISTING photo content.\n\n";
 
+    activePrompt += "### CRITICAL GEOMETRY LOCK (ZERO ADDITIONS):\n";
+    activePrompt += "You are strictly forbidden from adding ANY physical matter to this scene. You are a lighting engine only, not a builder.\n";
+    activePrompt += "1. NO NEW TREES. NO NEW BUSHES. NO NEW PLANTS.\n";
+    activePrompt += "2. NO NEW SIDEWALKS. NO NEW PATHWAYS. NO NEW DRIVEWAYS.\n";
+    activePrompt += "3. NO NEW ARCHITECTURE. Do not add wings to the house, do not add dormers, do not add windows.\n";
+    activePrompt += "4. NO NEW DECORATIONS. Do not add furniture, pots, or statues.\n";
+    activePrompt += "VERIFICATION: If the object does not exist in the original daylight photo, it MUST NOT exist in the night render. Only add PHOTONS (Light).\n\n";
+
     activePrompt += "### CRITICAL COMPOSITION RULE:\n";
     activePrompt += "The WHOLE HOUSE must remain in the generated photo. Do NOT crop parts of the house out. Do NOT zoom in. You must preserve the full field of view of the original image.\n\n";
 
@@ -417,7 +425,8 @@ const App: React.FC = () => {
     
     // Final QA Instruction
     activePrompt += "\n\n### FINAL QA PROTOCOL:\n";
-    activePrompt += "Before finalizing the image, review the ALLOWED list again. If you have generated a light on a surface that is NOT in the allowed list, you must REMOVE IT immediately. The image must strictly strictly follow the exclusion rules.";
+    activePrompt += "1. REVIEW GEOMETRY: Did you add any trees, sidewalks, or structural features? If yes, REMOVE THEM.\n";
+    activePrompt += "2. REVIEW EXCLUSIONS: Did you add lights to forbidden surfaces? If yes, REMOVE THEM.\n";
 
     // Prepare Color Temperature Prompt
     const selectedColor = COLOR_TEMPERATURES.find(c => c.id === colorTemp);

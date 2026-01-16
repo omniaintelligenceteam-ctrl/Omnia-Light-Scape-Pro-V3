@@ -38,9 +38,14 @@ export const generateNightScene = async (
 
     # CORE CONSTRAINTS (STRICT)
     1. **Structure**: Keep the original image geometry, architecture, and landscaping exactly as is. Do not crop or zoom.
-    2. **No Hallucinations**: Do not add new trees, plants, or buildings unless explicitly requested.
+    2. **STRICT PROHIBITION: GEOMETRIC ADDITIONS**: You are FORBIDDEN from adding any physical objects.
+       - NO NEW TREES. NO NEW BUSHES.
+       - NO NEW SIDEWALKS. NO NEW DRIVEWAYS. NO NEW PATHS.
+       - NO NEW ARCHITECTURE (No wings, no dormers, no extra windows).
+       - NO NEW DECOR (No pots, no furniture).
+       - Your job is to ADD LIGHT, NOT MATTER.
     3. **Background**: Trees in the background must remain dark silhouettes.
-    4. **Sky**: The night sky must feature a photorealistic FULL MOON and STARS. The moon should look natural with crater details and realistic luminance, avoiding cartoonish or clip-art styles.
+    4. **Sky**: The night sky must feature a photorealistic FULL MOON and STARS. The moon should look natural with crater details and realistic luminance.
     5. **Exclusive Generation Protocol**: If a lighting type or location is NOT explicitly listed in "DESIGN REQUEST" as "ALLOWED", it is FORBIDDEN. The default state for all unmentioned surfaces (roofs, paths, walls) is DARKNESS.
 
     # LIGHTING SPECIFICATIONS
