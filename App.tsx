@@ -6,6 +6,7 @@ import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
 import AuthWrapper from './components/AuthWrapper';
+import { useUserSync } from './hooks/useUserSync';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check } from 'lucide-react';
@@ -38,8 +39,9 @@ const parsePromptForQuantities = (text: string): Record<string, number> => {
 };
 
 const App: React.FC = () => {
-  // Get Clerk user
+  // Get Clerk user and sync to database
   const { user } = useUser();
+  useUserSync(); // Automatically sync user to Supabase on sign-in
 
   const [activeTab, setActiveTab] = useState<string>('editor');
   
