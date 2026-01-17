@@ -4,11 +4,12 @@
   "functions": {
     "api/**/*.ts": {
       "runtime": "nodejs20.x",
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
   "env": {
     "VITE_GEMINI_API_KEY": "@gemini-api-key",
+    "VITE_CLERK_PUBLISHABLE_KEY": "@clerk-publishable-key",
     "VITE_SUPABASE_URL": "@supabase-url",
     "VITE_SUPABASE_SERVICE_KEY": "@supabase-service-key"
   }

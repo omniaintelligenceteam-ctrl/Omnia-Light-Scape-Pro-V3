@@ -14,8 +14,8 @@ export const generateNightScene = async (
   colorTemperaturePrompt: string = "Use Soft White (3000K) for all lights."
 ): Promise<string> => {
   
-  // Initialization: The API key must be obtained exclusively from process.env.API_KEY.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Initialization: The API key is obtained from environment variable
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
   // Map sliders (0-100) to descriptive prompt instructions
   const getIntensityPrompt = (val: number) => {

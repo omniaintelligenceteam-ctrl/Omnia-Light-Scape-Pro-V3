@@ -1,0 +1,79 @@
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #050505;
+  color: #FFFFFF;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #F6B45A;
+}
+
+/* PDF Generation Overrides (Light Mode Simulation) */
+.pdf-mode {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+.pdf-mode * {
+    border-color: #e5e7eb !important;
+}
+/* Override dark backgrounds */
+.pdf-mode .bg-\[\#111\],
+.pdf-mode .bg-\[\#111\]\/30,
+.pdf-mode .bg-\[\#111\]\/50,
+.pdf-mode .bg-\[\#0F0F0F\],
+.pdf-mode .bg-\[\#1a1a1a\] {
+    background-color: transparent !important;
+    color: #000000 !important;
+}
+/* Ensure text is black */
+.pdf-mode input,
+.pdf-mode textarea,
+.pdf-mode span,
+.pdf-mode p,
+.pdf-mode h1,
+.pdf-mode h2,
+.pdf-mode h3,
+.pdf-mode h4,
+.pdf-mode td,
+.pdf-mode th,
+.pdf-mode div {
+    color: #000000 !important;
+}
+/* Adjust light gray text to darker gray */
+.pdf-mode .text-gray-300,
+.pdf-mode .text-gray-200,
+.pdf-mode .text-gray-400 {
+     color: #4b5563 !important;
+}
+.pdf-mode .text-white {
+    color: #000000 !important;
+}
+/* Hide elements not needed in PDF */
+.pdf-mode .print\:hidden,
+.pdf-mode .ambient-glow {
+    display: none !important;
+}
+/* Preserve Gold Color for Branding */
+.pdf-mode .text-\[\#F6B45A\] {
+    color: #d97706 !important;
+}
+.pdf-mode input::placeholder,
+.pdf-mode textarea::placeholder {
+    color: transparent !important;
+}
