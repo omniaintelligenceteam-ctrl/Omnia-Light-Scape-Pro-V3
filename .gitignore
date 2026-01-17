@@ -13,6 +13,16 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (SECURITY: Never commit!)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Backup folder containing exposed credentials
+local-backup/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

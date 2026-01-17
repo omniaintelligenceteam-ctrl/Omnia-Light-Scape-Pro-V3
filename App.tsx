@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
-import { LoginScreen } from './components/LoginScreen';
+import AuthWrapper from './components/AuthWrapper';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check } from 'lucide-react';
@@ -37,8 +38,8 @@ const parsePromptForQuantities = (text: string): Record<string, number> => {
 };
 
 const App: React.FC = () => {
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  // Get Clerk user
+  const { user } = useUser();
 
   const [activeTab, setActiveTab] = useState<string>('editor');
   
@@ -628,10 +629,7 @@ const App: React.FC = () => {
       setProjects(projects.filter(p => p.id !== id));
   };
 
-  // 1. Show Login Screen if not authenticated
-  if (!isAuthenticated) {
-      return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
-  }
+  // Authentication is now handled by AuthWrapper
 
   // 2. Show Loading State while checking API Key
   if (isCheckingAuth) {
@@ -677,7 +675,8 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#050505]">
+    <AuthWrapper>
+      <div className="flex flex-col h-screen overflow-hidden bg-[#050505]">
       <Header onRequestUpgrade={requestApiKey} />
       
       {/* Hidden PDF Generation Container */}
@@ -1202,6 +1201,7 @@ const App: React.FC = () => {
 
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
+    </AuthWrapper>
   );
 };
 
