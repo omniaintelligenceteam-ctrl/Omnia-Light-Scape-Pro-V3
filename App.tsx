@@ -7,6 +7,7 @@ import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
 import AuthWrapper from './components/AuthWrapper';
 import { useUserSync } from './hooks/useUserSync';
+import { useProjects } from './hooks/useProjects';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check } from 'lucide-react';
@@ -42,6 +43,9 @@ const App: React.FC = () => {
   // Get Clerk user and sync to database
   const { user } = useUser();
   useUserSync(); // Automatically sync user to Supabase on sign-in
+
+  // Load/save projects from Supabase
+  const { projects, isLoading: projectsLoading, saveProject, deleteProject } = useProjects();
 
   const [activeTab, setActiveTab] = useState<string>('editor');
   
@@ -82,8 +86,7 @@ const App: React.FC = () => {
   const [feedbackText, setFeedbackText] = useState<string>('');
   const [isLiked, setIsLiked] = useState<boolean>(false);
 
-  // Project State
-  const [projects, setProjects] = useState<SavedProject[]>([]);
+  // Project State (projects loaded from useProjects hook above)
   const [currentQuote, setCurrentQuote] = useState<QuoteData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -602,33 +605,21 @@ const App: React.FC = () => {
     setActiveTab('quotes');
   };
 
-  const handleSaveProjectFromEditor = () => {
+  const handleSaveProjectFromEditor = async () => {
       if (!generatedImage) return;
-      const newProject: SavedProject = {
-          id: crypto.randomUUID(),
-          name: `Night Scene ${projects.length + 1}`,
-          date: new Date().toLocaleDateString(),
-          image: generatedImage,
-          quote: null
-      };
-      setProjects([newProject, ...projects]);
+      const projectName = `Night Scene ${projects.length + 1}`;
+      await saveProject(projectName, generatedImage, null);
       setActiveTab('projects');
   };
 
-  const handleSaveProjectFromQuote = (quoteData: QuoteData) => {
-      const newProject: SavedProject = {
-          id: crypto.randomUUID(),
-          name: quoteData.clientDetails.name || `Quote ${projects.length + 1}`,
-          date: new Date().toLocaleDateString(),
-          image: generatedImage, 
-          quote: quoteData
-      };
-      setProjects([newProject, ...projects]);
+  const handleSaveProjectFromQuote = async (quoteData: QuoteData) => {
+      const projectName = quoteData.clientDetails.name || `Quote ${projects.length + 1}`;
+      await saveProject(projectName, generatedImage || '', quoteData);
       setActiveTab('projects');
   };
 
-  const handleDeleteProject = (id: string) => {
-      setProjects(projects.filter(p => p.id !== id));
+  const handleDeleteProject = async (id: string) => {
+      await deleteProject(id);
   };
 
   // Authentication is now handled by AuthWrapper
