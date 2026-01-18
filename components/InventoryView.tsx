@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Package, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Package, AlertTriangle, RefreshCw, Plus, X, Trash2 } from 'lucide-react';
 import { getInventory, InventoryItem } from '../services/inventoryService';
 
 export const InventoryView: React.FC = () => {
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
+    const [localInventory, setLocalInventory] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showAddProduct, setShowAddProduct] = useState(false);
+    const [newProduct, setNewProduct] = useState({
+        sku: '',
+        name: '',
+        on_hand: 0,
+        reserved: 0
+    });
 
     const fetchInventory = async () => {
         setLoading(true);
@@ -23,6 +31,30 @@ export const InventoryView: React.FC = () => {
     useEffect(() => {
         fetchInventory();
     }, []);
+
+    // Combine API inventory with local inventory
+    const allInventory = [...inventory, ...localInventory];
+
+    const handleAddProduct = () => {
+        if (!newProduct.name.trim() || !newProduct.sku.trim()) return;
+
+        const newItem: InventoryItem = {
+            sku: newProduct.sku,
+            name: newProduct.name,
+            on_hand: newProduct.on_hand,
+            reserved: newProduct.reserved
+        };
+
+        setLocalInventory(prev => [...prev, newItem]);
+        setNewProduct({ sku: '', name: '', on_hand: 0, reserved: 0 });
+        setShowAddProduct(false);
+    };
+
+    const handleDeleteLocalProduct = (sku: string) => {
+        setLocalInventory(prev => prev.filter(item => item.sku !== sku));
+    };
+
+    const isLocalItem = (sku: string) => localInventory.some(item => item.sku === sku);
 
     const getStockStatus = (item: InventoryItem) => {
         const available = item.on_hand - item.reserved;
@@ -43,14 +75,23 @@ export const InventoryView: React.FC = () => {
                         INVENTORY <span className="text-[#F6B45A]">DASHBOARD</span>
                     </h2>
                 </div>
-                <button
-                    onClick={fetchInventory}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#111] border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white hover:border-[#F6B45A]/50 transition-colors disabled:opacity-50"
-                >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowAddProduct(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F6B45A] text-black rounded-lg text-sm font-bold hover:bg-[#ffc67a] transition-colors"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add Product
+                    </button>
+                    <button
+                        onClick={fetchInventory}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#111] border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white hover:border-[#F6B45A]/50 transition-colors disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {/* Error State */}
@@ -63,18 +104,35 @@ export const InventoryView: React.FC = () => {
 
             {/* Inventory Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {inventory.map((item) => {
+                {allInventory.map((item) => {
                     const status = getStockStatus(item);
                     const available = item.on_hand - item.reserved;
+                    const isLocal = isLocalItem(item.sku);
 
                     return (
                         <div
                             key={item.sku}
-                            className="bg-[#111] border border-white/10 rounded-xl p-4 hover:border-[#F6B45A]/30 transition-colors"
+                            className={`bg-[#111] border rounded-xl p-4 hover:border-[#F6B45A]/30 transition-colors group relative ${isLocal ? 'border-[#F6B45A]/20' : 'border-white/10'}`}
                         >
+                            {/* Delete button for local items */}
+                            {isLocal && (
+                                <button
+                                    onClick={() => handleDeleteLocalProduct(item.sku)}
+                                    className="absolute top-2 right-2 p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                    title="Remove product"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+
                             {/* SKU & Status */}
                             <div className="flex items-start justify-between mb-3">
-                                <span className="text-xs font-mono text-gray-500">{item.sku}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-mono text-gray-500">{item.sku}</span>
+                                    {isLocal && (
+                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#F6B45A]/20 text-[#F6B45A] font-bold uppercase">Local</span>
+                                    )}
+                                </div>
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${status.bg} ${status.color}`}>
                                     {status.label}
                                 </span>
@@ -126,6 +184,96 @@ export const InventoryView: React.FC = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Add Product Modal */}
+            {showAddProduct && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="w-full max-w-md mx-4 bg-[#111] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-5 border-b border-white/10">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-[#F6B45A]/10 rounded-lg">
+                                    <Plus className="w-4 h-4 text-[#F6B45A]" />
+                                </div>
+                                <h3 className="font-bold text-lg text-white font-serif">Add Inventory Item</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowAddProduct(false)}
+                                className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-5 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">SKU *</label>
+                                    <input
+                                        type="text"
+                                        value={newProduct.sku}
+                                        onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+                                        placeholder="e.g., LT-001"
+                                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm font-mono focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Product Name *</label>
+                                    <input
+                                        type="text"
+                                        value={newProduct.name}
+                                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                                        placeholder="e.g., Up Light Bronze"
+                                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">On Hand</label>
+                                    <input
+                                        type="number"
+                                        value={newProduct.on_hand}
+                                        onChange={(e) => setNewProduct({ ...newProduct, on_hand: parseInt(e.target.value) || 0 })}
+                                        min="0"
+                                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Reserved</label>
+                                    <input
+                                        type="number"
+                                        value={newProduct.reserved}
+                                        onChange={(e) => setNewProduct({ ...newProduct, reserved: parseInt(e.target.value) || 0 })}
+                                        min="0"
+                                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10 bg-[#0a0a0a]">
+                            <button
+                                onClick={() => setShowAddProduct(false)}
+                                className="px-4 py-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg text-sm font-bold transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAddProduct}
+                                disabled={!newProduct.name.trim() || !newProduct.sku.trim()}
+                                className="px-6 py-2 bg-[#F6B45A] text-[#111] rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-[#ffc67a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Add Product
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

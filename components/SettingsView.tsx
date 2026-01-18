@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES } from '../constants';
 import { FixturePricing, CompanyProfile, FixtureCatalogItem } from '../types';
@@ -271,6 +271,12 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 // --- MAIN SETTINGS COMPONENT ---
 
+// Custom catalog item type (extends FixtureCatalogItem with custom name)
+interface CustomCatalogItem extends FixtureCatalogItem {
+  customName?: string;
+  isCustom?: boolean;
+}
+
 export const SettingsView: React.FC<SettingsViewProps> = ({
     profile,
     onProfileChange,
@@ -286,16 +292,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onFixtureCatalogChange
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('company');
+  const [showAddCatalogProduct, setShowAddCatalogProduct] = useState(false);
+  const [customCatalogProducts, setCustomCatalogProducts] = useState<CustomCatalogItem[]>([]);
+  const [newCatalogProduct, setNewCatalogProduct] = useState({
+    name: '',
+    brand: '',
+    sku: '',
+    wattage: 4
+  });
 
   // Default fixture types for BOM catalog
   const defaultCatalogTypes: FixtureCatalogItem['fixtureType'][] = ['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill'];
 
   // Ensure we have all fixture types in catalog
-  const getFullCatalog = (): FixtureCatalogItem[] => {
-    return defaultCatalogTypes.map(type => {
+  const getFullCatalog = (): CustomCatalogItem[] => {
+    const defaultItems: CustomCatalogItem[] = defaultCatalogTypes.map(type => {
       const existing = fixtureCatalog.find(c => c.fixtureType === type);
-      return existing || { fixtureType: type, brand: '', sku: '', wattage: type === 'path' || type === 'soffit' || type === 'hardscape' ? 3 : 4 };
+      return existing
+        ? { ...existing, isCustom: false }
+        : { fixtureType: type, brand: '', sku: '', wattage: type === 'path' || type === 'soffit' || type === 'hardscape' ? 3 : 4, isCustom: false };
     });
+    return [...defaultItems, ...customCatalogProducts];
+  };
+
+  const handleAddCatalogProduct = () => {
+    if (!newCatalogProduct.name.trim()) return;
+
+    const newItem: CustomCatalogItem = {
+      fixtureType: 'up', // Default type for custom items
+      brand: newCatalogProduct.brand,
+      sku: newCatalogProduct.sku,
+      wattage: newCatalogProduct.wattage,
+      customName: newCatalogProduct.name,
+      isCustom: true
+    };
+
+    setCustomCatalogProducts(prev => [...prev, newItem]);
+    setNewCatalogProduct({ name: '', brand: '', sku: '', wattage: 4 });
+    setShowAddCatalogProduct(false);
+  };
+
+  const handleDeleteCustomProduct = (index: number) => {
+    setCustomCatalogProducts(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCustomProductUpdate = (index: number, field: keyof CustomCatalogItem, value: any) => {
+    setCustomCatalogProducts(prev => prev.map((item, i) =>
+      i === index ? { ...item, [field]: value } : item
+    ));
   };
 
   const handleProfileUpdate = (key: keyof CompanyProfile, value: string) => {
@@ -489,64 +533,235 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {activeSection === 'catalog' && (
                 <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300 space-y-4">
-                    <p className="text-xs text-gray-400 mb-6">
-                        Configure your preferred fixture brands and SKUs. These will appear on your Bill of Materials when you generate a BOM from a quote.
-                    </p>
+                    <div className="flex items-center justify-between mb-6">
+                        <p className="text-xs text-gray-400">
+                            Configure your preferred fixture brands and SKUs. These will appear on your Bill of Materials when you generate a BOM from a quote.
+                        </p>
+                        <button
+                            onClick={() => setShowAddCatalogProduct(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#F6B45A] text-black rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#ffc67a] transition-colors shrink-0 ml-4"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Product
+                        </button>
+                    </div>
 
-                    {getFullCatalog().map((item) => (
-                        <div key={item.fixtureType} className="bg-[#0a0a0a] border border-white/5 rounded-xl p-5 hover:border-[#F6B45A]/30 transition-colors">
-                            <div className="flex items-center gap-3 mb-4">
-                                <span className="text-[10px] font-bold uppercase bg-[#F6B45A] text-black px-3 py-1 rounded-full">
-                                    {FIXTURE_TYPE_NAMES[item.fixtureType] || item.fixtureType}
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {/* Brand */}
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Brand</label>
-                                    <input
-                                        type="text"
-                                        value={item.brand}
-                                        onChange={(e) => handleCatalogUpdate(item.fixtureType, 'brand', e.target.value)}
-                                        placeholder="e.g., FX Luminaire"
-                                        className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
-                                    />
+                    {/* Default Fixture Types */}
+                    {defaultCatalogTypes.map((type) => {
+                        const item = fixtureCatalog.find(c => c.fixtureType === type) || { fixtureType: type, brand: '', sku: '', wattage: type === 'path' || type === 'soffit' || type === 'hardscape' ? 3 : 4 };
+                        return (
+                            <div key={type} className="bg-[#0a0a0a] border border-white/5 rounded-xl p-5 hover:border-[#F6B45A]/30 transition-colors">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <span className="text-[10px] font-bold uppercase bg-[#F6B45A] text-black px-3 py-1 rounded-full">
+                                        {FIXTURE_TYPE_NAMES[type] || type}
+                                    </span>
                                 </div>
 
-                                {/* SKU */}
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">SKU / Model #</label>
-                                    <input
-                                        type="text"
-                                        value={item.sku}
-                                        onChange={(e) => handleCatalogUpdate(item.fixtureType, 'sku', e.target.value)}
-                                        placeholder="e.g., PO-1LED-BZ"
-                                        className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm font-mono focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
-                                    />
-                                </div>
-
-                                {/* Wattage */}
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Wattage</label>
-                                    <div className="relative">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Brand */}
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Brand</label>
                                         <input
-                                            type="number"
-                                            value={item.wattage}
-                                            onChange={(e) => handleCatalogUpdate(item.fixtureType, 'wattage', parseInt(e.target.value) || 0)}
-                                            min="1"
-                                            max="50"
-                                            className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 pr-8 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                            type="text"
+                                            value={item.brand}
+                                            onChange={(e) => handleCatalogUpdate(type, 'brand', e.target.value)}
+                                            placeholder="e.g., FX Luminaire"
+                                            className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
                                         />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">W</span>
+                                    </div>
+
+                                    {/* SKU */}
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">SKU / Model #</label>
+                                        <input
+                                            type="text"
+                                            value={item.sku}
+                                            onChange={(e) => handleCatalogUpdate(type, 'sku', e.target.value)}
+                                            placeholder="e.g., PO-1LED-BZ"
+                                            className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm font-mono focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                        />
+                                    </div>
+
+                                    {/* Wattage */}
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Wattage</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={item.wattage}
+                                                onChange={(e) => handleCatalogUpdate(type, 'wattage', parseInt(e.target.value) || 0)}
+                                                min="1"
+                                                max="50"
+                                                className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 pr-8 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">W</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
+
+                    {/* Custom Products */}
+                    {customCatalogProducts.length > 0 && (
+                        <>
+                            <div className="pt-4 border-t border-white/10 mt-6">
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-[#F6B45A] mb-4">Custom Products</h4>
+                            </div>
+                            {customCatalogProducts.map((item, index) => (
+                                <div key={`custom-${index}`} className="bg-[#0a0a0a] border border-[#F6B45A]/20 rounded-xl p-5 hover:border-[#F6B45A]/40 transition-colors group relative">
+                                    <button
+                                        onClick={() => handleDeleteCustomProduct(index)}
+                                        className="absolute top-3 right-3 p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Remove product"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <span className="text-[10px] font-bold uppercase bg-white/20 text-white px-3 py-1 rounded-full">
+                                            {item.customName || 'Custom Product'}
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {/* Brand */}
+                                        <div>
+                                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Brand</label>
+                                            <input
+                                                type="text"
+                                                value={item.brand}
+                                                onChange={(e) => handleCustomProductUpdate(index, 'brand', e.target.value)}
+                                                placeholder="e.g., FX Luminaire"
+                                                className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                            />
+                                        </div>
+
+                                        {/* SKU */}
+                                        <div>
+                                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">SKU / Model #</label>
+                                            <input
+                                                type="text"
+                                                value={item.sku}
+                                                onChange={(e) => handleCustomProductUpdate(index, 'sku', e.target.value)}
+                                                placeholder="e.g., PO-1LED-BZ"
+                                                className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm font-mono focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                            />
+                                        </div>
+
+                                        {/* Wattage */}
+                                        <div>
+                                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Wattage</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    value={item.wattage}
+                                                    onChange={(e) => handleCustomProductUpdate(index, 'wattage', parseInt(e.target.value) || 0)}
+                                                    min="1"
+                                                    max="50"
+                                                    className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 pr-8 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">W</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
                 </div>
             )}
         </div>
+
+        {/* Add Catalog Product Modal */}
+        {showAddCatalogProduct && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                <div className="w-full max-w-md mx-4 bg-[#111] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between p-5 border-b border-white/10">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-[#F6B45A]/10 rounded-lg">
+                                <Plus className="w-4 h-4 text-[#F6B45A]" />
+                            </div>
+                            <h3 className="font-bold text-lg text-white font-serif">Add Custom Product</h3>
+                        </div>
+                        <button
+                            onClick={() => setShowAddCatalogProduct(false)}
+                            className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <div className="p-5 space-y-4">
+                        <div>
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Product Name *</label>
+                            <input
+                                type="text"
+                                value={newCatalogProduct.name}
+                                onChange={(e) => setNewCatalogProduct({ ...newCatalogProduct, name: e.target.value })}
+                                placeholder="e.g., Well Light 12V"
+                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Brand</label>
+                                <input
+                                    type="text"
+                                    value={newCatalogProduct.brand}
+                                    onChange={(e) => setNewCatalogProduct({ ...newCatalogProduct, brand: e.target.value })}
+                                    placeholder="e.g., FX Luminaire"
+                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">SKU</label>
+                                <input
+                                    type="text"
+                                    value={newCatalogProduct.sku}
+                                    onChange={(e) => setNewCatalogProduct({ ...newCatalogProduct, sku: e.target.value })}
+                                    placeholder="e.g., WL-LED"
+                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm font-mono focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Wattage</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    value={newCatalogProduct.wattage}
+                                    onChange={(e) => setNewCatalogProduct({ ...newCatalogProduct, wattage: parseInt(e.target.value) || 0 })}
+                                    min="1"
+                                    max="100"
+                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 pr-8 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">W</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10 bg-[#0a0a0a]">
+                        <button
+                            onClick={() => setShowAddCatalogProduct(false)}
+                            className="px-4 py-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg text-sm font-bold transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleAddCatalogProduct}
+                            disabled={!newCatalogProduct.name.trim()}
+                            className="px-6 py-2 bg-[#F6B45A] text-[#111] rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-[#ffc67a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Add Product
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* --- SECTION 4: LIGHTING PREFERENCES --- */}
         <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">

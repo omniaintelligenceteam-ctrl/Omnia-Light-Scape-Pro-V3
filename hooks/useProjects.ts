@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import { SavedProject, QuoteData } from '../types';
+import { SavedProject, QuoteData, BOMData } from '../types';
 
 export function useProjects() {
   const { user } = useUser();
@@ -33,7 +33,8 @@ export function useProjects() {
             name: p.name,
             date: new Date(p.created_at).toLocaleDateString(),
             image: p.generated_image_url,
-            quote: p.prompt_config?.quote || null
+            quote: p.prompt_config?.quote || null,
+            bom: p.prompt_config?.bom || null
           }));
           setProjects(loadedProjects);
         }
@@ -52,7 +53,8 @@ export function useProjects() {
   const saveProject = useCallback(async (
     name: string,
     generatedImage: string,
-    quote: QuoteData | null = null
+    quote: QuoteData | null = null,
+    bom: BOMData | null = null
   ): Promise<SavedProject | null> => {
     if (!user) {
       setError('User not logged in');
@@ -60,7 +62,12 @@ export function useProjects() {
     }
 
     try {
-      console.log('Saving project...', { name, userId: user.id, hasImage: !!generatedImage });
+      console.log('Saving project...', { name, userId: user.id, hasImage: !!generatedImage, hasBOM: !!bom });
+
+      // Build prompt_config object with all available data
+      const promptConfig: Record<string, any> = { savedFromEditor: true };
+      if (quote) promptConfig.quote = quote;
+      if (bom) promptConfig.bom = bom;
 
       const response = await fetch(`/api/projects?userId=${user.id}`, {
         method: 'POST',
@@ -70,7 +77,7 @@ export function useProjects() {
         body: JSON.stringify({
           name,
           generated_image_url: generatedImage,
-          prompt_config: quote ? { quote } : { savedFromEditor: true }
+          prompt_config: promptConfig
         }),
       });
 
@@ -91,7 +98,8 @@ export function useProjects() {
           name: data.data.name,
           date: new Date(data.data.created_at).toLocaleDateString(),
           image: data.data.generated_image_url,
-          quote: data.data.prompt_config?.quote || null
+          quote: data.data.prompt_config?.quote || null,
+          bom: data.data.prompt_config?.bom || null
         };
 
         // Add to local state
@@ -136,7 +144,7 @@ export function useProjects() {
   // Update a project
   const updateProject = useCallback(async (
     projectId: string,
-    updates: { name?: string; quote?: QuoteData }
+    updates: { name?: string; quote?: QuoteData; bom?: BOMData }
   ): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
@@ -144,6 +152,11 @@ export function useProjects() {
     }
 
     try {
+      // Build prompt_config for updates
+      const promptConfig: Record<string, any> = {};
+      if (updates.quote) promptConfig.quote = updates.quote;
+      if (updates.bom) promptConfig.bom = updates.bom;
+
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'PATCH',
         headers: {
@@ -151,7 +164,7 @@ export function useProjects() {
         },
         body: JSON.stringify({
           name: updates.name,
-          prompt_config: updates.quote ? { quote: updates.quote } : undefined
+          prompt_config: Object.keys(promptConfig).length > 0 ? promptConfig : undefined
         }),
       });
 
@@ -165,7 +178,8 @@ export function useProjects() {
           return {
             ...p,
             name: updates.name || p.name,
-            quote: updates.quote || p.quote
+            quote: updates.quote || p.quote,
+            bom: updates.bom || p.bom
           };
         }
         return p;

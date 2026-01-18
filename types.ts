@@ -61,6 +61,7 @@ export interface SavedProject {
   date: string;
   image: string | null;
   quote: QuoteData | null;
+  bom: BOMData | null;
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';
@@ -99,4 +100,31 @@ export interface FixtureCatalogItem {
   brand: string;              // User's preferred brand
   sku: string;                // User's SKU
   wattage: number;            // Actual wattage of their fixture
+}
+
+// Invoice Types
+export interface InvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface InvoiceData {
+  id: string;
+  projectId: string;
+  projectName: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  clientDetails: ClientDetails;
+  lineItems: InvoiceLineItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  discount: number;
+  total: number;
+  notes: string;
+  status: 'draft' | 'sent' | 'paid';
 }

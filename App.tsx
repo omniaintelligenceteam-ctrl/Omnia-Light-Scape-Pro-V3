@@ -13,9 +13,9 @@ import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, UP_LIGHT_SUBOPTIONS, PATH_LIGHT_SUBOPTIONS, CORE_DRILL_SUBOPTIONS, GUTTER_LIGHT_SUBOPTIONS, SOFFIT_LIGHT_SUBOPTIONS, HARDSCAPE_LIGHT_SUBOPTIONS } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem } from './types';
 
 // Helper to parse fixture quantities from text
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -107,6 +107,12 @@ const App: React.FC = () => {
   // BOM State
   const [currentBOM, setCurrentBOM] = useState<BOMData | null>(null);
   const [fixtureCatalog, setFixtureCatalog] = useState<FixtureCatalogItem[]>([]);
+
+  // Projects Sub-Tab State
+  const [projectsSubTab, setProjectsSubTab] = useState<'projects' | 'approved' | 'invoicing'>('projects');
+  const [approvedProjectIds, setApprovedProjectIds] = useState<Set<string>>(new Set());
+  const [invoices, setInvoices] = useState<InvoiceData[]>([]);
+  const [currentInvoice, setCurrentInvoice] = useState<InvoiceData | null>(null);
 
   // Auth State (API Key)
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -649,6 +655,109 @@ const App: React.FC = () => {
       setActiveTab('bom');
   };
 
+  const handleBOMChange = (bom: BOMData) => {
+      setCurrentBOM(bom);
+  };
+
+  const handleSaveProjectFromBOM = async (bom: BOMData) => {
+      const projectName = currentQuote?.clientDetails?.name || `BOM Project ${projects.length + 1}`;
+      const result = await saveProject(projectName, generatedImage || '', currentQuote, bom);
+      if (result) {
+        setActiveTab('projects');
+      } else {
+        setError('Failed to save project. Please try again.');
+      }
+  };
+
+  // Approve a project
+  const handleApproveProject = (projectId: string) => {
+      setApprovedProjectIds(prev => new Set([...prev, projectId]));
+      setProjectsSubTab('approved');
+  };
+
+  // Generate invoice from approved project
+  const handleGenerateInvoice = (project: SavedProject) => {
+      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+      const today = new Date();
+      const dueDate = new Date(today);
+      dueDate.setDate(dueDate.getDate() + 30); // 30 days payment terms
+
+      // Convert quote line items to invoice line items
+      const lineItems: InvoiceLineItem[] = project.quote?.lineItems.map(item => ({
+          id: item.id,
+          description: `${item.name} - ${item.description}`,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.quantity * item.unitPrice
+      })) || [];
+
+      const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+      const taxRate = project.quote?.taxRate || 0.07;
+      const taxAmount = subtotal * taxRate;
+      const discount = project.quote?.discount || 0;
+      const total = subtotal + taxAmount - discount;
+
+      const newInvoice: InvoiceData = {
+          id: `inv-${Date.now()}`,
+          projectId: project.id,
+          projectName: project.name,
+          invoiceNumber,
+          invoiceDate: today.toISOString().split('T')[0],
+          dueDate: dueDate.toISOString().split('T')[0],
+          clientDetails: project.quote?.clientDetails || { name: '', email: '', phone: '', address: '' },
+          lineItems,
+          subtotal,
+          taxRate,
+          taxAmount,
+          discount,
+          total,
+          notes: '',
+          status: 'draft'
+      };
+
+      setCurrentInvoice(newInvoice);
+      setInvoices(prev => [...prev, newInvoice]);
+      setProjectsSubTab('invoicing');
+  };
+
+  // Update invoice field
+  const handleInvoiceChange = (field: keyof InvoiceData, value: any) => {
+      if (!currentInvoice) return;
+
+      const updated = { ...currentInvoice, [field]: value };
+
+      // Recalculate totals if needed
+      if (field === 'lineItems' || field === 'taxRate' || field === 'discount') {
+          const lineItems = field === 'lineItems' ? value : updated.lineItems;
+          const subtotal = lineItems.reduce((sum: number, item: InvoiceLineItem) => sum + item.total, 0);
+          const taxAmount = subtotal * updated.taxRate;
+          updated.subtotal = subtotal;
+          updated.taxAmount = taxAmount;
+          updated.total = subtotal + taxAmount - updated.discount;
+      }
+
+      setCurrentInvoice(updated);
+      setInvoices(prev => prev.map(inv => inv.id === updated.id ? updated : inv));
+  };
+
+  // Update invoice line item
+  const handleInvoiceLineItemChange = (itemId: string, field: keyof InvoiceLineItem, value: number | string) => {
+      if (!currentInvoice) return;
+
+      const updatedLineItems = currentInvoice.lineItems.map(item => {
+          if (item.id === itemId) {
+              const updated = { ...item, [field]: value };
+              if (field === 'quantity' || field === 'unitPrice') {
+                  updated.total = updated.quantity * updated.unitPrice;
+              }
+              return updated;
+          }
+          return item;
+      });
+
+      handleInvoiceChange('lineItems', updatedLineItems);
+  };
+
   // Authentication is now handled by AuthWrapper
 
   // 2. Show Loading State while checking API Key
@@ -1047,9 +1156,9 @@ const App: React.FC = () => {
               <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
-                 
+
                  {/* High-End Header */}
-                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6 border-b border-white/5 pb-6">
                      <div>
                         <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Project Library</h2>
                         <div className="flex items-center gap-2">
@@ -1072,129 +1181,548 @@ const App: React.FC = () => {
                         />
                      </div>
                  </div>
-                 
-                 {filteredProjects.length === 0 ? (
-                     <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm">
-                         <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                            <FolderPlus className="w-8 h-8 text-gray-500" />
-                         </div>
-                         <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">System Empty</p>
-                         <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">No rendered scenes found in database</p>
-                     </div>
-                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                        {filteredProjects.map((p, index) => (
-                            <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(246,180,90,0.1)] flex flex-col">
-                                
-                                {/* Image Section - Hero */}
-                                <div 
-                                    className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}
-                                >
-                                    {p.image ? (
-                                        <>
-                                            <img 
-                                                src={p.image} 
-                                                onClick={() => {
-                                                    setGeneratedImage(p.image);
-                                                    setActiveTab('editor');
-                                                }}
-                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" 
-                                                alt="Scene" 
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
-                                            
-                                            {/* Tech Corners */}
-                                            <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                            <div className="absolute top-2 right-2 w-3 h-3 border-r border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                            <div className="absolute bottom-2 left-2 w-3 h-3 border-l border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                            <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
 
-                                            {/* Hover Action */}
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                                                <div className="bg-[#F6B45A] text-black px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
-                                                    Load Scene
+                 {/* Sub-Tabs Navigation */}
+                 <div className="flex items-center gap-2 mb-8 bg-[#111] p-1.5 rounded-xl border border-white/5 w-fit">
+                     <button
+                         onClick={() => setProjectsSubTab('projects')}
+                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                             projectsSubTab === 'projects'
+                                 ? 'bg-[#F6B45A] text-black'
+                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                         }`}
+                     >
+                         <FolderPlus className="w-4 h-4" />
+                         Projects
+                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${projectsSubTab === 'projects' ? 'bg-black/20' : 'bg-white/10'}`}>
+                             {filteredProjects.filter(p => !approvedProjectIds.has(p.id)).length}
+                         </span>
+                     </button>
+                     <button
+                         onClick={() => setProjectsSubTab('approved')}
+                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                             projectsSubTab === 'approved'
+                                 ? 'bg-emerald-500 text-white'
+                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                         }`}
+                     >
+                         <CheckCircle2 className="w-4 h-4" />
+                         Approved
+                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${projectsSubTab === 'approved' ? 'bg-black/20' : 'bg-white/10'}`}>
+                             {approvedProjectIds.size}
+                         </span>
+                     </button>
+                     <button
+                         onClick={() => setProjectsSubTab('invoicing')}
+                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                             projectsSubTab === 'invoicing'
+                                 ? 'bg-blue-500 text-white'
+                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                         }`}
+                     >
+                         <Receipt className="w-4 h-4" />
+                         Invoicing
+                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${projectsSubTab === 'invoicing' ? 'bg-black/20' : 'bg-white/10'}`}>
+                             {invoices.length}
+                         </span>
+                     </button>
+                 </div>
+
+                 {/* SUB-TAB: PROJECTS (Unapproved) */}
+                 {projectsSubTab === 'projects' && (
+                     <>
+                         {filteredProjects.filter(p => !approvedProjectIds.has(p.id)).length === 0 ? (
+                             <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm">
+                                 <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                                    <FolderPlus className="w-8 h-8 text-gray-500" />
+                                 </div>
+                                 <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">No Pending Projects</p>
+                                 <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">All projects have been approved</p>
+                             </div>
+                         ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                                {filteredProjects.filter(p => !approvedProjectIds.has(p.id)).map((p) => (
+                                    <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(246,180,90,0.1)] flex flex-col">
+
+                                        {/* Image Section - Hero */}
+                                        <div className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}>
+                                            {p.image ? (
+                                                <>
+                                                    <img
+                                                        src={p.image}
+                                                        onClick={() => {
+                                                            setGeneratedImage(p.image);
+                                                            setActiveTab('editor');
+                                                        }}
+                                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                                                        alt="Scene"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
+
+                                                    {/* Tech Corners */}
+                                                    <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                    <div className="absolute top-2 right-2 w-3 h-3 border-r border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                    <div className="absolute bottom-2 left-2 w-3 h-3 border-l border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                    <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+
+                                                    {/* Hover Action */}
+                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                                        <div className="bg-[#F6B45A] text-black px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                                                            Load Scene
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
+                                                    <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
+                                                    <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
                                                 </div>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
-                                            <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
-                                            <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Info Section */}
-                                <div className="p-5 flex flex-col flex-1 border-t border-white/5 bg-[#0a0a0a]">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <div className="text-[9px] text-[#F6B45A] font-mono mb-1">ID: PRJ-{p.id.substring(0,6).toUpperCase()}</div>
-                                            <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate w-48">{p.name}</h3>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <button 
-                                                onClick={() => handleDeleteProject(p.id)}
-                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-full transition-colors"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Stats Grid */}
-                                    <div className="grid grid-cols-2 gap-3 mt-auto">
-                                        <div className="bg-[#151515] p-2 rounded-lg border border-white/5">
-                                            <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Created</span>
-                                            <span className="text-xs text-gray-200 font-mono">{p.date}</span>
-                                        </div>
-                                        <div 
-                                            onClick={() => {
-                                                if (p.quote) {
-                                                    setCurrentQuote(p.quote);
-                                                    if (p.image) setGeneratedImage(p.image);
-                                                    setActiveTab('quotes');
-                                                }
-                                            }}
-                                            className={`bg-[#151515] p-2 rounded-lg border border-white/5 relative group/quote transition-colors ${p.quote ? 'cursor-pointer hover:border-[#F6B45A]/30 hover:bg-[#F6B45A]/5' : ''}`}
-                                        >
-                                            <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Estimate</span>
-                                            <span className={`text-xs font-mono font-bold ${p.quote ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
-                                                {p.quote ? `$${p.quote.total.toFixed(0)}` : 'N/A'}
-                                            </span>
-                                            {p.quote && (
-                                                <ArrowUpRight className="absolute top-2 right-2 w-3 h-3 text-[#F6B45A] opacity-0 group-hover/quote:opacity-100 transition-opacity" />
                                             )}
                                         </div>
-                                    </div>
 
-                                    {/* Download Actions Row */}
-                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
-                                        <button 
-                                            onClick={() => handleDownloadImage(p)}
-                                            className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
-                                            title="Download Image"
-                                            disabled={!p.image}
-                                        >
-                                            <ImageIcon className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
-                                            Save Img
-                                        </button>
-                                        
-                                        {p.quote && (
-                                            <button 
-                                                onClick={() => setPdfProject(p)}
-                                                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
-                                                title="Download Quote PDF"
-                                            >
-                                                <FileText className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
-                                                Save Quote
-                                            </button>
-                                        )}
+                                        {/* Info Section */}
+                                        <div className="p-5 flex flex-col flex-1 border-t border-white/5 bg-[#0a0a0a]">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <div className="text-[9px] text-[#F6B45A] font-mono mb-1">ID: PRJ-{p.id.substring(0,6).toUpperCase()}</div>
+                                                    <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate w-48">{p.name}</h3>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => handleDeleteProject(p.id)}
+                                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-full transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Stats Grid */}
+                                            <div className="grid grid-cols-2 gap-3 mt-auto">
+                                                <div className="bg-[#151515] p-2 rounded-lg border border-white/5">
+                                                    <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Created</span>
+                                                    <span className="text-xs text-gray-200 font-mono">{p.date}</span>
+                                                </div>
+                                                <div
+                                                    onClick={() => {
+                                                        if (p.quote) {
+                                                            setCurrentQuote(p.quote);
+                                                            if (p.image) setGeneratedImage(p.image);
+                                                            setActiveTab('quotes');
+                                                        }
+                                                    }}
+                                                    className={`bg-[#151515] p-2 rounded-lg border border-white/5 relative group/quote transition-colors ${p.quote ? 'cursor-pointer hover:border-[#F6B45A]/30 hover:bg-[#F6B45A]/5' : ''}`}
+                                                >
+                                                    <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Estimate</span>
+                                                    <span className={`text-xs font-mono font-bold ${p.quote ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
+                                                        {p.quote ? `$${p.quote.total.toFixed(0)}` : 'N/A'}
+                                                    </span>
+                                                    {p.quote && (
+                                                        <ArrowUpRight className="absolute top-2 right-2 w-3 h-3 text-[#F6B45A] opacity-0 group-hover/quote:opacity-100 transition-opacity" />
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Action Buttons Row */}
+                                            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                                                <button
+                                                    onClick={() => handleDownloadImage(p)}
+                                                    className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
+                                                    title="Download Image"
+                                                    disabled={!p.image}
+                                                >
+                                                    <ImageIcon className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
+                                                    Save Img
+                                                </button>
+
+                                                {p.quote && (
+                                                    <button
+                                                        onClick={() => setPdfProject(p)}
+                                                        className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
+                                                        title="Download Quote PDF"
+                                                    >
+                                                        <FileText className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
+                                                        Quote
+                                                    </button>
+                                                )}
+
+                                                {/* Approve Button */}
+                                                <button
+                                                    onClick={() => handleApproveProject(p.id)}
+                                                    className="flex-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-emerald-500/30 hover:border-emerald-500"
+                                                    title="Approve Project"
+                                                >
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    Approve
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                         )}
+                     </>
+                 )}
+
+                 {/* SUB-TAB: APPROVED */}
+                 {projectsSubTab === 'approved' && (
+                     <>
+                         {filteredProjects.filter(p => approvedProjectIds.has(p.id)).length === 0 ? (
+                             <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-emerald-500/20 rounded-3xl bg-emerald-500/5 backdrop-blur-sm">
+                                 <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20">
+                                    <CheckCircle2 className="w-8 h-8 text-emerald-500/50" />
+                                 </div>
+                                 <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">No Approved Projects</p>
+                                 <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">Approve projects to see them here</p>
+                             </div>
+                         ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                                {filteredProjects.filter(p => approvedProjectIds.has(p.id)).map((p) => (
+                                    <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-emerald-500/20 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)] flex flex-col">
+
+                                        {/* Approved Badge */}
+                                        <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-emerald-500 text-white px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-lg">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                            Approved
+                                        </div>
+
+                                        {/* Image Section */}
+                                        <div className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}>
+                                            {p.image ? (
+                                                <>
+                                                    <img
+                                                        src={p.image}
+                                                        onClick={() => {
+                                                            setGeneratedImage(p.image);
+                                                            setActiveTab('editor');
+                                                        }}
+                                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                                                        alt="Scene"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
+                                                </>
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
+                                                    <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
+                                                    <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Info Section */}
+                                        <div className="p-5 flex flex-col flex-1 border-t border-emerald-500/10 bg-[#0a0a0a]">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <div className="text-[9px] text-emerald-500 font-mono mb-1">ID: PRJ-{p.id.substring(0,6).toUpperCase()}</div>
+                                                    <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate w-48">{p.name}</h3>
+                                                </div>
+                                            </div>
+
+                                            {/* Stats Grid */}
+                                            <div className="grid grid-cols-2 gap-3 mt-auto">
+                                                <div className="bg-[#151515] p-2 rounded-lg border border-white/5">
+                                                    <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Created</span>
+                                                    <span className="text-xs text-gray-200 font-mono">{p.date}</span>
+                                                </div>
+                                                <div className="bg-[#151515] p-2 rounded-lg border border-white/5">
+                                                    <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Total</span>
+                                                    <span className="text-xs font-mono font-bold text-emerald-500">
+                                                        {p.quote ? `$${p.quote.total.toFixed(0)}` : 'N/A'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Generate Invoice Button */}
+                                            <div className="mt-4 pt-4 border-t border-white/5">
+                                                <button
+                                                    onClick={() => handleGenerateInvoice(p)}
+                                                    disabled={!p.quote}
+                                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+                                                >
+                                                    <Receipt className="w-4 h-4" />
+                                                    Generate Invoice
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                         )}
+                     </>
+                 )}
+
+                 {/* SUB-TAB: INVOICING */}
+                 {projectsSubTab === 'invoicing' && (
+                     <>
+                         {currentInvoice ? (
+                             /* Invoice Editor View */
+                             <div className="max-w-4xl mx-auto">
+                                 {/* Invoice Header */}
+                                 <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden">
+                                     {/* Top Bar */}
+                                     <div className="flex items-center justify-between p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-transparent">
+                                         <div className="flex items-center gap-4">
+                                             <div className="p-3 bg-blue-500/20 rounded-xl">
+                                                 <Receipt className="w-6 h-6 text-blue-500" />
+                                             </div>
+                                             <div>
+                                                 <h3 className="text-xl font-bold text-white font-serif">{currentInvoice.invoiceNumber}</h3>
+                                                 <p className="text-xs text-gray-400">{currentInvoice.projectName}</p>
+                                             </div>
+                                         </div>
+                                         <div className="flex items-center gap-3">
+                                             <span className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                                 currentInvoice.status === 'draft' ? 'bg-gray-500/20 text-gray-400' :
+                                                 currentInvoice.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
+                                                 'bg-emerald-500/20 text-emerald-400'
+                                             }`}>
+                                                 {currentInvoice.status}
+                                             </span>
+                                             <button
+                                                 onClick={() => setCurrentInvoice(null)}
+                                                 className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                             >
+                                                 <X className="w-5 h-5" />
+                                             </button>
+                                         </div>
+                                     </div>
+
+                                     {/* Invoice Details */}
+                                     <div className="p-6 space-y-6">
+                                         {/* Dates Row */}
+                                         <div className="grid grid-cols-2 gap-4">
+                                             <div>
+                                                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Invoice Date</label>
+                                                 <div className="relative">
+                                                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                                     <input
+                                                         type="date"
+                                                         value={currentInvoice.invoiceDate}
+                                                         onChange={(e) => handleInvoiceChange('invoiceDate', e.target.value)}
+                                                         className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors"
+                                                     />
+                                                 </div>
+                                             </div>
+                                             <div>
+                                                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Due Date</label>
+                                                 <div className="relative">
+                                                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                                     <input
+                                                         type="date"
+                                                         value={currentInvoice.dueDate}
+                                                         onChange={(e) => handleInvoiceChange('dueDate', e.target.value)}
+                                                         className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors"
+                                                     />
+                                                 </div>
+                                             </div>
+                                         </div>
+
+                                         {/* Client Details */}
+                                         <div>
+                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Bill To</label>
+                                             <div className="grid grid-cols-2 gap-4">
+                                                 <input
+                                                     type="text"
+                                                     value={currentInvoice.clientDetails.name}
+                                                     onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, name: e.target.value })}
+                                                     placeholder="Client Name"
+                                                     className="bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500"
+                                                 />
+                                                 <input
+                                                     type="email"
+                                                     value={currentInvoice.clientDetails.email}
+                                                     onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, email: e.target.value })}
+                                                     placeholder="Client Email"
+                                                     className="bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500"
+                                                 />
+                                                 <input
+                                                     type="text"
+                                                     value={currentInvoice.clientDetails.phone}
+                                                     onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, phone: e.target.value })}
+                                                     placeholder="Phone"
+                                                     className="bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500"
+                                                 />
+                                                 <input
+                                                     type="text"
+                                                     value={currentInvoice.clientDetails.address}
+                                                     onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, address: e.target.value })}
+                                                     placeholder="Address"
+                                                     className="bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500"
+                                                 />
+                                             </div>
+                                         </div>
+
+                                         {/* Line Items */}
+                                         <div>
+                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">Line Items</label>
+                                             <div className="bg-[#0a0a0a] rounded-xl border border-white/10 overflow-hidden">
+                                                 {/* Header */}
+                                                 <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/10 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                                     <div className="col-span-5">Description</div>
+                                                     <div className="col-span-2 text-center">Qty</div>
+                                                     <div className="col-span-2 text-center">Unit Price</div>
+                                                     <div className="col-span-3 text-right">Total</div>
+                                                 </div>
+                                                 {/* Items */}
+                                                 {currentInvoice.lineItems.map((item) => (
+                                                     <div key={item.id} className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 items-center hover:bg-white/5 transition-colors">
+                                                         <div className="col-span-5">
+                                                             <input
+                                                                 type="text"
+                                                                 value={item.description}
+                                                                 onChange={(e) => handleInvoiceLineItemChange(item.id, 'description', e.target.value)}
+                                                                 className="w-full bg-transparent text-white text-sm focus:outline-none"
+                                                             />
+                                                         </div>
+                                                         <div className="col-span-2 flex items-center justify-center gap-1">
+                                                             <button
+                                                                 onClick={() => handleInvoiceLineItemChange(item.id, 'quantity', Math.max(1, item.quantity - 1))}
+                                                                 className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white"
+                                                             >
+                                                                 <Minus className="w-3 h-3" />
+                                                             </button>
+                                                             <input
+                                                                 type="number"
+                                                                 value={item.quantity}
+                                                                 onChange={(e) => handleInvoiceLineItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                                                                 className="w-12 bg-transparent text-white text-sm text-center focus:outline-none"
+                                                             />
+                                                             <button
+                                                                 onClick={() => handleInvoiceLineItemChange(item.id, 'quantity', item.quantity + 1)}
+                                                                 className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white"
+                                                             >
+                                                                 <Plus className="w-3 h-3" />
+                                                             </button>
+                                                         </div>
+                                                         <div className="col-span-2 flex items-center justify-center">
+                                                             <span className="text-gray-400 mr-1">$</span>
+                                                             <input
+                                                                 type="number"
+                                                                 value={item.unitPrice}
+                                                                 onChange={(e) => handleInvoiceLineItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                                                 className="w-20 bg-transparent text-white text-sm text-center focus:outline-none"
+                                                             />
+                                                         </div>
+                                                         <div className="col-span-3 text-right text-white font-mono font-bold">
+                                                             ${item.total.toFixed(2)}
+                                                         </div>
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                         </div>
+
+                                         {/* Totals */}
+                                         <div className="flex justify-end">
+                                             <div className="w-72 space-y-3">
+                                                 <div className="flex justify-between items-center text-sm">
+                                                     <span className="text-gray-400">Subtotal</span>
+                                                     <span className="text-white font-mono">${currentInvoice.subtotal.toFixed(2)}</span>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-sm">
+                                                     <span className="text-gray-400">Tax ({(currentInvoice.taxRate * 100).toFixed(0)}%)</span>
+                                                     <span className="text-white font-mono">${currentInvoice.taxAmount.toFixed(2)}</span>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-sm">
+                                                     <span className="text-gray-400">Discount</span>
+                                                     <div className="flex items-center gap-1">
+                                                         <span className="text-gray-400">-$</span>
+                                                         <input
+                                                             type="number"
+                                                             value={currentInvoice.discount}
+                                                             onChange={(e) => handleInvoiceChange('discount', parseFloat(e.target.value) || 0)}
+                                                             className="w-20 bg-[#0a0a0a] border border-white/10 rounded px-2 py-1 text-white text-sm text-right focus:outline-none focus:border-blue-500"
+                                                         />
+                                                     </div>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-lg pt-3 border-t border-white/10">
+                                                     <span className="text-white font-bold">Total</span>
+                                                     <span className="text-blue-500 font-mono font-bold">${currentInvoice.total.toFixed(2)}</span>
+                                                 </div>
+                                             </div>
+                                         </div>
+
+                                         {/* Notes */}
+                                         <div>
+                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Notes</label>
+                                             <textarea
+                                                 value={currentInvoice.notes}
+                                                 onChange={(e) => handleInvoiceChange('notes', e.target.value)}
+                                                 placeholder="Add any notes or payment instructions..."
+                                                 className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500 resize-none h-24"
+                                             />
+                                         </div>
+                                     </div>
+
+                                     {/* Footer Actions */}
+                                     <div className="flex items-center justify-between p-6 border-t border-white/10 bg-[#0a0a0a]">
+                                         <button
+                                             onClick={() => handleInvoiceChange('status', currentInvoice.status === 'draft' ? 'sent' : currentInvoice.status === 'sent' ? 'paid' : 'draft')}
+                                             className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                                                 currentInvoice.status === 'draft' ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white' :
+                                                 currentInvoice.status === 'sent' ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white' :
+                                                 'bg-gray-500/20 text-gray-400 hover:bg-gray-500 hover:text-white'
+                                             }`}
+                                         >
+                                             {currentInvoice.status === 'draft' ? 'Mark as Sent' : currentInvoice.status === 'sent' ? 'Mark as Paid' : 'Reset to Draft'}
+                                         </button>
+                                         <button
+                                             className="flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-blue-500/20"
+                                         >
+                                             <Download className="w-4 h-4" />
+                                             Download PDF
+                                         </button>
+                                     </div>
+                                 </div>
+                             </div>
+                         ) : (
+                             /* Invoice List View */
+                             <>
+                                 {invoices.length === 0 ? (
+                                     <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-blue-500/20 rounded-3xl bg-blue-500/5 backdrop-blur-sm">
+                                         <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20">
+                                            <Receipt className="w-8 h-8 text-blue-500/50" />
+                                         </div>
+                                         <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">No Invoices Yet</p>
+                                         <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">Generate invoices from approved projects</p>
+                                     </div>
+                                 ) : (
+                                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                         {invoices.map((invoice) => (
+                                             <div
+                                                 key={invoice.id}
+                                                 onClick={() => setCurrentInvoice(invoice)}
+                                                 className="bg-[#111] border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all cursor-pointer group"
+                                             >
+                                                 <div className="flex items-start justify-between mb-4">
+                                                     <div>
+                                                         <p className="text-[10px] text-blue-500 font-mono mb-1">{invoice.invoiceNumber}</p>
+                                                         <h4 className="font-bold text-white">{invoice.projectName}</h4>
+                                                         <p className="text-xs text-gray-400">{invoice.clientDetails.name || 'No client'}</p>
+                                                     </div>
+                                                     <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${
+                                                         invoice.status === 'draft' ? 'bg-gray-500/20 text-gray-400' :
+                                                         invoice.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
+                                                         'bg-emerald-500/20 text-emerald-400'
+                                                     }`}>
+                                                         {invoice.status}
+                                                     </span>
+                                                 </div>
+                                                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                                     <div className="text-xs text-gray-400">
+                                                         Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                                                     </div>
+                                                     <div className="text-lg font-bold text-blue-500 font-mono">
+                                                         ${invoice.total.toFixed(2)}
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 )}
+                             </>
+                         )}
+                     </>
                  )}
              </div>
             </div>
@@ -1207,7 +1735,13 @@ const App: React.FC = () => {
 
           {/* TAB: BOM */}
           {activeTab === 'bom' && (
-            <BOMView bomData={currentBOM} />
+            <BOMView
+              bomData={currentBOM}
+              onBOMChange={handleBOMChange}
+              onSaveProject={handleSaveProjectFromBOM}
+              currentQuote={currentQuote}
+              generatedImage={generatedImage}
+            />
           )}
 
           {/* TAB: SETTINGS */}
