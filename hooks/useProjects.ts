@@ -60,6 +60,8 @@ export function useProjects() {
     }
 
     try {
+      console.log('Saving project...', { name, userId: user.id, hasImage: !!generatedImage });
+
       const response = await fetch(`/api/projects?userId=${user.id}`, {
         method: 'POST',
         headers: {
@@ -72,11 +74,16 @@ export function useProjects() {
         }),
       });
 
+      console.log('Save response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to save project');
+        const errorText = await response.text();
+        console.error('Save failed:', response.status, errorText);
+        throw new Error(`Failed to save project: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Save response data:', data);
 
       if (data.success && data.data) {
         const newProject: SavedProject = {
