@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Webhook } from 'svix';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.js';
 
 const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
 
