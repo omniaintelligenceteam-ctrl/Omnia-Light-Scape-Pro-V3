@@ -241,77 +241,172 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
     negativePrompt: `HARD RULE: Do NOT generate any ground-mounted up lights. The base of the house, walls, columns, and landscaping must remain completely dark at ground level. No uplighting of any kind.`,
     subOptions: [
       {
-        id: 'siding',
-        label: 'Siding',
-        description: 'Ground staked up lights on pier siding',
-        prompt: `TARGET: WALL PIERS / SIDING SECTIONS
-Identify every vertical solid wall section (siding, stucco, brick, stone) BETWEEN windows across the entire home facade.
+  id: 'siding',
+  label: 'Siding',
+  description: 'Ground staked up lights on wall piers between windows',
+  prompt: `TARGET: WALL PIERS / SIDING SECTIONS -- VERTICAL SURFACE GRAZING
 
-FIXTURE PLACEMENT:
-- Position one ground-staked brass up light at the BASE of each wall pier
-- Fixture distance from wall: 6 inches (or tighter against foundation if landscaping obstructs)
-- Place fixtures in planting bed/mulch, NOT on concrete or hardscape
-- Start with the FAR LEFT and FAR RIGHT corners of the structure, then fill between
+IDENTIFICATION SCAN:
+- Locate every vertical solid wall section BETWEEN windows across the entire home facade
+- Wall pier materials: siding (lap, board & batten, shake), stucco, brick, stone, block
+- Include: corner sections at far left and far right of structure
+- Include: wall sections between window groupings
+- Include: blank wall expanses with no windows
+
+FIXTURE SPECIFICATIONS:
+- Type: ground-staked brass up light (bullet or cylinder style)
+- Housing: solid brass/bronze, low-profile
+- Height: 6-8 inches above grade
+- Beam: narrow to medium (15-30 degrees) for wall grazing
+
+PLACEMENT GEOMETRY:
+- Place ONE ground-staked fixture at the BASE of EACH wall pier
+- Distance from wall: 6 inches (tighter against foundation if landscaping obstructs)
+- Place fixtures in planting bed or mulch ONLY -- never on concrete, pavers, or hardscape
+
+PLACEMENT SEQUENCE:
+1. Start with FAR LEFT corner of facade
+2. Then FAR RIGHT corner of facade
+3. Fill INWARD identifying each wall pier between windows
+4. Every vertical wall section receives one fixture
+
+WALL PIER IDENTIFICATION:
+- Measure from window edge to window edge
+- The solid wall between = one pier = one fixture
+- Wide piers (>6 ft): consider two fixtures at 1/3 points
+- Narrow piers (<2 ft): single centered fixture
 
 LIGHT PHYSICS:
-- Use WALL GRAZING technique: light source close to wall creates dramatic texture reveal on siding/stone
-- The light beam originates as a small bright hotspot at ground level
-- Beam travels VERTICALLY UP the wall with natural intensity falloff (brightest at base, gradually dimmer toward top)
-- Light MUST reach the soffit/roofline directly above - illuminating 2nd story if present
-- Cast subtle shadows from any architectural trim, shutters, or texture
+- WALL GRAZING technique: fixture close to wall (6 inches) creates dramatic texture reveal
+- Beam originates as bright hotspot at ground level
+- Light travels VERTICALLY UP the wall surface
+- Natural intensity falloff: brightest at base, gradually dimmer toward top
+- Beam MUST reach soffit/roofline directly above
+- If 2nd story present, light must travel full height to upper roofline
+- Cast subtle shadows from architectural trim, shutters, and surface texture
 
-REALISM:
+TEXTURE REVELATION BY MATERIAL:
+- LAP SIDING: horizontal shadow lines between each board
+- BOARD & BATTEN: vertical shadow lines at battens
+- BRICK: mortar joint grid pattern emphasized
+- STONE: irregular surface creates dramatic light/shadow play
+- STUCCO: subtle texture with soft shadows
+- SHAKE/SHINGLE: layered shadow pattern
+
+REALISM REQUIREMENTS:
 - Warm, soft glow characteristic of low-voltage LED landscape lighting
-- Slight light spill onto adjacent surfaces (not perfectly contained)
-- The fixture itself is a small dark brass cylinder, nearly invisible at night
+- Slight light spill onto adjacent surfaces (not perfectly contained beams)
+- Fixtures appear as small dark brass cylinders, nearly invisible at night
+- Light appears natural, not theatrical or over-saturated
 
-STRICT EXCLUSIONS:
-- Do NOT place lights directly under window glass
-- Do NOT place fixtures on walkways or driveways
-- Do NOT illuminate the soffit from above (no downlights)
-- Wall sections adjacent to selected windows receive ONLY spill light, not direct fixtures`,
-        negativePrompt: `ABSOLUTE PROHIBITION (SIDING): Do NOT place lights at the base of wall piers or siding sections between windows.`
-      },
-      {
-        id: 'windows',
-        label: '1st Story Windows',
-        description: 'Centered on glass (single) or mullion between (double)',
-        prompt: `TARGET: UP LIGHT UNDER 1ST STORY WINDOW ASSEMBLIES -- CENTERED
-
-WINDOW CLASSIFICATION:
-- SINGLE WINDOW: one pane of glass in a frame
-- DOUBLE/MULLED WINDOW: two or more panes joined by a vertical divider (mullion)
-
-PLACEMENT LOGIC:
-- SINGLE WINDOWS: place ONE ground-staked brass up light aligned with the exact HORIZONTAL CENTER of the glass pane
-- DOUBLE/JOINED WINDOWS: place EXACTLY ONE fixture centered on the VERTICAL MULLION (divider) between the panes
-
-GEOMETRY:
-- Find the center axis of the window unit
-- Drop a plumb line from that center to ground level
-- Stake the fixture at that ground point
-- Setback from foundation: 4-6 inches
-
-LIGHT PHYSICS:
-- Use WALL WASHING with slight graze to softly illuminate the window frame and trim
-- Beam originates at ground and travels vertically upward
-- Light grazes the center of the window frame or mullion and continues UP to the soffit above
-- Brightest at base with natural falloff
-- NO direct beam aimed at the glass pane itself -- glass receives ambient glow only
-
-OBSTRUCTION OVERRIDE:
-- IGNORE landscaping obstructions
-- If bushes or plants block the base, place the fixture BEHIND the foliage, pressed against the foundation
-- Do NOT skip any window due to landscaping
+SPACING RHYTHM:
+- Consistent fixture placement creates visual rhythm across facade
+- Alternating pattern: window (ambient glow) / pier (direct uplight) / window / pier
+- Symmetry preferred when architecture allows
 
 STRICT EXCLUSION ZONES:
-- Do NOT place lights under shutters (offset from window center)
-- Do NOT place lights on blank siding or wall space adjacent to the window
-- Do NOT place fixtures on concrete, pavers, or hardscape -- use planting beds/soil only
-- Do NOT use multiple fixtures for a single window unit
-- Left and right wall piers adjacent to windows remain darker -- they receive only spill light`,
-        negativePrompt: `ABSOLUTE PROHIBITION (1ST STORY WINDOWS): Do NOT place lights directly under glass windows. Do NOT place lights off-center from the window. Do NOT skip windows due to obstructions.`
+- Do NOT place fixtures directly UNDER window glass -- windows are skipped
+- Do NOT place fixtures on walkways, driveways, or any hardscape surface
+- Do NOT place fixtures in open lawn areas away from foundation
+- Do NOT aim light at window glass -- wall piers only
+- Do NOT create downlighting from soffit (this is UP lighting only)
+- Do NOT skip corner sections -- corners are critical anchor points
+- Wall sections immediately adjacent to windows receive SPILL light only, not direct fixtures`,
+  negativePrompt: `ABSOLUTE PROHIBITION (SIDING): Do NOT place up lights directly under windows. Do NOT place on concrete or hardscape. Do NOT skip corner wall sections. Do NOT aim beams at window glass. Wall piers between windows only.`
+
       },
+      {
+  id: 'windows',
+  label: '1st Story Windows',
+  description: 'Centered on glass (single) or mullion between (double)',
+  prompt: `TARGET: 1ST STORY WINDOW ASSEMBLIES -- CENTERED UPLIGHTING
+
+IDENTIFICATION SCAN:
+- Locate ALL first-story windows across the home facade
+- Include: single windows, double/mulled windows, triple windows, picture windows, bay windows
+- Identify the window TYPE to determine fixture placement point
+- Note window trim, casing, and any shutters present
+
+WINDOW CLASSIFICATION & PLACEMENT POINT:
+- SINGLE WINDOW (one pane): fixture centered on the horizontal middle of the glass
+- DOUBLE/MULLED WINDOW (two panes): fixture centered on the vertical MULLION (divider) between panes
+- TRIPLE WINDOW (three panes): fixture centered on the middle pane OR on center mullion
+- PICTURE WINDOW (large single): fixture centered on window width
+- BAY WINDOW: one fixture centered on each flat window section
+
+FIXTURE SPECIFICATIONS:
+- Type: ground-staked brass up light (bullet or cylinder style)
+- Housing: solid brass/bronze, low-profile
+- Height: 6-8 inches above grade
+- Beam: medium spread (20-40 degrees) for soft wall washing
+
+PLACEMENT GEOMETRY:
+- Find the CENTER AXIS of the window unit (vertical centerline)
+- Drop a plumb line from that center point to ground level
+- Stake the fixture at that exact ground point
+- Setback from foundation wall: 4-6 inches
+- Place in planting bed or mulch ONLY
+
+CENTERING PRECISION:
+- Fixture must align with window centerline -- NOT offset left or right
+- For windows with shutters: center on WINDOW, ignore shutter width
+- For windows with trim/casing: center on GLASS, not outer trim edge
+- Visual test: fixture should appear directly below window center when viewed straight-on
+
+LIGHT PHYSICS:
+- WALL WASHING technique with slight graze for soft illumination
+- Beam originates at ground level below window
+- Light travels VERTICALLY UP, grazing the window frame and trim
+- Illuminates: sill, frame, casing, trim details, header
+- Light CONTINUES ABOVE window to soffit/roofline
+- Brightest at base with natural intensity falloff upward
+- Glass receives AMBIENT GLOW only -- no direct beam on glass surface
+
+WINDOW FRAME ILLUMINATION:
+- Bottom sill: receives direct light first
+- Side casings: light grazes vertically along trim
+- Header/top trim: receives light traveling upward
+- Muntins/grilles (if present): cast subtle shadow patterns
+- Shutters (if present): catch side spill, add depth
+
+OBSTRUCTION OVERRIDE PROTOCOL:
+- IGNORE landscaping obstructions entirely
+- If bushes, shrubs, or plants block the ideal fixture location:
+  - Place fixture BEHIND the foliage
+  - Press fixture close to foundation (tighter than 4 inches if needed)
+  - Light will filter through/around foliage naturally
+- Do NOT skip any window due to landscaping obstacles
+- Do NOT relocate fixture off-center to avoid plants
+
+REALISM REQUIREMENTS:
+- Warm, soft glow characteristic of low-voltage LED landscape lighting
+- Window frame and trim softly illuminated, not harshly lit
+- Glass appears to glow from reflected/ambient light, not direct beam
+- Slight spill onto wall areas immediately adjacent to window
+- Fixture nearly invisible at night -- light effect is the focus
+
+FIXTURE COUNT RULE:
+- ONE fixture per window unit -- no exceptions
+- Double window = ONE fixture (on mullion)
+- Triple window = ONE fixture (centered)
+- Do NOT use multiple fixtures for a single window assembly
+
+STRICT EXCLUSION ZONES:
+- Do NOT place fixtures directly under SHUTTERS (stay centered on window glass)
+- Do NOT place fixtures on BLANK SIDING or wall piers between windows
+- Do NOT place fixtures on concrete, pavers, driveways, or walkways
+- Do NOT aim beam directly AT the glass surface
+- Do NOT skip windows because of landscaping
+- Do NOT use multiple fixtures per window
+- Do NOT place off-center from window axis
+- Adjacent wall piers receive SPILL LIGHT only, not dedicated fixtures
+
+RELATIONSHIP TO SIDING PRESET:
+- If SIDING preset is also active: windows get centered fixtures, wall piers get separate fixtures
+- If ONLY windows preset is active: wall piers between windows remain darker (spill light only)
+- These presets are complementary, not overlapping`,
+  negativePrompt: `ABSOLUTE PROHIBITION (1ST STORY WINDOWS): Do NOT place fixtures off-center from windows. Do NOT skip windows due to landscaping. Do NOT place on wall piers between windows. Do NOT aim directly at glass. Do NOT use multiple fixtures per window. ONE fixture centered under each window only.`
+},
       {
         id: 'entryway',
         label: 'Entryway',
