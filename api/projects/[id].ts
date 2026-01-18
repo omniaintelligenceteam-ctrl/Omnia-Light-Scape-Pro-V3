@@ -2,20 +2,33 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { id, userId } = req.query;
+  const { id, userId: clerkUserId } = req.query;
 
-  if (!id || typeof id !== 'string' || !userId || typeof userId !== 'string') {
+  if (!id || typeof id !== 'string' || !clerkUserId || typeof clerkUserId !== 'string') {
     return res.status(400).json({ error: 'Missing id or userId parameter' });
   }
 
   try {
+    // Look up the Supabase user ID from the Clerk user ID
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('clerk_user_id', clerkUserId)
+      .single();
+
+    if (userError || !userData) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const supabaseUserId = userData.id;
+
     if (req.method === 'GET') {
       // Get single project
       const { data, error } = await supabase
         .from('projects')
         .select('*')
         .eq('id', id)
-        .eq('user_id', userId)
+        .eq('user_id', supabaseUserId)
         .single();
 
       if (error) throw error;
@@ -35,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('projects')
         .update(updateData)
         .eq('id', id)
-        .eq('user_id', userId)
+        .eq('user_id', supabaseUserId)
         .select()
         .single();
 
@@ -50,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('projects')
         .delete()
         .eq('id', id)
-        .eq('user_id', userId);
+        .eq('user_id', supabaseUserId);
 
       if (error) throw error;
 

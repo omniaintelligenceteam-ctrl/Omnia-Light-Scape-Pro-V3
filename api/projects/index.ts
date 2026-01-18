@@ -2,19 +2,33 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { userId } = req.query;
+  const { userId: clerkUserId } = req.query;
 
-  if (!userId || typeof userId !== 'string') {
+  if (!clerkUserId || typeof clerkUserId !== 'string') {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
 
   try {
+    // Look up the Supabase user ID from the Clerk user ID
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('clerk_user_id', clerkUserId)
+      .single();
+
+    if (userError || !userData) {
+      console.error('User lookup failed:', userError);
+      return res.status(404).json({ error: 'User not found. Please sign out and sign back in.' });
+    }
+
+    const supabaseUserId = userData.id;
+
     if (req.method === 'GET') {
       // List all projects for user
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', supabaseUserId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -33,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await supabase
         .from('projects')
         .insert({
-          user_id: userId,
+          user_id: supabaseUserId,
           name: name || 'Untitled Project',
           original_image_url: original_image_url || null,
           generated_image_url,
