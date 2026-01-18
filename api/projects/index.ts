@@ -2,7 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log('Projects API called:', req.method, req.url);
+
   const { userId: clerkUserId } = req.query;
+  console.log('Clerk User ID:', clerkUserId);
 
   if (!clerkUserId || typeof clerkUserId !== 'string') {
     return res.status(400).json({ error: 'Missing userId parameter' });
@@ -10,15 +13,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Look up the Supabase user ID from the Clerk user ID
+    console.log('Looking up user with clerk_user_id:', clerkUserId);
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
       .eq('clerk_user_id', clerkUserId)
       .single();
 
+    console.log('User lookup result:', { userData, userError });
+
     if (userError || !userData) {
       console.error('User lookup failed:', userError);
-      return res.status(404).json({ error: 'User not found. Please sign out and sign back in.' });
+      return res.status(404).json({ error: 'User not found. Please sign out and sign back in.', details: userError });
     }
 
     const supabaseUserId = userData.id;
