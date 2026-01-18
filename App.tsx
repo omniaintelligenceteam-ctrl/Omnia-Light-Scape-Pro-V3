@@ -606,9 +606,15 @@ const App: React.FC = () => {
   };
 
   const handleSaveProjectFromEditor = async () => {
-      if (!generatedImage) return;
+      console.log('Save Project clicked!', { hasImage: !!generatedImage });
+      if (!generatedImage) {
+        console.log('No generated image, returning early');
+        return;
+      }
       const projectName = `Night Scene ${projects.length + 1}`;
+      console.log('Calling saveProject with:', projectName);
       const result = await saveProject(projectName, generatedImage, null);
+      console.log('saveProject result:', result);
       if (result) {
         setActiveTab('projects');
       } else {
