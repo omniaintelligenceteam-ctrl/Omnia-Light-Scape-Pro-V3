@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { supabase } from './lib/supabase';
 
-const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY!);
+const genAI = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY! });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST requests
@@ -50,13 +50,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Generate image with Nano Banana Pro (Gemini 3 Pro Image)
+    // Generate image with Gemini
     const startTime = Date.now();
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image' });
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
+    const result = await genAI.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
         temperature: 0.9,
         topP: 0.95,
         maxOutputTokens: 8192,
@@ -64,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const generationTime = Date.now() - startTime;
-    const response = result.response.text();
+    const response = result.text;
 
     // Log the render
     await supabase.from('render_logs').insert({
