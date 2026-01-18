@@ -6,13 +6,16 @@ import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
 import AuthWrapper from './components/AuthWrapper';
+import { InventoryView } from './components/InventoryView';
+import { BOMView } from './components/BOMView';
+import { generateBOM } from './utils/bomCalculator';
 import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, UP_LIGHT_SUBOPTIONS, PATH_LIGHT_SUBOPTIONS, CORE_DRILL_SUBOPTIONS, GUTTER_LIGHT_SUBOPTIONS, SOFFIT_LIGHT_SUBOPTIONS, HARDSCAPE_LIGHT_SUBOPTIONS } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem } from './types';
 
 // Helper to parse fixture quantities from text
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -100,6 +103,10 @@ const App: React.FC = () => {
     address: '123 Landscape Lane\nDesign District, CA 90210',
     logo: null
   });
+
+  // BOM State
+  const [currentBOM, setCurrentBOM] = useState<BOMData | null>(null);
+  const [fixtureCatalog, setFixtureCatalog] = useState<FixtureCatalogItem[]>([]);
 
   // Auth State (API Key)
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -636,6 +643,12 @@ const App: React.FC = () => {
       await deleteProject(id);
   };
 
+  const handleGenerateBOM = (quoteData: QuoteData) => {
+      const bom = generateBOM(quoteData.lineItems, fixtureCatalog.length > 0 ? fixtureCatalog : undefined);
+      setCurrentBOM(bom);
+      setActiveTab('bom');
+  };
+
   // Authentication is now handled by AuthWrapper
 
   // 2. Show Loading State while checking API Key
@@ -1017,9 +1030,10 @@ const App: React.FC = () => {
 
           {/* TAB: QUOTES */}
           {activeTab === 'quotes' && (
-             <QuoteView 
-                onSave={handleSaveProjectFromQuote} 
-                initialData={currentQuote} 
+             <QuoteView
+                onSave={handleSaveProjectFromQuote}
+                onGenerateBOM={handleGenerateBOM}
+                initialData={currentQuote}
                 companyProfile={companyProfile}
                 defaultPricing={pricing}
              />
@@ -1186,20 +1200,31 @@ const App: React.FC = () => {
             </div>
           )}
 
-           {/* TAB: SETTINGS */}
+           {/* TAB: INVENTORY */}
+           {activeTab === 'inventory' && (
+              <InventoryView />
+           )}
+
+          {/* TAB: BOM */}
+          {activeTab === 'bom' && (
+            <BOMView bomData={currentBOM} />
+          )}
+
+          {/* TAB: SETTINGS */}
            {activeTab === 'settings' && (
-             <SettingsView 
+             <SettingsView
                 profile={companyProfile}
                 onProfileChange={setCompanyProfile}
                 colorTemp={colorTemp}
                 onColorTempChange={setColorTemp}
                 lightIntensity={lightIntensity}
                 onLightIntensityChange={setLightIntensity}
-                // darknessLevel removed from props
                 beamAngle={beamAngle}
                 onBeamAngleChange={setBeamAngle}
                 pricing={pricing}
                 onPricingChange={setPricing}
+                fixtureCatalog={fixtureCatalog}
+                onFixtureCatalogChange={setFixtureCatalog}
              />
           )}
 

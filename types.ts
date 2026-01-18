@@ -64,3 +64,39 @@ export interface SavedProject {
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';
+
+// BOM (Bill of Materials) Types
+export interface BOMFixture {
+  id: string;
+  category: string;           // 'up', 'path', 'gutter', etc.
+  name: string;               // Display name
+  quantity: number;
+  wattage: number;            // Per fixture wattage
+  totalWattage: number;       // quantity * wattage
+  sku?: string;               // Optional brand SKU
+  brand?: string;             // e.g., 'FX Luminaire', 'Kichler'
+}
+
+export interface BOMData {
+  fixtures: BOMFixture[];
+  totalWattage: number;
+  totalFixtures: number;
+  recommendedTransformer: {
+    name: string;             // e.g., '300W Transformer'
+    watts: number;            // e.g., 300
+    loadPercentage: number;   // e.g., 40 (meaning 40% capacity used)
+  };
+  wireEstimate: {
+    gauge: string;            // '12/2', '10/2'
+    footage: number;
+    runsNeeded: number;
+  };
+  generatedAt: string;
+}
+
+export interface FixtureCatalogItem {
+  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'coredrill';
+  brand: string;              // User's preferred brand
+  sku: string;                // User's SKU
+  wattage: number;            // Actual wattage of their fixture
+}

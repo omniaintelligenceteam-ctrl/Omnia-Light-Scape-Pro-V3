@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
-import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES } from '../constants';
-import { FixturePricing, CompanyProfile } from '../types';
+import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES } from '../constants';
+import { FixturePricing, CompanyProfile, FixtureCatalogItem } from '../types';
 
 interface SettingsViewProps {
   profile?: CompanyProfile;
@@ -15,6 +15,8 @@ interface SettingsViewProps {
   onBeamAngleChange?: (angle: number) => void;
   pricing?: FixturePricing[];
   onPricingChange?: (pricing: FixturePricing[]) => void;
+  fixtureCatalog?: FixtureCatalogItem[];
+  onFixtureCatalogChange?: (catalog: FixtureCatalogItem[]) => void;
 }
 
 // --- UI COMPONENTS ---
@@ -269,9 +271,9 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 // --- MAIN SETTINGS COMPONENT ---
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ 
-    profile, 
-    onProfileChange, 
+export const SettingsView: React.FC<SettingsViewProps> = ({
+    profile,
+    onProfileChange,
     colorTemp = '3000k',
     onColorTempChange,
     lightIntensity = 50,
@@ -279,10 +281,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     beamAngle = 45,
     onBeamAngleChange,
     pricing,
-    onPricingChange
+    onPricingChange,
+    fixtureCatalog = [],
+    onFixtureCatalogChange
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('company');
-  
+
+  // Default fixture types for BOM catalog
+  const defaultCatalogTypes: FixtureCatalogItem['fixtureType'][] = ['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill'];
+
+  // Ensure we have all fixture types in catalog
+  const getFullCatalog = (): FixtureCatalogItem[] => {
+    return defaultCatalogTypes.map(type => {
+      const existing = fixtureCatalog.find(c => c.fixtureType === type);
+      return existing || { fixtureType: type, brand: '', sku: '', wattage: type === 'path' || type === 'soffit' || type === 'hardscape' ? 3 : 4 };
+    });
+  };
+
   const handleProfileUpdate = (key: keyof CompanyProfile, value: string) => {
       if (onProfileChange && profile) {
           onProfileChange({ ...profile, [key]: value });
@@ -294,6 +309,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const newPricing = [...pricing];
     newPricing[index] = { ...newPricing[index], [field]: value };
     onPricingChange(newPricing);
+  };
+
+  const handleCatalogUpdate = (fixtureType: FixtureCatalogItem['fixtureType'], field: keyof FixtureCatalogItem, value: any) => {
+    if (!onFixtureCatalogChange) return;
+    const fullCatalog = getFullCatalog();
+    const updated = fullCatalog.map(item =>
+      item.fixtureType === fixtureType ? { ...item, [field]: value } : item
+    );
+    onFixtureCatalogChange(updated);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -453,11 +477,82 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
         </div>
 
-        {/* --- SECTION 3: LIGHTING PREFERENCES --- */}
+        {/* --- SECTION 3: FIXTURE CATALOG (BOM) --- */}
         <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
-            <SectionHeader 
-                icon={Lightbulb} 
-                title="Lighting Defaults" 
+            <SectionHeader
+                icon={ClipboardList}
+                title="Fixture Catalog"
+                subtitle="Set your brands & SKUs for Bill of Materials"
+                isOpen={activeSection === 'catalog'}
+                onToggle={() => setActiveSection(activeSection === 'catalog' ? null : 'catalog')}
+            />
+
+            {activeSection === 'catalog' && (
+                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300 space-y-4">
+                    <p className="text-xs text-gray-400 mb-6">
+                        Configure your preferred fixture brands and SKUs. These will appear on your Bill of Materials when you generate a BOM from a quote.
+                    </p>
+
+                    {getFullCatalog().map((item) => (
+                        <div key={item.fixtureType} className="bg-[#0a0a0a] border border-white/5 rounded-xl p-5 hover:border-[#F6B45A]/30 transition-colors">
+                            <div className="flex items-center gap-3 mb-4">
+                                <span className="text-[10px] font-bold uppercase bg-[#F6B45A] text-black px-3 py-1 rounded-full">
+                                    {FIXTURE_TYPE_NAMES[item.fixtureType] || item.fixtureType}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Brand */}
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Brand</label>
+                                    <input
+                                        type="text"
+                                        value={item.brand}
+                                        onChange={(e) => handleCatalogUpdate(item.fixtureType, 'brand', e.target.value)}
+                                        placeholder="e.g., FX Luminaire"
+                                        className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                    />
+                                </div>
+
+                                {/* SKU */}
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">SKU / Model #</label>
+                                    <input
+                                        type="text"
+                                        value={item.sku}
+                                        onChange={(e) => handleCatalogUpdate(item.fixtureType, 'sku', e.target.value)}
+                                        placeholder="e.g., PO-1LED-BZ"
+                                        className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm font-mono focus:border-[#F6B45A] focus:outline-none transition-colors placeholder-gray-500"
+                                    />
+                                </div>
+
+                                {/* Wattage */}
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Wattage</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={item.wattage}
+                                            onChange={(e) => handleCatalogUpdate(item.fixtureType, 'wattage', parseInt(e.target.value) || 0)}
+                                            min="1"
+                                            max="50"
+                                            className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 pr-8 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors"
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">W</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+
+        {/* --- SECTION 4: LIGHTING PREFERENCES --- */}
+        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
+            <SectionHeader
+                icon={Lightbulb}
+                title="Lighting Defaults"
                 subtitle="Configure default realism settings"
                 isOpen={activeSection === 'lighting'}
                 onToggle={() => setActiveSection(activeSection === 'lighting' ? null : 'lighting')}

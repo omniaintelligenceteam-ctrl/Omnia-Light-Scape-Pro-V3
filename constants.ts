@@ -14,7 +14,7 @@ export const UP_LIGHT_SUBOPTIONS = [
     label: '1st Story Windows',
     description: 'Centered on glass (Single) or mullion Between (Double)',
     prompt: `
-      TARGET: 1ST STORY WINDOWS. Iterate through every window unit on the ground floor.
+      TARGET: UP LIGHT UNDER 1ST STORY WINDOW ASSEMBLIES CENTERED.
       
       PLACEMENT LOGIC (CRITICAL):
       1. SINGLE WINDOWS: Place one ground-mounted up light aligned with the EXACT HORIZONTAL CENTER of the glass pane.
@@ -357,4 +357,43 @@ export const STRIPE_CONFIG = {
       price: 299
     }
   }
+};
+
+// BOM - Default fixture wattages (users can override in Settings)
+export const DEFAULT_FIXTURE_WATTAGES: Record<string, number> = {
+  up: 4,
+  path: 3,
+  gutter: 4,
+  soffit: 3,
+  hardscape: 3,
+  coredrill: 4
+};
+
+// BOM - Transformer sizing options
+export const TRANSFORMER_SIZES = [
+  { watts: 150, name: '150W Transformer', maxLoad: 120 },
+  { watts: 300, name: '300W Transformer', maxLoad: 240 },
+  { watts: 600, name: '600W Transformer', maxLoad: 480 },
+  { watts: 900, name: '900W Transformer', maxLoad: 720 },
+  { watts: 1200, name: '1200W Transformer', maxLoad: 960 }
+];
+
+// BOM - Default fixture catalog (placeholder brands - users set their own in Settings)
+export const DEFAULT_FIXTURE_CATALOG = [
+  { fixtureType: 'up', brand: '', sku: '', wattage: 4 },
+  { fixtureType: 'path', brand: '', sku: '', wattage: 3 },
+  { fixtureType: 'gutter', brand: '', sku: '', wattage: 4 },
+  { fixtureType: 'soffit', brand: '', sku: '', wattage: 3 },
+  { fixtureType: 'hardscape', brand: '', sku: '', wattage: 3 },
+  { fixtureType: 'coredrill', brand: '', sku: '', wattage: 4 }
+];
+
+// BOM - Fixture type display names
+export const FIXTURE_TYPE_NAMES: Record<string, string> = {
+  up: 'Up Light',
+  path: 'Path Light',
+  gutter: 'Gutter Light',
+  soffit: 'Soffit Light',
+  hardscape: 'Hardscape Light',
+  coredrill: 'Core Drill Light'
 };

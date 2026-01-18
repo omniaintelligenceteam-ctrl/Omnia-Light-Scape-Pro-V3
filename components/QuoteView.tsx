@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2 } from 'lucide-react';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 
 interface QuoteViewProps {
     onSave: (data: QuoteData) => void;
+    onGenerateBOM?: (data: QuoteData) => void;
     initialData?: QuoteData | null;
     companyProfile?: CompanyProfile;
     defaultPricing?: FixturePricing[];
@@ -12,9 +13,10 @@ interface QuoteViewProps {
     hideToolbar?: boolean;
 }
 
-export const QuoteView: React.FC<QuoteViewProps> = ({ 
-    onSave, 
-    initialData, 
+export const QuoteView: React.FC<QuoteViewProps> = ({
+    onSave,
+    onGenerateBOM,
+    initialData,
     companyProfile = { name: 'Omnia Light Scape Pro', email: '', address: '123 Landscape Lane\nDesign District, CA 90210', logo: null },
     defaultPricing = DEFAULT_PRICING,
     containerId = "quote-content",
@@ -89,6 +91,23 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
       onSave(data);
   };
 
+  const handleGenerateBOMClick = () => {
+      if (!onGenerateBOM) return;
+      const data: QuoteData = {
+          lineItems,
+          taxRate,
+          discount,
+          clientDetails: {
+              name: clientName,
+              email: clientEmail,
+              phone: clientPhone,
+              address: projectAddress
+          },
+          total
+      };
+      onGenerateBOM(data);
+  };
+
   const handleDownloadPdf = async () => {
     const element = document.getElementById(containerId);
     if (!element) return;
@@ -141,7 +160,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
             </div>
             
             <div className="flex items-center gap-1 md:gap-2">
-                <button 
+                <button
                     onClick={handleSaveClick}
                     className="bg-[#F6B45A] text-[#111] px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-[#ffc67a] hover:scale-105 transition-all shadow-[0_0_15px_rgba(246,180,90,0.3)]"
                 >
@@ -149,13 +168,23 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                     <span className="hidden sm:inline">Save Project</span>
                     <span className="sm:hidden">Save</span>
                 </button>
+                {onGenerateBOM && (
+                    <button
+                        onClick={handleGenerateBOMClick}
+                        className="bg-white/10 text-white px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-white/20 hover:scale-105 transition-all border border-white/10"
+                    >
+                        <ClipboardList className="w-3 h-3 md:w-4 md:h-4" />
+                        <span className="hidden sm:inline">Generate BOM</span>
+                        <span className="sm:hidden">BOM</span>
+                    </button>
+                )}
                 <div className="w-px h-6 bg-white/10 mx-1"></div>
                 {/* Email Button */}
                 <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Email">
                     <Mail className="w-4 h-4" />
                 </button>
                 {/* Download PDF Button */}
-                <button 
+                <button
                     onClick={handleDownloadPdf}
                     disabled={isGeneratingPdf}
                     className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
