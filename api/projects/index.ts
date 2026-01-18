@@ -26,8 +26,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Create new project
       const { name, original_image_url, generated_image_url, prompt_config } = req.body;
 
-      if (!generated_image_url || !prompt_config) {
-        return res.status(400).json({ error: 'Missing required fields' });
+      if (!generated_image_url) {
+        return res.status(400).json({ error: 'Missing generated_image_url' });
       }
 
       const { data, error } = await supabase
@@ -35,9 +35,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .insert({
           user_id: userId,
           name: name || 'Untitled Project',
-          original_image_url,
+          original_image_url: original_image_url || null,
           generated_image_url,
-          prompt_config
+          prompt_config: prompt_config || {}
         })
         .select()
         .single();

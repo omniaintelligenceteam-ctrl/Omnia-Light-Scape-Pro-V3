@@ -68,7 +68,7 @@ export function useProjects() {
         body: JSON.stringify({
           name,
           generated_image_url: generatedImage,
-          prompt_config: { quote }
+          prompt_config: quote ? { quote } : { savedFromEditor: true }
         }),
       });
 

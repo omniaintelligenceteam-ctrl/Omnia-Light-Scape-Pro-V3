@@ -608,14 +608,22 @@ const App: React.FC = () => {
   const handleSaveProjectFromEditor = async () => {
       if (!generatedImage) return;
       const projectName = `Night Scene ${projects.length + 1}`;
-      await saveProject(projectName, generatedImage, null);
-      setActiveTab('projects');
+      const result = await saveProject(projectName, generatedImage, null);
+      if (result) {
+        setActiveTab('projects');
+      } else {
+        setError('Failed to save project. Please try again.');
+      }
   };
 
   const handleSaveProjectFromQuote = async (quoteData: QuoteData) => {
       const projectName = quoteData.clientDetails.name || `Quote ${projects.length + 1}`;
-      await saveProject(projectName, generatedImage || '', quoteData);
-      setActiveTab('projects');
+      const result = await saveProject(projectName, generatedImage || '', quoteData);
+      if (result) {
+        setActiveTab('projects');
+      } else {
+        setError('Failed to save project. Please try again.');
+      }
   };
 
   const handleDeleteProject = async (id: string) => {
