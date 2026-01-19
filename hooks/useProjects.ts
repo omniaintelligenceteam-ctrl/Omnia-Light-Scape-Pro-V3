@@ -49,157 +49,96 @@ export function useProjects() {
     loadProjects();
   }, [user]);
 
-  // Save a new project
-  const saveProject = useCallback(async (
-    name: string,
-    generatedImage: string,
-    quote: QuoteData | null = null,
-    bom: BOMData | null = null
-  ): Promise<SavedProject | null> => {
-    if (!user) {
-      setError('User not logged in');
-      return null;
-    }
+ // Save a new project
+const saveProject = useCallback(async (
+  name: string,
+  generatedImage: string,
+  quote: QuoteData | null = null,
+  bom: BOMData | null = null
+): Promise<SavedProject | null> => {
+  if (!user) {
+    setError('User not logged in');
+    return null;
+  }
 
-    try {
-      console.log('Saving project...', { name, userId: user.id, hasImage: !!generatedImage, hasBOM: !!bom });
+  try {
+    console.log('Saving project...', { name, userId: user.id, hasImage: !!generatedImage, hasBOM: !!bom });
 
-      // Build prompt_config object with all available data
-      const promptConfig: Record<string, any> = { savedFromEditor: true };
-      if (quote) promptConfig.quote = quote;
-      if (bom) promptConfig.bom = bom;
+    let imageUrl = generatedImage;
 
-      const response = await fetch(`/api/projects?userId=${user.id}`, {
+    // If image is base64, upload to storage first
+    if (generatedImage && generatedImage.startsWith('data:')) {
+      console.log('Uploading image to storage...');
+      const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          generated_image_url: generatedImage,
-          prompt_config: promptConfig
-        }),
+          image: generatedImage,
+          userId: user.id
+        })
       });
 
-      console.log('Save response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Save failed:', response.status, errorText);
-        throw new Error(`Failed to save project: ${response.status}`);
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('Upload failed:', errorText);
+        throw new Error('Failed to upload image');
       }
 
-      const data = await response.json();
-      console.log('Save response data:', data);
-
-      if (data.success && data.data) {
-        const newProject: SavedProject = {
-          id: data.data.id,
-          name: data.data.name,
-          date: new Date(data.data.created_at).toLocaleDateString(),
-          image: data.data.generated_image_url,
-          quote: data.data.prompt_config?.quote || null,
-          bom: data.data.prompt_config?.bom || null
-        };
-
-        // Add to local state
-        setProjects(prev => [newProject, ...prev]);
-        return newProject;
-      }
-
-      return null;
-    } catch (err: any) {
-      console.error('Error saving project:', err);
-      setError(err.message);
-      return null;
-    }
-  }, [user]);
-
-  // Delete a project
-  const deleteProject = useCallback(async (projectId: string): Promise<boolean> => {
-    if (!user) {
-      setError('User not logged in');
-      return false;
+      const uploadData = await uploadResponse.json();
+      imageUrl = uploadData.url;
+      console.log('Image uploaded:', imageUrl);
     }
 
-    try {
-      const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
-        method: 'DELETE',
-      });
+    // Build prompt_config object with all available data
+    const promptConfig: Record<string, any> = { savedFromEditor: true };
+    if (quote) promptConfig.quote = quote;
+    if (bom) promptConfig.bom = bom;
 
-      if (!response.ok) {
-        throw new Error('Failed to delete project');
-      }
+    const response = await fetch(`/api/projects?userId=${user.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        generated_image_url: imageUrl,
+        prompt_config: promptConfig
+      }),
+    });
 
-      // Remove from local state
-      setProjects(prev => prev.filter(p => p.id !== projectId));
-      return true;
-    } catch (err: any) {
-      console.error('Error deleting project:', err);
-      setError(err.message);
-      return false;
-    }
-  }, [user]);
+    console.log('Save response status:', response.status);
 
-  // Update a project
-  const updateProject = useCallback(async (
-    projectId: string,
-    updates: { name?: string; quote?: QuoteData; bom?: BOMData }
-  ): Promise<boolean> => {
-    if (!user) {
-      setError('User not logged in');
-      return false;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Save failed:', response.status, errorText);
+      throw new Error(`Failed to save project: ${response.status}`);
     }
 
-    try {
-      // Build prompt_config for updates
-      const promptConfig: Record<string, any> = {};
-      if (updates.quote) promptConfig.quote = updates.quote;
-      if (updates.bom) promptConfig.bom = updates.bom;
+    const data = await response.json();
+    console.log('Save response data:', data);
 
-      const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: updates.name,
-          prompt_config: Object.keys(promptConfig).length > 0 ? promptConfig : undefined
-        }),
-      });
+    if (data.success && data.data) {
+      const newProject: SavedProject = {
+        id: data.data.id,
+        name: data.data.name,
+        date: new Date(data.data.created_at).toLocaleDateString(),
+        image: data.data.generated_image_url,
+        quote: data.data.prompt_config?.quote || null,
+        bom: data.data.prompt_config?.bom || null
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to update project');
-      }
-
-      // Update local state
-      setProjects(prev => prev.map(p => {
-        if (p.id === projectId) {
-          return {
-            ...p,
-            name: updates.name || p.name,
-            quote: updates.quote || p.quote,
-            bom: updates.bom || p.bom
-          };
-        }
-        return p;
-      }));
-
-      return true;
-    } catch (err: any) {
-      console.error('Error updating project:', err);
-      setError(err.message);
-      return false;
+      // Add to local state
+      setProjects(prev => [newProject, ...prev]);
+      return newProject;
     }
-  }, [user]);
 
-  return {
-    projects,
-    isLoading,
-    error,
-    saveProject,
-    deleteProject,
-    updateProject,
-    setProjects // For local state updates if needed
-  };
-}
+    return null;
+  } catch (err: any) {
+    console.error('Error saving project:', err);
+    setError(err.message);
+    return null;
+  }
+}, [user]);
+
+// Delete a project
+
