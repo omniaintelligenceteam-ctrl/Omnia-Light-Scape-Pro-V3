@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -13,7 +13,7 @@ import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2 } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem } from './types';
 
@@ -749,6 +749,120 @@ const App: React.FC = () => {
       handleInvoiceChange('lineItems', updatedLineItems);
   };
 
+  // Add new line item to invoice
+  const handleAddInvoiceLineItem = () => {
+      if (!currentInvoice) return;
+      const newItem: InvoiceLineItem = {
+          id: Date.now().toString(),
+          description: '',
+          quantity: 1,
+          unitPrice: 0,
+          total: 0
+      };
+      handleInvoiceChange('lineItems', [...currentInvoice.lineItems, newItem]);
+  };
+
+  // Remove line item from invoice
+  const handleRemoveInvoiceLineItem = (itemId: string) => {
+      if (!currentInvoice) return;
+      handleInvoiceChange('lineItems', currentInvoice.lineItems.filter(item => item.id !== itemId));
+  };
+
+  // Delete an invoice
+  const handleDeleteInvoice = (invoiceId: string) => {
+      if (!confirm('Are you sure you want to delete this invoice?')) return;
+      setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
+      if (currentInvoice?.id === invoiceId) {
+          setCurrentInvoice(null);
+      }
+  };
+
+  // Unapprove a project (move back to projects)
+  const handleUnapproveProject = (projectId: string) => {
+      if (!confirm('Remove this project from approved list?')) return;
+      setApprovedProjectIds(prev => {
+          const next = new Set(prev);
+          next.delete(projectId);
+          return next;
+      });
+  };
+
+  // Download invoice as PDF
+  const handleDownloadInvoicePDF = async (invoice: InvoiceData) => {
+      const elementId = `invoice-pdf-${invoice.id}`;
+      const element = document.getElementById(elementId);
+
+      if (element && (window as any).html2pdf) {
+          element.classList.add('pdf-mode');
+          const opt = {
+              margin: [0.3, 0.3, 0.3, 0.3],
+              filename: `${invoice.invoiceNumber}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true, logging: false },
+              jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+          };
+
+          try {
+              await (window as any).html2pdf().set(opt).from(element).save();
+          } catch (e) {
+              console.error("Invoice PDF Fail", e);
+          } finally {
+              element.classList.remove('pdf-mode');
+          }
+      } else {
+          // Fallback: Generate a simple text-based PDF download
+          const content = `
+INVOICE: ${invoice.invoiceNumber}
+Project: ${invoice.projectName}
+Date: ${invoice.invoiceDate}
+Due: ${invoice.dueDate}
+
+Bill To:
+${invoice.clientDetails.name}
+${invoice.clientDetails.email}
+${invoice.clientDetails.phone}
+${invoice.clientDetails.address}
+
+Line Items:
+${invoice.lineItems.map(item => `${item.description} - Qty: ${item.quantity} x $${item.unitPrice} = $${item.total.toFixed(2)}`).join('\n')}
+
+Subtotal: $${invoice.subtotal.toFixed(2)}
+Tax (${(invoice.taxRate * 100).toFixed(0)}%): $${invoice.taxAmount.toFixed(2)}
+Discount: -$${invoice.discount.toFixed(2)}
+TOTAL: $${invoice.total.toFixed(2)}
+
+Notes: ${invoice.notes || 'N/A'}
+          `.trim();
+
+          const blob = new Blob([content], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${invoice.invoiceNumber}.txt`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+      }
+  };
+
+  // Memoized filtered project lists (includes search filtering)
+  const filteredUnapprovedProjects = useMemo(() =>
+      projects.filter(p =>
+          !approvedProjectIds.has(p.id) &&
+          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.date.includes(searchTerm))
+      ),
+      [projects, approvedProjectIds, searchTerm]
+  );
+
+  const filteredApprovedProjects = useMemo(() =>
+      projects.filter(p =>
+          approvedProjectIds.has(p.id) &&
+          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.date.includes(searchTerm))
+      ),
+      [projects, approvedProjectIds, searchTerm]
+  );
+
   // Authentication is now handled by AuthWrapper
 
   // 2. Show Loading State while checking API Key
@@ -787,12 +901,6 @@ const App: React.FC = () => {
         </div>
     );
   }
-
-  // Filter projects for the search bar
-  const filteredProjects = projects.filter(p => 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.date.includes(searchTerm)
-  );
 
   return (
     <AuthWrapper>
@@ -1180,7 +1288,7 @@ const App: React.FC = () => {
                          <FolderPlus className="w-4 h-4" />
                          Projects
                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${projectsSubTab === 'projects' ? 'bg-black/20' : 'bg-white/10'}`}>
-                             {filteredProjects.filter(p => !approvedProjectIds.has(p.id)).length}
+                             {filteredUnapprovedProjects.length}
                          </span>
                      </button>
                      <button
@@ -1194,7 +1302,7 @@ const App: React.FC = () => {
                          <CheckCircle2 className="w-4 h-4" />
                          Approved
                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${projectsSubTab === 'approved' ? 'bg-black/20' : 'bg-white/10'}`}>
-                             {approvedProjectIds.size}
+                             {filteredApprovedProjects.length}
                          </span>
                      </button>
                      <button
@@ -1216,7 +1324,7 @@ const App: React.FC = () => {
                  {/* SUB-TAB: PROJECTS (Unapproved) */}
                  {projectsSubTab === 'projects' && (
                      <>
-                         {filteredProjects.filter(p => !approvedProjectIds.has(p.id)).length === 0 ? (
+                         {filteredUnapprovedProjects.length === 0 ? (
                              <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm">
                                  <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
                                     <FolderPlus className="w-8 h-8 text-gray-500" />
@@ -1226,7 +1334,7 @@ const App: React.FC = () => {
                              </div>
                          ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                                {filteredProjects.filter(p => !approvedProjectIds.has(p.id)).map((p) => (
+                                {filteredUnapprovedProjects.map((p) => (
                                     <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(246,180,90,0.1)] flex flex-col">
 
                                         {/* Image Section - Hero */}
@@ -1353,7 +1461,7 @@ const App: React.FC = () => {
                  {/* SUB-TAB: APPROVED */}
                  {projectsSubTab === 'approved' && (
                      <>
-                         {filteredProjects.filter(p => approvedProjectIds.has(p.id)).length === 0 ? (
+                         {filteredApprovedProjects.length === 0 ? (
                              <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-emerald-500/20 rounded-3xl bg-emerald-500/5 backdrop-blur-sm">
                                  <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20">
                                     <CheckCircle2 className="w-8 h-8 text-emerald-500/50" />
@@ -1363,7 +1471,7 @@ const App: React.FC = () => {
                              </div>
                          ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                                {filteredProjects.filter(p => approvedProjectIds.has(p.id)).map((p) => (
+                                {filteredApprovedProjects.map((p) => (
                                     <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-emerald-500/20 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)] flex flex-col">
 
                                         {/* Approved Badge */}
@@ -1418,12 +1526,19 @@ const App: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Generate Invoice Button */}
-                                            <div className="mt-4 pt-4 border-t border-white/5">
+                                            {/* Action Buttons */}
+                                            <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
+                                                <button
+                                                    onClick={() => handleUnapproveProject(p.id)}
+                                                    className="flex-shrink-0 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 p-3 rounded-lg text-xs font-bold transition-all border border-white/5 hover:border-red-500/30"
+                                                    title="Remove from approved"
+                                                >
+                                                    <Undo2 className="w-4 h-4" />
+                                                </button>
                                                 <button
                                                     onClick={() => handleGenerateInvoice(p)}
                                                     disabled={!p.quote}
-                                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+                                                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
                                                 >
                                                     <Receipt className="w-4 h-4" />
                                                     Generate Invoice
@@ -1544,20 +1659,22 @@ const App: React.FC = () => {
                                              <div className="bg-[#0a0a0a] rounded-xl border border-white/10 overflow-hidden">
                                                  {/* Header */}
                                                  <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/10 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                                                     <div className="col-span-5">Description</div>
+                                                     <div className="col-span-4">Description</div>
                                                      <div className="col-span-2 text-center">Qty</div>
                                                      <div className="col-span-2 text-center">Unit Price</div>
                                                      <div className="col-span-3 text-right">Total</div>
+                                                     <div className="col-span-1"></div>
                                                  </div>
                                                  {/* Items */}
                                                  {currentInvoice.lineItems.map((item) => (
-                                                     <div key={item.id} className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 items-center hover:bg-white/5 transition-colors">
-                                                         <div className="col-span-5">
+                                                     <div key={item.id} className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 items-center hover:bg-white/5 transition-colors group">
+                                                         <div className="col-span-4">
                                                              <input
                                                                  type="text"
                                                                  value={item.description}
                                                                  onChange={(e) => handleInvoiceLineItemChange(item.id, 'description', e.target.value)}
-                                                                 className="w-full bg-transparent text-white text-sm focus:outline-none"
+                                                                 placeholder="Enter description..."
+                                                                 className="w-full bg-transparent text-white text-sm focus:outline-none placeholder-gray-600"
                                                              />
                                                          </div>
                                                          <div className="col-span-2 flex items-center justify-center gap-1">
@@ -1592,8 +1709,25 @@ const App: React.FC = () => {
                                                          <div className="col-span-3 text-right text-white font-mono font-bold">
                                                              ${item.total.toFixed(2)}
                                                          </div>
+                                                         <div className="col-span-1 flex justify-center">
+                                                             <button
+                                                                 onClick={() => handleRemoveInvoiceLineItem(item.id)}
+                                                                 className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                                                 title="Remove item"
+                                                             >
+                                                                 <Trash2 className="w-3.5 h-3.5" />
+                                                             </button>
+                                                         </div>
                                                      </div>
                                                  ))}
+                                                 {/* Add Item Button */}
+                                                 <button
+                                                     onClick={handleAddInvoiceLineItem}
+                                                     className="w-full p-4 text-gray-400 hover:text-blue-400 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider"
+                                                 >
+                                                     <Plus className="w-4 h-4" />
+                                                     Add Line Item
+                                                 </button>
                                              </div>
                                          </div>
 
@@ -1652,6 +1786,7 @@ const App: React.FC = () => {
                                              {currentInvoice.status === 'draft' ? 'Mark as Sent' : currentInvoice.status === 'sent' ? 'Mark as Paid' : 'Reset to Draft'}
                                          </button>
                                          <button
+                                             onClick={() => handleDownloadInvoicePDF(currentInvoice)}
                                              className="flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-blue-500/20"
                                          >
                                              <Download className="w-4 h-4" />
@@ -1676,10 +1811,21 @@ const App: React.FC = () => {
                                          {invoices.map((invoice) => (
                                              <div
                                                  key={invoice.id}
-                                                 onClick={() => setCurrentInvoice(invoice)}
-                                                 className="bg-[#111] border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all cursor-pointer group"
+                                                 className="bg-[#111] border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all cursor-pointer group relative"
                                              >
-                                                 <div className="flex items-start justify-between mb-4">
+                                                 {/* Delete Button */}
+                                                 <button
+                                                     onClick={(e) => {
+                                                         e.stopPropagation();
+                                                         handleDeleteInvoice(invoice.id);
+                                                     }}
+                                                     className="absolute top-3 right-3 p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                                     title="Delete invoice"
+                                                 >
+                                                     <Trash2 className="w-4 h-4" />
+                                                 </button>
+
+                                                 <div onClick={() => setCurrentInvoice(invoice)} className="flex items-start justify-between mb-4">
                                                      <div>
                                                          <p className="text-[10px] text-blue-500 font-mono mb-1">{invoice.invoiceNumber}</p>
                                                          <h4 className="font-bold text-white">{invoice.projectName}</h4>
@@ -1693,7 +1839,7 @@ const App: React.FC = () => {
                                                          {invoice.status}
                                                      </span>
                                                  </div>
-                                                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                                 <div onClick={() => setCurrentInvoice(invoice)} className="flex items-center justify-between pt-4 border-t border-white/5">
                                                      <div className="text-xs text-gray-400">
                                                          Due: {new Date(invoice.dueDate).toLocaleDateString()}
                                                      </div>
