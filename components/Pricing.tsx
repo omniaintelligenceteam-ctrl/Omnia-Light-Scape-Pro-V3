@@ -244,7 +244,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
         {/* Footer */}
         <div className="px-8 pb-8 text-center">
           <p className="text-xs text-gray-400 flex items-center justify-center gap-1">
-            <ShieldCheck size={12} /> Secured by Stripe. Cancel anytime. All plans include 10 free trial generations.
+            <ShieldCheck size={12} /> Secured by Stripe. Cancel anytime. All plans include 25 free trial generations.
           </p>
         </div>
       </div>

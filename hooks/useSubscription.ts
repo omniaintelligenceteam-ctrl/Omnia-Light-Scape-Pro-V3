@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const FREE_TRIAL_LIMIT = 10;
+const FREE_TRIAL_LIMIT = 25;
 
 export interface SubscriptionStatus {
   hasActiveSubscription: boolean;
