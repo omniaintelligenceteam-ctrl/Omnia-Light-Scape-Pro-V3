@@ -635,10 +635,10 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
     negativePrompt: `HARD RULE: Do NOT generate any post-mounted path lights. Walkways, driveways, and garden beds must remain dark. No path lighting of any kind.`,
     subOptions: [
       {
-        id: 'pathway',
-        label: 'Pathway',
-        description: 'Walkways & sidewalks',
-        prompt: `TARGET: PEDESTRIAN WALKWAYS & SIDEWALKS -- POOL-OF-LIGHT WAYFINDING
+  id: 'pathway',
+  label: 'Pathway',
+  description: 'Walkways & sidewalks',
+  prompt: `TARGET: PEDESTRIAN WALKWAYS & SIDEWALKS -- POOL-OF-LIGHT WAYFINDING
 
 IDENTIFICATION:
 - Locate all pedestrian walkways: front walk from street/driveway to front door, side paths, garden paths, patio transitions
@@ -651,11 +651,18 @@ FIXTURE SPECIFICATIONS:
 - Light distribution: 360-degree omnidirectional downward projection
 - Ground light pool diameter: approximately 6-8 feet
 
+PLACEMENT PRIORITY (CRITICAL):
+- PREFERRED: Place fixtures IN landscaping beds/mulch alongside the pathway, NOT in the path itself
+- Position fixtures at the edge of planting beds where they meet the pathway
+- If no landscaping exists, place at pathway edge in grass/groundcover
+- AVOID: Placing fixtures directly in the middle of walkways or on hardscape
+- Fixtures illuminate the path from the SIDE, not obstruct foot traffic
+- Setback from path edge: 6-8 inches INTO the landscaping bed
+
 PLACEMENT GEOMETRY:
 - Place fixtures in a STAGGERED ZIGZAG pattern along the path
 - Alternate left and right sides for depth and coverage
 - Spacing: 8-10 feet apart along the zigzag line
-- Setback: 6-8 inches into planting bed/mulch from path edge
 
 PLACEMENT SPECIFICS:
 - First fixture: near the PATH START (street or driveway junction)
@@ -676,14 +683,15 @@ FUNCTIONAL PURPOSE:
 - Create welcoming approach to the home
 
 STRICT EXCLUSION ZONES:
-- Do NOT place fixtures on concrete, pavers, or driveway surface
+- Do NOT place fixtures ON concrete, pavers, or any hardscape surface
+- Do NOT place fixtures IN the walking path -- always in adjacent beds
 - Do NOT place in open lawn areas away from path edge
 - Do NOT place along driveways (use driveway preset)
 - No uplighting -- downward projection only
 - No direct glare toward street or windows
 - No exposed bulbs -- hat must shield the light source`,
-        negativePrompt: `ABSOLUTE PROHIBITION (PATHWAY): Do NOT place path lights on concrete or pavement. Do NOT place path lights along driveways. Do NOT create dark gaps between light pools.`
-      },
+  negativePrompt: `ABSOLUTE PROHIBITION (PATHWAY): Do NOT place path lights on concrete or pavement. Do NOT place path lights IN the walkway. Always place in adjacent landscaping beds. Do NOT place along driveways. Do NOT create dark gaps between light pools.`
+},
       {
         id: 'driveway',
         label: 'Driveway',
