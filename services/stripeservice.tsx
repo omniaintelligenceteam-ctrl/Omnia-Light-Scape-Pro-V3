@@ -1,12 +1,6 @@
-import { SubscriptionPlan } from '../types';
-
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-export const createCheckoutSession = async (userId: string, plan: SubscriptionPlan): Promise<{ url: string }> => {
-  const priceId = plan === 'pro_monthly'
-    ? import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY
-    : import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY;
-
+export const createCheckoutSession = async (userId: string, priceId: string): Promise<{ url: string }> => {
   const response = await fetch(`${API_URL}/api/stripe/checkout`, {
     method: 'POST',
     headers: {

@@ -23,10 +23,14 @@ router.post('/checkout', async (req: Request<{}, {}, CheckoutRequest>, res: Resp
             return res.status(400).json({ error: 'Missing required fields: userId and priceId' });
         }
 
-        // Validate priceId against allowed values
+        // Validate priceId against allowed values (all 6 tiers)
         const allowedPriceIds = [
-            process.env.STRIPE_PRICE_ID_MONTHLY,
-            process.env.STRIPE_PRICE_ID_YEARLY
+            'price_1SrNHIQ1tit8mwraqKGAf2GL', // STARTER_MONTHLY
+            'price_1SrNJdQ1tit8mwraqbC4ihcM', // STARTER_YEARLY
+            'price_1SrNK5Q1tit8mwraTa5UHFWD', // PRO_MONTHLY
+            'price_1SrNKfQ1tit8mwrajmlqx1ak', // PRO_YEARLY
+            'price_1SrNLUQ1tit8mwraV4J0nB6T', // BUSINESS_MONTHLY
+            'price_1SrNM8Q1tit8mwraPzrGelaH', // BUSINESS_YEARLY
         ];
 
         if (!allowedPriceIds.includes(priceId)) {
@@ -119,6 +123,18 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
                 const subscription = await stripe.subscriptions.retrieve(subscriptionId);
                 const priceId = subscription.items.data[0]?.price.id;
 
+                // Map price ID to monthly limit
+                const priceToLimitMap: Record<string, number> = {
+                    'price_1SrNHIQ1tit8mwraqKGAf2GL': 10,    // STARTER_MONTHLY
+                    'price_1SrNJdQ1tit8mwraqbC4ihcM': 10,    // STARTER_YEARLY (10/month)
+                    'price_1SrNK5Q1tit8mwraTa5UHFWD': 125,   // PRO_MONTHLY
+                    'price_1SrNKfQ1tit8mwrajmlqx1ak': 125,   // PRO_YEARLY (125/month)
+                    'price_1SrNLUQ1tit8mwraV4J0nB6T': -1,    // BUSINESS_MONTHLY (unlimited)
+                    'price_1SrNM8Q1tit8mwraPzrGelaH': -1,    // BUSINESS_YEARLY (unlimited)
+                };
+
+                const monthlyLimit = priceToLimitMap[priceId] || 0;
+
                 // Insert into subscriptions table
                 const { error: insertError } = await supabase
                     .from('subscriptions')
@@ -127,7 +143,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
                         stripe_customer_id: customerId,
                         stripe_subscription_id: subscriptionId,
                         status: 'active',
-                        plan_id: priceId
+                        plan_id: priceId,
+                        monthly_limit: monthlyLimit
                     });
 
                 if (insertError) {

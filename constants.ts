@@ -1660,13 +1660,41 @@ export const DEFAULT_PRICING: FixturePricing[] = [
 
 export const STRIPE_CONFIG = {
   PLANS: {
-    MONTHLY: {
-      id: 'price_pro_monthly',
-      price: 250
+    STARTER_MONTHLY: {
+      id: 'price_1SrNHIQ1tit8mwraqKGAf2GL',
+      price: 25,
+      generations: 10,
+      label: 'Starter'
     },
-    YEARLY: {
-      id: 'price_pro_yearly',
-      price: 2500
+    STARTER_YEARLY: {
+      id: 'price_1SrNJdQ1tit8mwraqbC4ihcM',
+      price: 250,
+      generations: 120, // 10 per month * 12
+      label: 'Starter'
+    },
+    PRO_MONTHLY: {
+      id: 'price_1SrNK5Q1tit8mwraTa5UHFWD',
+      price: 250,
+      generations: 125,
+      label: 'Pro'
+    },
+    PRO_YEARLY: {
+      id: 'price_1SrNKfQ1tit8mwrajmlqx1ak',
+      price: 2500,
+      generations: 1500, // 125 per month * 12
+      label: 'Pro'
+    },
+    BUSINESS_MONTHLY: {
+      id: 'price_1SrNLUQ1tit8mwraV4J0nB6T',
+      price: 750,
+      generations: -1, // unlimited
+      label: 'Business'
+    },
+    BUSINESS_YEARLY: {
+      id: 'price_1SrNM8Q1tit8mwraPzrGelaH',
+      price: 7500,
+      generations: -1, // unlimited
+      label: 'Business'
     }
   }
 };

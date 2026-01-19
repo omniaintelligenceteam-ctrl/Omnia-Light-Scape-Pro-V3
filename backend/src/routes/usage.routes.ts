@@ -36,15 +36,37 @@ router.get('/status', async (req: Request, res: Response) => {
         // Check for active subscription
         const { data: subData } = await supabase
             .from('subscriptions')
-            .select('status, plan_id')
+            .select('status, plan_id, monthly_limit')
             .eq('user_id', userData.id)
             .eq('status', 'active')
             .single();
 
         const hasActiveSubscription = !!subData;
         const generationCount = userData.generation_count || 0;
-        const remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
-        const canGenerate = hasActiveSubscription || remainingFreeGenerations > 0;
+
+        let remainingFreeGenerations = 0;
+        let canGenerate = false;
+
+        if (hasActiveSubscription) {
+            const monthlyLimit = subData.monthly_limit || 0;
+            if (monthlyLimit === -1) {
+                // Unlimited
+                remainingFreeGenerations = 999999;
+                canGenerate = true;
+            } else if (monthlyLimit > 0) {
+                // Has a monthly limit
+                remainingFreeGenerations = Math.max(0, monthlyLimit - generationCount);
+                canGenerate = remainingFreeGenerations > 0;
+            } else {
+                // No limit set, default to free trial
+                remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
+                canGenerate = remainingFreeGenerations > 0;
+            }
+        } else {
+            // No subscription, use free trial
+            remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
+            canGenerate = remainingFreeGenerations > 0;
+        }
 
         res.json({
             hasActiveSubscription,
@@ -52,7 +74,8 @@ router.get('/status', async (req: Request, res: Response) => {
             freeTrialLimit: FREE_TRIAL_LIMIT,
             remainingFreeGenerations,
             canGenerate,
-            plan: subData?.plan_id || null
+            plan: subData?.plan_id || null,
+            monthlyLimit: subData?.monthly_limit || 0
         });
     } catch (err) {
         console.error('Usage status error:', err);
@@ -164,23 +187,52 @@ router.post('/can-generate', async (req: Request<{}, {}, UsageCheckRequest>, res
         // Check for active subscription
         const { data: subData } = await supabase
             .from('subscriptions')
-            .select('status, plan_id')
+            .select('status, plan_id, monthly_limit')
             .eq('user_id', userData.id)
             .eq('status', 'active')
             .single();
 
         const hasActiveSubscription = !!subData;
         const generationCount = userData.generation_count || 0;
-        const remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
-        const canGenerate = hasActiveSubscription || remainingFreeGenerations > 0;
+
+        let remainingFreeGenerations = 0;
+        let canGenerate = false;
+        let reason = '';
+
+        if (hasActiveSubscription) {
+            const monthlyLimit = subData.monthly_limit || 0;
+            if (monthlyLimit === -1) {
+                // Unlimited
+                remainingFreeGenerations = 999999;
+                canGenerate = true;
+            } else if (monthlyLimit > 0) {
+                // Has a monthly limit
+                remainingFreeGenerations = Math.max(0, monthlyLimit - generationCount);
+                canGenerate = remainingFreeGenerations > 0;
+                reason = canGenerate ? '' : 'MONTHLY_LIMIT_REACHED';
+            } else {
+                // No limit set
+                remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
+                canGenerate = remainingFreeGenerations > 0;
+                reason = canGenerate ? '' : 'FREE_TRIAL_EXHAUSTED';
+            }
+        } else {
+            // No subscription, use free trial
+            remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
+            canGenerate = remainingFreeGenerations > 0;
+            reason = canGenerate ? '' : 'FREE_TRIAL_EXHAUSTED';
+        }
 
         if (!canGenerate) {
             return res.status(403).json({
                 canGenerate: false,
-                reason: 'FREE_TRIAL_EXHAUSTED',
-                message: 'Free trial exhausted. Please subscribe to continue.',
+                reason,
+                message: reason === 'MONTHLY_LIMIT_REACHED'
+                    ? 'Monthly generation limit reached. Upgrade or wait for next billing cycle.'
+                    : 'Free trial exhausted. Please subscribe to continue.',
                 generationCount,
-                freeTrialLimit: FREE_TRIAL_LIMIT
+                freeTrialLimit: FREE_TRIAL_LIMIT,
+                monthlyLimit: subData?.monthly_limit || 0
             });
         }
 
@@ -188,7 +240,8 @@ router.post('/can-generate', async (req: Request<{}, {}, UsageCheckRequest>, res
             canGenerate: true,
             hasActiveSubscription,
             generationCount,
-            remainingFreeGenerations: hasActiveSubscription ? 'unlimited' : remainingFreeGenerations
+            remainingFreeGenerations,
+            monthlyLimit: subData?.monthly_limit || 0
         });
     } catch (err) {
         console.error('Can generate check error:', err);
