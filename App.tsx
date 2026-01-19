@@ -14,7 +14,7 @@ import { useProjects } from './hooks/useProjects';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus } from 'lucide-react';
-import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, UP_LIGHT_SUBOPTIONS, PATH_LIGHT_SUBOPTIONS, CORE_DRILL_SUBOPTIONS, GUTTER_LIGHT_SUBOPTIONS, SOFFIT_LIGHT_SUBOPTIONS, HARDSCAPE_LIGHT_SUBOPTIONS } from './constants';
+import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem } from './types';
 
 // Helper to parse fixture quantities from text
@@ -272,13 +272,8 @@ const App: React.FC = () => {
   };
 
   const getCurrentSubOptions = () => {
-      if (activeConfigFixture === 'up') return UP_LIGHT_SUBOPTIONS;
-      if (activeConfigFixture === 'path') return PATH_LIGHT_SUBOPTIONS;
-      if (activeConfigFixture === 'coredrill') return CORE_DRILL_SUBOPTIONS;
-      if (activeConfigFixture === 'gutter') return GUTTER_LIGHT_SUBOPTIONS;
-      if (activeConfigFixture === 'soffit') return SOFFIT_LIGHT_SUBOPTIONS;
-      if (activeConfigFixture === 'hardscape') return HARDSCAPE_LIGHT_SUBOPTIONS;
-      return [];
+      const fixture = FIXTURE_TYPES.find(f => f.id === activeConfigFixture);
+      return fixture?.subOptions || [];
   };
 
   const getActiveFixtureTitle = () => {
@@ -347,12 +342,8 @@ const App: React.FC = () => {
             let allOptionsList: any[] = [];
 
             // Identify sub-options
-            if (ft.id === 'up') { subOptionList = fixtureSubOptions['up']; allOptionsList = UP_LIGHT_SUBOPTIONS; }
-            else if (ft.id === 'path') { subOptionList = fixtureSubOptions['path']; allOptionsList = PATH_LIGHT_SUBOPTIONS; }
-            else if (ft.id === 'coredrill') { subOptionList = fixtureSubOptions['coredrill']; allOptionsList = CORE_DRILL_SUBOPTIONS; }
-            else if (ft.id === 'gutter') { subOptionList = fixtureSubOptions['gutter']; allOptionsList = GUTTER_LIGHT_SUBOPTIONS; }
-            else if (ft.id === 'soffit') { subOptionList = fixtureSubOptions['soffit']; allOptionsList = SOFFIT_LIGHT_SUBOPTIONS; }
-            else if (ft.id === 'hardscape') { subOptionList = fixtureSubOptions['hardscape']; allOptionsList = HARDSCAPE_LIGHT_SUBOPTIONS; }
+            subOptionList = fixtureSubOptions[ft.id] || [];
+            allOptionsList = ft.subOptions || [];
 
             // Apply Strict Sub-Option Logic
             if (subOptionList && subOptionList.length > 0 && allOptionsList) {
@@ -1068,13 +1059,7 @@ const App: React.FC = () => {
                                     
                                     // Helper to get labels for sub-options
                                     const getSubLabel = (id: string) => {
-                                        if (ft.id === 'up') return UP_LIGHT_SUBOPTIONS.find(o => o.id === id)?.label;
-                                        if (ft.id === 'path') return PATH_LIGHT_SUBOPTIONS.find(o => o.id === id)?.label;
-                                        if (ft.id === 'coredrill') return CORE_DRILL_SUBOPTIONS.find(o => o.id === id)?.label;
-                                        if (ft.id === 'gutter') return GUTTER_LIGHT_SUBOPTIONS.find(o => o.id === id)?.label;
-                                        if (ft.id === 'soffit') return SOFFIT_LIGHT_SUBOPTIONS.find(o => o.id === id)?.label;
-                                        if (ft.id === 'hardscape') return HARDSCAPE_LIGHT_SUBOPTIONS.find(o => o.id === id)?.label;
-                                        return '';
+                                        return ft.subOptions?.find(o => o.id === id)?.label || '';
                                     };
 
                                     return (
