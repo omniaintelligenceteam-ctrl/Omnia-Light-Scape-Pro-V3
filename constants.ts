@@ -304,6 +304,24 @@ SPACING RHYTHM:
 - Alternating pattern: window (ambient glow) / pier (direct uplight) / window / pier
 - Symmetry preferred when architecture allows
 
+HOT SPOT AVOIDANCE & WATTAGE:
+- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
+- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
+- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
+- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
+- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
+- Light BRIGHTEST at mid-wall, not at base
+- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
+
+HOT SPOT AVOIDANCE & WATTAGE:
+- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
+- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
+- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
+- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
+- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
+- Light BRIGHTEST at mid-wall, not at base
+- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
+
 STRICT EXCLUSION ZONES:
 - Do NOT place fixtures directly UNDER window glass -- windows are skipped
 - Do NOT place fixtures on walkways, driveways, or any hardscape surface
@@ -390,6 +408,15 @@ FIXTURE COUNT RULE:
 - Double window = ONE fixture (on mullion)
 - Triple window = ONE fixture (centered)
 - Do NOT use multiple fixtures for a single window assembly
+
+HOT SPOT AVOIDANCE & WATTAGE:
+- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
+- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
+- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
+- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
+- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
+- Light BRIGHTEST at mid-wall, not at base
+- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
 
 STRICT EXCLUSION ZONES:
 - Do NOT place fixtures directly under SHUTTERS (stay centered on window glass)
@@ -508,6 +535,15 @@ MULTIPLE COLUMN PROTOCOL:
 - Same setback and centering for visual rhythm
 - Spaces BETWEEN columns stay darker for contrast
 
+HOT SPOT AVOIDANCE & WATTAGE:
+- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
+- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
+- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
+- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
+- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
+- Light BRIGHTEST at mid-wall, not at base
+- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
+
 STRICT EXCLUSION ZONES:
 - No fixtures in gaps BETWEEN columns
 - No fixtures on porch floor or deck surface
@@ -517,7 +553,72 @@ STRICT EXCLUSION ZONES:
 - Avoid broad flood beams
 - Fixtures should be visually unobtrusive`,
         negativePrompt: `ABSOLUTE PROHIBITION (COLUMNS): Do NOT place lights in the open space between columns. Do NOT skip columns in a row -- all must be lit for symmetry. Do NOT use broad flood fixtures.`
-      }
+      },
+      {
+  id: 'trees',
+  label: 'Trees',
+  description: 'Uplighting trees and large shrubs',
+  prompt: `TARGET: TREES & LARGE SHRUBS -- CANOPY UPLIGHTING
+
+IDENTIFICATION SCAN:
+- Locate ALL significant trees within 15 feet of the home
+- Include: deciduous trees, evergreens, ornamental trees, large specimen shrubs
+- Note trunk location, canopy spread, and branch structure
+
+FIXTURE SPECIFICATIONS:
+- Type: ground-staked brass up light (bullet or well light style)
+- Housing: solid brass/bronze, low-profile
+- Beam: narrow to medium (15-35 degrees) depending on tree size
+- For large canopy trees: use 2-3 fixtures around trunk
+
+PLACEMENT GEOMETRY:
+- Single trunk trees: place fixture 1-2 feet from trunk base
+- Multi-trunk trees: place fixtures to illuminate each major trunk
+- Angle beam UP into the canopy center
+- For trees near house: position fixture so light grazes toward home
+
+TREE SIZE PROTOCOL:
+- SMALL trees (under 15 ft): ONE fixture, narrow beam
+- MEDIUM trees (15-25 ft): ONE or TWO fixtures, medium beam
+- LARGE trees (over 25 ft): TWO or THREE fixtures around trunk base
+
+LIGHT PHYSICS:
+- Beam originates at ground level near trunk
+- Light travels UP through branch structure into canopy
+- Illuminates: trunk texture, primary branches, leaf/needle mass
+- Creates dramatic silhouette and shadow play
+- Moonlighting effect on ground below (light filtering through leaves)
+
+CANOPY ILLUMINATION:
+- Deciduous trees: branch architecture visible, leaves glow
+- Evergreens: needle texture emphasized, dense glow
+- Palm trees: illuminate trunk texture and frond undersides
+- Ornamental trees: highlight unique form and features
+
+REALISM REQUIREMENTS:
+- Warm, soft glow characteristic of low-voltage LED
+- Natural light falloff through canopy
+- Some light escapes through gaps in foliage
+- Ground receives dappled shadow patterns
+- Fixture nearly invisible at night
+
+HOT SPOT AVOIDANCE & WATTAGE:
+- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
+- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
+- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
+- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
+- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
+- Light BRIGHTEST at mid-wall, not at base
+- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
+
+STRICT EXCLUSION ZONES:
+- Do NOT place fixtures where they will be hit by mowers
+- Do NOT aim light toward windows or neighbor properties
+- Do NOT over-light small ornamental trees
+- Do NOT place on hardscape or lawn (use bed areas when possible)
+- Do NOT create hot spots on trunk -- light should reach canopy`,
+  negativePrompt: `ABSOLUTE PROHIBITION (TREES): Do NOT aim tree lights toward house windows. Do NOT place in open lawn if avoidable. Do NOT over-light small trees with multiple fixtures.`
+     }
     ]
   },
 
