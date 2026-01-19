@@ -116,6 +116,15 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 
   globalNegativePrompt: `new architectural features, new windows, new doors, new dormers, new columns, new trim, new shutters, new porches, new decks, new balconies, new railings, roof changes, roof modifications, new hardscape, new driveways, new sidewalks, new walkways, new patios, new steps, new retaining walls, new pavers, new concrete, new landscaping, new trees, new shrubs, new bushes, new plants, new flowers, new mulch beds, new planters, new garden features, lawn changes, seasonal changes, snow, fall leaves, different foliage, new vehicles, new furniture, new outdoor objects, string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, dramatic moonlight, visible moon, light fixtures not specified, paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, property modifications, house modifications, structure modifications, added features, removed features, altered features`,
 
+MASTER RULE - STRICT CATEGORY ENFORCEMENT:
+- ONLY generate fixtures for categories that are EXPLICITLY ENABLED
+- If soffit/downlights are NOT selected, there must be ZERO soffit fixtures in the image
+- If path lights are NOT selected, there must be ZERO path lights in the image
+- If up lights are NOT selected, there must be ZERO up lights in the image
+- NEVER add fixtures "for realism" or "to complete the design"
+- ABSENCE of a category selection means ABSOLUTE PROHIBITION of that fixture type
+- When in doubt, DO NOT ADD the fixture
+  
   closingReinforcement: `FINAL REMINDER: 
 You are converting a daytime photo to nighttime and adding ONLY the specified lighting fixtures.
 The home, landscaping, hardscape, and all physical features must be PIXEL-PERFECT identical to the source.
