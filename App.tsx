@@ -15,6 +15,7 @@ import { useProjects } from './hooks/useProjects';
 import { useSubscription } from './hooks/useSubscription';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
+import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2 } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem } from './types';
@@ -500,7 +501,13 @@ const App: React.FC = () => {
 
     try {
       const base64 = await fileToBase64(file);
-      const result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt);
+      let result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt);
+
+      // Apply watermark for free users
+      if (shouldApplyWatermark(subscription.hasActiveSubscription)) {
+        result = await applyWatermark(result);
+      }
+
       setGeneratedImage(result);
       // Increment usage count after successful generation
       await subscription.incrementUsage();
@@ -533,8 +540,14 @@ const App: React.FC = () => {
         const base64 = await fileToBase64(file);
         // Construct a refinement prompt
         const refinementPrompt = `${lastUsedPrompt}\n\nCRITICAL MODIFICATION REQUEST: ${feedbackText}\n\nRe-generate the night scene keeping the original design but applying the modification request.`;
-        
-        const result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt);
+
+        let result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt);
+
+        // Apply watermark for free users
+        if (shouldApplyWatermark(subscription.hasActiveSubscription)) {
+          result = await applyWatermark(result);
+        }
+
         setGeneratedImage(result);
         // Increment usage count after successful generation
         await subscription.incrementUsage();
