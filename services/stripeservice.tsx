@@ -1,38 +1,29 @@
-import { STRIPE_CONFIG } from '../constants';
 import { SubscriptionPlan } from '../types';
 
-export const createCheckoutSession = async (userId: string, plan: SubscriptionPlan): Promise<{ sessionId: string, url: string }> => {
-  // SIMULATION OF BACKEND LOGIC
-  
-  const priceId = plan === 'pro_monthly' 
-    ? STRIPE_CONFIG.PLANS.MONTHLY.id 
-    : STRIPE_CONFIG.PLANS.YEARLY.id;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  console.log(`[Stripe Service] Creating session for user ${userId} with price ${priceId}`);
+export const createCheckoutSession = async (userId: string, plan: SubscriptionPlan): Promise<{ url: string }> => {
+  const priceId = plan === 'pro_monthly'
+    ? import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY
+    : import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY;
 
-  /**
-   * --- BACKEND IMPLEMENTATION REFERENCE ---
-   * 
-   * const session = await stripe.checkout.sessions.create({
-   *   mode: 'subscription',
-   *   customer: stripeCustomerId, // Retrieved from DB based on userId
-   *   line_items: [{ price: priceId, quantity: 1 }],
-   *   success_url: `${APP_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-   *   cancel_url: `${APP_URL}/settings`,
-   * });
-   * 
-   * return res.json({ url: session.url, sessionId: session.id });
-   */
+  const response = await fetch(`${API_URL}/api/stripe/checkout`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId,
+      priceId,
+    }),
+  });
 
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create checkout session');
+  }
 
-  // Return mock session and URL
-  // In production, 'url' would be the hosted Stripe Checkout page
-  return {
-    sessionId: `cs_test_${Math.random().toString(36).substr(2, 9)}`,
-    url: 'https://checkout.stripe.com/mock-session' 
-  };
+  return response.json();
 };
 
 export const createPortalSession = async (userId: string): Promise<{ url: string }> => {

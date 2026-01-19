@@ -1662,11 +1662,11 @@ export const STRIPE_CONFIG = {
   PLANS: {
     MONTHLY: {
       id: 'price_pro_monthly',
-      price: 29
+      price: 250
     },
     YEARLY: {
       id: 'price_pro_yearly',
-      price: 299
+      price: 2500
     }
   }
 };

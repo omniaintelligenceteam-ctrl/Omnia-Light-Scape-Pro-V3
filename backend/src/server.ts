@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 
 import healthRoutes from './routes/health.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
+import stripeRoutes from './routes/stripe.routes.js';
+import usageRoutes from './routes/usage.routes.js';
 
 dotenv.config();
 
@@ -21,6 +23,8 @@ app.use(express.json());
 // Routes
 app.use('/health', healthRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/stripe', stripeRoutes);
+app.use('/api/usage', usageRoutes);
 
 // Start
 app.listen(PORT, () => {

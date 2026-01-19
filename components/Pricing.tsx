@@ -1,26 +1,42 @@
 import React, { useState } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { STRIPE_CONFIG } from '../constants';
-import { Check, X, Loader2, Sparkles, ShieldCheck, Zap } from 'lucide-react';
+import { X, Loader2, Sparkles, ShieldCheck, Zap } from 'lucide-react';
 import { SubscriptionPlan } from '../types';
+import { createCheckoutSession } from '../services/stripeservice';
 
 interface PricingProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubscribe: (plan: SubscriptionPlan) => Promise<void>;
+  onSubscribe?: (plan: SubscriptionPlan) => Promise<void>;
 }
 
 export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose, onSubscribe }) => {
+  const { user } = useUser();
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
+    if (!user) {
+      setError('Please sign in to subscribe');
+      return;
+    }
+
     setLoadingPlan(plan);
-    // Simulate Stripe Checkout redirect delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    await onSubscribe(plan);
-    setLoadingPlan(null);
-    onClose();
+    setError(null);
+
+    try {
+      const { url } = await createCheckoutSession(user.id, plan);
+      if (url) {
+        window.location.href = url;
+      }
+      onSubscribe?.(plan);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start checkout');
+      setLoadingPlan(null);
+    }
   };
 
   return (
@@ -89,6 +105,10 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose, onSubscribe }
                    </div>
                 )}
             </button>
+
+            {error && (
+              <p className="text-red-500 text-sm text-center">{error}</p>
+            )}
 
             <div className="pt-4 text-center">
                  <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1">

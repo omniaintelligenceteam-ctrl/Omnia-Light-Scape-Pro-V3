@@ -8,9 +8,11 @@ import { SettingsView } from './components/SettingsView';
 import AuthWrapper from './components/AuthWrapper';
 import { InventoryView } from './components/InventoryView';
 import { BOMView } from './components/BOMView';
+import { Pricing } from './components/Pricing';
 import { generateBOM } from './utils/bomCalculator';
 import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
+import { useSubscription } from './hooks/useSubscription';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2 } from 'lucide-react';
@@ -46,6 +48,9 @@ const App: React.FC = () => {
   // Get Clerk user and sync to database
   const { user } = useUser();
   useUserSync(); // Automatically sync user to Supabase on sign-in
+
+  // Subscription and usage tracking
+  const subscription = useSubscription();
 
   // Load/save projects from Supabase
   const { projects, isLoading: projectsLoading, saveProject, deleteProject } = useProjects();
@@ -286,8 +291,21 @@ const App: React.FC = () => {
       return 'Fixture';
   };
 
+  const [showPricing, setShowPricing] = useState(false);
+
   const handleGenerate = async () => {
     if (!file || !previewUrl) return;
+
+    // Check if user can generate (subscription or free trial)
+    const { canGenerate, reason } = await subscription.checkCanGenerate();
+    if (!canGenerate) {
+      if (reason === 'FREE_TRIAL_EXHAUSTED') {
+        setShowPricing(true);
+      } else {
+        setError('Unable to generate. Please try again.');
+      }
+      return;
+    }
 
     // Construct Composite Prompt
     let activePrompt = "EDITING TASK: Apply specific lighting to the EXISTING photo content.\n\n";
@@ -484,6 +502,8 @@ const App: React.FC = () => {
       const base64 = await fileToBase64(file);
       const result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt);
       setGeneratedImage(result);
+      // Increment usage count after successful generation
+      await subscription.incrementUsage();
     } catch (err: any) {
       console.error(err);
       const errorMessage = err.toString().toLowerCase();
@@ -516,6 +536,8 @@ const App: React.FC = () => {
         
         const result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt);
         setGeneratedImage(result);
+        // Increment usage count after successful generation
+        await subscription.incrementUsage();
         setShowFeedback(false);
         setFeedbackText('');
         setIsLiked(false);
@@ -905,7 +927,15 @@ Notes: ${invoice.notes || 'N/A'}
   return (
     <AuthWrapper>
       <div className="flex flex-col h-screen overflow-hidden bg-[#050505]">
-      <Header onRequestUpgrade={requestApiKey} />
+      <Header
+        onRequestUpgrade={() => setShowPricing(true)}
+        subscriptionStatus={{
+          hasActiveSubscription: subscription.hasActiveSubscription,
+          remainingFreeGenerations: subscription.remainingFreeGenerations,
+          freeTrialLimit: subscription.freeTrialLimit,
+          isLoading: subscription.isLoading,
+        }}
+      />
       
       {/* Hidden PDF Generation Container */}
       <div style={{ position: 'absolute', left: '-5000px', top: 0, width: '1000px', height: '0', overflow: 'hidden' }}>
@@ -1897,6 +1927,12 @@ Notes: ${invoice.notes || 'N/A'}
       </div>
 
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Pricing Modal */}
+      <Pricing
+        isOpen={showPricing}
+        onClose={() => setShowPricing(false)}
+      />
     </div>
     </AuthWrapper>
   );
