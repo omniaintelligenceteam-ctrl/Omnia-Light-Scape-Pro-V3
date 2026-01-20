@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const filename = `${userId}/${Date.now()}.${extension}`;
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('project-images')
       .upload(filename, buffer, {
         contentType: mimeType,
