@@ -1210,13 +1210,14 @@ Notes: ${invoice.notes || 'N/A'}
       {/* Hidden PDF Generation Container */}
       <div style={{ position: 'absolute', left: '-5000px', top: 0, width: '1000px', height: '0', overflow: 'hidden' }}>
           {pdfProject && pdfProject.quote && (
-              <QuoteView 
-                  onSave={() => {}} 
+              <QuoteView
+                  onSave={() => {}}
                   initialData={pdfProject.quote}
                   companyProfile={companyProfile}
                   defaultPricing={pricing}
                   containerId={`quote-pdf-${pdfProject.id}`}
                   hideToolbar={true}
+                  projectImage={pdfProject.image}
               />
           )}
       </div>
@@ -1865,6 +1866,7 @@ Notes: ${invoice.notes || 'N/A'}
                         initialData={currentQuote}
                         companyProfile={companyProfile}
                         defaultPricing={pricing}
+                        projectImage={generatedImage}
                      />
                  )}
 

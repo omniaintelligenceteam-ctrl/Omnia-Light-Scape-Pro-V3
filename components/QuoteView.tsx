@@ -12,6 +12,7 @@ interface QuoteViewProps {
     defaultPricing?: FixturePricing[];
     containerId?: string;
     hideToolbar?: boolean;
+    projectImage?: string | null;
 }
 
 export const QuoteView: React.FC<QuoteViewProps> = ({
@@ -21,7 +22,8 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     companyProfile = { name: 'Omnia Light Scape Pro', email: '', address: '123 Landscape Lane\nDesign District, CA 90210', logo: null },
     defaultPricing = DEFAULT_PRICING,
     containerId = "quote-content",
-    hideToolbar = false
+    hideToolbar = false,
+    projectImage = null
 }) => {
   // Helper to find pricing by type
   const getPrice = (type: string) => defaultPricing.find(p => p.fixtureType === type) || DEFAULT_PRICING.find(p => p.fixtureType === type)!;
@@ -587,7 +589,7 @@ ${customMessage ? `\n${customMessage}\n` : ''}
             </div>
           )}
 
-          {/* Totals */}
+          {/* Totals with Project Image */}
           <motion.div
               className="relative bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 md:p-8 rounded-2xl border border-white/10 mb-12 md:mb-16 overflow-hidden print:bg-transparent print:border-none print:p-0"
               initial={{ opacity: 0, y: 20 }}
@@ -597,57 +599,90 @@ ${customMessage ? `\n${customMessage}\n` : ''}
              {/* Decorative glow */}
              <div className="absolute top-0 right-0 w-32 h-32 bg-[#F6B45A]/10 rounded-full blur-3xl pointer-events-none print:hidden" />
 
-             <div className="flex flex-col md:items-end gap-3 relative z-10">
-                 <div className="w-full md:w-80 flex justify-between py-3 text-sm text-gray-300 print:text-gray-600">
-                    <span>Subtotal</span>
-                    <span className="font-bold text-lg text-white font-mono print:text-black">${subtotal.toFixed(2)}</span>
+             <div className="flex flex-col md:flex-row gap-6 md:gap-8 relative z-10">
+                 {/* Project Image */}
+                 <div className="flex-1 md:flex-[1.2]">
+                     {projectImage ? (
+                         <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/30 print:border-gray-200">
+                             <img
+                                 src={projectImage}
+                                 alt="Project Design"
+                                 className="w-full h-auto object-cover"
+                             />
+                             {/* Tech corners */}
+                             <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
+                             {/* Label */}
+                             <div className="absolute bottom-3 left-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm border border-white/10 print:hidden">
+                                 <span className="text-[9px] font-bold uppercase tracking-wider text-[#F6B45A]">Lighting Design</span>
+                             </div>
+                         </div>
+                     ) : (
+                         <div className="h-full min-h-[200px] md:min-h-[280px] rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center text-center p-6 print:hidden">
+                             <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                                 <Sparkles className="w-6 h-6 text-gray-600" />
+                             </div>
+                             <p className="text-sm text-gray-500 font-medium mb-1">No Image Available</p>
+                             <p className="text-xs text-gray-600">Generate a design in the Editor tab</p>
+                         </div>
+                     )}
                  </div>
 
-                 {/* Discount Row */}
-                 <div className="w-full md:w-80 flex justify-between items-center py-3 text-sm text-gray-300 print:text-gray-600">
-                    <span className="flex items-center gap-2 text-white font-medium print:text-black">
-                        <Tag className="w-4 h-4 text-gray-500" />
-                        Discount
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <span className="text-gray-500 text-sm">-$</span>
-                        <input
-                            type="number"
-                            value={discount}
-                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                            className="w-24 text-right bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-0 focus:border-[#F6B45A] font-bold placeholder-gray-600 font-mono transition-colors print:bg-transparent print:border-gray-200 print:text-black"
-                            min="0"
-                            placeholder="0.00"
-                        />
-                    </div>
-                 </div>
+                 {/* Totals Column */}
+                 <div className="flex flex-col md:items-end gap-3 md:flex-1">
+                     <div className="w-full md:w-72 flex justify-between py-3 text-sm text-gray-300 print:text-gray-600">
+                        <span>Subtotal</span>
+                        <span className="font-bold text-lg text-white font-mono print:text-black">${subtotal.toFixed(2)}</span>
+                     </div>
 
-                 <div className="w-full md:w-80 flex justify-between items-center py-3 text-sm text-gray-300 border-b border-white/10 print:border-gray-200 print:text-gray-600">
-                    <div className="flex items-center gap-2">
-                        <span>Tax Rate</span>
-                        <div className="flex items-center bg-[#0a0a0a] rounded-lg px-3 py-2 border border-white/10 print:bg-gray-50 print:border-none">
+                     {/* Discount Row */}
+                     <div className="w-full md:w-72 flex justify-between items-center py-3 text-sm text-gray-300 print:text-gray-600">
+                        <span className="flex items-center gap-2 text-white font-medium print:text-black">
+                            <Tag className="w-4 h-4 text-gray-500" />
+                            Discount
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <span className="text-gray-500 text-sm">-$</span>
                             <input
                                 type="number"
-                                value={(taxRate * 100).toFixed(1)}
-                                onChange={(e) => setTaxRate((parseFloat(e.target.value) || 0) / 100)}
-                                className="w-12 text-right bg-transparent border-none p-0 text-sm focus:ring-0 font-medium text-white font-mono print:text-black"
-                                step="0.1"
+                                value={discount}
+                                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                                className="w-24 text-right bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-0 focus:border-[#F6B45A] font-bold placeholder-gray-600 font-mono transition-colors print:bg-transparent print:border-gray-200 print:text-black"
+                                min="0"
+                                placeholder="0.00"
                             />
-                            <Percent className="w-3 h-3 ml-1 text-gray-500" />
                         </div>
-                    </div>
-                    <span className="font-bold text-lg text-white font-mono print:text-black">${tax.toFixed(2)}</span>
-                 </div>
+                     </div>
 
-                 {/* Grand Total */}
-                 <div className="w-full md:w-80 flex justify-between items-center py-4 mt-2">
-                    <span className="text-lg font-bold text-white print:text-black">Grand Total</span>
-                    <div className="relative">
-                        <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] font-mono print:text-black">
-                            ${total.toFixed(2)}
-                        </span>
-                        <div className="absolute -inset-2 bg-[#F6B45A]/20 blur-xl -z-10 print:hidden" />
-                    </div>
+                     <div className="w-full md:w-72 flex justify-between items-center py-3 text-sm text-gray-300 border-b border-white/10 print:border-gray-200 print:text-gray-600">
+                        <div className="flex items-center gap-2">
+                            <span>Tax Rate</span>
+                            <div className="flex items-center bg-[#0a0a0a] rounded-lg px-3 py-2 border border-white/10 print:bg-gray-50 print:border-none">
+                                <input
+                                    type="number"
+                                    value={(taxRate * 100).toFixed(1)}
+                                    onChange={(e) => setTaxRate((parseFloat(e.target.value) || 0) / 100)}
+                                    className="w-12 text-right bg-transparent border-none p-0 text-sm focus:ring-0 font-medium text-white font-mono print:text-black"
+                                    step="0.1"
+                                />
+                                <Percent className="w-3 h-3 ml-1 text-gray-500" />
+                            </div>
+                        </div>
+                        <span className="font-bold text-lg text-white font-mono print:text-black">${tax.toFixed(2)}</span>
+                     </div>
+
+                     {/* Grand Total */}
+                     <div className="w-full md:w-72 flex justify-between items-center py-4 mt-2">
+                        <span className="text-lg font-bold text-white print:text-black">Grand Total</span>
+                        <div className="relative">
+                            <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] font-mono print:text-black">
+                                ${total.toFixed(2)}
+                            </span>
+                            <div className="absolute -inset-2 bg-[#F6B45A]/20 blur-xl -z-10 print:hidden" />
+                        </div>
+                     </div>
                  </div>
              </div>
           </motion.div>

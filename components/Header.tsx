@@ -69,15 +69,10 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
             {/* Main Brand Name */}
             <div className="flex items-baseline gap-1.5 md:gap-2">
               <h1
-                className="text-2xl md:text-3xl font-black tracking-tight"
+                className="text-2xl md:text-3xl font-black tracking-tight text-[#F6B45A]"
                 style={{
                   fontFamily: "'Playfair Display', Georgia, serif",
-                  background: 'linear-gradient(135deg, #F6B45A 0%, #FFD700 25%, #F6B45A 50%, #D4AF37 75%, #F6B45A 100%)',
-                  backgroundSize: '200% 200%',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  textShadow: '0 0 40px rgba(246,180,90,0.3)',
+                  textShadow: '0 0 30px rgba(246,180,90,0.5), 0 0 60px rgba(246,180,90,0.3)',
                 }}
               >
                 OMNIA
@@ -199,14 +194,14 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
           {!showProBadge && (
             <motion.button
               onClick={onRequestUpgrade}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-[#F6B45A] via-[#ffc861] to-[#F6B45A] text-[#050505] shadow-[0_0_25px_rgba(246,180,90,0.3)] hover:shadow-[0_0_40px_rgba(246,180,90,0.5)] transition-all duration-300"
+              className="group relative overflow-hidden rounded-xl bg-[#F6B45A] text-[#050505] shadow-[0_0_25px_rgba(246,180,90,0.4)] hover:shadow-[0_0_40px_rgba(246,180,90,0.6)] hover:bg-[#f7bc6a] transition-all duration-300"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               title="Upgrade to Pro"
             >
               {/* Animated shine effect */}
               <motion.div
-                className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
                 initial={{ x: '-100%' }}
                 animate={{ x: '200%' }}
                 transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -219,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
               </div>
 
               {/* Bottom highlight */}
-              <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/40"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/30"></div>
             </motion.button>
           )}
         </div>
