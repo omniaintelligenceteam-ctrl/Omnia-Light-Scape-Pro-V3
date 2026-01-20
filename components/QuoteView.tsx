@@ -307,91 +307,91 @@ ${customMessage ? `\n${customMessage}\n` : ''}
           <div className="absolute bottom-4 left-4 w-8 h-8 border-l-2 border-b-2 border-[#F6B45A]/20 rounded-bl-lg print:hidden" />
           <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-[#F6B45A]/20 rounded-br-lg print:hidden" />
 
-          {/* Header */}
+          {/* Header - Reorganized Layout */}
           <header className="mb-8 md:mb-12 border-b border-white/10 pb-6 print:border-gray-200 relative">
-             <div className="flex justify-between items-start">
-                 <div className="w-full">
-                    {/* Company Name & Logo Row */}
-                    <div className="flex items-center gap-6 mb-4">
-                        <h1 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] tracking-tight font-serif print:text-[#111]">
-                             {companyProfile.name}
-                        </h1>
-                        {companyProfile.logo && (
-                            <img src={companyProfile.logo} alt="Logo" className="h-16 w-16 md:h-24 md:w-24 object-contain" />
-                        )}
+             {/* Company Name - Top Center */}
+             <div className="text-center mb-6">
+                <h1 className="text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] tracking-tight font-serif print:text-[#111]">
+                     {companyProfile.name}
+                </h1>
+             </div>
+
+             {/* Two Column Layout: Quote For (Left) | Logo + Address + Date (Right) */}
+             <div className="flex flex-col md:flex-row justify-between gap-6">
+                {/* Left Side - Quote For (Client Info) */}
+                <div className="flex-1 md:max-w-[45%]">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20">
+                            <User className="w-4 h-4 text-[#F6B45A]" />
+                        </div>
+                        <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em] print:text-gray-800">Quote For</h3>
                     </div>
-                    {/* Address & Date */}
-                    <div className="text-xs md:text-sm text-gray-400 space-y-0.5 md:space-y-1 whitespace-pre-line print:text-gray-600">
+
+                    <div className="space-y-3 print:text-black">
+                        <div className="group">
+                            <input
+                                type="text"
+                                value={clientName}
+                                onChange={(e) => setClientName(e.target.value)}
+                                className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-2 text-lg font-bold text-white placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
+                                placeholder="Client Name"
+                            />
+                        </div>
+                        <div className="flex items-center gap-3 text-gray-400 group">
+                            <Mail className="w-4 h-4 shrink-0 group-hover:text-[#F6B45A] transition-colors print:text-gray-400" />
+                            <input
+                                type="text"
+                                value={clientEmail}
+                                onChange={(e) => setClientEmail(e.target.value)}
+                                className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-1 text-sm text-gray-300 placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
+                                placeholder="Client Email"
+                            />
+                        </div>
+                        <div className="flex items-center gap-3 text-gray-400 group">
+                            <Phone className="w-4 h-4 shrink-0 group-hover:text-[#F6B45A] transition-colors print:text-gray-400" />
+                            <input
+                                type="text"
+                                value={clientPhone}
+                                onChange={(e) => setClientPhone(e.target.value)}
+                                className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-1 text-sm text-gray-300 placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
+                                placeholder="Cell Phone"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Side - Logo, Address, Date */}
+                <div className="flex flex-col items-end text-right">
+                    {/* Logo - Top Right, Bigger */}
+                    {companyProfile.logo && (
+                        <img src={companyProfile.logo} alt="Logo" className="h-20 w-20 md:h-28 md:w-28 object-contain mb-4" />
+                    )}
+                    {/* Address */}
+                    <div className="text-xs md:text-sm text-gray-400 space-y-0.5 whitespace-pre-line print:text-gray-600 mb-3">
                         {companyProfile.address}
                     </div>
-                    <div className="mt-4 flex items-center gap-3">
+                    {/* Date */}
+                    <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20">
                             <Calendar className="w-3.5 h-3.5 text-[#F6B45A]"/>
                             <span className="text-xs font-bold text-[#F6B45A] uppercase tracking-wider">Date</span>
                         </div>
                         <span className="text-sm font-medium text-white print:text-black">{today}</span>
                     </div>
-                 </div>
+                </div>
              </div>
 
              {/* Quote number badge */}
              <div className="absolute top-0 right-0 flex items-center gap-2 px-4 py-2 rounded-bl-xl bg-white/5 border-l border-b border-white/10 print:hidden">
                  <Hash className="w-3 h-3 text-gray-500" />
-                 <span className="text-[10px] font-mono text-gray-400">QT-{Date.now().toString(36).toUpperCase().slice(-6)}</span>
+                 <span className="text-[10px] font-mono text-gray-400">QT-{String(Date.now()).slice(-8)}</span>
              </div>
           </header>
 
-          {/* Client & Project Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-8 md:mb-12">
+          {/* Project Site Info - Now Separate Below Header */}
+          <div className="mb-8 md:mb-12">
              <motion.div
-                 className="relative bg-gradient-to-br from-white/[0.04] to-transparent p-5 rounded-2xl border border-white/10 overflow-hidden print:border-none print:p-0 print:bg-transparent"
-                 whileHover={{ borderColor: 'rgba(246,180,90,0.3)' }}
-             >
-                {/* Section icon */}
-                <div className="absolute -top-2 -left-2 w-12 h-12 bg-[#F6B45A]/10 rounded-full blur-xl print:hidden" />
-
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20">
-                        <User className="w-4 h-4 text-[#F6B45A]" />
-                    </div>
-                    <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em] print:text-gray-800">Quote For</h3>
-                </div>
-
-                <div className="space-y-3 print:text-black">
-                    <div className="group">
-                        <input
-                            type="text"
-                            value={clientName}
-                            onChange={(e) => setClientName(e.target.value)}
-                            className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-2 text-lg font-bold text-white placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
-                            placeholder="Client Name"
-                        />
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-400 group">
-                        <Mail className="w-4 h-4 shrink-0 group-hover:text-[#F6B45A] transition-colors print:text-gray-400" />
-                         <input
-                            type="text"
-                            value={clientEmail}
-                            onChange={(e) => setClientEmail(e.target.value)}
-                            className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-1 text-sm text-gray-300 placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
-                            placeholder="Client Email"
-                        />
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-400 group">
-                        <Phone className="w-4 h-4 shrink-0 group-hover:text-[#F6B45A] transition-colors print:text-gray-400" />
-                         <input
-                            type="text"
-                            value={clientPhone}
-                            onChange={(e) => setClientPhone(e.target.value)}
-                            className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-1 text-sm text-gray-300 placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
-                            placeholder="Cell Phone"
-                        />
-                    </div>
-                </div>
-             </motion.div>
-
-             <motion.div
-                 className="relative bg-gradient-to-br from-white/[0.04] to-transparent p-5 rounded-2xl border border-white/10 overflow-hidden print:border-none print:p-0 print:bg-transparent"
+                 className="relative bg-gradient-to-br from-white/[0.04] to-transparent p-5 rounded-2xl border border-white/10 overflow-hidden print:border-none print:p-0 print:bg-transparent max-w-md"
                  whileHover={{ borderColor: 'rgba(246,180,90,0.3)' }}
              >
                 {/* Section icon */}
@@ -406,7 +406,7 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 
                 <div className="print:text-black">
                     <textarea
-                        className="w-full bg-transparent border-b border-white/10 hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-2 text-sm text-gray-300 resize-none h-24 placeholder-gray-500 leading-relaxed transition-colors print:text-black print:border-none print:p-0"
+                        className="w-full bg-transparent border-b border-white/10 hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-2 text-sm text-gray-300 resize-none h-20 placeholder-gray-500 leading-relaxed transition-colors print:text-black print:border-none print:p-0"
                         value={projectAddress}
                         onChange={(e) => setProjectAddress(e.target.value)}
                         placeholder="Project Address"

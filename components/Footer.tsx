@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Shield, Sparkles, ExternalLink } from 'lucide-react';
+import { Sun, Shield, Sparkles, Zap, Lock, Headphones, FileText } from 'lucide-react';
 
 interface FooterProps {
   variant?: 'full' | 'minimal';
@@ -13,7 +13,7 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
     return (
       <footer className="relative py-4 px-4 bg-[#050505] border-t border-white/5">
         <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500">
-          <Zap className="w-3 h-3 text-[#F6B45A]/50" />
+          <Sun className="w-3 h-3 text-[#F6B45A]/50" />
           <span className="font-mono tracking-wider">
             OMNIA LIGHT SCAPE PRO
           </span>
@@ -25,106 +25,176 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
   }
 
   return (
-    <footer className="relative bg-gradient-to-b from-[#0a0a0a] to-[#050505] border-t border-white/5 overflow-hidden">
+    <footer className="relative bg-gradient-to-b from-[#0a0a0a] to-[#030303] border-t border-white/5 overflow-hidden">
       {/* Ambient top glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-20 bg-[#F6B45A]/5 blur-[80px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-24 bg-[#F6B45A]/5 blur-[100px] pointer-events-none"></div>
 
       {/* Top gradient line */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/30 to-transparent"></div>
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/40 to-transparent"></div>
+
+      {/* Secondary shimmer line */}
+      <div className="absolute top-[1px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
 
       {/* Main Content */}
-      <div className="relative px-4 md:px-8 py-6 md:py-8">
+      <div className="relative px-4 md:px-8 py-8 md:py-10">
         {/* Mobile: Stacked layout */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
 
           {/* Brand Section */}
-          <div className="flex items-center justify-center md:justify-start gap-3">
+          <div className="flex items-center justify-center md:justify-start gap-4">
             {/* Logo Mark */}
             <motion.div
-              className="relative w-10 h-10 flex items-center justify-center"
+              className="relative w-12 h-12 flex items-center justify-center"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
-              <div className="absolute inset-0 rounded-lg border border-[#F6B45A]/20 rotate-45"></div>
-              <div className="absolute inset-1 rounded bg-gradient-to-br from-[#F6B45A]/10 to-transparent rotate-45"></div>
-              <Zap className="w-5 h-5 text-[#F6B45A] relative z-10 fill-[#F6B45A]/20" />
+              <motion.div
+                className="absolute inset-0 rounded-xl border border-[#F6B45A]/30"
+                style={{ rotate: 45 }}
+                animate={{ rotate: [45, 405] }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              />
+              <div className="absolute inset-1 rounded-lg bg-gradient-to-br from-[#F6B45A]/20 via-[#F6B45A]/5 to-transparent rotate-45"></div>
+              <Sun className="w-5 h-5 text-[#F6B45A] relative z-10" strokeWidth={2.5} />
+              <div className="absolute inset-0 bg-[#F6B45A]/20 blur-xl -z-10 rounded-full"></div>
             </motion.div>
 
             {/* Brand Text */}
             <div className="flex flex-col">
-              <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] font-serif tracking-tight">
-                Omnia
+              <span
+                className="text-xl font-black tracking-tight"
+                style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  background: 'linear-gradient(135deg, #F6B45A 0%, #FFD700 50%, #F6B45A 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                OMNIA
               </span>
-              <span className="text-[8px] text-gray-500 font-mono tracking-[0.2em] uppercase -mt-0.5">
+              <span className="text-[8px] text-gray-500 font-medium tracking-[0.25em] uppercase -mt-0.5">
                 Light Scape Pro
               </span>
             </div>
           </div>
 
-          {/* Trust Badges - Mobile Horizontal Scroll */}
-          <div className="flex items-center justify-center gap-4 md:gap-6 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+          {/* Trust Badges - Glassmorphism Style */}
+          <div className="flex items-center justify-center gap-3 md:gap-4 flex-wrap">
             <TrustBadge icon={Shield} label="Secure" />
             <TrustBadge icon={Sparkles} label="AI Powered" />
-            <TrustBadge icon={Zap} label="Fast" />
+            <TrustBadge icon={Zap} label="Lightning Fast" />
           </div>
 
-          {/* Links - Mobile: Center aligned */}
-          <div className="flex items-center justify-center md:justify-end gap-4 text-[10px]">
-            <FooterLink href="#">Privacy</FooterLink>
-            <span className="text-gray-700">|</span>
-            <FooterLink href="#">Terms</FooterLink>
-            <span className="text-gray-700">|</span>
-            <FooterLink href="#">Support</FooterLink>
+          {/* Premium Links */}
+          <div className="flex items-center justify-center md:justify-end gap-2 md:gap-3">
+            <FooterLink href="#" icon={Lock}>Privacy</FooterLink>
+            <FooterLink href="#" icon={FileText}>Terms</FooterLink>
+            <FooterLink href="#" icon={Headphones}>Support</FooterLink>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-6 pt-4 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="mt-8 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Copyright */}
           <p className="text-[10px] text-gray-600 font-mono tracking-wider text-center md:text-left">
             &copy; {currentYear} Omnia Intelligence. All rights reserved.
           </p>
 
-          {/* Version Badge */}
-          <div className="flex items-center gap-2">
+          {/* Version Badge - Premium Style */}
+          <div className="flex items-center gap-3">
             <span className="text-[9px] text-gray-600 font-mono">v2.0.0</span>
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <span className="relative flex h-1.5 w-1.5">
+            <motion.div
+              className="relative flex items-center gap-2 px-3 py-1.5 rounded-full overflow-hidden"
+              whileHover={{ scale: 1.02 }}
+            >
+              {/* Glassmorphism background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 backdrop-blur-sm border border-emerald-500/20 rounded-full"></div>
+
+              {/* Animated gradient border */}
+              <div className="absolute inset-0 rounded-full opacity-50">
+                <div className="absolute inset-[-1px] rounded-full bg-gradient-to-r from-emerald-500/0 via-emerald-500/50 to-emerald-500/0 animate-pulse"></div>
+              </div>
+
+              <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
               </span>
-              <span className="text-[8px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
-                Systems Online
+              <span className="relative text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
+                Online
               </span>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
 
       {/* Decorative bottom corners */}
-      <div className="absolute bottom-3 left-3 w-3 h-3 border-l border-b border-[#F6B45A]/20 hidden md:block"></div>
-      <div className="absolute bottom-3 right-3 w-3 h-3 border-r border-b border-[#F6B45A]/20 hidden md:block"></div>
+      <div className="absolute bottom-4 left-4 w-4 h-4 border-l-2 border-b-2 border-[#F6B45A]/20 hidden md:block"></div>
+      <div className="absolute bottom-4 right-4 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/20 hidden md:block"></div>
     </footer>
   );
 };
 
-// Trust Badge Component
+// Premium Trust Badge Component with Glassmorphism
 const TrustBadge: React.FC<{ icon: React.ElementType; label: string }> = ({ icon: Icon, label }) => (
-  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/5 shrink-0">
-    <Icon className="w-3 h-3 text-[#F6B45A]/60" />
-    <span className="text-[9px] font-medium text-gray-400 uppercase tracking-wider">{label}</span>
-  </div>
+  <motion.div
+    className="relative flex items-center gap-2 px-4 py-2 rounded-xl overflow-hidden shrink-0 group cursor-default"
+    whileHover={{ scale: 1.03, y: -1 }}
+    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+  >
+    {/* Glassmorphism background */}
+    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-md border border-white/10 rounded-xl group-hover:border-[#F6B45A]/30 transition-colors duration-300"></div>
+
+    {/* Inner glow on hover */}
+    <div className="absolute inset-0 bg-gradient-to-br from-[#F6B45A]/0 to-[#F6B45A]/0 group-hover:from-[#F6B45A]/5 group-hover:to-transparent rounded-xl transition-all duration-300"></div>
+
+    {/* Icon container */}
+    <div className="relative w-6 h-6 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20 flex items-center justify-center group-hover:bg-[#F6B45A]/20 transition-colors duration-300">
+      <Icon className="w-3 h-3 text-[#F6B45A]" />
+    </div>
+
+    <span className="relative text-[10px] font-semibold text-gray-300 uppercase tracking-wider group-hover:text-white transition-colors duration-300">
+      {label}
+    </span>
+  </motion.div>
 );
 
-// Footer Link Component
-const FooterLink: React.FC<{ href: string; children: React.ReactNode }> = ({ href, children }) => (
-  <a
+// Premium Footer Link with Gradient Border Glow
+const FooterLink: React.FC<{ href: string; icon: React.ElementType; children: React.ReactNode }> = ({ href, icon: Icon, children }) => (
+  <motion.a
     href={href}
-    className="text-gray-500 hover:text-[#F6B45A] transition-colors font-medium uppercase tracking-wider flex items-center gap-1 group"
+    className="relative group"
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
   >
-    {children}
-    <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-  </a>
+    {/* Outer glow on hover */}
+    <div className="absolute -inset-1 bg-gradient-to-r from-[#F6B45A]/0 via-[#F6B45A]/20 to-[#F6B45A]/0 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+    {/* Button container */}
+    <div className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl overflow-hidden">
+      {/* Glassmorphism background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-sm border border-white/10 rounded-xl group-hover:border-[#F6B45A]/40 transition-all duration-300"></div>
+
+      {/* Gradient fill on hover */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#F6B45A]/0 to-[#F6B45A]/0 group-hover:from-[#F6B45A]/10 group-hover:to-[#F6B45A]/5 rounded-xl transition-all duration-300"></div>
+
+      {/* Animated shine effect */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg]"
+          initial={{ x: '-100%' }}
+          whileHover={{ x: '200%' }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+        />
+      </div>
+
+      {/* Content */}
+      <Icon className="relative w-3.5 h-3.5 text-gray-500 group-hover:text-[#F6B45A] transition-colors duration-300" />
+      <span className="relative text-[10px] font-semibold text-gray-400 uppercase tracking-wider group-hover:text-white transition-colors duration-300">
+        {children}
+      </span>
+    </div>
+  </motion.a>
 );
 
 export default Footer;

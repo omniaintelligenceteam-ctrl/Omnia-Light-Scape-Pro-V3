@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { STRIPE_CONFIG } from '../constants';
-import { X, Loader2, Sparkles, ShieldCheck, Zap, Check, Crown, Building2 } from 'lucide-react';
+import { X, Loader2, Sparkles, ShieldCheck, Zap, Check, Crown, Building2, Plus } from 'lucide-react';
 import { createCheckoutSession } from '../services/stripeservice';
 
 interface PricingProps {
@@ -271,6 +271,19 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                           <>Get {plan.name}</>
                         )}
                       </motion.button>
+
+                      {/* Create Item Button - Only for Business plan */}
+                      {plan.id === 'business' && (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => window.open('https://buy.stripe.com/test_create_item', '_blank')}
+                          className="w-full mt-3 py-2.5 rounded-xl font-medium transition-all flex items-center justify-center gap-2 bg-white/5 text-white hover:bg-white/10 border border-white/10 text-sm"
+                        >
+                          <Plus size={16} />
+                          Create Item
+                        </motion.button>
+                      )}
                     </div>
                   </motion.div>
                 );

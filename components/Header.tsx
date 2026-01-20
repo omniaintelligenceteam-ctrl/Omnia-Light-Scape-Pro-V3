@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Crown, Sparkles, Zap, Sun } from 'lucide-react';
+import { Crown, Sparkles } from 'lucide-react';
 
 interface HeaderProps {
     onRequestUpgrade?: () => void;
@@ -39,29 +39,86 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
           whileHover={{ scale: 1.01 }}
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
         >
-          {/* Logo Mark - Animated Sun/Light Icon */}
+          {/* Logo Mark - Triple Pyramid with Setting Sun */}
           <motion.div
             className="relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center"
             animate={{
-              boxShadow: [
-                '0 0 20px rgba(246,180,90,0.2)',
-                '0 0 30px rgba(246,180,90,0.4)',
-                '0 0 20px rgba(246,180,90,0.2)'
+              filter: [
+                'drop-shadow(0 0 8px rgba(246,180,90,0.3))',
+                'drop-shadow(0 0 12px rgba(246,180,90,0.5))',
+                'drop-shadow(0 0 8px rgba(246,180,90,0.3))'
               ]
             }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           >
-            {/* Outer rotating ring */}
-            <motion.div
-              className="absolute inset-0 rounded-xl border border-[#F6B45A]/40"
-              style={{ rotate: 45 }}
-              animate={{ rotate: [45, 405] }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            />
-            {/* Inner glow background */}
-            <div className="absolute inset-1 rounded-lg bg-gradient-to-br from-[#F6B45A]/30 via-[#F6B45A]/10 to-transparent rotate-45"></div>
-            {/* Icon */}
-            <Sun className="w-5 h-5 md:w-6 md:h-6 text-[#F6B45A] relative z-10" strokeWidth={2.5} />
+            <svg
+              viewBox="0 0 48 48"
+              className="w-full h-full"
+              fill="none"
+            >
+              {/* Sun glow gradient */}
+              <defs>
+                <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#F6B45A" stopOpacity="1" />
+                  <stop offset="70%" stopColor="#F6B45A" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="#F6B45A" stopOpacity="0" />
+                </radialGradient>
+                <linearGradient id="pyramidGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#F6B45A" />
+                  <stop offset="100%" stopColor="#D4943A" />
+                </linearGradient>
+              </defs>
+
+              {/* Setting Sun - positioned between center and right pyramid */}
+              <motion.circle
+                cx="33"
+                cy="26"
+                r="6"
+                fill="url(#sunGlow)"
+                animate={{
+                  cy: [26, 28, 26],
+                  opacity: [0.9, 1, 0.9]
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              />
+
+              {/* Left Pyramid (smaller) */}
+              <polygon
+                points="8,38 16,22 24,38"
+                fill="none"
+                stroke="#F6B45A"
+                strokeWidth="1.5"
+                opacity="0.7"
+              />
+
+              {/* Center Pyramid (bigger) */}
+              <polygon
+                points="14,38 24,14 34,38"
+                fill="none"
+                stroke="url(#pyramidGold)"
+                strokeWidth="2"
+              />
+
+              {/* Right Pyramid (smaller) */}
+              <polygon
+                points="24,38 32,22 40,38"
+                fill="none"
+                stroke="#F6B45A"
+                strokeWidth="1.5"
+                opacity="0.7"
+              />
+
+              {/* Ground line */}
+              <line
+                x1="4"
+                y1="38"
+                x2="44"
+                y2="38"
+                stroke="#F6B45A"
+                strokeWidth="1"
+                opacity="0.4"
+              />
+            </svg>
           </motion.div>
 
           {/* Text Logo - Premium Typography */}
@@ -79,13 +136,13 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
               </h1>
               <div className="flex flex-col -space-y-0.5">
                 <span
-                  className="text-[9px] md:text-[10px] font-medium text-white/90 tracking-[0.25em] uppercase"
+                  className="text-[11px] md:text-[13px] font-medium text-white/90 tracking-[0.25em] uppercase"
                   style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                 >
                   LIGHT
                 </span>
                 <span
-                  className="text-[9px] md:text-[10px] font-medium text-white/60 tracking-[0.25em] uppercase"
+                  className="text-[11px] md:text-[13px] font-medium text-white/60 tracking-[0.25em] uppercase"
                   style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                 >
                   SCAPE

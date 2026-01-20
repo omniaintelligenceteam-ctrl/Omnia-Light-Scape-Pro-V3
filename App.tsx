@@ -1320,17 +1320,10 @@ Notes: ${invoice.notes || 'N/A'}
                     <div className="absolute top-6 left-0 right-0 z-40 flex justify-center gap-3 px-4">
                         <button
                             onClick={handleSaveProjectFromEditor}
-                            className="bg-black/40 backdrop-blur-md text-white border border-white/10 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-white/10 hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
-                        >
-                            <FolderPlus className="w-4 h-4 text-[#F6B45A]" />
-                            Save Project
-                        </button>
-                        <button
-                            onClick={handleGenerateQuote}
                             className="bg-[#F6B45A] text-[#111] px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-[#ffc67a] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(246,180,90,0.3)] flex items-center gap-2"
                         >
-                            <FileText className="w-4 h-4" />
-                            Generate Quote
+                            <FolderPlus className="w-4 h-4" />
+                            Save Project
                         </button>
                     </div>
 

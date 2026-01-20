@@ -1,5 +1,5 @@
 /**
- * Applies a diagonal "OMNIA FREE VERSION" watermark to an image
+ * Applies a diagonal "OMNIA FREE TRIAL" watermark to an image
  * @param imageDataUrl - Base64 data URL of the image
  * @returns Promise<string> - Base64 data URL of the watermarked image
  */
@@ -27,12 +27,12 @@ export async function applyWatermark(imageDataUrl: string): Promise<string> {
         // Configure watermark text
         const fontSize = Math.max(18, Math.floor(img.width / 50));
         ctx.font = `${fontSize}px Arial`;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)'; // White at 8% opacity - more subtle
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)'; // White at 12% opacity - slightly more visible
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         // Calculate diagonal pattern
-        const text = 'OMNIA FREE VERSION';
+        const text = 'OMNIA FREE TRIAL';
         const textWidth = ctx.measureText(text).width;
         const spacing = textWidth + 150; // More space between repetitions
 
