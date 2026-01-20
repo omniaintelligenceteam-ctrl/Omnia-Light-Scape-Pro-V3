@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { uploadImage } from '../services/uploadService';
-import { SavedProject, QuoteData, BOMData } from '../types';
+import { SavedProject, QuoteData, BOMData, ProjectStatus } from '../types';
 
 export function useProjects() {
   const { user } = useUser();
@@ -34,7 +34,8 @@ export function useProjects() {
             date: new Date(p.created_at).toLocaleDateString(),
             image: p.generated_image_url,
             quote: p.prompt_config?.quote || null,
-            bom: p.prompt_config?.bom || null
+            bom: p.prompt_config?.bom || null,
+            status: (p.prompt_config?.status as ProjectStatus) || 'draft'
           }));
           setProjects(loadedProjects);
         }
@@ -110,7 +111,8 @@ export function useProjects() {
           date: new Date(data.data.created_at).toLocaleDateString(),
           image: data.data.generated_image_url,
           quote: data.data.prompt_config?.quote || null,
-          bom: data.data.prompt_config?.bom || null
+          bom: data.data.prompt_config?.bom || null,
+          status: 'draft'
         };
 
         setProjects(prev => [newProject, ...prev]);
@@ -153,7 +155,7 @@ export function useProjects() {
   // Update a project
   const updateProject = useCallback(async (
     projectId: string,
-    updates: { name?: string; quote?: QuoteData; bom?: BOMData }
+    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus }
   ): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
@@ -161,9 +163,12 @@ export function useProjects() {
     }
 
     try {
+      // Get current project to merge prompt_config
+      const currentProject = projects.find(p => p.id === projectId);
       const promptConfig: Record<string, any> = {};
       if (updates.quote) promptConfig.quote = updates.quote;
       if (updates.bom) promptConfig.bom = updates.bom;
+      if (updates.status) promptConfig.status = updates.status;
 
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'PATCH',
@@ -186,7 +191,8 @@ export function useProjects() {
             ...p,
             name: updates.name || p.name,
             quote: updates.quote || p.quote,
-            bom: updates.bom || p.bom
+            bom: updates.bom || p.bom,
+            status: updates.status || p.status
           };
         }
         return p;
@@ -198,7 +204,15 @@ export function useProjects() {
       setError(err.message);
       return false;
     }
-  }, [user]);
+  }, [user, projects]);
+
+  // Update project status
+  const updateProjectStatus = useCallback(async (
+    projectId: string,
+    status: ProjectStatus
+  ): Promise<boolean> => {
+    return updateProject(projectId, { status });
+  }, [updateProject]);
 
   return {
     projects,
@@ -207,6 +221,7 @@ export function useProjects() {
     saveProject,
     deleteProject,
     updateProject,
+    updateProjectStatus,
     setProjects
   };
 }

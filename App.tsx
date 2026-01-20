@@ -19,9 +19,9 @@ import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2 } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus } from './types';
 
 // Helper to parse fixture quantities from text
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -60,7 +60,7 @@ const App: React.FC = () => {
   const subscription = useSubscription();
 
   // Load/save projects from Supabase
-  const { projects, isLoading: projectsLoading, saveProject, deleteProject } = useProjects();
+  const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProjectStatus } = useProjects();
 
   // Rate limiting for generate button (prevent double-clicks)
   const lastGenerateTime = useRef<number>(0);
@@ -95,6 +95,14 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Generation History for Undo
+  interface GenerationHistoryEntry {
+    id: string;
+    image: string;
+    timestamp: number;
+  }
+  const [generationHistory, setGenerationHistory] = useState<GenerationHistoryEntry[]>([]);
+
   // Full Screen State
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
 
@@ -124,10 +132,12 @@ const App: React.FC = () => {
   const [fixtureCatalog, setFixtureCatalog] = useState<FixtureCatalogItem[]>([]);
 
   // Projects Sub-Tab State
-  const [projectsSubTab, setProjectsSubTab] = useState<'projects' | 'approved' | 'invoicing'>('projects');
-  const [approvedProjectIds, setApprovedProjectIds] = useState<Set<string>>(new Set());
+  const [projectsSubTab, setProjectsSubTab] = useState<'projects' | 'quotes' | 'approved' | 'invoicing'>('projects');
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [currentInvoice, setCurrentInvoice] = useState<InvoiceData | null>(null);
+
+  // Inventory Sub-Tab State
+  const [inventorySubTab, setInventorySubTab] = useState<'bom' | 'inventory'>('bom');
 
   // Auth State (API Key)
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -214,6 +224,7 @@ const App: React.FC = () => {
     setFile(selectedFile);
     setPreviewUrl(getPreviewUrl(selectedFile));
     setGeneratedImage(null);
+    setGenerationHistory([]); // Clear history on new photo
     setError(null);
     setShowFeedback(false);
     setIsLiked(false);
@@ -224,6 +235,7 @@ const App: React.FC = () => {
     setFile(null);
     setPreviewUrl(null);
     setGeneratedImage(null);
+    setGenerationHistory([]); // Clear history on clear
     setPrompt('');
     setSelectedFixtures([]);
     setFixtureSubOptions({});
@@ -329,9 +341,14 @@ const App: React.FC = () => {
     }
     lastGenerateTime.current = now;
 
+    // Show loading immediately for better UX
+    setIsLoading(true);
+    setError(null);
+
     // Check if user can generate (subscription or free trial)
     const { canGenerate, reason } = await subscription.checkCanGenerate();
     if (!canGenerate) {
+      setIsLoading(false);
       if (reason === 'FREE_TRIAL_EXHAUSTED') {
         setShowPricing(true);
         showToast('info', 'Upgrade to continue generating');
@@ -504,6 +521,7 @@ const App: React.FC = () => {
 
     // Validation
     if (selectedFixtures.length === 0 && !prompt) {
+        setIsLoading(false);
         setError("Please select at least one lighting type or enter custom instructions.");
         return;
     }
@@ -512,8 +530,6 @@ const App: React.FC = () => {
     setShowFeedback(false);
     setFeedbackText('');
     setIsLiked(false);
-    setIsLoading(true);
-    setError(null);
     setIsFullScreen(false);
 
     // Dynamic Aspect Ratio Detection
@@ -545,6 +561,12 @@ const App: React.FC = () => {
       }
 
       setGeneratedImage(result);
+      // Add to history
+      setGenerationHistory(prev => [...prev, {
+        id: Date.now().toString(),
+        image: result,
+        timestamp: Date.now()
+      }]);
       // Increment usage count after successful generation
       await subscription.incrementUsage();
       showToast('success', 'Night scene generated successfully!');
@@ -596,6 +618,12 @@ const App: React.FC = () => {
         }
 
         setGeneratedImage(result);
+        // Add to history
+        setGenerationHistory(prev => [...prev, {
+          id: Date.now().toString(),
+          image: result,
+          timestamp: Date.now()
+        }]);
         // Increment usage count after successful generation
         await subscription.incrementUsage();
         setShowFeedback(false);
@@ -749,9 +777,16 @@ const App: React.FC = () => {
   };
 
   // Approve a project
-  const handleApproveProject = (projectId: string) => {
-      setApprovedProjectIds(prev => new Set([...prev, projectId]));
+  const handleApproveProject = async (projectId: string) => {
+      await updateProjectStatus(projectId, 'approved');
       setProjectsSubTab('approved');
+      showToast('success', 'Project approved!');
+  };
+
+  // Change project status
+  const handleStatusChange = async (projectId: string, newStatus: ProjectStatus) => {
+      await updateProjectStatus(projectId, newStatus);
+      showToast('success', `Project moved to ${STATUS_CONFIG[newStatus].label}`);
   };
 
   // Generate invoice from approved project
@@ -865,14 +900,11 @@ const App: React.FC = () => {
       }
   };
 
-  // Unapprove a project (move back to projects)
-  const handleUnapproveProject = (projectId: string) => {
-      if (!confirm('Remove this project from approved list?')) return;
-      setApprovedProjectIds(prev => {
-          const next = new Set(prev);
-          next.delete(projectId);
-          return next;
-      });
+  // Unapprove a project (move back to draft)
+  const handleUnapproveProject = async (projectId: string) => {
+      if (!confirm('Move this project back to draft?')) return;
+      await updateProjectStatus(projectId, 'draft');
+      showToast('success', 'Project moved back to draft');
   };
 
   // Download invoice as PDF
@@ -934,21 +966,43 @@ Notes: ${invoice.notes || 'N/A'}
       }
   };
 
+  // Status configuration for pipeline
+  const STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string; bgColor: string; borderColor: string }> = {
+    draft: { label: 'Draft', color: 'text-gray-400', bgColor: 'bg-gray-500/10', borderColor: 'border-gray-500/30' },
+    quoted: { label: 'Quoted', color: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30' },
+    approved: { label: 'Approved', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
+    scheduled: { label: 'Scheduled', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30' },
+    completed: { label: 'Completed', color: 'text-[#F6B45A]', bgColor: 'bg-[#F6B45A]/10', borderColor: 'border-[#F6B45A]/30' }
+  };
+
+  // Count projects by status
+  const statusCounts = useMemo(() => {
+    const counts: Record<ProjectStatus, number> = { draft: 0, quoted: 0, approved: 0, scheduled: 0, completed: 0 };
+    projects.forEach(p => {
+      counts[p.status] = (counts[p.status] || 0) + 1;
+    });
+    return counts;
+  }, [projects]);
+
   // Memoized filtered project lists (includes search filtering)
   const filteredUnapprovedProjects = useMemo(() =>
       projects.filter(p =>
-          !approvedProjectIds.has(p.id) &&
-          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.date.includes(searchTerm))
+          (p.status === 'draft' || p.status === 'quoted') &&
+          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           p.date.includes(searchTerm) ||
+           p.quote?.clientDetails?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
       ),
-      [projects, approvedProjectIds, searchTerm]
+      [projects, searchTerm]
   );
 
   const filteredApprovedProjects = useMemo(() =>
       projects.filter(p =>
-          approvedProjectIds.has(p.id) &&
-          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.date.includes(searchTerm))
+          (p.status === 'approved' || p.status === 'scheduled' || p.status === 'completed') &&
+          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           p.date.includes(searchTerm) ||
+           p.quote?.clientDetails?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
       ),
-      [projects, approvedProjectIds, searchTerm]
+      [projects, searchTerm]
   );
 
   // Authentication is now handled by AuthWrapper
@@ -974,9 +1028,9 @@ Notes: ${invoice.notes || 'N/A'}
                 </div>
                 {/* Only show the connect button if we are in a dev environment that supports it */}
                 {(window as any).aistudio ? (
-                    <button 
-                        onClick={requestApiKey} 
-                        className="w-full bg-[#F6B45A] text-[#050505] rounded-xl py-4 font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all"
+                    <button
+                        onClick={requestApiKey}
+                        className="w-full bg-[#F6B45A] text-[#050505] rounded-xl py-4 font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] active:scale-[0.98] transition-all"
                     >
                         Connect API Key (Dev Mode)
                     </button>
@@ -1131,16 +1185,16 @@ Notes: ${invoice.notes || 'N/A'}
                     
                     {/* Top Action Bar */}
                     <div className="absolute top-6 left-0 right-0 z-40 flex justify-center gap-3 px-4">
-                        <button 
+                        <button
                             onClick={handleSaveProjectFromEditor}
-                            className="bg-black/40 backdrop-blur-md text-white border border-white/10 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-white/10 hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+                            className="bg-black/40 backdrop-blur-md text-white border border-white/10 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-white/10 hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
                         >
                             <FolderPlus className="w-4 h-4 text-[#F6B45A]" />
                             Save Project
                         </button>
-                        <button 
+                        <button
                             onClick={handleGenerateQuote}
-                            className="bg-[#F6B45A] text-[#111] px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-[#ffc67a] hover:scale-105 transition-all shadow-[0_0_20px_rgba(246,180,90,0.3)] flex items-center gap-2"
+                            className="bg-[#F6B45A] text-[#111] px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-[#ffc67a] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(246,180,90,0.3)] flex items-center gap-2"
                         >
                             <FileText className="w-4 h-4" />
                             Generate Quote
@@ -1165,9 +1219,41 @@ Notes: ${invoice.notes || 'N/A'}
                         )}
                     </div>
 
+                    {/* History Thumbnail Strip */}
+                    {generationHistory.length > 1 && (
+                        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 w-full px-4">
+                            <div className="flex items-center justify-center gap-2 overflow-x-auto py-2 px-3 bg-black/60 backdrop-blur-md rounded-full border border-white/10 mx-auto max-w-fit">
+                                {generationHistory.map((entry, index) => {
+                                    const isCurrentImage = entry.image === generatedImage;
+                                    return (
+                                        <button
+                                            key={entry.id}
+                                            onClick={() => setGeneratedImage(entry.image)}
+                                            className={`relative shrink-0 w-12 h-12 rounded-lg overflow-hidden transition-all duration-200 ${
+                                                isCurrentImage
+                                                    ? 'ring-2 ring-[#F6B45A] scale-110'
+                                                    : 'ring-1 ring-white/20 hover:ring-white/40 opacity-60 hover:opacity-100'
+                                            }`}
+                                            title={`Generation ${index + 1}`}
+                                        >
+                                            <img
+                                                src={entry.image}
+                                                alt={`Generation ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <span className="absolute bottom-0.5 right-0.5 text-[8px] font-bold bg-black/70 text-white px-1 rounded">
+                                                {index + 1}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Floating Controls Bar */}
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3 w-full px-4">
-                        
+
                         <div className="flex items-center gap-3 bg-black/80 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-2xl">
                             
                             <button 
@@ -1328,10 +1414,10 @@ Notes: ${invoice.notes || 'N/A'}
                         )}
 
                         {/* Generate Button */}
-                        <button 
+                        <button
                             onClick={handleGenerate}
                             disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
-                            className="w-full bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] rounded-xl py-4 font-black text-xs uppercase tracking-[0.25em] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-3 group"
+                            className="w-full bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] rounded-xl py-4 font-black text-xs uppercase tracking-[0.25em] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-3 group"
                         >
                             <Wand2 className="w-4 h-4 text-black group-hover:rotate-12 transition-transform" />
                             Generate Scene
@@ -1342,17 +1428,6 @@ Notes: ${invoice.notes || 'N/A'}
                 )}
               </div>
             </div>
-          )}
-
-          {/* TAB: QUOTES */}
-          {activeTab === 'quotes' && (
-             <QuoteView
-                onSave={handleSaveProjectFromQuote}
-                onGenerateBOM={handleGenerateBOM}
-                initialData={currentQuote}
-                companyProfile={companyProfile}
-                defaultPricing={pricing}
-             />
           )}
 
           {/* TAB: PROJECTS */}
@@ -1384,8 +1459,29 @@ Notes: ${invoice.notes || 'N/A'}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-[#111] text-gray-200 placeholder-gray-400 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 sm:text-sm font-mono transition-all"
-                            placeholder="Search by ID or Client..."
+                            placeholder="Search by name or client..."
                         />
+                     </div>
+                 </div>
+
+                 {/* Status Pipeline */}
+                 <div className="mb-6 p-4 bg-[#111] rounded-2xl border border-white/5">
+                     <div className="flex items-center gap-1 md:gap-2 overflow-x-auto pb-2">
+                         {(['draft', 'quoted', 'approved', 'scheduled', 'completed'] as ProjectStatus[]).map((status, index) => {
+                             const config = STATUS_CONFIG[status];
+                             const count = statusCounts[status];
+                             return (
+                                 <React.Fragment key={status}>
+                                     <div className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 md:px-5 py-2 rounded-xl ${config.bgColor} border ${config.borderColor} min-w-[70px] md:min-w-[90px]`}>
+                                         <span className={`text-lg md:text-2xl font-bold ${config.color}`}>{count}</span>
+                                         <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-wider ${config.color}`}>{config.label}</span>
+                                     </div>
+                                     {index < 4 && (
+                                         <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                     )}
+                                 </React.Fragment>
+                             );
+                         })}
                      </div>
                  </div>
 
@@ -1393,7 +1489,7 @@ Notes: ${invoice.notes || 'N/A'}
                  <div className="flex items-center gap-2 mb-8 bg-[#111] p-1.5 rounded-xl border border-white/5 w-fit">
                      <button
                          onClick={() => setProjectsSubTab('projects')}
-                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'projects'
                                  ? 'bg-[#F6B45A] text-black'
                                  : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1406,8 +1502,19 @@ Notes: ${invoice.notes || 'N/A'}
                          </span>
                      </button>
                      <button
+                         onClick={() => setProjectsSubTab('quotes')}
+                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
+                             projectsSubTab === 'quotes'
+                                 ? 'bg-purple-500 text-white'
+                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                         }`}
+                     >
+                         <FileText className="w-4 h-4" />
+                         Quotes
+                     </button>
+                     <button
                          onClick={() => setProjectsSubTab('approved')}
-                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'approved'
                                  ? 'bg-emerald-500 text-white'
                                  : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1421,7 +1528,7 @@ Notes: ${invoice.notes || 'N/A'}
                      </button>
                      <button
                          onClick={() => setProjectsSubTab('invoicing')}
-                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'invoicing'
                                  ? 'bg-blue-500 text-white'
                                  : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1434,6 +1541,17 @@ Notes: ${invoice.notes || 'N/A'}
                          </span>
                      </button>
                  </div>
+
+                 {/* SUB-TAB: QUOTES */}
+                 {projectsSubTab === 'quotes' && (
+                     <QuoteView
+                        onSave={handleSaveProjectFromQuote}
+                        onGenerateBOM={handleGenerateBOM}
+                        initialData={currentQuote}
+                        companyProfile={companyProfile}
+                        defaultPricing={pricing}
+                     />
+                 )}
 
                  {/* SUB-TAB: PROJECTS (Unapproved) */}
                  {projectsSubTab === 'projects' && (
@@ -1450,6 +1568,16 @@ Notes: ${invoice.notes || 'N/A'}
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
                                 {filteredUnapprovedProjects.map((p) => (
                                     <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(246,180,90,0.1)] flex flex-col">
+
+                                        {/* Status Badge */}
+                                        <div className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${STATUS_CONFIG[p.status].bgColor} ${STATUS_CONFIG[p.status].color} border ${STATUS_CONFIG[p.status].borderColor}`}>
+                                            {p.status === 'draft' && <Clock className="w-3 h-3" />}
+                                            {p.status === 'quoted' && <FileText className="w-3 h-3" />}
+                                            {p.status === 'approved' && <CheckCircle2 className="w-3 h-3" />}
+                                            {p.status === 'scheduled' && <Calendar className="w-3 h-3" />}
+                                            {p.status === 'completed' && <Check className="w-3 h-3" />}
+                                            {STATUS_CONFIG[p.status].label}
+                                        </div>
 
                                         {/* Image Section - Hero */}
                                         <div className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}>
@@ -1489,12 +1617,22 @@ Notes: ${invoice.notes || 'N/A'}
 
                                         {/* Info Section */}
                                         <div className="p-5 flex flex-col flex-1 border-t border-white/5 bg-[#0a0a0a]">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="flex-1 min-w-0">
                                                     <div className="text-[9px] text-[#F6B45A] font-mono mb-1">ID: PRJ-{p.id.substring(0,6).toUpperCase()}</div>
-                                                    <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate w-48">{p.name}</h3>
+                                                    <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate">{p.name}</h3>
                                                 </div>
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-1 ml-2">
+                                                    {p.quote?.clientDetails?.phone && (
+                                                        <a
+                                                            href={`tel:${p.quote.clientDetails.phone}`}
+                                                            className="p-2 text-gray-400 hover:text-[#F6B45A] hover:bg-white/5 rounded-full transition-colors"
+                                                            title={`Call ${p.quote.clientDetails.phone}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <Phone className="w-4 h-4" />
+                                                        </a>
+                                                    )}
                                                     <button
                                                         onClick={() => handleDeleteProject(p.id)}
                                                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-full transition-colors"
@@ -1504,6 +1642,22 @@ Notes: ${invoice.notes || 'N/A'}
                                                     </button>
                                                 </div>
                                             </div>
+
+                                            {/* Client Info */}
+                                            {p.quote?.clientDetails?.name && (
+                                                <div className="mb-3 space-y-1.5">
+                                                    <div className="flex items-center gap-2 text-gray-300">
+                                                        <User className="w-3.5 h-3.5 text-gray-500" />
+                                                        <span className="text-sm truncate">{p.quote.clientDetails.name}</span>
+                                                    </div>
+                                                    {p.quote.clientDetails.address && (
+                                                        <div className="flex items-start gap-2 text-gray-400">
+                                                            <MapPin className="w-3.5 h-3.5 text-gray-500 mt-0.5 shrink-0" />
+                                                            <span className="text-xs truncate">{p.quote.clientDetails.address.split('\n')[0]}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             {/* Stats Grid */}
                                             <div className="grid grid-cols-2 gap-3 mt-auto">
@@ -1516,7 +1670,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                         if (p.quote) {
                                                             setCurrentQuote(p.quote);
                                                             if (p.image) setGeneratedImage(p.image);
-                                                            setActiveTab('quotes');
+                                                            setProjectsSubTab('quotes');
                                                         }
                                                     }}
                                                     className={`bg-[#151515] p-2 rounded-lg border border-white/5 relative group/quote transition-colors ${p.quote ? 'cursor-pointer hover:border-[#F6B45A]/30 hover:bg-[#F6B45A]/5' : ''}`}
@@ -1588,10 +1742,12 @@ Notes: ${invoice.notes || 'N/A'}
                                 {filteredApprovedProjects.map((p) => (
                                     <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-emerald-500/20 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)] flex flex-col">
 
-                                        {/* Approved Badge */}
-                                        <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-emerald-500 text-white px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-lg">
-                                            <CheckCircle2 className="w-3 h-3" />
-                                            Approved
+                                        {/* Status Badge */}
+                                        <div className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${STATUS_CONFIG[p.status].bgColor} ${STATUS_CONFIG[p.status].color} border ${STATUS_CONFIG[p.status].borderColor}`}>
+                                            {p.status === 'approved' && <CheckCircle2 className="w-3 h-3" />}
+                                            {p.status === 'scheduled' && <Calendar className="w-3 h-3" />}
+                                            {p.status === 'completed' && <Check className="w-3 h-3" />}
+                                            {STATUS_CONFIG[p.status].label}
                                         </div>
 
                                         {/* Image Section */}
@@ -1619,12 +1775,40 @@ Notes: ${invoice.notes || 'N/A'}
 
                                         {/* Info Section */}
                                         <div className="p-5 flex flex-col flex-1 border-t border-emerald-500/10 bg-[#0a0a0a]">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="flex-1 min-w-0">
                                                     <div className="text-[9px] text-emerald-500 font-mono mb-1">ID: PRJ-{p.id.substring(0,6).toUpperCase()}</div>
-                                                    <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate w-48">{p.name}</h3>
+                                                    <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate">{p.name}</h3>
+                                                </div>
+                                                <div className="flex items-center gap-1 ml-2">
+                                                    {p.quote?.clientDetails?.phone && (
+                                                        <a
+                                                            href={`tel:${p.quote.clientDetails.phone}`}
+                                                            className="p-2 text-gray-400 hover:text-emerald-400 hover:bg-white/5 rounded-full transition-colors"
+                                                            title={`Call ${p.quote.clientDetails.phone}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <Phone className="w-4 h-4" />
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </div>
+
+                                            {/* Client Info */}
+                                            {p.quote?.clientDetails?.name && (
+                                                <div className="mb-3 space-y-1.5">
+                                                    <div className="flex items-center gap-2 text-gray-300">
+                                                        <User className="w-3.5 h-3.5 text-gray-500" />
+                                                        <span className="text-sm truncate">{p.quote.clientDetails.name}</span>
+                                                    </div>
+                                                    {p.quote.clientDetails.address && (
+                                                        <div className="flex items-start gap-2 text-gray-400">
+                                                            <MapPin className="w-3.5 h-3.5 text-gray-500 mt-0.5 shrink-0" />
+                                                            <span className="text-xs truncate">{p.quote.clientDetails.address.split('\n')[0]}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             {/* Stats Grid */}
                                             <div className="grid grid-cols-2 gap-3 mt-auto">
@@ -1640,19 +1824,42 @@ Notes: ${invoice.notes || 'N/A'}
                                                 </div>
                                             </div>
 
-                                            {/* Action Buttons */}
-                                            <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
-                                                <button
-                                                    onClick={() => handleUnapproveProject(p.id)}
-                                                    className="flex-shrink-0 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 p-3 rounded-lg text-xs font-bold transition-all border border-white/5 hover:border-red-500/30"
-                                                    title="Remove from approved"
-                                                >
-                                                    <Undo2 className="w-4 h-4" />
-                                                </button>
+                                            {/* Status Change & Action Buttons */}
+                                            <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                                                {/* Status Progression */}
+                                                <div className="flex gap-2">
+                                                    {p.status === 'approved' && (
+                                                        <button
+                                                            onClick={() => handleStatusChange(p.id, 'scheduled')}
+                                                            className="flex-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-blue-500/30 hover:border-blue-500"
+                                                        >
+                                                            <Calendar className="w-3 h-3" />
+                                                            Schedule
+                                                        </button>
+                                                    )}
+                                                    {p.status === 'scheduled' && (
+                                                        <button
+                                                            onClick={() => handleStatusChange(p.id, 'completed')}
+                                                            className="flex-1 bg-[#F6B45A]/10 hover:bg-[#F6B45A] text-[#F6B45A] hover:text-black py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]"
+                                                        >
+                                                            <Check className="w-3 h-3" />
+                                                            Complete
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleUnapproveProject(p.id)}
+                                                        className="flex-shrink-0 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 p-2 rounded-lg text-xs font-bold transition-all border border-white/5 hover:border-red-500/30"
+                                                        title="Move back to draft"
+                                                    >
+                                                        <Undo2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+
+                                                {/* Invoice Button */}
                                                 <button
                                                     onClick={() => handleGenerateInvoice(p)}
                                                     disabled={!p.quote}
-                                                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+                                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
                                                 >
                                                     <Receipt className="w-4 h-4" />
                                                     Generate Invoice
@@ -1975,19 +2182,68 @@ Notes: ${invoice.notes || 'N/A'}
 
            {/* TAB: INVENTORY */}
            {activeTab === 'inventory' && (
-              <InventoryView />
-           )}
+            <div className="h-full overflow-y-auto bg-[#050505] relative">
+              {/* Background Tech Mesh/Glow */}
+              <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
+              <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-          {/* TAB: BOM */}
-          {activeTab === 'bom' && (
-            <BOMView
-              bomData={currentBOM}
-              onBOMChange={handleBOMChange}
-              onSaveProject={handleSaveProjectFromBOM}
-              currentQuote={currentQuote}
-              generatedImage={generatedImage}
-            />
-          )}
+              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
+
+                {/* High-End Header */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6 border-b border-white/5 pb-6">
+                    <div>
+                       <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Inventory & BOM</h2>
+                       <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-[#F6B45A] animate-pulse"></div>
+                            <span className="text-[10px] text-gray-300 font-mono uppercase tracking-widest">Materials Management</span>
+                       </div>
+                    </div>
+                </div>
+
+                {/* Sub-Tabs Navigation */}
+                <div className="flex items-center gap-2 mb-8 bg-[#111] p-1.5 rounded-xl border border-white/5 w-fit">
+                    <button
+                        onClick={() => setInventorySubTab('bom')}
+                        className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
+                            inventorySubTab === 'bom'
+                                ? 'bg-[#F6B45A] text-black'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <ClipboardList className="w-4 h-4" />
+                        Bill of Materials
+                    </button>
+                    <button
+                        onClick={() => setInventorySubTab('inventory')}
+                        className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
+                            inventorySubTab === 'inventory'
+                                ? 'bg-emerald-500 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <Package className="w-4 h-4" />
+                        Inventory
+                    </button>
+                </div>
+
+                {/* SUB-TAB: BOM */}
+                {inventorySubTab === 'bom' && (
+                    <BOMView
+                      bomData={currentBOM}
+                      onBOMChange={handleBOMChange}
+                      onSaveProject={handleSaveProjectFromBOM}
+                      currentQuote={currentQuote}
+                      generatedImage={generatedImage}
+                    />
+                )}
+
+                {/* SUB-TAB: INVENTORY */}
+                {inventorySubTab === 'inventory' && (
+                    <InventoryView />
+                )}
+              </div>
+            </div>
+           )}
 
           {/* TAB: SETTINGS */}
            {activeTab === 'settings' && (

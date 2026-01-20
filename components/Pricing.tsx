@@ -124,7 +124,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="p-8 pb-4 text-center border-b border-gray-100">
           <div className="flex justify-end mb-4">
-            <button onClick={onClose} className="p-2 -mr-2 -mt-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#111]">
+            <button onClick={onClose} className="p-2 -mr-2 -mt-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#111] active:scale-90">
               <X size={20} />
             </button>
           </div>
@@ -140,7 +140,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
           <div className="inline-flex items-center gap-2 p-1 bg-gray-100 rounded-full">
             <button
               onClick={() => setBillingCycle('monthly')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
                 billingCycle === 'monthly'
                   ? 'bg-white text-[#111] shadow-sm'
                   : 'text-gray-600 hover:text-[#111]'
@@ -150,7 +150,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
             </button>
             <button
               onClick={() => setBillingCycle('yearly')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all active:scale-95 flex items-center gap-2 ${
                 billingCycle === 'yearly'
                   ? 'bg-white text-[#111] shadow-sm'
                   : 'text-gray-600 hover:text-[#111]'
@@ -228,7 +228,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                   <button
                     onClick={() => handleSelectPlan(plan.id)}
                     disabled={!!loadingPlan}
-                    className={`w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                    className={`w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 active:scale-95 ${
                       plan.highlighted
                         ? 'bg-[#111] text-white hover:bg-black shadow-lg'
                         : 'bg-gray-100 text-[#111] hover:bg-gray-200'

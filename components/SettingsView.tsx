@@ -542,7 +542,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <button
                                     onClick={handleManageSubscription}
                                     disabled={isLoadingPortal}
-                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isLoadingPortal ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -556,7 +556,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             ) : (
                                 <button
                                     onClick={onRequestUpgrade}
-                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#F6B45A] text-[#050505] rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] transition-all"
+                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#F6B45A] text-[#050505] rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-[#ffc67a] active:scale-95 shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] transition-all"
                                 >
                                     <Sparkles className="w-4 h-4" />
                                     Upgrade Now
@@ -727,7 +727,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </p>
                         <button
                             onClick={() => setShowAddCatalogProduct(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#F6B45A] text-black rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#ffc67a] transition-colors shrink-0 ml-4"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#F6B45A] text-black rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#ffc67a] active:scale-95 transition-all shrink-0 ml-4"
                         >
                             <Plus className="w-4 h-4" />
                             Add Product
@@ -1060,7 +1060,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                  <div className="p-6">
                      <button
                         onClick={() => setActiveSection('ai')}
-                        className="w-full py-4 rounded-xl border border-dashed border-[#F6B45A]/30 text-[#F6B45A] font-bold uppercase tracking-widest hover:bg-[#F6B45A]/10 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-4 rounded-xl border border-dashed border-[#F6B45A]/30 text-[#F6B45A] font-bold uppercase tracking-widest hover:bg-[#F6B45A]/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                      >
                         <Sparkles className="w-4 h-4" />
                         Open Assistant Interface
@@ -1083,7 +1083,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 <a
                     href="mailto:omniaintelligenceteam@gmail.com"
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all"
                 >
                     <Mail className="w-4 h-4" />
                     Email Us
@@ -1094,7 +1094,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span className="text-gray-300 text-sm font-mono">omniaintelligenceteam@gmail.com</span>
                     <button
                         onClick={() => navigator.clipboard.writeText('omniaintelligenceteam@gmail.com')}
-                        className="text-xs text-[#F6B45A] hover:text-[#ffc67a] font-bold uppercase tracking-wider transition-colors"
+                        className="text-xs text-[#F6B45A] hover:text-[#ffc67a] active:scale-90 font-bold uppercase tracking-wider transition-all"
                     >
                         Copy
                     </button>

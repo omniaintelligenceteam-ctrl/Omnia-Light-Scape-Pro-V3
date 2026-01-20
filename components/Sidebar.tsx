@@ -1,6 +1,6 @@
 import React from 'react';
 import { useClerk } from '@clerk/clerk-react';
-import { Wand2, FolderOpen, FileText, Settings, LogOut, Package, ClipboardList } from 'lucide-react';
+import { Wand2, FolderOpen, Settings, LogOut, Package } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -17,8 +17,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const menuItems = [
     { id: 'editor', label: 'Editor', icon: Wand2 },
     { id: 'projects', label: 'Projects', icon: FolderOpen },
-    { id: 'quotes', label: 'Quotes', icon: FileText },
-    { id: 'bom', label: 'BOM', icon: ClipboardList },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];

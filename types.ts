@@ -55,6 +55,8 @@ export interface QuoteData {
   total: number;
 }
 
+export type ProjectStatus = 'draft' | 'quoted' | 'approved' | 'scheduled' | 'completed';
+
 export interface SavedProject {
   id: string;
   name: string;
@@ -62,6 +64,7 @@ export interface SavedProject {
   image: string | null;
   quote: QuoteData | null;
   bom: BOMData | null;
+  status: ProjectStatus;
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';
