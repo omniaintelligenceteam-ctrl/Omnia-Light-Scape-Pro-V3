@@ -143,38 +143,30 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
           </motion.div>
 
           {/* Text Logo - Premium Typography */}
-          <div className="flex flex-col">
-            {/* Main Brand Name - OMNIA spans full height of LIGHT/SCAPE */}
-            <div className="flex items-stretch gap-1 md:gap-2">
-              <h1
-                className="text-lg md:text-3xl font-black tracking-tight text-[#F6B45A] leading-none flex items-center"
-                style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  textShadow: '0 0 30px rgba(246,180,90,0.5), 0 0 60px rgba(246,180,90,0.3)',
-                }}
+          <div className="flex items-center gap-1 md:gap-2">
+            {/* Main Brand Name - OMNIA */}
+            <h1
+              className="text-2xl md:text-5xl font-black tracking-tight text-[#F6B45A] leading-none"
+              style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                textShadow: '0 0 30px rgba(246,180,90,0.5), 0 0 60px rgba(246,180,90,0.3)',
+              }}
+            >
+              OMNIA
+            </h1>
+            {/* LIGHT SCAPE stacked to the right */}
+            <div className="flex flex-col justify-center gap-0">
+              <span
+                className="text-[8px] md:text-[12px] font-medium text-white/80 tracking-[0.15em] md:tracking-[0.2em] uppercase leading-none"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
-                OMNIA
-              </h1>
-              <div className="flex flex-col justify-between">
-                <span
-                  className="text-[8px] md:text-[13px] font-medium text-white/90 tracking-[0.15em] md:tracking-[0.25em] uppercase leading-none"
-                  style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
-                >
-                  LIGHT
-                </span>
-                <span
-                  className="text-[8px] md:text-[13px] font-medium text-white/60 tracking-[0.15em] md:tracking-[0.25em] uppercase leading-none"
-                  style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
-                >
-                  SCAPE
-                </span>
-              </div>
-            </div>
-            {/* Tagline - hidden on mobile */}
-            <div className="hidden md:flex items-center gap-2 mt-0.5">
-              <div className="h-[1px] w-6 md:w-10 bg-gradient-to-r from-[#F6B45A] to-transparent"></div>
-              <span className="text-[7px] md:text-[8px] text-[#F6B45A]/80 font-semibold tracking-[0.35em] uppercase">
-                PRO
+                LIGHT
+              </span>
+              <span
+                className="text-[8px] md:text-[12px] font-medium text-white/80 tracking-[0.15em] md:tracking-[0.2em] uppercase leading-none"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+              >
+                SCAPE
               </span>
             </div>
           </div>
