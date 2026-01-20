@@ -8,6 +8,7 @@ import healthRoutes from './routes/health.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
 import stripeRoutes from './routes/stripe.routes.js';
 import usageRoutes from './routes/usage.routes.js';
+import projectsRoutes from './routes/projects.routes.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/health', healthRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/usage', usageRoutes);
+app.use('/api/projects', projectsRoutes);
 
 // Start
 app.listen(PORT, () => {

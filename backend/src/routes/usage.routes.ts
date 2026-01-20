@@ -100,7 +100,7 @@ router.post('/increment', async (req: Request<{}, {}, UsageCheckRequest>, res: R
         const { data: userData, error: updateError } = await supabase
             .from('users')
             .update({
-                generation_count: supabase.rpc ? undefined : 0 // Will use RPC below
+                generation_count: (typeof supabase.rpc === 'function') ? undefined : 0 // Will use RPC below
             })
             .eq('clerk_user_id', userId)
             .select('id, generation_count')
