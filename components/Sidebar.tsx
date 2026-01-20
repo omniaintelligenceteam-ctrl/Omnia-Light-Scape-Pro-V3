@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wand2, FolderOpen, Settings, Package } from 'lucide-react';
+import { Paintbrush, FolderOpen, Settings, Package, Sparkles } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -9,34 +9,11 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const menuItems = [
-    { id: 'editor', label: 'Editor', icon: Wand2 },
+    { id: 'editor', label: 'Editor', icon: Paintbrush },
     { id: 'projects', label: 'Projects', icon: FolderOpen },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [tabDimensions, setTabDimensions] = useState<{ width: number; left: number }[]>([]);
-
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        const buttons = containerRef.current.querySelectorAll('button');
-        const dims = Array.from(buttons).map(btn => ({
-          width: btn.offsetWidth,
-          left: btn.offsetLeft,
-        }));
-        setTabDimensions(dims);
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
-
-  const activeIndex = menuItems.findIndex(item => item.id === activeTab);
-  const activeDimension = tabDimensions[activeIndex];
 
   return (
     <nav className="w-full bg-gradient-to-t from-[#0a0a0a] via-[#0f0f0f] to-[#111] text-white shrink-0 z-50 relative">
@@ -49,51 +26,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       {/* Ambient glow behind navigation */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-16 bg-[#F6B45A]/[0.03] blur-[50px] pointer-events-none" />
 
-      <div className="flex items-center justify-center px-4 py-3 md:py-4">
-        {/* Navigation Container */}
-        <div
-          ref={containerRef}
-          className="relative flex items-center gap-0 p-1.5 md:p-2 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/40 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]"
-        >
-          {/* Animated background pill */}
-          {activeDimension && (
-            <motion.div
-              className="absolute top-1.5 md:top-2 bottom-1.5 md:bottom-2 rounded-xl overflow-hidden"
-              initial={false}
-              animate={{
-                x: activeDimension.left,
-                width: activeDimension.width,
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 500,
-                damping: 35
-              }}
-            >
-              {/* Gradient background */}
-              <div className="absolute inset-0 bg-gradient-to-b from-[#F6B45A] via-[#f0a847] to-[#e59a3a]" />
+      <div className="flex flex-col items-center px-4 py-3 md:py-4">
+        {/* Brand text - hidden on mobile */}
+        <div className="hidden md:flex items-center gap-2 mb-3 text-[10px] text-gray-500">
+          <span className="font-mono tracking-wider">OMNIA LIGHT SCAPE PRO</span>
+          <span className="text-gray-600">|</span>
+          <span>{new Date().getFullYear()}</span>
+        </div>
 
-              {/* Inner glow */}
-              <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20" />
-
-              {/* Shine effect */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-20deg]"
-                initial={{ x: '-100%' }}
-                animate={{ x: '200%' }}
-                transition={{
-                  repeat: Infinity,
-                  repeatDelay: 3,
-                  duration: 1,
-                  ease: "easeInOut"
-                }}
-              />
-
-              {/* Outer glow */}
-              <div className="absolute -inset-1 bg-[#F6B45A]/30 blur-xl -z-10" />
-            </motion.div>
-          )}
-
+        {/* Navigation Container - 4 separate buttons */}
+        <div className="flex items-center justify-center gap-2 md:gap-3 w-full max-w-md">
           {menuItems.map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
@@ -102,13 +44,78 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               <motion.button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className="relative z-10 flex flex-col items-center justify-center gap-1 md:gap-1.5 px-4 md:px-6 py-2.5 md:py-3 rounded-xl transition-colors duration-200"
-                whileHover={{ scale: isActive ? 1 : 1.05 }}
+                className="relative flex-1 flex flex-col items-center justify-center gap-1 md:gap-1.5 py-2.5 md:py-3 rounded-xl transition-all duration-300 overflow-hidden"
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.95 }}
               >
+                {/* Button background - individual for each button */}
+                <motion.div
+                  className="absolute inset-0 rounded-xl"
+                  initial={false}
+                  animate={{
+                    background: isActive
+                      ? 'linear-gradient(to bottom, #F6B45A, #f0a847, #e59a3a)'
+                      : 'linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(0,0,0,0.4))',
+                    borderColor: isActive ? 'rgba(246,180,90,0.5)' : 'rgba(255,255,255,0.08)',
+                  }}
+                  transition={{ duration: 0.3 }}
+                  style={{
+                    border: '1px solid',
+                  }}
+                />
+
+                {/* Inner glow for active state */}
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.div
+                      className="absolute inset-0 rounded-xl bg-gradient-to-t from-transparent via-white/10 to-white/20"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  )}
+                </AnimatePresence>
+
+                {/* Shine effect for active */}
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.div
+                      className="absolute inset-0 rounded-xl overflow-hidden"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-20deg]"
+                        initial={{ x: '-100%' }}
+                        animate={{ x: '200%' }}
+                        transition={{
+                          repeat: Infinity,
+                          repeatDelay: 3,
+                          duration: 1,
+                          ease: "easeInOut"
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Outer glow for active */}
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.div
+                      className="absolute -inset-1 bg-[#F6B45A]/30 blur-xl -z-10 rounded-xl"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    />
+                  )}
+                </AnimatePresence>
+
                 {/* Icon */}
                 <motion.div
-                  className="relative"
+                  className="relative z-10"
                   animate={{
                     y: isActive ? -1 : 0,
                   }}
@@ -123,22 +130,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     strokeWidth={isActive ? 2.5 : 2}
                   />
 
-                  {/* Icon glow when active */}
+                  {/* Magic sparkles for Editor tab */}
                   <AnimatePresence>
-                    {isActive && (
-                      <motion.div
-                        className="absolute inset-0 bg-[#1a1a1a]/10 blur-sm rounded-full scale-150"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      />
+                    {item.id === 'editor' && isActive && (
+                      <>
+                        <motion.div
+                          className="absolute -top-1 -right-1"
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
+                          transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 0.5 }}
+                        >
+                          <Sparkles className="w-2 h-2 text-[#1a1a1a]" />
+                        </motion.div>
+                        <motion.div
+                          className="absolute -bottom-0.5 -left-1"
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
+                          transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 0.8, delay: 0.3 }}
+                        >
+                          <Sparkles className="w-1.5 h-1.5 text-[#1a1a1a]/70" />
+                        </motion.div>
+                      </>
                     )}
                   </AnimatePresence>
                 </motion.div>
 
                 {/* Label */}
                 <motion.span
-                  className={`text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.08em] transition-all duration-300 whitespace-nowrap ${
+                  className={`relative z-10 text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.05em] transition-all duration-300 whitespace-nowrap ${
                     isActive
                       ? 'text-[#1a1a1a] font-bold'
                       : 'text-gray-500'
@@ -150,14 +169,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 >
                   {item.label}
                 </motion.span>
-
-                {/* Hover highlight for inactive tabs */}
-                {!isActive && (
-                  <motion.div
-                    className="absolute inset-0 rounded-xl bg-white/0 hover:bg-white/[0.04] transition-colors duration-200"
-                    whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
-                  />
-                )}
               </motion.button>
             );
           })}
