@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { uploadImage } from '../services/uploadService';
 import { useUser } from '@clerk/clerk-react';
+import { uploadImage } from '../services/uploadService';
 import { SavedProject, QuoteData, BOMData } from '../types';
 
 export function useProjects() {
@@ -64,9 +64,16 @@ export function useProjects() {
     try {
       console.log('Saving project...', { name, userId: user.id, hasImage: !!generatedImage, hasBOM: !!bom });
 
-      let imageUrl = generatedImage;
+      let imageUrl = '';
 
-    }
+      // Upload image directly to Supabase Storage from browser
+      if (generatedImage && generatedImage.startsWith('data:')) {
+        console.log('Uploading image to storage...');
+        imageUrl = await uploadImage(generatedImage, user.id);
+        console.log('Image uploaded:', imageUrl);
+      } else if (generatedImage) {
+        imageUrl = generatedImage;
+      }
 
       // Build prompt_config object with all available data
       const promptConfig: Record<string, any> = { savedFromEditor: true };
@@ -80,7 +87,7 @@ export function useProjects() {
         },
         body: JSON.stringify({
           name,
-          generated_image_url: generatedImage,
+          generated_image_url: imageUrl,
           prompt_config: promptConfig
         }),
       });
