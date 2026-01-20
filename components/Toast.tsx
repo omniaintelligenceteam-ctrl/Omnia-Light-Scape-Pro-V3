@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -6,13 +7,14 @@ type ToastType = 'success' | 'error' | 'warning' | 'info';
 interface Toast {
   id: string;
   type: ToastType;
+  title?: string;
   message: string;
   duration?: number;
 }
 
 interface ToastContextType {
   toasts: Toast[];
-  showToast: (type: ToastType, message: string, duration?: number) => void;
+  showToast: (type: ToastType, message: string, duration?: number, title?: string) => void;
   dismissToast: (id: string) => void;
 }
 
@@ -37,9 +39,9 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  const showToast = useCallback((type: ToastType, message: string, duration = 4000) => {
+  const showToast = useCallback((type: ToastType, message: string, duration = 4000, title?: string) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newToast: Toast = { id, type, message, duration };
+    const newToast: Toast = { id, type, message, duration, title };
 
     setToasts((prev) => [...prev, newToast]);
 
@@ -64,13 +66,13 @@ interface ToastContainerProps {
 }
 
 const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismiss }) => {
-  if (toasts.length === 0) return null;
-
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm">
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
-      ))}
+    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 max-w-sm">
+      <AnimatePresence mode="popLayout">
+        {toasts.map((toast) => (
+          <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
+        ))}
+      </AnimatePresence>
     </div>
   );
 };
@@ -81,55 +83,132 @@ interface ToastItemProps {
 }
 
 const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
-  const icons: Record<ToastType, React.ReactNode> = {
-    success: <CheckCircle2 className="w-5 h-5 text-green-500" />,
-    error: <XCircle className="w-5 h-5 text-red-500" />,
-    warning: <AlertTriangle className="w-5 h-5 text-yellow-500" />,
-    info: <Info className="w-5 h-5 text-blue-500" />,
+  const [progress, setProgress] = useState(100);
+
+  useEffect(() => {
+    if (!toast.duration || toast.duration <= 0) return;
+
+    const startTime = Date.now();
+    const duration = toast.duration;
+
+    const updateProgress = () => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setProgress(remaining);
+
+      if (remaining > 0) {
+        requestAnimationFrame(updateProgress);
+      }
+    };
+
+    const animationFrame = requestAnimationFrame(updateProgress);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [toast.duration]);
+
+  const config: Record<ToastType, {
+    icon: React.ReactNode;
+    iconBg: string;
+    border: string;
+    progressColor: string;
+    title: string;
+  }> = {
+    success: {
+      icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
+      iconBg: 'bg-emerald-500/20',
+      border: 'border-emerald-500/20',
+      progressColor: 'bg-emerald-500',
+      title: 'Success',
+    },
+    error: {
+      icon: <XCircle className="w-4 h-4 text-red-400" />,
+      iconBg: 'bg-red-500/20',
+      border: 'border-red-500/20',
+      progressColor: 'bg-red-500',
+      title: 'Error',
+    },
+    warning: {
+      icon: <AlertTriangle className="w-4 h-4 text-amber-400" />,
+      iconBg: 'bg-amber-500/20',
+      border: 'border-amber-500/20',
+      progressColor: 'bg-amber-500',
+      title: 'Warning',
+    },
+    info: {
+      icon: <Info className="w-4 h-4 text-blue-400" />,
+      iconBg: 'bg-blue-500/20',
+      border: 'border-blue-500/20',
+      progressColor: 'bg-blue-500',
+      title: 'Info',
+    },
   };
 
-  const backgrounds: Record<ToastType, string> = {
-    success: 'bg-green-500/10 border-green-500/30',
-    error: 'bg-red-500/10 border-red-500/30',
-    warning: 'bg-yellow-500/10 border-yellow-500/30',
-    info: 'bg-blue-500/10 border-blue-500/30',
-  };
+  const { icon, iconBg, border, progressColor, title } = config[toast.type];
 
   return (
-    <div
-      className={`flex items-start gap-3 p-4 rounded-xl border backdrop-blur-sm shadow-lg animate-in slide-in-from-right-5 duration-300 ${backgrounds[toast.type]} bg-[#111]/90`}
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 50, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 100, transition: { duration: 0.2 } }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      className={`relative glass rounded-xl border overflow-hidden ${border}`}
       role="alert"
     >
-      <div className="flex-shrink-0 mt-0.5">{icons[toast.type]}</div>
-      <p className="flex-1 text-sm text-white">{toast.message}</p>
-      <button
-        onClick={() => onDismiss(toast.id)}
-        className="flex-shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
-        aria-label="Dismiss"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </div>
+      <div className="flex items-start gap-3 p-4">
+        {/* Icon */}
+        <div className={`w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0`}>
+          {icon}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-white text-sm">{toast.title || title}</p>
+          <p className="text-gray-400 text-xs mt-0.5">{toast.message}</p>
+        </div>
+
+        {/* Dismiss Button */}
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onDismiss(toast.id)}
+          className="text-gray-500 hover:text-white transition-colors shrink-0"
+          aria-label="Dismiss"
+        >
+          <X className="w-4 h-4" />
+        </motion.button>
+      </div>
+
+      {/* Progress Bar */}
+      {toast.duration && toast.duration > 0 && (
+        <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${progressColor}/20`}>
+          <motion.div
+            className={`h-full ${progressColor}`}
+            style={{ width: `${progress}%` }}
+            transition={{ duration: 0.1 }}
+          />
+        </div>
+      )}
+    </motion.div>
   );
 };
 
 // Helper hooks for common toast patterns
 export const useSuccessToast = () => {
   const { showToast } = useToast();
-  return useCallback((message: string) => showToast('success', message), [showToast]);
+  return useCallback((message: string, title?: string) => showToast('success', message, 4000, title), [showToast]);
 };
 
 export const useErrorToast = () => {
   const { showToast } = useToast();
-  return useCallback((message: string) => showToast('error', message, 6000), [showToast]);
+  return useCallback((message: string, title?: string) => showToast('error', message, 6000, title), [showToast]);
 };
 
 export const useWarningToast = () => {
   const { showToast } = useToast();
-  return useCallback((message: string) => showToast('warning', message), [showToast]);
+  return useCallback((message: string, title?: string) => showToast('warning', message, 5000, title), [showToast]);
 };
 
 export const useInfoToast = () => {
   const { showToast } = useToast();
-  return useCallback((message: string) => showToast('info', message), [showToast]);
+  return useCallback((message: string, title?: string) => showToast('info', message, 4000, title), [showToast]);
 };

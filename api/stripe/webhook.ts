@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { supabase } from '../lib/supabase.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2024-12-18.acacia'
+    apiVersion: '2025-12-15.clover'
 });
 
 // Price ID to monthly limit mapping
@@ -133,7 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'invoice.paid': {
                 // Reset monthly generation count when subscription renews
                 const invoice = event.data.object as Stripe.Invoice;
-                const subscriptionId = invoice.subscription as string;
+                const subscriptionId = (invoice as { subscription?: string | null }).subscription as string;
 
                 // Only reset for subscription invoices (not first payment)
                 if (invoice.billing_reason === 'subscription_cycle') {

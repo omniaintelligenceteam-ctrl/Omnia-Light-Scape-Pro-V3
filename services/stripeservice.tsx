@@ -1,5 +1,5 @@
 export const createCheckoutSession = async (userId: string, priceId: string): Promise<{ url: string }> => {
-  const response = await fetch(`/api/stripe/checkout`, {
+  const response = await fetch(`/api/stripe?action=checkout`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -19,7 +19,7 @@ export const createCheckoutSession = async (userId: string, priceId: string): Pr
 };
 
 export const createPortalSession = async (userId: string): Promise<{ url: string }> => {
-  const response = await fetch(`/api/stripe/portal`, {
+  const response = await fetch(`/api/stripe?action=portal`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

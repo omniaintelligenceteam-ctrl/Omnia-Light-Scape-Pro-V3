@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList } from 'lucide-react';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 
@@ -38,6 +38,11 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [taxRate, setTaxRate] = useState<number>(initialData?.taxRate ?? 0.07);
   const [discount, setDiscount] = useState<number>(initialData?.discount || 0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Send Quote Modal State
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendMethod, setSendMethod] = useState<'email' | 'sms'>('email');
+  const [customMessage, setCustomMessage] = useState('');
 
   // Client Details State (Controlled)
   const [clientName, setClientName] = useState(initialData?.clientDetails.name || "John & Jane Smith");
@@ -142,6 +147,45 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     }
   };
 
+  // Generate quote summary text for SMS/Email
+  const generateQuoteSummary = () => {
+    const itemsList = lineItems
+      .filter(item => item.quantity > 0)
+      .map(item => `• ${item.name} (${item.quantity}x) - $${(item.unitPrice * item.quantity).toFixed(2)}`)
+      .join('\n');
+
+    return `Quote for ${clientName}
+
+Project: ${projectAddress.split('\n')[0]}
+
+${itemsList}
+
+Subtotal: $${subtotal.toFixed(2)}
+${discount > 0 ? `Discount: -$${discount.toFixed(2)}\n` : ''}Tax (${(taxRate * 100).toFixed(1)}%): $${tax.toFixed(2)}
+TOTAL: $${total.toFixed(2)}
+
+${customMessage ? `\n${customMessage}\n` : ''}
+- ${companyProfile.name}`;
+  };
+
+  const handleSendEmail = () => {
+    const subject = encodeURIComponent(`Lighting Quote - ${clientName}`);
+    const body = encodeURIComponent(generateQuoteSummary());
+    const mailtoLink = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+    window.open(mailtoLink, '_blank');
+    setShowSendModal(false);
+  };
+
+  const handleSendSMS = () => {
+    // Clean phone number for SMS
+    const cleanPhone = clientPhone.replace(/[^\d+]/g, '');
+    const message = encodeURIComponent(generateQuoteSummary());
+    // Use sms: protocol - works on mobile devices
+    const smsLink = `sms:${cleanPhone}?body=${message}`;
+    window.open(smsLink, '_blank');
+    setShowSendModal(false);
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#050505] p-2 md:p-8 overflow-y-auto relative">
       {/* Background Ambient Glow */}
@@ -179,9 +223,14 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
                     </button>
                 )}
                 <div className="w-px h-6 bg-white/10 mx-1"></div>
-                {/* Email Button */}
-                <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Email">
-                    <Mail className="w-4 h-4" />
+                {/* Send Quote Button */}
+                <button
+                    onClick={() => setShowSendModal(true)}
+                    className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10"
+                    title="Send Quote"
+                >
+                    <Send className="w-3 h-3 md:w-4 md:h-4" />
+                    <span className="hidden sm:inline">Send</span>
                 </button>
                 {/* Download PDF Button */}
                 <button
@@ -495,6 +544,119 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
 
         </div>
       </div>
+
+      {/* Send Quote Modal */}
+      {showSendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#111] rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#F6B45A]/10 rounded-lg">
+                  <Send className="w-4 h-4 text-[#F6B45A]" />
+                </div>
+                <h3 className="font-bold text-lg text-white font-serif">Send Quote</h3>
+              </div>
+              <button
+                onClick={() => setShowSendModal(false)}
+                className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-5">
+              {/* Recipient Info */}
+              <div className="bg-[#0a0a0a] rounded-xl p-4 border border-white/5">
+                <div className="flex items-center gap-3 mb-3">
+                  <User className="w-4 h-4 text-[#F6B45A]" />
+                  <span className="font-bold text-white">{clientName || 'No name set'}</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>{clientEmail || 'No email set'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>{clientPhone || 'No phone set'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Send Method Toggle */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">Send via</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSendMethod('email')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all active:scale-95 ${
+                      sendMethod === 'email'
+                        ? 'bg-[#F6B45A] text-black'
+                        : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    <Mail className="w-4 h-4" />
+                    Email
+                  </button>
+                  <button
+                    onClick={() => setSendMethod('sms')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all active:scale-95 ${
+                      sendMethod === 'sms'
+                        ? 'bg-[#F6B45A] text-black'
+                        : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    SMS
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Message */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Add a personal message (optional)</label>
+                <textarea
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  placeholder="Thanks for choosing us! Let me know if you have any questions..."
+                  className="w-full h-24 bg-[#0a0a0a] border border-white/10 rounded-xl p-3 text-white text-sm focus:border-[#F6B45A] focus:outline-none resize-none placeholder-gray-500"
+                />
+              </div>
+
+              {/* Quote Preview */}
+              <div className="bg-[#0a0a0a] rounded-xl p-4 border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Quote Total</span>
+                  <span className="text-lg font-bold text-[#F6B45A]">${total.toFixed(2)}</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {lineItems.filter(i => i.quantity > 0).length} items
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-5 border-t border-white/10 bg-[#0a0a0a]">
+              <button
+                onClick={sendMethod === 'email' ? handleSendEmail : handleSendSMS}
+                disabled={sendMethod === 'email' ? !clientEmail : !clientPhone}
+                className="w-full bg-[#F6B45A] text-black py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#ffc67a] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#F6B45A]/20"
+              >
+                {sendMethod === 'email' ? <Mail className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+                Send via {sendMethod === 'email' ? 'Email' : 'SMS'}
+              </button>
+              {sendMethod === 'email' && !clientEmail && (
+                <p className="text-xs text-red-400 text-center mt-2">Please add a client email address first</p>
+              )}
+              {sendMethod === 'sms' && !clientPhone && (
+                <p className="text-xs text-red-400 text-center mt-2">Please add a client phone number first</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

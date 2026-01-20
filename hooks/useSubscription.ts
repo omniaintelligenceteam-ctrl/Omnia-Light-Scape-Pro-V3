@@ -39,7 +39,7 @@ export function useSubscription() {
     }
 
     try {
-      const response = await fetch(`/api/usage/status?userId=${user.id}`);
+      const response = await fetch(`/api/usage?action=status&userId=${user.id}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch subscription status');
@@ -75,7 +75,7 @@ export function useSubscription() {
     if (!user) return;
 
     try {
-      const response = await fetch(`/api/usage/increment`, {
+      const response = await fetch(`/api/usage?action=increment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -101,7 +101,7 @@ export function useSubscription() {
     }
 
     try {
-      const response = await fetch(`/api/usage/can-generate`, {
+      const response = await fetch(`/api/usage?action=can-generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),

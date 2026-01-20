@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { ImageUpload } from './components/ImageUpload';
@@ -1557,17 +1558,40 @@ Notes: ${invoice.notes || 'N/A'}
                  {projectsSubTab === 'projects' && (
                      <>
                          {filteredUnapprovedProjects.length === 0 ? (
-                             <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm">
-                                 <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                                    <FolderPlus className="w-8 h-8 text-gray-500" />
-                                 </div>
+                             <motion.div
+                               initial={{ opacity: 0, y: 20 }}
+                               animate={{ opacity: 1, y: 0 }}
+                               className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-[#F6B45A]/20 rounded-3xl bg-gradient-to-b from-[#F6B45A]/5 to-transparent relative overflow-hidden"
+                             >
+                                 <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #F6B45A 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+                                 <motion.div
+                                   animate={{ y: [0, -8, 0] }}
+                                   transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                                   className="w-20 h-20 rounded-full bg-[#F6B45A]/10 flex items-center justify-center mb-6 border border-[#F6B45A]/20 animate-glow-pulse"
+                                 >
+                                    <FolderPlus className="w-8 h-8 text-[#F6B45A]/60" />
+                                 </motion.div>
                                  <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">No Pending Projects</p>
-                                 <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">All projects have been approved</p>
-                             </div>
+                                 <p className="text-sm text-gray-400 mt-1 max-w-[280px] text-center">All projects have been approved or create a new design in the Editor.</p>
+                                 <motion.button
+                                   whileHover={{ scale: 1.02 }}
+                                   whileTap={{ scale: 0.98 }}
+                                   onClick={() => setActiveTab('editor')}
+                                   className="mt-6 px-5 py-2.5 bg-[#F6B45A]/10 border border-[#F6B45A]/30 rounded-xl text-[#F6B45A] text-sm font-bold hover:bg-[#F6B45A]/20 transition-colors"
+                                 >
+                                   Open Editor
+                                 </motion.button>
+                             </motion.div>
                          ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                                {filteredUnapprovedProjects.map((p) => (
-                                    <div key={p.id} className="group relative bg-[#111]/80 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(246,180,90,0.1)] flex flex-col">
+                                {filteredUnapprovedProjects.map((p, index) => (
+                                    <motion.div
+                                      key={p.id}
+                                      initial={{ opacity: 0, y: 20 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ delay: index * 0.05 }}
+                                      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                                      className="group relative bg-gradient-to-b from-[#151515] to-[#111] border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex flex-col cursor-pointer">
 
                                         {/* Status Badge */}
                                         <div className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${STATUS_CONFIG[p.status].bgColor} ${STATUS_CONFIG[p.status].color} border ${STATUS_CONFIG[p.status].borderColor}`}>
@@ -1719,7 +1743,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
                          )}
@@ -1730,13 +1754,31 @@ Notes: ${invoice.notes || 'N/A'}
                  {projectsSubTab === 'approved' && (
                      <>
                          {filteredApprovedProjects.length === 0 ? (
-                             <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-emerald-500/20 rounded-3xl bg-emerald-500/5 backdrop-blur-sm">
-                                 <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20">
-                                    <CheckCircle2 className="w-8 h-8 text-emerald-500/50" />
-                                 </div>
+                             <motion.div
+                               initial={{ opacity: 0, y: 20 }}
+                               animate={{ opacity: 1, y: 0 }}
+                               className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-emerald-500/20 rounded-3xl bg-gradient-to-b from-emerald-500/5 to-transparent relative overflow-hidden"
+                             >
+                                 <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #10b981 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+                                 <motion.div
+                                   animate={{ y: [0, -8, 0] }}
+                                   transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                                   className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20"
+                                   style={{ boxShadow: '0 0 30px rgba(16,185,129,0.2)' }}
+                                 >
+                                    <CheckCircle2 className="w-8 h-8 text-emerald-500/60" />
+                                 </motion.div>
                                  <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">No Approved Projects</p>
-                                 <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">Approve projects to see them here</p>
-                             </div>
+                                 <p className="text-sm text-gray-400 mt-1 max-w-[280px] text-center">Approve projects from the Projects tab to see them here.</p>
+                                 <motion.button
+                                   whileHover={{ scale: 1.02 }}
+                                   whileTap={{ scale: 0.98 }}
+                                   onClick={() => setProjectsSubTab('projects')}
+                                   className="mt-6 px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-sm font-bold hover:bg-emerald-500/20 transition-colors"
+                                 >
+                                   View Projects
+                                 </motion.button>
+                             </motion.div>
                          ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
                                 {filteredApprovedProjects.map((p) => (
@@ -2120,13 +2162,31 @@ Notes: ${invoice.notes || 'N/A'}
                              /* Invoice List View */
                              <>
                                  {invoices.length === 0 ? (
-                                     <div className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-blue-500/20 rounded-3xl bg-blue-500/5 backdrop-blur-sm">
-                                         <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20">
-                                            <Receipt className="w-8 h-8 text-blue-500/50" />
-                                         </div>
+                                     <motion.div
+                                       initial={{ opacity: 0, y: 20 }}
+                                       animate={{ opacity: 1, y: 0 }}
+                                       className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-blue-500/20 rounded-3xl bg-gradient-to-b from-blue-500/5 to-transparent relative overflow-hidden"
+                                     >
+                                         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #3b82f6 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+                                         <motion.div
+                                           animate={{ y: [0, -8, 0] }}
+                                           transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                                           className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20"
+                                           style={{ boxShadow: '0 0 30px rgba(59,130,246,0.2)' }}
+                                         >
+                                            <Receipt className="w-8 h-8 text-blue-500/60" />
+                                         </motion.div>
                                          <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">No Invoices Yet</p>
-                                         <p className="text-xs text-gray-400 font-mono uppercase tracking-widest">Generate invoices from approved projects</p>
-                                     </div>
+                                         <p className="text-sm text-gray-400 mt-1 max-w-[280px] text-center">Your invoices will appear here once you generate them from approved projects.</p>
+                                         <motion.button
+                                           whileHover={{ scale: 1.02 }}
+                                           whileTap={{ scale: 0.98 }}
+                                           onClick={() => setProjectsSubTab('approved')}
+                                           className="mt-6 px-5 py-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-400 text-sm font-bold hover:bg-blue-500/20 transition-colors"
+                                         >
+                                           View Approved Projects
+                                         </motion.button>
+                                     </motion.div>
                                  ) : (
                                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                          {invoices.map((invoice) => (

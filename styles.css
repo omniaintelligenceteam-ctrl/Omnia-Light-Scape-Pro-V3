@@ -1,23 +1,126 @@
+/* Premium Design System Variables */
+:root {
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.6);
+  --shadow-gold: 0 0 30px rgba(246,180,90,0.15);
+  --shadow-gold-hover: 0 0 50px rgba(246,180,90,0.25);
+
+  --color-gold: #F6B45A;
+  --color-gold-light: #ffc67a;
+  --color-dark: #050505;
+  --color-card: #111111;
+  --color-card-hover: #151515;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: #050505;
   color: #FFFFFF;
 }
 
-/* Custom Scrollbar */
+/* Premium Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
+  background: linear-gradient(180deg, #333 0%, #222 100%);
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #F6B45A;
+  background: linear-gradient(180deg, #F6B45A 0%, #d4964a 100%);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Shimmer Animation for Skeletons */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  animation: shimmer 1.5s infinite;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+}
+
+/* Float Animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Glow Pulse Animation */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(246,180,90,0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(246,180,90,0.4);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Glass Effect */
+.glass {
+  background: rgba(17, 17, 17, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Gold Glow Effects */
+.gold-glow {
+  box-shadow: 0 0 30px rgba(246,180,90,0.15);
+}
+
+.gold-glow-hover:hover {
+  box-shadow: 0 0 50px rgba(246,180,90,0.25);
+}
+
+/* Card Elevation */
+.card-elevate {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-elevate:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+/* Input Focus Glow */
+.input-premium:focus {
+  box-shadow: 0 0 0 1px rgba(246,180,90,0.5), 0 0 20px rgba(246,180,90,0.1);
+  border-color: rgba(246,180,90,0.5);
 }
 
 /* PDF Generation Overrides (Light Mode Simulation) */
