@@ -92,13 +92,13 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
    - Mailboxes, house numbers, and accessories remain unchanged
 
 5. NIGHTTIME SKY REQUIREMENTS (MANDATORY):
-   - The sky MUST be converted to a Black nighttime sky 
+   - The sky MUST be converted to a completely Black nighttime sky 
    - The sky MUST include a REALISTIC FULL MOON - clearly visible, properly sized, with natural lunar detail
    - Moon position: place the moon in an aesthetically pleasing location (upper portion of sky, not behind house)
    - Moon appearance: realistic full moon with visible surface features (craters, maria), soft white/pale yellow glow
-   - Moon lighting effect: the moon provides SOFT AMBIENT LIGHT across the entire scene
-   - Moonlight creates gentle illumination on rooftops, lawns, and surfaces facing upward
-   - Moonlight color: cool, pale blue-white ambient wash
+   - Moon lighting effect: the moon provides SOFT AMBIENT LIGHT
+   - Moonlight creates gentle outline illumination on rooftops, lawns, and surfaces facing upward
+   - Moonlight color: cool, pale ambient wash
    - Stars may be included for realism but should be subtle, not overpowering
    - NO clouds blocking the moon - clear night sky
 
