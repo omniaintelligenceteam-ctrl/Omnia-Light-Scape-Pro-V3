@@ -43,6 +43,8 @@ interface SettingsViewProps {
   // Notification props
   notifications?: NotificationPreferences;
   onNotificationsChange?: (prefs: NotificationPreferences) => void;
+  // Sign out
+  onSignOut?: () => void;
 }
 
 // --- UI COMPONENTS ---
@@ -330,7 +332,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onHighContrastChange,
     // Notification props
     notifications,
-    onNotificationsChange
+    onNotificationsChange,
+    // Sign out
+    onSignOut
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('company');
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
@@ -453,150 +457,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Settings</h2>
             <div className="h-1 w-20 bg-[#F6B45A] rounded-full"></div>
         </div>
-
-        {/* --- SUBSCRIPTION SECTION --- */}
-        {subscription && (
-          <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
-            <SectionHeader
-                icon={CreditCard}
-                title="Subscription"
-                subtitle="Manage your billing and plan"
-                isOpen={activeSection === 'subscription'}
-                onToggle={() => setActiveSection(activeSection === 'subscription' ? null : 'subscription')}
-            />
-
-            {activeSection === 'subscription' && (
-                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        {/* Plan Info */}
-                        <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                    subscription.hasActiveSubscription
-                                        ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
-                                        : 'bg-white/10 text-gray-400 border border-white/10'
-                                }`}>
-                                    {subscription.hasActiveSubscription ? getPlanDisplayName(subscription.plan) : 'Free Trial'}
-                                </div>
-                                {subscription.hasActiveSubscription && (
-                                    <span className="text-xs text-green-400 flex items-center gap-1">
-                                        <Check className="w-3 h-3" /> Active
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Usage Info with Progress Bar */}
-                            <div className="space-y-3">
-                                {subscription.hasActiveSubscription ? (
-                                    subscription.monthlyLimit === -1 ? (
-                                        <>
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-sm text-gray-300">
-                                                    <span className="text-white font-bold">{subscription.generationCount}</span> generations this month
-                                                </p>
-                                                <span className="text-xs text-[#F6B45A] font-bold">UNLIMITED</span>
-                                            </div>
-                                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                                <div className="h-full bg-gradient-to-r from-[#F6B45A] to-[#F6B45A]/60 rounded-full w-full animate-pulse" />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-sm text-gray-300">
-                                                    <span className="text-white font-bold">{subscription.generationCount}</span> / {subscription.monthlyLimit} used
-                                                </p>
-                                                <span className="text-xs text-gray-400">
-                                                    {Math.max(0, (subscription.monthlyLimit || 0) - subscription.generationCount)} remaining
-                                                </span>
-                                            </div>
-                                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full transition-all duration-500 ${
-                                                        (subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.9
-                                                            ? 'bg-red-500'
-                                                            : (subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.7
-                                                            ? 'bg-yellow-500'
-                                                            : 'bg-[#F6B45A]'
-                                                    }`}
-                                                    style={{ width: `${Math.min(100, (subscription.generationCount / (subscription.monthlyLimit || 1)) * 100)}%` }}
-                                                />
-                                            </div>
-                                            {(subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.8 && (
-                                                <p className="text-xs text-yellow-400">
-                                                    You're approaching your monthly limit
-                                                </p>
-                                            )}
-                                        </>
-                                    )
-                                ) : (
-                                    <>
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-sm text-gray-300">
-                                                <span className="text-white font-bold">{subscription.freeTrialLimit - subscription.remainingFreeGenerations}</span> / {subscription.freeTrialLimit} used
-                                            </p>
-                                            <span className="text-xs text-gray-400">
-                                                {subscription.remainingFreeGenerations} free remaining
-                                            </span>
-                                        </div>
-                                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full transition-all duration-500 ${
-                                                    subscription.remainingFreeGenerations <= 3
-                                                        ? 'bg-red-500'
-                                                        : subscription.remainingFreeGenerations <= 7
-                                                        ? 'bg-yellow-500'
-                                                        : 'bg-[#F6B45A]'
-                                                }`}
-                                                style={{ width: `${((subscription.freeTrialLimit - subscription.remainingFreeGenerations) / subscription.freeTrialLimit) * 100}%` }}
-                                            />
-                                        </div>
-                                        {subscription.remainingFreeGenerations <= 5 && (
-                                            <p className="text-xs text-yellow-400">
-                                                Running low on free generations - upgrade to continue
-                                            </p>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Action Button */}
-                        <div className="flex flex-col gap-2">
-                            {subscription.hasActiveSubscription ? (
-                                <button
-                                    onClick={handleManageSubscription}
-                                    disabled={isLoadingPortal}
-                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isLoadingPortal ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <>
-                                            <ExternalLink className="w-4 h-4" />
-                                            Manage Subscription
-                                        </>
-                                    )}
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={onRequestUpgrade}
-                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#F6B45A] text-[#050505] rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-[#ffc67a] active:scale-95 shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] transition-all"
-                                >
-                                    <Sparkles className="w-4 h-4" />
-                                    Upgrade Now
-                                </button>
-                            )}
-
-                            {portalError && (
-                                <p className="text-xs text-red-400 text-center">{portalError}</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-          </div>
-        )}
 
         {/* --- THEME CUSTOMIZATION SECTION --- */}
         <motion.div
@@ -1424,6 +1284,173 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
             </div>
         </motion.div>
+
+        {/* --- SUBSCRIPTION SECTION --- */}
+        {subscription && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6 bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+          >
+            <SectionHeader
+                icon={CreditCard}
+                title="Subscription"
+                subtitle="Manage your billing and plan"
+                isOpen={activeSection === 'subscription'}
+                onToggle={() => setActiveSection(activeSection === 'subscription' ? null : 'subscription')}
+            />
+
+            {activeSection === 'subscription' && (
+                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        {/* Plan Info */}
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                    subscription.hasActiveSubscription
+                                        ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
+                                        : 'bg-white/10 text-gray-400 border border-white/10'
+                                }`}>
+                                    {subscription.hasActiveSubscription ? getPlanDisplayName(subscription.plan) : 'Free Trial'}
+                                </div>
+                                {subscription.hasActiveSubscription && (
+                                    <span className="text-xs text-green-400 flex items-center gap-1">
+                                        <Check className="w-3 h-3" /> Active
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Usage Info with Progress Bar */}
+                            <div className="space-y-3">
+                                {subscription.hasActiveSubscription ? (
+                                    subscription.monthlyLimit === -1 ? (
+                                        <>
+                                            <div className="flex justify-between items-center">
+                                                <p className="text-sm text-gray-300">
+                                                    <span className="text-white font-bold">{subscription.generationCount}</span> generations this month
+                                                </p>
+                                                <span className="text-xs text-[#F6B45A] font-bold">UNLIMITED</span>
+                                            </div>
+                                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-gradient-to-r from-[#F6B45A] to-[#F6B45A]/60 rounded-full w-full animate-pulse" />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex justify-between items-center">
+                                                <p className="text-sm text-gray-300">
+                                                    <span className="text-white font-bold">{subscription.generationCount}</span> / {subscription.monthlyLimit} used
+                                                </p>
+                                                <span className="text-xs text-gray-400">
+                                                    {Math.max(0, (subscription.monthlyLimit || 0) - subscription.generationCount)} remaining
+                                                </span>
+                                            </div>
+                                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-500 ${
+                                                        (subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.9
+                                                            ? 'bg-red-500'
+                                                            : (subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.7
+                                                            ? 'bg-yellow-500'
+                                                            : 'bg-[#F6B45A]'
+                                                    }`}
+                                                    style={{ width: `${Math.min(100, (subscription.generationCount / (subscription.monthlyLimit || 1)) * 100)}%` }}
+                                                />
+                                            </div>
+                                            {(subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.8 && (
+                                                <p className="text-xs text-yellow-400">
+                                                    You're approaching your monthly limit
+                                                </p>
+                                            )}
+                                        </>
+                                    )
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-sm text-gray-300">
+                                                <span className="text-white font-bold">{subscription.freeTrialLimit - subscription.remainingFreeGenerations}</span> / {subscription.freeTrialLimit} used
+                                            </p>
+                                            <span className="text-xs text-gray-400">
+                                                {subscription.remainingFreeGenerations} free remaining
+                                            </span>
+                                        </div>
+                                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 ${
+                                                    subscription.remainingFreeGenerations <= 3
+                                                        ? 'bg-red-500'
+                                                        : subscription.remainingFreeGenerations <= 7
+                                                        ? 'bg-yellow-500'
+                                                        : 'bg-[#F6B45A]'
+                                                }`}
+                                                style={{ width: `${((subscription.freeTrialLimit - subscription.remainingFreeGenerations) / subscription.freeTrialLimit) * 100}%` }}
+                                            />
+                                        </div>
+                                        {subscription.remainingFreeGenerations <= 5 && (
+                                            <p className="text-xs text-yellow-400">
+                                                Running low on free generations - upgrade to continue
+                                            </p>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <div className="flex flex-col gap-2">
+                            {subscription.hasActiveSubscription ? (
+                                <button
+                                    onClick={handleManageSubscription}
+                                    disabled={isLoadingPortal}
+                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoadingPortal ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <ExternalLink className="w-4 h-4" />
+                                            Manage Subscription
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={onRequestUpgrade}
+                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#F6B45A] text-[#050505] rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-[#ffc67a] active:scale-95 shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] transition-all"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                    Upgrade Now
+                                </button>
+                            )}
+
+                            {portalError && (
+                                <p className="text-xs text-red-400 text-center">{portalError}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* --- SIGN OUT SECTION --- */}
+        {onSignOut && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6"
+          >
+            <button
+              onClick={onSignOut}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl text-gray-300 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 transition-all duration-300 group"
+            >
+              <LogOut className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span className="text-sm font-bold uppercase tracking-wider">Sign Out</span>
+            </button>
+          </motion.div>
+        )}
 
       </div>
     </div>

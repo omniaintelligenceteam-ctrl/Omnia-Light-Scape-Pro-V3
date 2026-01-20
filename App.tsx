@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useClerk } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -53,7 +53,14 @@ const parsePromptForQuantities = (text: string): Record<string, number> => {
 const App: React.FC = () => {
   // Get Clerk user and sync to database
   const { user } = useUser();
+  const { signOut } = useClerk();
   useUserSync(); // Automatically sync user to Supabase on sign-in
+
+  // Sign out handler
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.href = '/';
+  };
 
   // Toast notifications
   const { showToast } = useToast();
@@ -2398,6 +2405,8 @@ Notes: ${invoice.notes || 'N/A'}
                 // Notification props
                 notifications={notifications}
                 onNotificationsChange={setNotifications}
+                // Sign out
+                onSignOut={handleSignOut}
              />
           )}
 

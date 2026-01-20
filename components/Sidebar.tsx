@@ -1,6 +1,5 @@
 import React from 'react';
-import { useClerk } from '@clerk/clerk-react';
-import { Wand2, FolderOpen, Settings, LogOut, Package } from 'lucide-react';
+import { Wand2, FolderOpen, Settings, Package } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -8,12 +7,6 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
-  const { signOut } = useClerk();
-
-  const handleSignOut = async () => {
-    await signOut();
-    window.location.href = '/';
-  };
   const menuItems = [
     { id: 'editor', label: 'Editor', icon: Wand2 },
     { id: 'projects', label: 'Projects', icon: FolderOpen },
@@ -50,13 +43,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         })}
       </div>
       
-      {/* Right Side Actions - Hidden on Mobile */}
-      <div className="w-32 hidden md:flex justify-end">
-        <button onClick={handleSignOut} className="flex items-center gap-2 text-gray-300 hover:text-red-400 transition-colors px-2 py-2 group">
-          <LogOut className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          <span className="text-xs font-bold uppercase tracking-wider hidden md:inline">Sign Out</span>
-        </button>
-      </div>
+      {/* Right side spacer for balance */}
+      <div className="w-32 hidden md:block" />
     </nav>
   );
 };
