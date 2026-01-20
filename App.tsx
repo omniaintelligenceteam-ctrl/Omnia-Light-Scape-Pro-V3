@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from './components/Header';
+import { Footer } from './components/Footer';
 import { Sidebar } from './components/Sidebar';
 import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
@@ -2401,6 +2402,9 @@ Notes: ${invoice.notes || 'N/A'}
           )}
 
         </main>
+
+        {/* Footer */}
+        <Footer variant="minimal" />
       </div>
 
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />

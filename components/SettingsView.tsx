@@ -598,11 +598,284 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         )}
 
+        {/* --- THEME CUSTOMIZATION SECTION --- */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+        >
+            <SectionHeader
+                icon={Palette}
+                title="Theme Customization"
+                subtitle="Personalize your workspace"
+                isOpen={activeSection === 'theme'}
+                onToggle={() => setActiveSection(activeSection === 'theme' ? null : 'theme')}
+            />
+
+            <AnimatePresence initial={false}>
+              {activeSection === 'theme' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-6 md:p-8 space-y-8">
+                    {/* Appearance - Light/Dark Mode */}
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Appearance</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          onClick={() => onThemeChange?.('light')}
+                          className={`relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${
+                            theme === 'light'
+                              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 shadow-[0_0_20px_var(--accent-glow)]'
+                              : 'border-white/10 bg-[#0a0a0a] hover:border-white/20'
+                          }`}
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center">
+                            <Sun className="w-6 h-6 text-amber-500" />
+                          </div>
+                          <span className={`text-sm font-bold ${theme === 'light' ? 'text-[var(--accent-primary)]' : 'text-gray-300'}`}>Light</span>
+                          {theme === 'light' && (
+                            <div className="absolute top-2 right-2 text-[var(--accent-primary)]">
+                              <Check className="w-4 h-4" />
+                            </div>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => onThemeChange?.('dark')}
+                          className={`relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${
+                            theme === 'dark'
+                              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 shadow-[0_0_20px_var(--accent-glow)]'
+                              : 'border-white/10 bg-[#0a0a0a] hover:border-white/20'
+                          }`}
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center">
+                            <Moon className="w-6 h-6 text-blue-400" />
+                          </div>
+                          <span className={`text-sm font-bold ${theme === 'dark' ? 'text-[var(--accent-primary)]' : 'text-gray-300'}`}>Dark</span>
+                          {theme === 'dark' && (
+                            <div className="absolute top-2 right-2 text-[var(--accent-primary)]">
+                              <Check className="w-4 h-4" />
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Accent Color */}
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Accent Color</label>
+                      <div className="flex flex-wrap gap-3">
+                        {ACCENT_COLORS.map((color) => (
+                          <button
+                            key={color.id}
+                            onClick={() => onAccentColorChange?.(color.id as AccentColor)}
+                            className={`relative group flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
+                              accentColor === color.id
+                                ? 'bg-white/10'
+                                : 'hover:bg-white/5'
+                            }`}
+                          >
+                            <div
+                              className={`w-10 h-10 rounded-full transition-all ${
+                                accentColor === color.id
+                                  ? 'ring-2 ring-white ring-offset-2 ring-offset-[#111] scale-110'
+                                  : 'group-hover:scale-105'
+                              }`}
+                              style={{ backgroundColor: color.primary, boxShadow: accentColor === color.id ? `0 0 20px ${color.glow}` : 'none' }}
+                            />
+                            <span className={`text-[10px] font-bold uppercase ${accentColor === color.id ? 'text-white' : 'text-gray-400'}`}>
+                              {color.name}
+                            </span>
+                            {accentColor === color.id && (
+                              <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                                <Check className="w-3 h-3 text-black" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Font Size */}
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Font Size</label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {(['compact', 'normal', 'comfortable'] as const).map((size) => (
+                          <button
+                            key={size}
+                            onClick={() => onFontSizeChange?.(size)}
+                            className={`relative p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${
+                              fontSize === size
+                                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
+                                : 'border-white/10 bg-[#0a0a0a] hover:border-white/20'
+                            }`}
+                          >
+                            <span className={`font-serif ${
+                              size === 'compact' ? 'text-sm' : size === 'normal' ? 'text-base' : 'text-lg'
+                            } ${fontSize === size ? 'text-[var(--accent-primary)]' : 'text-white'}`}>
+                              Aa
+                            </span>
+                            <span className={`text-[10px] font-bold uppercase ${fontSize === size ? 'text-[var(--accent-primary)]' : 'text-gray-400'}`}>
+                              {size}
+                            </span>
+                            {fontSize === size && (
+                              <div className="absolute top-1 right-1 text-[var(--accent-primary)]">
+                                <Check className="w-3 h-3" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* High Contrast */}
+                    <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
+                      <div>
+                        <p className="text-sm font-bold text-white">High Contrast Mode</p>
+                        <p className="text-xs text-gray-400 mt-1">Increase visibility for better readability</p>
+                      </div>
+                      <Toggle checked={highContrast} onChange={(val) => onHighContrastChange?.(val)} />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+        </motion.div>
+
+        {/* --- NOTIFICATION PREFERENCES SECTION --- */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+        >
+            <SectionHeader
+                icon={Bell}
+                title="Notification Preferences"
+                subtitle="Control how we communicate"
+                isOpen={activeSection === 'notifications'}
+                onToggle={() => setActiveSection(activeSection === 'notifications' ? null : 'notifications')}
+            />
+
+            <AnimatePresence initial={false}>
+              {activeSection === 'notifications' && notifications && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-6 md:p-8 space-y-6">
+                    {/* Email Notifications */}
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Email Notifications</label>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                              <Mail className="w-4 h-4 text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Project Updates</p>
+                              <p className="text-xs text-gray-400">Get notified when projects are updated</p>
+                            </div>
+                          </div>
+                          <Toggle
+                            checked={notifications.emailProjectUpdates}
+                            onChange={(val) => onNotificationsChange?.({ ...notifications, emailProjectUpdates: val })}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                              <ClipboardList className="w-4 h-4 text-amber-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Quote Reminders</p>
+                              <p className="text-xs text-gray-400">Receive reminders for pending quotes</p>
+                            </div>
+                          </div>
+                          <Toggle
+                            checked={notifications.emailQuoteReminders}
+                            onChange={(val) => onNotificationsChange?.({ ...notifications, emailQuoteReminders: val })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SMS & Marketing */}
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">SMS & Marketing</label>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                              <MessageCircle className="w-4 h-4 text-green-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">SMS Notifications</p>
+                              <p className="text-xs text-gray-400">Receive important updates via text</p>
+                            </div>
+                          </div>
+                          <Toggle
+                            checked={notifications.smsNotifications}
+                            onChange={(val) => onNotificationsChange?.({ ...notifications, smsNotifications: val })}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                              <Sparkles className="w-4 h-4 text-purple-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Marketing Emails</p>
+                              <p className="text-xs text-gray-400">Product updates, tips, and offers</p>
+                            </div>
+                          </div>
+                          <Toggle
+                            checked={notifications.marketingEmails}
+                            onChange={(val) => onNotificationsChange?.({ ...notifications, marketingEmails: val })}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center">
+                              {notifications.soundEffects ? <Volume2 className="w-4 h-4 text-rose-400" /> : <VolumeX className="w-4 h-4 text-rose-400" />}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Sound Effects</p>
+                              <p className="text-xs text-gray-400">Play sounds for notifications</p>
+                            </div>
+                          </div>
+                          <Toggle
+                            checked={notifications.soundEffects}
+                            onChange={(val) => onNotificationsChange?.({ ...notifications, soundEffects: val })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+        </motion.div>
+
         {/* --- SECTION 1: COMPANY PROFILE --- */}
-        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
-            <SectionHeader 
-                icon={Building} 
-                title="Company Profile" 
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+        >
+            <SectionHeader
+                icon={Building}
+                title="Company Profile"
                 subtitle="Manage your branding for estimates"
                 isOpen={activeSection === 'company'}
                 onToggle={() => setActiveSection(activeSection === 'company' ? null : 'company')}
@@ -661,13 +934,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                 </div>
             )}
-        </div>
+        </motion.div>
 
         {/* --- SECTION 2: COMPANY PRICING (NEW) --- */}
-        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
-            <SectionHeader 
-                icon={DollarSign} 
-                title="Company Pricing" 
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+        >
+            <SectionHeader
+                icon={DollarSign}
+                title="Company Pricing"
                 subtitle="Set your standard unit prices for auto-quotes"
                 isOpen={activeSection === 'pricing'}
                 onToggle={() => setActiveSection(activeSection === 'pricing' ? null : 'pricing')}
@@ -732,10 +1010,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     ))}
                 </div>
             )}
-        </div>
+        </motion.div>
 
         {/* --- SECTION 3: FIXTURE CATALOG (BOM) --- */}
-        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+        >
             <SectionHeader
                 icon={ClipboardList}
                 title="Fixture Catalog"
@@ -884,7 +1167,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     )}
                 </div>
             )}
-        </div>
+        </motion.div>
 
         {/* Add Catalog Product Modal */}
         {showAddCatalogProduct && (
@@ -977,7 +1260,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         )}
 
         {/* --- SECTION 4: LIGHTING PREFERENCES --- */}
-        <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+        >
             <SectionHeader
                 icon={Lightbulb}
                 title="Lighting Defaults"
@@ -1061,10 +1349,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                      </div>
                 </div>
             )}
-        </div>
+        </motion.div>
 
         {/* --- AI ASSISTANT WIDGET --- */}
-        <div className="mt-12 bg-[#111] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-12 bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+        >
              <div className="p-6 border-b border-white/5 bg-gradient-to-r from-[#111] to-[#1a1a1a]">
                  <div className="flex items-center gap-4">
                      <div className="p-3 bg-[#F6B45A]/20 rounded-xl">
@@ -1092,10 +1385,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                      </button>
                  </div>
              )}
-        </div>
+        </motion.div>
 
         {/* --- CONTACT & SUPPORT SECTION --- */}
-        <div className="mt-6 bg-[#111] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="mt-6 bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-xl hover:border-[var(--accent-primary)]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+        >
             <div className="p-6 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-white/5 rounded-xl">
@@ -1125,7 +1423,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </button>
                 </div>
             </div>
-        </div>
+        </motion.div>
 
       </div>
     </div>

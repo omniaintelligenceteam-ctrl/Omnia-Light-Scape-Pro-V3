@@ -4,6 +4,23 @@
 
 ---
 
+## 📱 MOBILE-FIRST DESIGN PRIORITY
+
+> **CRITICAL**: 90% of users access this application on mobile devices.
+>
+> All UI/UX decisions MUST prioritize mobile experience:
+> - Touch-friendly tap targets (minimum 44x44px)
+> - Bottom navigation for thumb-reachable actions
+> - Swipe gestures where appropriate
+> - Responsive layouts that work on 320px+ screens
+> - Fast load times and minimal data usage
+> - Large, readable fonts (minimum 14px body text)
+> - High contrast for outdoor visibility
+> - Avoid hover-only interactions
+> - Test on actual mobile devices
+
+---
+
 ## 📋 Overview
 
 Antigravity Kit is a modular system consisting of:
