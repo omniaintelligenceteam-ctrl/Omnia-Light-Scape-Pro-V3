@@ -86,26 +86,38 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
    - Do NOT change the season or foliage appearance
 
 4. ENVIRONMENTAL PRESERVATION:
-   - Background elements (sky, neighboring structures, fences) remain unchanged except sky darkness
+   - Neighboring structures, fences, and property elements remain unchanged
    - Vehicles, if present, remain unchanged
    - Outdoor furniture and decorations remain unchanged
    - Mailboxes, house numbers, and accessories remain unchanged
 
-5. PERMITTED MODIFICATIONS (ONLY THESE):
-   - Convert daytime sky to nighttime sky (darker, stars optional)
-   - Reduce ambient light to simulate nighttime
+5. NIGHTTIME SKY REQUIREMENTS (MANDATORY):
+   - The sky MUST be converted to a DARK BLUE nighttime sky - deep navy/midnight blue color
+   - The sky MUST include a REALISTIC FULL MOON - clearly visible, properly sized, with natural lunar detail
+   - Moon position: place the moon in an aesthetically pleasing location (upper portion of sky, not behind house)
+   - Moon appearance: realistic full moon with visible surface features (craters, maria), soft white/pale yellow glow
+   - Moon lighting effect: the moon provides SOFT AMBIENT LIGHT across the entire scene
+   - Moonlight creates gentle illumination on rooftops, lawns, and surfaces facing upward
+   - Moonlight color: cool, pale blue-white ambient wash
+   - Stars may be included for realism but should be subtle, not overpowering
+   - NO clouds blocking the moon - clear night sky
+
+6. PERMITTED MODIFICATIONS (ONLY THESE):
+   - Convert daytime sky to dark blue nighttime sky with realistic full moon (REQUIRED)
+   - Apply soft moonlight ambient illumination across the scene
+   - Reduce ambient light to simulate nighttime while maintaining moon glow
    - Darken shadows appropriately for night scene
    - ADD ONLY the specific light fixtures and light effects explicitly requested
    - Light fixtures may ONLY be placed in locations specified by active prompts
 
-6. LIGHT GENERATION RULES:
+7. LIGHT GENERATION RULES:
    - Generate ONLY the fixture types that are explicitly ENABLED
    - Place fixtures ONLY in locations specified by active sub-option prompts
-   - If a fixture category is DISABLED, that area receives ZERO light
+   - If a fixture category is DISABLED, that area receives ZERO light from fixtures
+   - The moon provides ambient fill light across the entire scene (this is separate from fixture lighting)
    - Do NOT add decorative string lights unless explicitly requested
    - Do NOT add interior lights glowing through windows unless explicitly requested
    - Do NOT add street lights, car headlights, or ambient city glow
-   - Do NOT add moon glow or dramatic moonlight effects unless requested
    - Light color temperature and beam characteristics follow active prompt specs
 
 VALIDATION CHECK (PERFORM BEFORE GENERATING):
