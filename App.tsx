@@ -214,6 +214,7 @@ const App: React.FC = () => {
 
   // Projects Sub-Tab State
   const [projectsSubTab, setProjectsSubTab] = useState<'projects' | 'quotes' | 'approved' | 'invoicing'>('projects');
+  const [showMobileProjectsMenu, setShowMobileProjectsMenu] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [currentInvoice, setCurrentInvoice] = useState<InvoiceData | null>(null);
 
@@ -1848,17 +1849,17 @@ Notes: ${invoice.notes || 'N/A'}
                      </div>
                  </div>
 
-                 {/* Status Pipeline */}
-                 <div className="mb-6 p-4 bg-[#111] rounded-2xl border border-white/5">
-                     <div className="flex items-center gap-1 md:gap-2 overflow-x-auto pb-2">
+                 {/* Status Pipeline - Hidden on mobile */}
+                 <div className="hidden md:block mb-6 p-4 bg-[#111] rounded-2xl border border-white/5">
+                     <div className="flex items-center gap-2 overflow-x-auto pb-2">
                          {(['draft', 'quoted', 'approved', 'scheduled', 'completed'] as ProjectStatus[]).map((status, index) => {
                              const config = STATUS_CONFIG[status];
                              const count = statusCounts[status];
                              return (
                                  <React.Fragment key={status}>
-                                     <div className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 md:px-5 py-2 rounded-xl ${config.bgColor} border ${config.borderColor} min-w-[70px] md:min-w-[90px]`}>
-                                         <span className={`text-lg md:text-2xl font-bold ${config.color}`}>{count}</span>
-                                         <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-wider ${config.color}`}>{config.label}</span>
+                                     <div className={`flex-shrink-0 flex flex-col items-center gap-1 px-5 py-2 rounded-xl ${config.bgColor} border ${config.borderColor} min-w-[90px]`}>
+                                         <span className={`text-2xl font-bold ${config.color}`}>{count}</span>
+                                         <span className={`text-[10px] font-bold uppercase tracking-wider ${config.color}`}>{config.label}</span>
                                      </div>
                                      {index < 4 && (
                                          <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
@@ -1869,8 +1870,78 @@ Notes: ${invoice.notes || 'N/A'}
                      </div>
                  </div>
 
-                 {/* Sub-Tabs Navigation */}
-                 <div className="flex items-center gap-2 mb-8 bg-[#111] p-1.5 rounded-xl border border-white/5 w-fit">
+                 {/* Sub-Tabs Navigation - Dropdown on mobile, buttons on desktop */}
+                 {/* Mobile Dropdown */}
+                 <div className="md:hidden mb-6 relative">
+                     <button
+                         onClick={() => setShowMobileProjectsMenu(!showMobileProjectsMenu)}
+                         className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all border ${
+                             projectsSubTab === 'projects' ? 'bg-[#F6B45A] text-black border-[#F6B45A]' :
+                             projectsSubTab === 'quotes' ? 'bg-purple-500 text-white border-purple-500' :
+                             projectsSubTab === 'approved' ? 'bg-emerald-500 text-white border-emerald-500' :
+                             'bg-[#F6B45A] text-black border-[#F6B45A]'
+                         }`}
+                     >
+                         <div className="flex items-center gap-2">
+                             {projectsSubTab === 'projects' && <FolderPlus className="w-4 h-4" />}
+                             {projectsSubTab === 'quotes' && <FileText className="w-4 h-4" />}
+                             {projectsSubTab === 'approved' && <CheckCircle2 className="w-4 h-4" />}
+                             {projectsSubTab === 'invoicing' && <Receipt className="w-4 h-4" />}
+                             {projectsSubTab === 'projects' ? 'Projects' : projectsSubTab === 'quotes' ? 'Quotes' : projectsSubTab === 'approved' ? 'Approved' : 'Invoicing'}
+                         </div>
+                         <ChevronRight className={`w-4 h-4 transition-transform ${showMobileProjectsMenu ? 'rotate-90' : ''}`} />
+                     </button>
+                     <AnimatePresence>
+                         {showMobileProjectsMenu && (
+                             <motion.div
+                                 initial={{ opacity: 0, y: -10 }}
+                                 animate={{ opacity: 1, y: 0 }}
+                                 exit={{ opacity: 0, y: -10 }}
+                                 className="absolute top-full left-0 right-0 mt-2 bg-[#111] border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl"
+                             >
+                                 <button
+                                     onClick={() => { setProjectsSubTab('projects'); setShowMobileProjectsMenu(false); }}
+                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${
+                                         projectsSubTab === 'projects' ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <FolderPlus className="w-4 h-4" />
+                                     Projects
+                                 </button>
+                                 <button
+                                     onClick={() => { setProjectsSubTab('quotes'); setShowMobileProjectsMenu(false); }}
+                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${
+                                         projectsSubTab === 'quotes' ? 'bg-purple-500 text-white' : 'text-gray-400 hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <FileText className="w-4 h-4" />
+                                     Quotes
+                                 </button>
+                                 <button
+                                     onClick={() => { setProjectsSubTab('approved'); setShowMobileProjectsMenu(false); }}
+                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${
+                                         projectsSubTab === 'approved' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <CheckCircle2 className="w-4 h-4" />
+                                     Approved
+                                 </button>
+                                 <button
+                                     onClick={() => { setProjectsSubTab('invoicing'); setShowMobileProjectsMenu(false); }}
+                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${
+                                         projectsSubTab === 'invoicing' ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <Receipt className="w-4 h-4" />
+                                     Invoicing
+                                 </button>
+                             </motion.div>
+                         )}
+                     </AnimatePresence>
+                 </div>
+
+                 {/* Desktop Buttons */}
+                 <div className="hidden md:flex items-center gap-2 mb-8 bg-[#111] p-1.5 rounded-xl border border-white/5 w-fit">
                      <button
                          onClick={() => setProjectsSubTab('projects')}
                          className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
@@ -1881,9 +1952,6 @@ Notes: ${invoice.notes || 'N/A'}
                      >
                          <FolderPlus className="w-4 h-4" />
                          Projects
-                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${projectsSubTab === 'projects' ? 'bg-black/20' : 'bg-white/10'}`}>
-                             {filteredUnapprovedProjects.length}
-                         </span>
                      </button>
                      <button
                          onClick={() => setProjectsSubTab('quotes')}
@@ -1906,23 +1974,17 @@ Notes: ${invoice.notes || 'N/A'}
                      >
                          <CheckCircle2 className="w-4 h-4" />
                          Approved
-                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${projectsSubTab === 'approved' ? 'bg-black/20' : 'bg-white/10'}`}>
-                             {filteredApprovedProjects.length}
-                         </span>
                      </button>
                      <button
                          onClick={() => setProjectsSubTab('invoicing')}
                          className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'invoicing'
-                                 ? 'bg-blue-500 text-white'
+                                 ? 'bg-[#F6B45A] text-black'
                                  : 'text-gray-400 hover:text-white hover:bg-white/5'
                          }`}
                      >
                          <Receipt className="w-4 h-4" />
                          Invoicing
-                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${projectsSubTab === 'invoicing' ? 'bg-black/20' : 'bg-white/10'}`}>
-                             {invoices.length}
-                         </span>
                      </button>
                  </div>
 
