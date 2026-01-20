@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paintbrush, FolderOpen, Settings, Package, Sparkles } from 'lucide-react';
+import { Paintbrush, FolderOpen, FolderClosed, Settings, Package, PackageOpen, Sparkles } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -114,14 +114,80 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                   }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Icon
-                    className={`w-[18px] h-[18px] md:w-5 md:h-5 transition-all duration-300 ${
-                      isActive
-                        ? 'text-[#1a1a1a]'
-                        : 'text-gray-500'
-                    }`}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
+                  {/* Projects - Folder open/close animation */}
+                  {item.id === 'projects' && isActive ? (
+                    <motion.div
+                      initial={{ scale: 1 }}
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 1.5 }}
+                    >
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key="folder-animation"
+                          initial={{ opacity: 1 }}
+                          animate={{ opacity: 1 }}
+                        >
+                          <motion.div
+                            animate={{
+                              rotateX: [0, -20, 0],
+                            }}
+                            transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 1.5 }}
+                          >
+                            <FolderOpen
+                              className="w-[18px] h-[18px] md:w-5 md:h-5 text-[#1a1a1a]"
+                              strokeWidth={2.5}
+                            />
+                          </motion.div>
+                        </motion.div>
+                      </AnimatePresence>
+                    </motion.div>
+                  ) : item.id === 'projects' ? (
+                    <FolderClosed
+                      className="w-[18px] h-[18px] md:w-5 md:h-5 text-gray-500"
+                      strokeWidth={2}
+                    />
+                  ) : /* Inventory - Package open/close animation */
+                  item.id === 'inventory' && isActive ? (
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.05, 1],
+                        y: [0, -2, 0]
+                      }}
+                      transition={{ duration: 1, repeat: Infinity, repeatDelay: 1.2 }}
+                    >
+                      <PackageOpen
+                        className="w-[18px] h-[18px] md:w-5 md:h-5 text-[#1a1a1a]"
+                        strokeWidth={2.5}
+                      />
+                    </motion.div>
+                  ) : item.id === 'inventory' ? (
+                    <Package
+                      className="w-[18px] h-[18px] md:w-5 md:h-5 text-gray-500"
+                      strokeWidth={2}
+                    />
+                  ) : /* Settings - Gear rotation animation */
+                  item.id === 'settings' && isActive ? (
+                    <motion.div
+                      animate={{
+                        rotate: [0, 45, 0, -45, 0]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <Settings
+                        className="w-[18px] h-[18px] md:w-5 md:h-5 text-[#1a1a1a]"
+                        strokeWidth={2.5}
+                      />
+                    </motion.div>
+                  ) : (
+                    <Icon
+                      className={`w-[18px] h-[18px] md:w-5 md:h-5 transition-all duration-300 ${
+                        isActive
+                          ? 'text-[#1a1a1a]'
+                          : 'text-gray-500'
+                      }`}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                  )}
 
                   {/* Magic sparkles for Editor tab */}
                   <AnimatePresence>

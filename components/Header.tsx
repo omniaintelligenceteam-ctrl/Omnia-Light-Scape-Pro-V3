@@ -2,25 +2,32 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Sparkles } from 'lucide-react';
 
-// Animated Golden Ratio Spiral Logo
-const GoldenSpiral: React.FC<{ className?: string }> = ({ className = "w-6 h-6 md:w-10 md:h-10" }) => (
+// Animated Penrose Triangle (Impossible Triangle) Logo
+const PenroseTriangle: React.FC<{ className?: string }> = ({ className = "w-6 h-6 md:w-10 md:h-10" }) => (
   <motion.svg
     viewBox="0 0 48 48"
     className={className}
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ duration: 0.5 }}
+    initial={{ opacity: 0, scale: 0.8 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration: 0.6, ease: "easeOut" }}
   >
     <defs>
-      {/* Golden gradient for the spiral */}
-      <linearGradient id="spiralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      {/* Golden gradient */}
+      <linearGradient id="penroseGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#F6B45A" />
-        <stop offset="50%" stopColor="#FFD700" />
+        <stop offset="100%" stopColor="#FFD700" />
+      </linearGradient>
+      <linearGradient id="penroseGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#D4973D" />
         <stop offset="100%" stopColor="#F6B45A" />
       </linearGradient>
+      <linearGradient id="penroseGradient3" x1="50%" y1="100%" x2="50%" y2="0%">
+        <stop offset="0%" stopColor="#FFD700" />
+        <stop offset="100%" stopColor="#FFF0C4" />
+      </linearGradient>
       {/* Glow filter */}
-      <filter id="spiralGlow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <filter id="penroseGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="1" result="blur" />
         <feMerge>
           <feMergeNode in="blur" />
           <feMergeNode in="SourceGraphic" />
@@ -28,80 +35,56 @@ const GoldenSpiral: React.FC<{ className?: string }> = ({ className = "w-6 h-6 m
       </filter>
     </defs>
 
-    {/* Main Fibonacci Spiral - draws itself on load */}
+    {/* Impossible Triangle - Three interlocking bars */}
+    {/* Left bar */}
     <motion.path
-      d="M24 24
-         C24 19.58 27.58 16 32 16
-         C38.63 16 44 21.37 44 28
-         C44 37.94 36.04 46 26 46
-         C12.75 46 2 35.25 2 22
-         C2 5.43 15.43 -8 32 -8"
-      stroke="url(#spiralGradient)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      fill="none"
-      filter="url(#spiralGlow)"
+      d="M24 6 L10 30 L14 30 L24 12 L34 30 L24 30 L24 34 L38 34 L24 6"
+      fill="url(#penroseGradient1)"
+      filter="url(#penroseGlow)"
       initial={{ pathLength: 0, opacity: 0 }}
       animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 2.5, ease: "easeOut", delay: 0.2 }}
+      transition={{ duration: 1.2, ease: "easeOut", delay: 0.1 }}
     />
-
-    {/* Inner spiral detail */}
+    {/* Right bar */}
     <motion.path
-      d="M24 24
-         C24 21.79 25.79 20 28 20
-         C31.31 20 34 22.69 34 26
-         C34 30.97 29.97 35 25 35"
-      stroke="url(#spiralGradient)"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      fill="none"
-      filter="url(#spiralGlow)"
+      d="M38 34 L24 34 L24 30 L34 30 L28 20 L32 20 L42 38 L38 38 L38 34"
+      fill="url(#penroseGradient2)"
+      filter="url(#penroseGlow)"
       initial={{ pathLength: 0, opacity: 0 }}
       animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 1.8, ease: "easeOut", delay: 0.5 }}
+      transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
+    />
+    {/* Bottom bar */}
+    <motion.path
+      d="M6 38 L10 30 L14 30 L10 38 L38 38 L42 38 L6 38"
+      fill="url(#penroseGradient3)"
+      filter="url(#penroseGlow)"
+      initial={{ pathLength: 0, opacity: 0 }}
+      animate={{ pathLength: 1, opacity: 1 }}
+      transition={{ duration: 1.2, ease: "easeOut", delay: 0.5 }}
     />
 
-    {/* Luminous dots at Fibonacci points */}
+    {/* Glowing vertices */}
     <motion.circle
-      cx="24" cy="24" r="2"
-      fill="#F6B45A"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: [0.6, 1, 0.6] }}
-      transition={{
-        scale: { duration: 0.3, delay: 1 },
-        opacity: { duration: 2, repeat: Infinity, delay: 1 }
-      }}
-    />
-    <motion.circle
-      cx="32" cy="16" r="1.5"
+      cx="24" cy="6" r="2"
       fill="#FFD700"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: [0.4, 0.8, 0.4] }}
-      transition={{
-        scale: { duration: 0.3, delay: 1.3 },
-        opacity: { duration: 2.5, repeat: Infinity, delay: 1.3 }
-      }}
+      initial={{ scale: 0 }}
+      animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
+      transition={{ duration: 2, repeat: Infinity, delay: 1 }}
     />
     <motion.circle
-      cx="44" cy="28" r="1.5"
+      cx="6" cy="38" r="2"
       fill="#F6B45A"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: [0.5, 0.9, 0.5] }}
-      transition={{
-        scale: { duration: 0.3, delay: 1.6 },
-        opacity: { duration: 2.2, repeat: Infinity, delay: 1.6 }
-      }}
+      initial={{ scale: 0 }}
+      animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
+      transition={{ duration: 2, repeat: Infinity, delay: 1.3 }}
     />
     <motion.circle
-      cx="26" cy="46" r="1.5"
+      cx="42" cy="38" r="2"
       fill="#FFD700"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: [0.4, 0.7, 0.4] }}
-      transition={{
-        scale: { duration: 0.3, delay: 1.9 },
-        opacity: { duration: 2.8, repeat: Infinity, delay: 1.9 }
-      }}
+      initial={{ scale: 0 }}
+      animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
+      transition={{ duration: 2, repeat: Infinity, delay: 1.6 }}
     />
   </motion.svg>
 );
@@ -155,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
             }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           >
-            <GoldenSpiral className="w-6 h-6 md:w-10 md:h-10" />
+            <PenroseTriangle className="w-6 h-6 md:w-10 md:h-10" />
             <div className="absolute inset-0 bg-[#F6B45A]/20 blur-xl rounded-full -z-10"></div>
           </motion.div>
 
