@@ -25,11 +25,11 @@ import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight,
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences } from './types';
 
-// Helper to parse fixture quantities from text
+// Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
     const counts: Record<string, number> = {};
     const t = text.toLowerCase();
-    
+
     // Mapping patterns to DEFAULT_PRICING IDs
     const patterns = [
        { id: 'default_up', regex: /(\d+)\s*(?:x\s*)?(?:up|accent)/ },
@@ -48,6 +48,78 @@ const parsePromptForQuantities = (text: string): Record<string, number> => {
     });
 
     return counts;
+};
+
+// Estimate fixture counts based on selected sub-options
+// Each sub-option represents a specific placement area that typically requires a certain number of fixtures
+const estimateCountsFromSubOptions = (
+    selectedFixtures: string[],
+    fixtureSubOptions: Record<string, string[]>
+): Record<string, number> => {
+    const estimates: Record<string, number> = {};
+
+    // Sub-option multipliers - how many fixtures each sub-option typically requires
+    const subOptionCounts: Record<string, Record<string, number>> = {
+        'up': {
+            'siding': 8,      // Wall piers between windows
+            'windows': 6,     // First story windows
+            'entryway': 2,    // Flanking entry door
+            'columns': 4,     // Architectural columns
+            'trees': 3        // Trees in landscape
+        },
+        'path': {
+            'pathway': 6,     // Walkway lights
+            'driveway': 8,    // Driveway edge lights
+            'landscaping': 4  // Garden bed lights
+        },
+        'coredrill': {
+            'garage_sides': 3,  // Piers flanking garage
+            'garage_door': 2,   // Door face wash
+            'sidewalks': 6,     // Embedded path markers
+            'driveway': 8       // Driveway edge markers
+        },
+        'gutter': {
+            'dormers': 2,     // Dormer faces
+            'peaks': 2        // Gable peaks
+        },
+        'soffit': {
+            'windows': 6,     // Above windows
+            'columns': 4,     // Above columns
+            'siding': 6,      // Above wall piers
+            'peaks': 2        // At gable peaks
+        },
+        'hardscape': {
+            'columns': 4,     // Pillar cap lights
+            'walls': 6,       // Retaining wall lights
+            'steps': 4        // Step riser lights
+        }
+    };
+
+    // For each selected fixture type, sum up counts based on selected sub-options
+    selectedFixtures.forEach(fixtureId => {
+        const subOpts = fixtureSubOptions[fixtureId] || [];
+        const optionCounts = subOptionCounts[fixtureId] || {};
+
+        let totalCount = 0;
+        if (subOpts.length > 0) {
+            // Sum counts for each selected sub-option
+            subOpts.forEach(optId => {
+                totalCount += optionCounts[optId] || 2; // Default 2 if not found
+            });
+        } else {
+            // No sub-options selected, use a reasonable default
+            const defaultCounts: Record<string, number> = {
+                'up': 10, 'path': 6, 'gutter': 4, 'soffit': 6, 'hardscape': 6, 'coredrill': 4
+            };
+            totalCount = defaultCounts[fixtureId] || 4;
+        }
+
+        // Map fixture ID to pricing ID
+        const pricingId = `default_${fixtureId}`;
+        estimates[pricingId] = totalCount;
+    });
+
+    return estimates;
 };
 
 const App: React.FC = () => {
@@ -800,15 +872,12 @@ const App: React.FC = () => {
   };
 
   const handleGenerateQuote = () => {
-    // 1. Parse prompt for quantities
+    // 1. Parse prompt (custom notes) for explicit quantities
     const parsedCounts = parsePromptForQuantities(prompt);
-    
-    // Default fallback quantities if no parsing found but user toggled buttons
-    const defaultQuantities: Record<string, number> = {
-        'up': 12, 'path': 6, 'gutter': 4, 'soffit': 4, 'hardscape': 8, 'coredrill': 4, 'transformer': 1
-    };
-
     const hasParsedCounts = Object.keys(parsedCounts).length > 0;
+
+    // 2. Estimate counts based on selected sub-options (smarter estimation)
+    const estimatedCounts = estimateCountsFromSubOptions(selectedFixtures, fixtureSubOptions);
 
     // Generate Line Items using CURRENT pricing state
     const lineItems = pricing.map(def => {
@@ -817,18 +886,22 @@ const App: React.FC = () => {
              return { ...def, quantity: 1 };
          }
 
-         if (hasParsedCounts) {
-             // If we found numbers in text, use them strictly. 
-             // If ID not found in text, quantity is 0.
-             const qty = parsedCounts[def.id] || 0;
-             return { ...def, quantity: qty };
-         } else {
-             // Fallback to Toggle Buttons
-             if (selectedFixtures.includes(def.fixtureType)) {
-                 return { ...def, quantity: defaultQuantities[def.fixtureType] || 1 };
-             }
-             return { ...def, quantity: 0 };
+         // Priority 1: Use explicit counts from custom notes if provided
+         if (hasParsedCounts && parsedCounts[def.id]) {
+             return { ...def, quantity: parsedCounts[def.id] };
          }
+
+         // Priority 2: Use estimated counts based on selected sub-options
+         if (estimatedCounts[def.id]) {
+             return { ...def, quantity: estimatedCounts[def.id] };
+         }
+
+         // Priority 3: If fixture is selected but no estimate, use a minimal default
+         if (selectedFixtures.includes(def.fixtureType)) {
+             return { ...def, quantity: 4 }; // Minimal default
+         }
+
+         return { ...def, quantity: 0 };
     }).filter(item => item.quantity > 0);
 
     const newQuote: QuoteData = {
@@ -1249,9 +1322,9 @@ Notes: ${invoice.notes || 'N/A'}
               ></div>
               
               {/* Modal / Bottom Sheet */}
-              <div className="pointer-events-auto w-full max-w-4xl bg-[#111] border-t border-x border-white/10 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transform transition-all animate-in slide-in-from-bottom-10 fade-in duration-300 max-h-[50vh] flex flex-col pb-safe">
+              <div className="pointer-events-auto w-full max-w-4xl bg-[#0a0a0a] border-t border-x border-white/10 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.7)] transform transition-all animate-in slide-in-from-bottom-10 fade-in duration-300 max-h-[50vh] flex flex-col pb-safe">
                   {/* Header - Fixed */}
-                  <div className="p-6 pb-2 border-b border-white/5 shrink-0 flex justify-between items-start bg-[#111] rounded-t-[32px]">
+                  <div className="p-6 pb-2 border-b border-white/5 shrink-0 flex justify-between items-start bg-[#0a0a0a] rounded-t-[32px]">
                       <div>
                         <h3 className="text-xl font-bold text-white font-serif">
                             Configure {getActiveFixtureTitle()}
@@ -1267,21 +1340,23 @@ Notes: ${invoice.notes || 'N/A'}
                   </div>
                   
                   {/* Scrollable Content */}
-                  <div className="p-6 pt-4 overflow-y-auto custom-scrollbar bg-[#111]">
+                  <div className="p-6 pt-4 overflow-y-auto custom-scrollbar bg-[#0a0a0a]">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                           {getCurrentSubOptions().map(opt => {
                               const isSelected = pendingOptions.includes(opt.id);
                               return (
-                                  <button 
+                                  <button
                                     key={opt.id}
                                     onClick={() => togglePendingOption(opt.id)}
-                                    className={`w-full flex items-start justify-between p-4 rounded-xl border transition-all h-full ${isSelected ? 'bg-[#F6B45A]/10 border-[#F6B45A] text-white' : 'bg-[#0a0a0a] border-white/5 text-gray-400 hover:bg-[#1a1a1a]'}`}
+                                    className={`w-full flex items-start justify-between p-4 rounded-xl border-2 transition-all h-full ${isSelected ? 'bg-[#F6B45A]/15 border-[#F6B45A] text-white shadow-[0_0_15px_rgba(246,180,90,0.2)]' : 'bg-[#050505] border-white/5 text-gray-400 hover:bg-[#0a0a0a] hover:border-[#F6B45A]/30'}`}
                                   >
-                                      <div className="flex flex-col items-start text-left gap-1">
-                                          <span className={`text-sm font-bold ${isSelected ? 'text-[#F6B45A]' : 'text-gray-300'}`}>{opt.label}</span>
+                                      <div className="flex flex-col items-start text-left gap-1.5">
+                                          <span className={`text-sm font-bold ${isSelected ? 'text-[#F6B45A]' : 'text-gray-200'}`}>{opt.label}</span>
                                           <span className="text-[10px] text-gray-500 leading-relaxed">{opt.description}</span>
                                       </div>
-                                      {isSelected && <Check className="w-5 h-5 text-[#F6B45A] shrink-0 ml-3" />}
+                                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-3 transition-all ${isSelected ? 'bg-[#F6B45A]' : 'bg-white/5 border border-white/10'}`}>
+                                          {isSelected && <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />}
+                                      </div>
                                   </button>
                               )
                           })}
@@ -1289,7 +1364,7 @@ Notes: ${invoice.notes || 'N/A'}
                   </div>
 
                   {/* Footer - Fixed */}
-                  <div className="p-6 pt-4 border-t border-white/5 shrink-0 bg-[#111] pb-8 sm:pb-6">
+                  <div className="p-6 pt-4 border-t border-white/5 shrink-0 bg-[#0a0a0a] pb-8 sm:pb-6">
                       <button 
                         onClick={confirmFixtureSelection}
                         className="w-full bg-[#F6B45A] text-black font-bold uppercase tracking-widest py-4 rounded-xl hover:bg-[#ffc67a] transition-colors shadow-lg text-xs"
@@ -1521,17 +1596,17 @@ Notes: ${invoice.notes || 'N/A'}
                                             onClick={() => toggleFixture(ft.id)}
                                             className={`relative overflow-hidden rounded-xl transition-all duration-300 ${
                                                 isSelected
-                                                    ? 'bg-gradient-to-b from-[#F6B45A] via-[#f0a847] to-[#e59a3a]'
-                                                    : 'bg-gradient-to-b from-white/[0.06] to-white/[0.02]'
+                                                    ? 'bg-gradient-to-b from-[#F6B45A] via-[#e5a040] to-[#cc8a30] shadow-[0_0_20px_rgba(246,180,90,0.3)]'
+                                                    : 'bg-[#0a0a0a] hover:bg-[#111]'
                                             }`}
-                                            whileHover={{ scale: 1.02, y: -2 }}
-                                            whileTap={{ scale: 0.98 }}
+                                            whileHover={{ scale: 1.03, y: -3 }}
+                                            whileTap={{ scale: 0.97 }}
                                         >
                                             {/* Border gradient overlay */}
-                                            <div className={`absolute inset-0 rounded-xl border ${
+                                            <div className={`absolute inset-0 rounded-xl border-2 ${
                                                 isSelected
-                                                    ? 'border-[#F6B45A]/50'
-                                                    : 'border-white/10 hover:border-white/20'
+                                                    ? 'border-[#F6B45A]'
+                                                    : 'border-white/5 hover:border-[#F6B45A]/30'
                                             }`} />
 
                                             {/* Inner glow when selected */}

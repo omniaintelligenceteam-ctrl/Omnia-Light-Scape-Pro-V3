@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sun, Shield, Sparkles, Zap, Lock, Headphones, FileText } from 'lucide-react';
+import { Sun, Shield, Sparkles, Zap, KeyRound, Headphones, FileText } from 'lucide-react';
 
 interface FooterProps {
   variant?: 'full' | 'minimal';
@@ -88,7 +88,7 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
 
           {/* Premium Links */}
           <div className="flex items-center justify-center md:justify-end gap-2 md:gap-3">
-            <FooterLink href="#" icon={Lock}>Privacy</FooterLink>
+            <FooterLink href="#" icon={KeyRound}>Privacy</FooterLink>
             <FooterLink href="#" icon={FileText}>Terms</FooterLink>
             <FooterLink href="#" icon={Headphones}>Support</FooterLink>
           </div>
@@ -135,62 +135,67 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
   );
 };
 
-// Premium Trust Badge Component with Glassmorphism
+// Premium Trust Badge Component with Pill Shape
 const TrustBadge: React.FC<{ icon: React.ElementType; label: string }> = ({ icon: Icon, label }) => (
   <motion.div
-    className="relative flex items-center gap-2 px-4 py-2 rounded-xl overflow-hidden shrink-0 group cursor-default"
-    whileHover={{ scale: 1.03, y: -1 }}
-    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+    className="relative flex items-center gap-2.5 px-4 py-2 rounded-full overflow-hidden shrink-0 group cursor-default"
+    whileHover={{ scale: 1.05, y: -2 }}
+    transition={{ type: "spring", stiffness: 400, damping: 20 }}
   >
-    {/* Glassmorphism background */}
-    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-md border border-white/10 rounded-xl group-hover:border-[#F6B45A]/30 transition-colors duration-300"></div>
+    {/* Background with subtle border */}
+    <div className="absolute inset-0 bg-[#0a0a0a] border border-white/10 rounded-full group-hover:border-[#F6B45A]/40 transition-colors duration-300"></div>
 
-    {/* Inner glow on hover */}
-    <div className="absolute inset-0 bg-gradient-to-br from-[#F6B45A]/0 to-[#F6B45A]/0 group-hover:from-[#F6B45A]/5 group-hover:to-transparent rounded-xl transition-all duration-300"></div>
+    {/* Inner highlight on hover */}
+    <div className="absolute inset-0 bg-gradient-to-t from-[#F6B45A]/0 to-[#F6B45A]/0 group-hover:from-[#F6B45A]/10 group-hover:to-transparent rounded-full transition-all duration-500"></div>
 
-    {/* Icon container */}
-    <div className="relative w-6 h-6 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20 flex items-center justify-center group-hover:bg-[#F6B45A]/20 transition-colors duration-300">
+    {/* Icon container - circular */}
+    <div className="relative w-6 h-6 rounded-full bg-[#F6B45A]/15 border border-[#F6B45A]/30 flex items-center justify-center group-hover:bg-[#F6B45A]/25 group-hover:scale-110 transition-all duration-300">
       <Icon className="w-3 h-3 text-[#F6B45A]" />
     </div>
 
-    <span className="relative text-[10px] font-semibold text-gray-300 uppercase tracking-wider group-hover:text-white transition-colors duration-300">
+    <span className="relative text-[11px] font-medium text-white tracking-wide">
       {label}
     </span>
   </motion.div>
 );
 
-// Premium Footer Link with Gradient Border Glow
+// Premium Footer Link with Morphing Border Effect
 const FooterLink: React.FC<{ href: string; icon: React.ElementType; children: React.ReactNode }> = ({ href, icon: Icon, children }) => (
   <motion.a
     href={href}
     className="relative group"
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
+    whileHover={{ scale: 1.05, y: -2 }}
+    whileTap={{ scale: 0.95 }}
+    transition={{ type: "spring", stiffness: 400, damping: 20 }}
   >
-    {/* Outer glow on hover */}
-    <div className="absolute -inset-1 bg-gradient-to-r from-[#F6B45A]/0 via-[#F6B45A]/20 to-[#F6B45A]/0 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    {/* Animated border gradient */}
+    <motion.div
+      className="absolute -inset-[1px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+      style={{
+        background: 'linear-gradient(90deg, #F6B45A, #FFD700, #F6B45A)',
+        backgroundSize: '200% 100%',
+      }}
+      animate={{
+        backgroundPosition: ['0% 0%', '200% 0%'],
+      }}
+      transition={{
+        duration: 2,
+        repeat: Infinity,
+        ease: "linear",
+      }}
+    />
 
-    {/* Button container */}
-    <div className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl overflow-hidden">
-      {/* Glassmorphism background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-sm border border-white/10 rounded-xl group-hover:border-[#F6B45A]/40 transition-all duration-300"></div>
+    {/* Button container - Pill shape */}
+    <div className="relative flex items-center gap-2.5 px-5 py-2 rounded-full overflow-hidden">
+      {/* Dark background */}
+      <div className="absolute inset-0 bg-[#0a0a0a] rounded-full border border-white/5 group-hover:border-transparent transition-all duration-300"></div>
 
-      {/* Gradient fill on hover */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#F6B45A]/0 to-[#F6B45A]/0 group-hover:from-[#F6B45A]/10 group-hover:to-[#F6B45A]/5 rounded-xl transition-all duration-300"></div>
+      {/* Inner glow on hover */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#F6B45A]/0 to-[#F6B45A]/0 group-hover:from-[#F6B45A]/5 group-hover:to-transparent rounded-full transition-all duration-500"></div>
 
-      {/* Animated shine effect */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg]"
-          initial={{ x: '-100%' }}
-          whileHover={{ x: '200%' }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
-        />
-      </div>
-
-      {/* Content */}
-      <Icon className="relative w-3.5 h-3.5 text-gray-500 group-hover:text-[#F6B45A] transition-colors duration-300" />
-      <span className="relative text-[10px] font-semibold text-gray-400 uppercase tracking-wider group-hover:text-white transition-colors duration-300">
+      {/* Content - White font */}
+      <Icon className="relative w-4 h-4 text-white/70 group-hover:text-[#F6B45A] transition-colors duration-300" />
+      <span className="relative text-[11px] font-medium text-white tracking-wide group-hover:text-white transition-colors duration-300">
         {children}
       </span>
     </div>

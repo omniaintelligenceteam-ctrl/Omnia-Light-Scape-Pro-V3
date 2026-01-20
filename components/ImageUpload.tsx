@@ -56,10 +56,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   return (
     <div
-      className="relative w-full aspect-video bg-[#0a0a0a] rounded-2xl border border-dashed border-gray-700 flex flex-col items-center justify-center transition-all duration-300 overflow-hidden shadow-inner"
+      className="relative w-full aspect-video bg-[#030303] rounded-2xl border border-dashed border-gray-800 flex flex-col items-center justify-center transition-all duration-300 overflow-hidden shadow-inner"
     >
       {/* Background Grid Pattern */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+      <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
            style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }}>
       </div>
 
