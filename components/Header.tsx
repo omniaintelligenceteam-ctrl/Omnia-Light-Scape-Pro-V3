@@ -315,8 +315,6 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
         </div>
       </div>
 
-      {/* Bottom shadow gradient */}
-      <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-b from-black/40 to-transparent pointer-events-none"></div>
-    </header>
+          </header>
   );
 };
