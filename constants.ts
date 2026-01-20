@@ -91,33 +91,37 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
    - Outdoor furniture and decorations remain unchanged
    - Mailboxes, house numbers, and accessories remain unchanged
 
-5. NIGHTTIME SKY REQUIREMENTS (MANDATORY):
-   - The sky MUST be converted to a completely Black sky 
-   - The sky MUST include a REALISTIC FULL MOON - clearly visible, properly sized, with natural lunar detail
-   - Moon position: place the moon in an aesthetically pleasing location (upper portion of sky, not behind house)
-   - Moon appearance: realistic full moon with visible surface features (craters, maria), soft white/pale yellow glow
-   - Moon lighting effect: the moon provides SOFT outlining effet
-   - Moonlight color: cool, pale ambient wash
-   - Stars may be included for realism but should be subtle, not overpowering
-   - NO clouds blocking the moon - clear night sky
+5. NIGHTTIME SKY REQUIREMENTS (MANDATORY - CRITICAL):
+   - The sky MUST be PURE BLACK - completely dark with NO ambient glow, NO gradients, NO blue tones
+   - ZERO light pollution in the sky - absolute pitch black darkness
+   - NO moon - the sky must be entirely black to maximize contrast
+   - NO stars - keep the sky completely void and dark
+   - NO clouds - pure black emptiness
+   - The ONLY light sources in the scene are the landscape lighting fixtures
+   - This creates MAXIMUM CONTRAST between the lit areas and dark areas
+   - Shadows must be deep and dramatic against the black sky backdrop
+   - The house and landscaping should appear illuminated ONLY by the specified fixtures
+   - This simulates a true nighttime scene where fixture lighting is the sole light source
 
 6. PERMITTED MODIFICATIONS (ONLY THESE):
-   - Convert daytime sky to dark blue nighttime sky with realistic full moon (REQUIRED)
-   - Apply soft moonlight ambient illumination across the scene
-   - Reduce ambient light to simulate nighttime while maintaining moon glow
-   - Darken shadows appropriately for night scene
+   - Convert daytime sky to PURE BLACK nighttime sky (REQUIRED)
+   - REMOVE all ambient daylight - the scene should be dark except for fixture lighting
+   - Shadows should be deep, dark, and dramatic
    - ADD ONLY the specific light fixtures and light effects explicitly requested
    - Light fixtures may ONLY be placed in locations specified by active prompts
+   - The contrast between lit surfaces and unlit surfaces should be DRAMATIC
 
 7. LIGHT GENERATION RULES:
    - Generate ONLY the fixture types that are explicitly ENABLED
    - Place fixtures ONLY in locations specified by active sub-option prompts
-   - If a fixture category is DISABLED, that area receives ZERO light from fixtures
-   - The moon provides ambient fill light across the entire scene (this is separate from fixture lighting)
+   - If a fixture category is DISABLED, that area receives ZERO light - complete darkness
+   - There is NO ambient light source - fixtures are the ONLY light in the scene
    - Do NOT add decorative string lights unless explicitly requested
    - Do NOT add interior lights glowing through windows unless explicitly requested
    - Do NOT add street lights, car headlights, or ambient city glow
+   - Do NOT add moonlight or any natural ambient illumination
    - Light color temperature and beam characteristics follow active prompt specs
+   - Unlit areas should remain in deep shadow for maximum contrast
 
 VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - Source image architecture = Output image architecture (IDENTICAL)
@@ -125,7 +129,7 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - Source image landscaping = Output image landscaping (IDENTICAL)
 - Only differences: sky darkness + requested light fixtures/effects`,
 
-  globalNegativePrompt: `new architectural features, new windows, new doors, new dormers, new columns, new trim, new shutters, new porches, new decks, new balconies, new railings, roof changes, roof modifications, new hardscape, new driveways, new sidewalks, new walkways, new patios, new steps, new retaining walls, new pavers, new concrete, new landscaping, new trees, new shrubs, new bushes, new plants, new flowers, new mulch beds, new planters, new garden features, lawn changes, seasonal changes, snow, fall leaves, different foliage, new vehicles, new furniture, new outdoor objects, string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, dramatic moonlight, visible moon, light fixtures not specified, paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, property modifications, house modifications, structure modifications, added features, removed features, altered features`,
+  globalNegativePrompt: `new architectural features, new windows, new doors, new dormers, new columns, new trim, new shutters, new porches, new decks, new balconies, new railings, roof changes, roof modifications, new hardscape, new driveways, new sidewalks, new walkways, new patios, new steps, new retaining walls, new pavers, new concrete, new landscaping, new trees, new shrubs, new bushes, new plants, new flowers, new mulch beds, new planters, new garden features, lawn changes, seasonal changes, snow, fall leaves, different foliage, new vehicles, new furniture, new outdoor objects, string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, moonlight, moon, visible moon, stars, starlight, blue sky, gradient sky, ambient sky glow, twilight, dusk colors, light fixtures not specified, paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, property modifications, house modifications, structure modifications, added features, removed features, altered features`,
 
   closingReinforcement: `MASTER RULE - STRICT CATEGORY ENFORCEMENT:
 - ONLY generate fixtures for categories that are EXPLICITLY ENABLED
@@ -136,12 +140,16 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - ABSENCE of a category selection means ABSOLUTE PROHIBITION of that fixture type
 - When in doubt, DO NOT ADD the fixture
 
-FINAL REMINDER: 
+FINAL REMINDER:
 You are converting a daytime photo to nighttime and adding ONLY the specified lighting fixtures.
 The home, landscaping, hardscape, and all physical features must be PIXEL-PERFECT identical to the source.
 If you are uncertain whether a feature exists in the source, do NOT add it.
 When in doubt, preserve the source image exactly.
-ONLY generate lights that are explicitly enabled above.`
+ONLY generate lights that are explicitly enabled above.
+
+SKY REQUIREMENT: The sky MUST be PURE BLACK - no moon, no stars, no gradients, no blue tones.
+CONTRAST REQUIREMENT: Maximize the contrast between lit surfaces (from fixtures) and unlit surfaces (deep shadows).
+The dramatic interplay of light and shadow on the house is the primary visual goal.`
 };
 
 
