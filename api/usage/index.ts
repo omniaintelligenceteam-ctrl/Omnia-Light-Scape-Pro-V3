@@ -1,26 +1,34 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../lib/supabase.js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabase } from '../lib/supabase.js';
 
 const FREE_TRIAL_LIMIT = 25;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    let supabase: SupabaseClient;
+    try {
+        supabase = getSupabase();
+    } catch {
+        return res.status(500).json({ error: 'Database not configured' });
+    }
+
     const action = req.query.action as string;
 
     // Route to appropriate handler based on action
     switch (action) {
         case 'status':
-            return handleStatus(req, res);
+            return handleStatus(req, res, supabase);
         case 'increment':
-            return handleIncrement(req, res);
+            return handleIncrement(req, res, supabase);
         case 'can-generate':
-            return handleCanGenerate(req, res);
+            return handleCanGenerate(req, res, supabase);
         default:
             return res.status(400).json({ error: 'Invalid action. Use: status, increment, or can-generate' });
     }
 }
 
 // GET /api/usage?action=status&userId=xxx
-async function handleStatus(req: VercelRequest, res: VercelResponse) {
+async function handleStatus(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -30,19 +38,6 @@ async function handleStatus(req: VercelRequest, res: VercelResponse) {
 
         if (!userId) {
             return res.status(400).json({ error: 'Missing userId parameter' });
-        }
-
-        // Return mock data if supabase is not available (local dev)
-        if (!supabase) {
-            return res.json({
-                hasActiveSubscription: false,
-                generationCount: 0,
-                freeTrialLimit: FREE_TRIAL_LIMIT,
-                remainingFreeGenerations: FREE_TRIAL_LIMIT,
-                canGenerate: true,
-                plan: null,
-                monthlyLimit: 0
-            });
         }
 
         // Get user's generation count
@@ -107,7 +102,7 @@ async function handleStatus(req: VercelRequest, res: VercelResponse) {
 }
 
 // POST /api/usage?action=increment
-async function handleIncrement(req: VercelRequest, res: VercelResponse) {
+async function handleIncrement(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -117,15 +112,6 @@ async function handleIncrement(req: VercelRequest, res: VercelResponse) {
 
         if (!userId) {
             return res.status(400).json({ error: 'Missing userId' });
-        }
-
-        // Return mock data if supabase is not available (local dev)
-        if (!supabase) {
-            return res.json({
-                generationCount: 1,
-                remainingFreeGenerations: FREE_TRIAL_LIMIT - 1,
-                hasActiveSubscription: false
-            });
         }
 
         // Try RPC first, then fallback to manual increment
@@ -185,7 +171,7 @@ async function handleIncrement(req: VercelRequest, res: VercelResponse) {
 }
 
 // POST /api/usage?action=can-generate
-async function handleCanGenerate(req: VercelRequest, res: VercelResponse) {
+async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -195,17 +181,6 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse) {
 
         if (!userId) {
             return res.status(400).json({ error: 'Missing userId' });
-        }
-
-        // Return mock data if supabase is not available (local dev)
-        if (!supabase) {
-            return res.json({
-                canGenerate: true,
-                hasActiveSubscription: false,
-                generationCount: 0,
-                remainingFreeGenerations: FREE_TRIAL_LIMIT,
-                monthlyLimit: 0
-            });
         }
 
         // Get user

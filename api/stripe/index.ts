@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
-import { supabase } from '../lib/supabase.js';
+import { getSupabase } from '../lib/supabase.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
     apiVersion: '2025-12-15.clover'
@@ -49,6 +49,13 @@ async function handleCheckout(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Invalid priceId' });
         }
 
+        let supabase;
+        try {
+            supabase = getSupabase();
+        } catch {
+            return res.status(500).json({ error: 'Database not configured' });
+        }
+
         // Look up user email from Supabase by clerk_user_id
         const { data: userData, error: userError } = await supabase
             .from('users')
@@ -92,6 +99,13 @@ async function handlePortal(req: VercelRequest, res: VercelResponse) {
 
         if (!userId) {
             return res.status(400).json({ error: 'Missing userId' });
+        }
+
+        let supabase;
+        try {
+            supabase = getSupabase();
+        } catch {
+            return res.status(500).json({ error: 'Database not configured' });
         }
 
         // Get user's internal ID from clerk_user_id
