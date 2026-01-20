@@ -618,12 +618,19 @@ const App: React.FC = () => {
                  const allowedLabels = selectedSubs.map(id => allOptionsList.find(o => o.id === id)?.label || id).join(', ').toUpperCase();
                  const forbiddenLabels = allSubIds.filter(id => !selectedSubs.includes(id)).map(id => allOptionsList.find(o => o.id === id)?.label || id).join(', ').toUpperCase();
                  
-                 // 2. Override Prompt Header
-                 p = `PRIORITY OVERRIDE - ${ft.label.toUpperCase()}: You must ONLY place ${ft.label.toLowerCase()} in the following selected locations.\n`;
+                 // 2. Override Prompt Header with STRICT SUB-OPTION RULE
+                 p = `\n*** STRICT SUB-OPTION RULE - ${ft.label.toUpperCase()} ***\n`;
+                 p += `THIS IS A MANDATORY, NON-NEGOTIABLE RULE:\n`;
+                 p += `ONLY the sub-options listed in ALLOWED may receive ${ft.label.toLowerCase()}.\n`;
+                 p += `ALL other surfaces/features MUST remain COMPLETELY DARK - NO EXCEPTIONS.\n\n`;
                  p += `[STRICT SCOPE - ${ft.label.toUpperCase()}]\n`;
-                 p += `ALLOWED: ${allowedLabels}\n`;
-                 p += `STRICTLY FORBIDDEN: ${forbiddenLabels}\n`;
-                 p += `VERIFICATION: If a surface is listed in FORBIDDEN, it must remain DARK.\n`;
+                 p += `ALLOWED (ONLY THESE GET LIGHTS): ${allowedLabels}\n`;
+                 p += `STRICTLY FORBIDDEN (MUST REMAIN DARK): ${forbiddenLabels}\n\n`;
+                 p += `ENFORCEMENT:\n`;
+                 p += `- If it's not in ALLOWED, it gets ZERO light\n`;
+                 p += `- Do NOT add lights to "complete" or "balance" the design\n`;
+                 p += `- Do NOT assume missing sub-options should be lit\n`;
+                 p += `- FORBIDDEN surfaces must be pitch black with no illumination\n`;
 
                  // 3. Add Positives for SELECTED items
                  const positives = selectedSubs.map(id => {
@@ -668,7 +675,15 @@ const App: React.FC = () => {
 
                  if (ft.id === 'gutter') {
                      if (selectedSubs.includes('dormers')) {
-                         p += "\n\n[CRITICAL HARD RULE - DORMERS]: For each dormer window, place EXACTLY ONE (1) up-light inside the horizontal gutter directly below it. The light beam must shine STRAIGHT UP to wash the dormer face. Do not place lights on the roof shingles.";
+                         p += "\n\n[STRICT RULE - GUTTER MOUNT DORMER LIGHTING]:\n";
+                         p += "*** MANDATORY RULE - READ CAREFULLY ***\n";
+                         p += "- Each dormer gets EXACTLY ONE (1) gutter-mounted up light - NO MORE, NO LESS\n";
+                         p += "- The fixture must be placed DIRECTLY BELOW the dormer, CENTERED on the dormer's width\n";
+                         p += "- The fixture sits INSIDE the horizontal gutter trough, not on the roof\n";
+                         p += "- The light beam shines STRAIGHT UP to wash the dormer face\n";
+                         p += "- COUNT THE DORMERS: If 2 dormers exist, use exactly 2 lights. If 3 dormers, exactly 3 lights.\n";
+                         p += "- FORBIDDEN: Multiple lights per dormer, lights between dormers, lights on roof shingles, lights on dormer itself\n";
+                         p += "- CENTERING IS CRITICAL: The fixture must be horizontally centered under each dormer\n";
                      }
                      p += "\n\nGENERAL SAFETY: Lights must shine UP from the gutter line. Do not shine down.";
                  }

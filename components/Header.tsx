@@ -144,10 +144,10 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
 
           {/* Text Logo - Premium Typography */}
           <div className="flex flex-col">
-            {/* Main Brand Name - OMNIA aligned with SCAPE */}
-            <div className="flex items-end gap-1 md:gap-2">
+            {/* Main Brand Name - OMNIA spans full height of LIGHT/SCAPE */}
+            <div className="flex items-stretch gap-1 md:gap-2">
               <h1
-                className="text-lg md:text-3xl font-black tracking-tight text-[#F6B45A] leading-none"
+                className="text-lg md:text-3xl font-black tracking-tight text-[#F6B45A] leading-none flex items-center"
                 style={{
                   fontFamily: "'Playfair Display', Georgia, serif",
                   textShadow: '0 0 30px rgba(246,180,90,0.5), 0 0 60px rgba(246,180,90,0.3)',
@@ -155,15 +155,15 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
               >
                 OMNIA
               </h1>
-              <div className="flex flex-col -space-y-0.5">
+              <div className="flex flex-col justify-between">
                 <span
-                  className="text-[8px] md:text-[13px] font-medium text-white/90 tracking-[0.15em] md:tracking-[0.25em] uppercase"
+                  className="text-[8px] md:text-[13px] font-medium text-white/90 tracking-[0.15em] md:tracking-[0.25em] uppercase leading-none"
                   style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                 >
                   LIGHT
                 </span>
                 <span
-                  className="text-[8px] md:text-[13px] font-medium text-white/60 tracking-[0.15em] md:tracking-[0.25em] uppercase"
+                  className="text-[8px] md:text-[13px] font-medium text-white/60 tracking-[0.15em] md:tracking-[0.25em] uppercase leading-none"
                   style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                 >
                   SCAPE

@@ -154,6 +154,15 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - ABSENCE of a category selection means ABSOLUTE PROHIBITION of that fixture type
 - When in doubt, DO NOT ADD the fixture
 
+*** CRITICAL SUB-OPTION RULE ***:
+- Within each fixture category, ONLY the SELECTED sub-options receive lights
+- Unselected sub-options MUST remain COMPLETELY DARK - NO EXCEPTIONS
+- Example: If "Up Lights" is enabled with ONLY "Trees" selected, then:
+  * Trees = LIT
+  * Siding, Windows, Columns, Landscaping = MUST REMAIN DARK
+- Do NOT light unselected sub-options to "balance" or "complete" the design
+- This rule is ABSOLUTE and NON-NEGOTIABLE
+
 FINAL REMINDER:
 You are converting a daytime photo to nighttime and adding ONLY the specified lighting fixtures.
 The home, landscaping, hardscape, and all physical features must be PIXEL-PERFECT identical to the source.
@@ -1155,10 +1164,14 @@ FIXTURE SPECIFICATIONS:
 - Mounting: on gutter lip, inside gutter trough, or on fascia board adjacent to gutter
 - Beam spread: medium -- enough to wash dormer face
 
-PLACEMENT GEOMETRY:
-- Place ONE fixture per dormer
+PLACEMENT GEOMETRY (STRICT RULE - CRITICAL):
+*** EXACTLY ONE (1) FIXTURE PER DORMER - THIS IS MANDATORY ***
+- Each dormer receives ONE and ONLY ONE gutter-mounted up light
 - Mount on the MAIN ROOF gutter line directly BELOW each dormer
-- Align fixture on dormer's VERTICAL CENTERLINE (centered under the dormer)
+- The fixture MUST be CENTERED horizontally under the dormer (aligned with the dormer's vertical centerline)
+- The fixture sits INSIDE the horizontal gutter trough
+- COUNT RULE: If the house has 2 dormers, place exactly 2 lights. If 3 dormers, exactly 3 lights.
+- FORBIDDEN: Multiple lights per dormer, lights placed between dormers, lights on roof shingles
 
 MOUNTING OPTIONS:
 - INSIDE GUTTER TROUGH: fixture sits in gutter, aims up at dormer
@@ -1198,7 +1211,7 @@ STRICT EXCLUSION ZONES:
 - Do NOT use one fixture for multiple dormers -- one fixture per dormer
 - Do NOT skip dormers -- all dormers should be lit for balance
 - Ensure SYMMETRIC placement for balanced facade`,
-        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): Do NOT mount on dormer surface. Do NOT aim into window glass. Do NOT skip dormers. One fixture per dormer, centered on vertical axis.`
+        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE light per dormer - no more, no less. Light must be CENTERED in gutter directly below dormer. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`
       },
       {
         id: 'peaks',
