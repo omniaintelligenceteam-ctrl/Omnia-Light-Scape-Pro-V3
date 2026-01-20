@@ -1382,7 +1382,7 @@ Notes: ${invoice.notes || 'N/A'}
           
           {/* TAB: EDITOR */}
           {activeTab === 'editor' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative">
+            <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
               {/* Background Ambient Glow */}
               <div className="absolute top-[-10%] left-[20%] w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
@@ -1817,7 +1817,7 @@ Notes: ${invoice.notes || 'N/A'}
 
           {/* TAB: PROJECTS */}
           {activeTab === 'projects' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative">
+            <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
               {/* Background Tech Mesh/Glow */}
               <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
               <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
@@ -2906,7 +2906,7 @@ Notes: ${invoice.notes || 'N/A'}
 
            {/* TAB: INVENTORY */}
            {activeTab === 'inventory' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative">
+            <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
               {/* Background Tech Mesh/Glow */}
               <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
               <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
