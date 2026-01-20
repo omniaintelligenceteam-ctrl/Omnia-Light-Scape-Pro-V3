@@ -1856,3 +1856,12 @@ export const FIXTURE_TYPE_NAMES: Record<string, string> = {
   hardscape: 'Hardscape Light',
   coredrill: 'Core Drill Light'
 };
+
+// Theme - Accent color configurations
+export const ACCENT_COLORS = [
+  { id: 'gold', name: 'Gold', primary: '#F6B45A', hover: '#ffc67a', glow: 'rgba(246,180,90,0.3)' },
+  { id: 'blue', name: 'Sapphire', primary: '#3B82F6', hover: '#60A5FA', glow: 'rgba(59,130,246,0.3)' },
+  { id: 'purple', name: 'Amethyst', primary: '#8B5CF6', hover: '#A78BFA', glow: 'rgba(139,92,246,0.3)' },
+  { id: 'green', name: 'Emerald', primary: '#10B981', hover: '#34D399', glow: 'rgba(16,185,129,0.3)' },
+  { id: 'red', name: 'Ruby', primary: '#EF4444', hover: '#F87171', glow: 'rgba(239,68,68,0.3)' },
+] as const;

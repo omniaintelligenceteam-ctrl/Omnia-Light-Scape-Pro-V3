@@ -22,7 +22,7 @@ import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences } from './types';
 
 // Helper to parse fixture quantities from text
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -139,6 +139,21 @@ const App: React.FC = () => {
 
   // Inventory Sub-Tab State
   const [inventorySubTab, setInventorySubTab] = useState<'bom' | 'inventory'>('bom');
+
+  // Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [accentColor, setAccentColor] = useState<AccentColor>('gold');
+  const [fontSize, setFontSize] = useState<FontSize>('normal');
+  const [highContrast, setHighContrast] = useState<boolean>(false);
+
+  // Notification Preferences State
+  const [notifications, setNotifications] = useState<NotificationPreferences>({
+    emailProjectUpdates: true,
+    emailQuoteReminders: true,
+    smsNotifications: false,
+    marketingEmails: false,
+    soundEffects: true,
+  });
 
   // Auth State (API Key)
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -1721,16 +1736,23 @@ Notes: ${invoice.notes || 'N/A'}
                                                     Save Img
                                                 </button>
 
-                                                {p.quote && (
-                                                    <button
-                                                        onClick={() => setPdfProject(p)}
-                                                        className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
-                                                        title="Download Quote PDF"
-                                                    >
-                                                        <FileText className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
-                                                        Quote
-                                                    </button>
-                                                )}
+                                                {/* Add/Edit Quote Button */}
+                                                <button
+                                                    onClick={() => {
+                                                        if (p.image) setGeneratedImage(p.image);
+                                                        if (p.quote) {
+                                                            setCurrentQuote(p.quote);
+                                                        } else {
+                                                            setCurrentQuote(null);
+                                                        }
+                                                        setProjectsSubTab('quotes');
+                                                    }}
+                                                    className="flex-1 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-purple-500/30 hover:border-purple-500 group/btn"
+                                                    title={p.quote ? "Edit Quote" : "Add Quote"}
+                                                >
+                                                    <FileText className="w-3 h-3" />
+                                                    {p.quote ? 'Edit Quote' : 'Add Quote'}
+                                                </button>
 
                                                 {/* Approve Button */}
                                                 <button

@@ -131,3 +131,24 @@ export interface InvoiceData {
   notes: string;
   status: 'draft' | 'sent' | 'paid';
 }
+
+// === THEME TYPES ===
+export type AccentColor = 'gold' | 'blue' | 'purple' | 'green' | 'red';
+
+export type FontSize = 'compact' | 'normal' | 'comfortable';
+
+export interface ThemePreferences {
+  theme: 'light' | 'dark';
+  accentColor: AccentColor;
+  fontSize: FontSize;
+  highContrast: boolean;
+}
+
+// === NOTIFICATION TYPES ===
+export interface NotificationPreferences {
+  emailProjectUpdates: boolean;
+  emailQuoteReminders: boolean;
+  smsNotifications: boolean;
+  marketingEmails: boolean;
+  soundEffects: boolean;
+}
