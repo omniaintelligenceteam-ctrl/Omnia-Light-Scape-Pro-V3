@@ -347,27 +347,82 @@ ${customMessage ? `\n${customMessage}\n` : ''}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-2xl md:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-white/10 min-h-auto md:min-h-[1000px] p-5 md:p-12 overflow-hidden print:shadow-none print:border-none print:m-0 print:w-full print:bg-white print:text-black"
+            className="relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-xl md:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-white/10 min-h-auto md:min-h-[1000px] p-3 md:p-12 overflow-hidden print:shadow-none print:border-none print:m-0 print:w-full print:bg-white print:text-black"
         >
-          {/* Decorative corner accents */}
-          <div className="absolute top-4 left-4 w-8 h-8 border-l-2 border-t-2 border-[#F6B45A]/20 rounded-tl-lg print:hidden" />
-          <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-[#F6B45A]/20 rounded-tr-lg print:hidden" />
-          <div className="absolute bottom-4 left-4 w-8 h-8 border-l-2 border-b-2 border-[#F6B45A]/20 rounded-bl-lg print:hidden" />
-          <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-[#F6B45A]/20 rounded-br-lg print:hidden" />
+          {/* Decorative corner accents - hidden on mobile */}
+          <div className="hidden md:block absolute top-4 left-4 w-8 h-8 border-l-2 border-t-2 border-[#F6B45A]/20 rounded-tl-lg print:hidden" />
+          <div className="hidden md:block absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-[#F6B45A]/20 rounded-tr-lg print:hidden" />
+          <div className="hidden md:block absolute bottom-4 left-4 w-8 h-8 border-l-2 border-b-2 border-[#F6B45A]/20 rounded-bl-lg print:hidden" />
+          <div className="hidden md:block absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-[#F6B45A]/20 rounded-br-lg print:hidden" />
 
-          {/* Header - Reorganized Layout */}
-          <header className="mb-8 md:mb-12 border-b border-white/10 pb-6 print:border-gray-200 relative">
-             {/* Company Name - Top Center */}
-             <div className="text-center mb-6">
-                <h1 className="text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] tracking-tight font-serif print:text-[#111]">
+          {/* Header - Compact on mobile */}
+          <header className="mb-4 md:mb-12 border-b border-white/10 pb-4 md:pb-6 print:border-gray-200 relative">
+             {/* Company Name - Smaller on mobile */}
+             <div className="text-center mb-3 md:mb-6">
+                <h1 className="text-xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] tracking-tight font-serif print:text-[#111]">
                      {companyProfile.name}
                 </h1>
              </div>
 
-             {/* Two Column Layout: Quote For (Left) | Logo + Address + Date (Right) */}
-             <div className="flex flex-col md:flex-row justify-between gap-6">
+             {/* Mobile: Compact stacked layout */}
+             <div className="md:hidden space-y-3">
+                {/* Client Info Row */}
+                <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2 border border-white/5">
+                    <User className="w-4 h-4 text-[#F6B45A] shrink-0" />
+                    <input
+                        type="text"
+                        value={clientName}
+                        onChange={(e) => setClientName(e.target.value)}
+                        className="flex-1 bg-transparent text-sm font-bold text-white placeholder-gray-500 focus:outline-none"
+                        placeholder="Client Name"
+                    />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2 border border-white/5">
+                        <Mail className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                        <input
+                            type="text"
+                            value={clientEmail}
+                            onChange={(e) => setClientEmail(e.target.value)}
+                            className="flex-1 bg-transparent text-xs text-gray-300 placeholder-gray-500 focus:outline-none min-w-0"
+                            placeholder="Email"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2 border border-white/5">
+                        <Phone className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                        <input
+                            type="text"
+                            value={clientPhone}
+                            onChange={(e) => setClientPhone(e.target.value)}
+                            className="flex-1 bg-transparent text-xs text-gray-300 placeholder-gray-500 focus:outline-none min-w-0"
+                            placeholder="Phone"
+                        />
+                    </div>
+                </div>
+                {/* Address Row */}
+                <div className="flex items-start gap-2 bg-white/5 rounded-lg p-2 border border-white/5">
+                    <MapPin className="w-3.5 h-3.5 text-[#F6B45A] shrink-0 mt-0.5" />
+                    <textarea
+                        className="flex-1 bg-transparent text-xs text-gray-300 resize-none h-10 placeholder-gray-500 focus:outline-none"
+                        value={projectAddress}
+                        onChange={(e) => setProjectAddress(e.target.value)}
+                        placeholder="Project Address"
+                    />
+                </div>
+                {/* Date */}
+                <div className="flex items-center justify-between text-[10px] text-gray-500">
+                    <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-[#F6B45A]"/>
+                        {today}
+                    </span>
+                    <span className="font-mono">QT-{String(Date.now()).slice(-8)}</span>
+                </div>
+             </div>
+
+             {/* Desktop: Two Column Layout */}
+             <div className="hidden md:flex flex-row justify-between gap-6">
                 {/* Left Side - Quote For (Client Info) */}
-                <div className="flex-1 md:max-w-[45%]">
+                <div className="flex-1 max-w-[45%]">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20">
                             <User className="w-4 h-4 text-[#F6B45A]" />
@@ -412,10 +467,10 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                 <div className="flex flex-col items-end text-right">
                     {/* Logo - Top Right, Bigger */}
                     {companyProfile.logo && (
-                        <img src={companyProfile.logo} alt="Logo" className="h-20 w-20 md:h-28 md:w-28 object-contain mb-4" />
+                        <img src={companyProfile.logo} alt="Logo" className="h-28 w-28 object-contain mb-4" />
                     )}
                     {/* Address */}
-                    <div className="text-xs md:text-sm text-gray-400 space-y-0.5 whitespace-pre-line print:text-gray-600 mb-3">
+                    <div className="text-sm text-gray-400 space-y-0.5 whitespace-pre-line print:text-gray-600 mb-3">
                         {companyProfile.address}
                     </div>
                     {/* Date */}
@@ -429,15 +484,15 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                 </div>
              </div>
 
-             {/* Quote number badge */}
-             <div className="absolute top-0 right-0 flex items-center gap-2 px-4 py-2 rounded-bl-xl bg-white/5 border-l border-b border-white/10 print:hidden">
+             {/* Quote number badge - Desktop only */}
+             <div className="hidden md:flex absolute top-0 right-0 items-center gap-2 px-4 py-2 rounded-bl-xl bg-white/5 border-l border-b border-white/10 print:hidden">
                  <Hash className="w-3 h-3 text-gray-500" />
                  <span className="text-[10px] font-mono text-gray-400">QT-{String(Date.now()).slice(-8)}</span>
              </div>
           </header>
 
-          {/* Project Site Info - Now Separate Below Header */}
-          <div className="mb-8 md:mb-12">
+          {/* Project Site Info - Desktop only, mobile has it in header */}
+          <div className="hidden md:block mb-12">
              <motion.div
                  className="relative bg-gradient-to-br from-white/[0.04] to-transparent p-5 rounded-2xl border border-white/10 overflow-hidden print:border-none print:p-0 print:bg-transparent max-w-md"
                  whileHover={{ borderColor: 'rgba(246,180,90,0.3)' }}
@@ -464,11 +519,11 @@ ${customMessage ? `\n${customMessage}\n` : ''}
           </div>
 
           {/* Line Items Section Header */}
-          <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                  <Receipt className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+              <div className="p-1.5 md:p-2 rounded-lg bg-white/5 border border-white/10">
+                  <Receipt className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
               </div>
-              <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em]">Line Items</h3>
+              <h3 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-[0.15em]">Line Items</h3>
               <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
           </div>
 
@@ -548,8 +603,68 @@ ${customMessage ? `\n${customMessage}\n` : ''}
             </table>
           </div>
 
-          {/* Line Items - MOBILE CARDS */}
-          <div className="md:hidden space-y-4 mb-8">
+          {/* Line Items - MOBILE CARDS - Compact */}
+          <div className="md:hidden space-y-2 mb-4">
+            {lineItems.map((item, index) => (
+                <motion.div
+                    key={index}
+                    className="relative bg-white/[0.03] border border-white/10 rounded-xl p-3 overflow-hidden print:bg-transparent print:border-gray-200"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.02 }}
+                >
+                    {/* Top row: Name + Delete */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                        <input
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => handleUpdateItem(index, 'name', e.target.value)}
+                            className="font-bold text-white text-sm flex-1 bg-transparent border-none p-0 focus:ring-0 placeholder-gray-500 print:text-black"
+                            placeholder="Item Name"
+                        />
+                        <motion.button
+                            onClick={() => handleRemoveItem(index)}
+                            className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg print:hidden"
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </motion.button>
+                    </div>
+
+                    {/* Controls Row: Qty, Rate, Total */}
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 bg-white/5 rounded-lg px-2 py-1.5 border border-white/5">
+                            <label className="text-[8px] font-bold uppercase text-gray-500">Qty</label>
+                            <input
+                                type="number"
+                                value={item.quantity}
+                                min="0"
+                                onChange={(e) => handleUpdateItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                                className="w-10 text-sm font-bold text-[#F6B45A] bg-transparent border-none p-0 focus:ring-0 text-center print:text-black"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1 bg-white/5 rounded-lg px-2 py-1.5 border border-white/5">
+                            <label className="text-[8px] font-bold uppercase text-gray-500">$</label>
+                            <input
+                                type="number"
+                                value={item.unitPrice}
+                                step="0.01"
+                                onChange={(e) => handleUpdateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                className="w-14 text-sm font-bold text-white bg-transparent border-none p-0 focus:ring-0 print:text-black"
+                            />
+                        </div>
+                        <div className="flex-1 text-right">
+                            <span className="text-sm font-bold text-[#F6B45A] font-mono">
+                                ${(item.unitPrice * item.quantity).toFixed(0)}
+                            </span>
+                        </div>
+                    </div>
+                </motion.div>
+            ))}
+          </div>
+
+          {/* Line Items - MOBILE CARDS - Original (hidden, keeping for reference) */}
+          <div className="hidden space-y-4 mb-8">
             {lineItems.map((item, index) => (
                 <motion.div
                     key={index}
@@ -624,51 +739,46 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 
           {/* Add Item Button */}
           {!hideToolbar && (
-            <div className="mb-12 print:hidden">
+            <div className="mb-4 md:mb-12 print:hidden">
                 <motion.button
                     onClick={handleAddItem}
-                    className="w-full md:w-auto flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#ffc67a] hover:bg-[#F6B45A]/10 px-8 py-4 rounded-xl border-2 border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A]/60 transition-all"
-                    whileHover={{ scale: 1.01 }}
+                    className="w-full md:w-auto flex items-center justify-center gap-2 text-[10px] md:text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#ffc67a] hover:bg-[#F6B45A]/10 px-4 md:px-8 py-2.5 md:py-4 rounded-lg md:rounded-xl border border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A]/60 transition-all"
                     whileTap={{ scale: 0.99 }}
                 >
-                    <Plus className="w-5 h-5" />
-                    ADD LINE ITEM
+                    <Plus className="w-4 h-4 md:w-5 md:h-5" />
+                    ADD ITEM
                 </motion.button>
             </div>
           )}
 
           {/* Totals with Project Image */}
           <motion.div
-              className="relative bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 md:p-8 rounded-2xl border border-white/10 mb-12 md:mb-16 overflow-hidden print:bg-transparent print:border-none print:p-0"
+              className="relative bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-3 md:p-8 rounded-xl md:rounded-2xl border border-white/10 mb-4 md:mb-16 overflow-hidden print:bg-transparent print:border-none print:p-0"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
           >
-             {/* Decorative glow */}
-             <div className="absolute top-0 right-0 w-32 h-32 bg-[#F6B45A]/10 rounded-full blur-3xl pointer-events-none print:hidden" />
+             {/* Decorative glow - hidden on mobile */}
+             <div className="hidden md:block absolute top-0 right-0 w-32 h-32 bg-[#F6B45A]/10 rounded-full blur-3xl pointer-events-none print:hidden" />
 
-             <div className="flex flex-col md:flex-row gap-6 md:gap-8 relative z-10">
-                 {/* Project Image */}
-                 <div className="flex-1 md:flex-[1.2]">
+             <div className="flex flex-col md:flex-row gap-3 md:gap-8 relative z-10">
+                 {/* Project Image - smaller on mobile */}
+                 <div className="md:flex-[1.2]">
                      {projectImage ? (
-                         <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/30 print:border-gray-200">
+                         <div className="relative rounded-lg md:rounded-xl overflow-hidden border border-white/10 bg-black/30 print:border-gray-200">
                              <img
                                  src={projectImage}
                                  alt="Project Design"
-                                 className="w-full h-auto object-cover"
+                                 className="w-full h-auto object-cover max-h-32 md:max-h-none"
                              />
-                             {/* Tech corners */}
-                             <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
-                             <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
-                             <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
-                             <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
-                             {/* Label */}
-                             <div className="absolute bottom-3 left-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm border border-white/10 print:hidden">
-                                 <span className="text-[9px] font-bold uppercase tracking-wider text-[#F6B45A]">Lighting Design</span>
-                             </div>
+                             {/* Tech corners - hidden on mobile */}
+                             <div className="hidden md:block absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="hidden md:block absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="hidden md:block absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="hidden md:block absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
                          </div>
                      ) : (
-                         <div className="h-full min-h-[200px] md:min-h-[280px] rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center text-center p-6 print:hidden">
+                         <div className="hidden md:flex h-full min-h-[280px] rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex-col items-center justify-center text-center p-6 print:hidden">
                              <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
                                  <Sparkles className="w-6 h-6 text-gray-600" />
                              </div>
@@ -678,65 +788,65 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                      )}
                  </div>
 
-                 {/* Totals Column */}
-                 <div className="flex flex-col md:items-end gap-3 md:flex-1">
-                     <div className="w-full md:w-72 flex justify-between py-3 text-sm text-gray-300 print:text-gray-600">
+                 {/* Totals Column - Compact on mobile */}
+                 <div className="flex flex-col md:items-end gap-1 md:gap-3 md:flex-1">
+                     <div className="w-full md:w-72 flex justify-between py-1.5 md:py-3 text-xs md:text-sm text-gray-300 print:text-gray-600">
                         <span>Subtotal</span>
-                        <span className="font-bold text-lg text-white font-mono print:text-black">${subtotal.toFixed(2)}</span>
+                        <span className="font-bold text-sm md:text-lg text-white font-mono print:text-black">${subtotal.toFixed(2)}</span>
                      </div>
 
                      {/* Discount Row */}
-                     <div className="w-full md:w-72 flex justify-between items-center py-3 text-sm text-gray-300 print:text-gray-600">
-                        <span className="flex items-center gap-2 text-white font-medium print:text-black">
-                            <Tag className="w-4 h-4 text-gray-500" />
+                     <div className="w-full md:w-72 flex justify-between items-center py-1.5 md:py-3 text-xs md:text-sm text-gray-300 print:text-gray-600">
+                        <span className="flex items-center gap-1 md:gap-2 text-white font-medium print:text-black">
+                            <Tag className="w-3 h-3 md:w-4 md:h-4 text-gray-500" />
                             Discount
                         </span>
                         <div className="flex items-center gap-1">
-                            <span className="text-gray-500 text-sm">-$</span>
+                            <span className="text-gray-500 text-xs md:text-sm">-$</span>
                             <input
                                 type="number"
                                 value={discount}
                                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-0 focus:border-[#F6B45A] font-bold placeholder-gray-600 font-mono transition-colors print:bg-transparent print:border-gray-200 print:text-black"
+                                className="w-16 md:w-24 text-right bg-[#0a0a0a] border border-white/10 rounded-lg px-2 md:px-3 py-1 md:py-2 text-xs md:text-sm text-white focus:ring-0 focus:border-[#F6B45A] font-bold placeholder-gray-600 font-mono transition-colors print:bg-transparent print:border-gray-200 print:text-black"
                                 min="0"
-                                placeholder="0.00"
+                                placeholder="0"
                             />
                         </div>
                      </div>
 
-                     <div className="w-full md:w-72 flex justify-between items-center py-3 text-sm text-gray-300 border-b border-white/10 print:border-gray-200 print:text-gray-600">
-                        <div className="flex items-center gap-2">
-                            <span>Tax Rate</span>
-                            <div className="flex items-center bg-[#0a0a0a] rounded-lg px-3 py-2 border border-white/10 print:bg-gray-50 print:border-none">
+                     <div className="w-full md:w-72 flex justify-between items-center py-1.5 md:py-3 text-xs md:text-sm text-gray-300 border-b border-white/10 print:border-gray-200 print:text-gray-600">
+                        <div className="flex items-center gap-1 md:gap-2">
+                            <span>Tax</span>
+                            <div className="flex items-center bg-[#0a0a0a] rounded-lg px-2 py-1 md:px-3 md:py-2 border border-white/10 print:bg-gray-50 print:border-none">
                                 <input
                                     type="number"
                                     value={(taxRate * 100).toFixed(1)}
                                     onChange={(e) => setTaxRate((parseFloat(e.target.value) || 0) / 100)}
-                                    className="w-12 text-right bg-transparent border-none p-0 text-sm focus:ring-0 font-medium text-white font-mono print:text-black"
+                                    className="w-8 md:w-12 text-right bg-transparent border-none p-0 text-xs md:text-sm focus:ring-0 font-medium text-white font-mono print:text-black"
                                     step="0.1"
                                 />
-                                <Percent className="w-3 h-3 ml-1 text-gray-500" />
+                                <Percent className="w-2.5 h-2.5 md:w-3 md:h-3 ml-0.5 md:ml-1 text-gray-500" />
                             </div>
                         </div>
-                        <span className="font-bold text-lg text-white font-mono print:text-black">${tax.toFixed(2)}</span>
+                        <span className="font-bold text-sm md:text-lg text-white font-mono print:text-black">${tax.toFixed(2)}</span>
                      </div>
 
                      {/* Grand Total */}
-                     <div className="w-full md:w-72 flex justify-between items-center py-4 mt-2">
-                        <span className="text-lg font-bold text-white print:text-black">Grand Total</span>
+                     <div className="w-full md:w-72 flex justify-between items-center py-2 md:py-4 mt-1 md:mt-2">
+                        <span className="text-sm md:text-lg font-bold text-white print:text-black">Total</span>
                         <div className="relative">
-                            <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] font-mono print:text-black">
+                            <span className="text-xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] font-mono print:text-black">
                                 ${total.toFixed(2)}
                             </span>
-                            <div className="absolute -inset-2 bg-[#F6B45A]/20 blur-xl -z-10 print:hidden" />
+                            <div className="hidden md:block absolute -inset-2 bg-[#F6B45A]/20 blur-xl -z-10 print:hidden" />
                         </div>
                      </div>
                  </div>
              </div>
           </motion.div>
 
-          {/* Footer / Terms */}
-          <div className="mt-auto pt-8 border-t border-white/10 print:border-gray-200">
+          {/* Footer / Terms - Hidden on mobile for compactness */}
+          <div className="hidden md:block mt-auto pt-8 border-t border-white/10 print:border-gray-200">
              <div className="flex items-center gap-3 mb-4">
                  <div className="p-2 rounded-lg bg-white/5 border border-white/10">
                      <FileText className="w-4 h-4 text-gray-400" />
@@ -744,16 +854,16 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                  <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-white print:text-gray-800">Terms & Conditions</h4>
              </div>
              <textarea
-                className="w-full text-xs text-gray-400 leading-relaxed max-w-2xl mb-8 md:mb-12 border-none resize-none bg-transparent focus:bg-white/5 p-3 rounded-xl focus:ring-0 min-h-[100px] transition-colors print:text-gray-600"
+                className="w-full text-xs text-gray-400 leading-relaxed max-w-2xl mb-12 border-none resize-none bg-transparent focus:bg-white/5 p-3 rounded-xl focus:ring-0 min-h-[100px] transition-colors print:text-gray-600"
                 defaultValue="This estimate is valid for 30 days. A 50% deposit is required to schedule installation. The remaining balance is due upon completion of the project. Any changes to this scope of work must be approved in writing and may result in additional charges. Lifetime warranty on fixtures covers manufacturer defects; labor warranty is valid for 2 years from installation date."
              />
 
-             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 md:gap-12">
-                <div className="w-full md:flex-1">
+             <div className="flex flex-row justify-between items-end gap-12">
+                <div className="flex-1">
                     <div className="border-b-2 border-white/20 pb-2 mb-2 print:border-gray-300" />
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest print:text-gray-400">Authorized Signature</p>
                 </div>
-                <div className="w-full md:flex-1">
+                <div className="flex-1">
                      <div className="border-b-2 border-white/20 pb-2 mb-2 print:border-gray-300" />
                      <p className="text-[10px] text-gray-500 uppercase tracking-widest print:text-gray-400">Date</p>
                 </div>
