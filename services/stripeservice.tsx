@@ -21,14 +21,20 @@ export const createCheckoutSession = async (userId: string, priceId: string): Pr
 };
 
 export const createPortalSession = async (userId: string): Promise<{ url: string }> => {
-  console.log(`[Stripe Service] Creating portal session for user ${userId}`);
-  
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const response = await fetch(`${API_URL}/api/stripe/portal`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userId }),
+  });
 
-  return {
-    url: 'https://billing.stripe.com/p/session/mock_portal'
-  };
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create portal session');
+  }
+
+  return response.json();
 };
 
 /**

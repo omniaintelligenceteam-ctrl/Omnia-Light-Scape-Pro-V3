@@ -4,6 +4,21 @@ import { GoogleGenAI } from "@google/genai";
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
 const MODEL_NAME = 'gemini-3-pro-image-preview';
 
+// Timeout for API calls (2 minutes)
+const API_TIMEOUT_MS = 120000;
+
+/**
+ * Wraps a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    )
+  ]);
+}
+
 export const generateNightScene = async (
   imageBase64: string,
   userInstructions: string,
@@ -67,7 +82,7 @@ export const generateNightScene = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const generatePromise = ai.models.generateContent({
       model: MODEL_NAME,
       contents: {
         parts: [
@@ -84,11 +99,18 @@ export const generateNightScene = async (
       },
       config: {
         imageConfig: {
-            imageSize: "2K", 
-            aspectRatio: aspectRatio, 
+            imageSize: "2K",
+            aspectRatio: aspectRatio,
         }
       },
     });
+
+    // Wrap with timeout to prevent hanging
+    const response = await withTimeout(
+      generatePromise,
+      API_TIMEOUT_MS,
+      'Generation timed out. The server took too long to respond. Please try again.'
+    );
 
     if (response.candidates && response.candidates.length > 0) {
       const candidate = response.candidates[0];

@@ -183,12 +183,95 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
                 }
                 break;
             }
+
+            case 'invoice.paid': {
+                // Reset monthly generation count when subscription renews
+                const invoice = event.data.object as Stripe.Invoice;
+                const subscriptionId = invoice.subscription as string;
+
+                // Only reset for subscription invoices (not first payment)
+                if (invoice.billing_reason === 'subscription_cycle') {
+                    // Get subscription to find user
+                    const { data: subData, error: subError } = await supabase
+                        .from('subscriptions')
+                        .select('user_id')
+                        .eq('stripe_subscription_id', subscriptionId)
+                        .single();
+
+                    if (subError || !subData) {
+                        console.error('Subscription not found for invoice:', subscriptionId);
+                        break;
+                    }
+
+                    // Reset generation count for this user
+                    const { error: resetError } = await supabase
+                        .from('users')
+                        .update({ generation_count: 0 })
+                        .eq('id', subData.user_id);
+
+                    if (resetError) {
+                        console.error('Failed to reset generation count:', resetError);
+                    } else {
+                        console.log('Reset generation count for user:', subData.user_id);
+                    }
+                }
+                break;
+            }
         }
 
         res.json({ received: true });
     } catch (err) {
         console.error('Webhook processing error:', err);
         res.status(500).json({ error: 'Webhook processing failed' });
+    }
+});
+
+// POST /api/stripe/portal - Create customer portal session
+router.post('/portal', async (req: Request<{}, {}, { userId: string }>, res: Response) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'Missing userId' });
+        }
+
+        if (!supabase) {
+            return res.status(500).json({ error: 'Database not configured' });
+        }
+
+        // Get user's internal ID from clerk_user_id
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('clerk_user_id', userId)
+            .single();
+
+        if (userError || !userData) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Get stripe_customer_id from subscriptions table
+        const { data: subData, error: subError } = await supabase
+            .from('subscriptions')
+            .select('stripe_customer_id')
+            .eq('user_id', userData.id)
+            .eq('status', 'active')
+            .single();
+
+        if (subError || !subData?.stripe_customer_id) {
+            return res.status(404).json({ error: 'No active subscription found' });
+        }
+
+        // Create Stripe billing portal session
+        const session = await stripe.billingPortal.sessions.create({
+            customer: subData.stripe_customer_id,
+            return_url: `${process.env.FRONTEND_URL}/settings`,
+        });
+
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error('Stripe portal error:', err);
+        res.status(500).json({ error: 'Failed to create portal session' });
     }
 });
 

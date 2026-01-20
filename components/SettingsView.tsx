@@ -1,8 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2 } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES } from '../constants';
 import { FixturePricing, CompanyProfile, FixtureCatalogItem } from '../types';
+import { createPortalSession } from '../services/stripeservice';
+
+interface SubscriptionInfo {
+  hasActiveSubscription: boolean;
+  plan: string | null;
+  remainingFreeGenerations: number;
+  freeTrialLimit: number;
+  generationCount: number;
+  monthlyLimit?: number;
+}
 
 interface SettingsViewProps {
   profile?: CompanyProfile;
@@ -17,6 +27,9 @@ interface SettingsViewProps {
   onPricingChange?: (pricing: FixturePricing[]) => void;
   fixtureCatalog?: FixtureCatalogItem[];
   onFixtureCatalogChange?: (catalog: FixtureCatalogItem[]) => void;
+  subscription?: SubscriptionInfo;
+  userId?: string;
+  onRequestUpgrade?: () => void;
 }
 
 // --- UI COMPONENTS ---
@@ -289,9 +302,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     pricing,
     onPricingChange,
     fixtureCatalog = [],
-    onFixtureCatalogChange
+    onFixtureCatalogChange,
+    subscription,
+    userId,
+    onRequestUpgrade
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('company');
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
   const [showAddCatalogProduct, setShowAddCatalogProduct] = useState(false);
   const [customCatalogProducts, setCustomCatalogProducts] = useState<CustomCatalogItem[]>([]);
   const [newCatalogProduct, setNewCatalogProduct] = useState({
@@ -376,6 +394,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       }
   };
 
+  const handleManageSubscription = async () => {
+    if (!userId) {
+      setPortalError('Please sign in to manage your subscription');
+      return;
+    }
+
+    setIsLoadingPortal(true);
+    setPortalError(null);
+
+    try {
+      const { url } = await createPortalSession(userId);
+      window.location.href = url;
+    } catch (err) {
+      setPortalError(err instanceof Error ? err.message : 'Failed to open billing portal');
+      setIsLoadingPortal(false);
+    }
+  };
+
+  const getPlanDisplayName = (planId: string | null): string => {
+    if (!planId) return 'Free';
+    if (planId.includes('STARTER') || planId.includes('starter') || planId.includes('SrNHI') || planId.includes('SrNJd')) return 'Starter';
+    if (planId.includes('PRO') || planId.includes('pro') || planId.includes('SrNK5') || planId.includes('SrNKf')) return 'Pro';
+    if (planId.includes('BUSINESS') || planId.includes('business') || planId.includes('SrNLU') || planId.includes('SrNM8')) return 'Business';
+    return 'Pro';
+  };
+
   return (
     <div className="h-full bg-[#050505] overflow-y-auto relative">
       <div className="max-w-3xl mx-auto p-4 md:p-12 pb-24 relative z-10">
@@ -384,6 +428,150 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Settings</h2>
             <div className="h-1 w-20 bg-[#F6B45A] rounded-full"></div>
         </div>
+
+        {/* --- SUBSCRIPTION SECTION --- */}
+        {subscription && (
+          <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">
+            <SectionHeader
+                icon={CreditCard}
+                title="Subscription"
+                subtitle="Manage your billing and plan"
+                isOpen={activeSection === 'subscription'}
+                onToggle={() => setActiveSection(activeSection === 'subscription' ? null : 'subscription')}
+            />
+
+            {activeSection === 'subscription' && (
+                <div className="p-6 md:p-8 animate-in slide-in-from-top-4 duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        {/* Plan Info */}
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                    subscription.hasActiveSubscription
+                                        ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
+                                        : 'bg-white/10 text-gray-400 border border-white/10'
+                                }`}>
+                                    {subscription.hasActiveSubscription ? getPlanDisplayName(subscription.plan) : 'Free Trial'}
+                                </div>
+                                {subscription.hasActiveSubscription && (
+                                    <span className="text-xs text-green-400 flex items-center gap-1">
+                                        <Check className="w-3 h-3" /> Active
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Usage Info with Progress Bar */}
+                            <div className="space-y-3">
+                                {subscription.hasActiveSubscription ? (
+                                    subscription.monthlyLimit === -1 ? (
+                                        <>
+                                            <div className="flex justify-between items-center">
+                                                <p className="text-sm text-gray-300">
+                                                    <span className="text-white font-bold">{subscription.generationCount}</span> generations this month
+                                                </p>
+                                                <span className="text-xs text-[#F6B45A] font-bold">UNLIMITED</span>
+                                            </div>
+                                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-gradient-to-r from-[#F6B45A] to-[#F6B45A]/60 rounded-full w-full animate-pulse" />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex justify-between items-center">
+                                                <p className="text-sm text-gray-300">
+                                                    <span className="text-white font-bold">{subscription.generationCount}</span> / {subscription.monthlyLimit} used
+                                                </p>
+                                                <span className="text-xs text-gray-400">
+                                                    {Math.max(0, (subscription.monthlyLimit || 0) - subscription.generationCount)} remaining
+                                                </span>
+                                            </div>
+                                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-500 ${
+                                                        (subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.9
+                                                            ? 'bg-red-500'
+                                                            : (subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.7
+                                                            ? 'bg-yellow-500'
+                                                            : 'bg-[#F6B45A]'
+                                                    }`}
+                                                    style={{ width: `${Math.min(100, (subscription.generationCount / (subscription.monthlyLimit || 1)) * 100)}%` }}
+                                                />
+                                            </div>
+                                            {(subscription.generationCount / (subscription.monthlyLimit || 1)) > 0.8 && (
+                                                <p className="text-xs text-yellow-400">
+                                                    You're approaching your monthly limit
+                                                </p>
+                                            )}
+                                        </>
+                                    )
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-sm text-gray-300">
+                                                <span className="text-white font-bold">{subscription.freeTrialLimit - subscription.remainingFreeGenerations}</span> / {subscription.freeTrialLimit} used
+                                            </p>
+                                            <span className="text-xs text-gray-400">
+                                                {subscription.remainingFreeGenerations} free remaining
+                                            </span>
+                                        </div>
+                                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 ${
+                                                    subscription.remainingFreeGenerations <= 3
+                                                        ? 'bg-red-500'
+                                                        : subscription.remainingFreeGenerations <= 7
+                                                        ? 'bg-yellow-500'
+                                                        : 'bg-[#F6B45A]'
+                                                }`}
+                                                style={{ width: `${((subscription.freeTrialLimit - subscription.remainingFreeGenerations) / subscription.freeTrialLimit) * 100}%` }}
+                                            />
+                                        </div>
+                                        {subscription.remainingFreeGenerations <= 5 && (
+                                            <p className="text-xs text-yellow-400">
+                                                Running low on free generations - upgrade to continue
+                                            </p>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <div className="flex flex-col gap-2">
+                            {subscription.hasActiveSubscription ? (
+                                <button
+                                    onClick={handleManageSubscription}
+                                    disabled={isLoadingPortal}
+                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoadingPortal ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <ExternalLink className="w-4 h-4" />
+                                            Manage Subscription
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={onRequestUpgrade}
+                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#F6B45A] text-[#050505] rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-[#ffc67a] shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] transition-all"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                    Upgrade Now
+                                </button>
+                            )}
+
+                            {portalError && (
+                                <p className="text-xs text-red-400 text-center">{portalError}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+          </div>
+        )}
 
         {/* --- SECTION 1: COMPANY PROFILE --- */}
         <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden mb-6 shadow-xl">

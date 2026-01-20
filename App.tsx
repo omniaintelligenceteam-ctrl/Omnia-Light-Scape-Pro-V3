@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -9,10 +9,13 @@ import AuthWrapper from './components/AuthWrapper';
 import { InventoryView } from './components/InventoryView';
 import { BOMView } from './components/BOMView';
 import { Pricing } from './components/Pricing';
+import { BillingSuccess } from './components/BillingSuccess';
+import { BillingCanceled } from './components/BillingCanceled';
 import { generateBOM } from './utils/bomCalculator';
 import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
 import { useSubscription } from './hooks/useSubscription';
+import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
@@ -50,11 +53,18 @@ const App: React.FC = () => {
   const { user } = useUser();
   useUserSync(); // Automatically sync user to Supabase on sign-in
 
+  // Toast notifications
+  const { showToast } = useToast();
+
   // Subscription and usage tracking
   const subscription = useSubscription();
 
   // Load/save projects from Supabase
   const { projects, isLoading: projectsLoading, saveProject, deleteProject } = useProjects();
+
+  // Rate limiting for generate button (prevent double-clicks)
+  const lastGenerateTime = useRef<number>(0);
+  const GENERATE_COOLDOWN_MS = 3000; // 3 seconds between generations
 
   const [activeTab, setActiveTab] = useState<string>('editor');
   
@@ -83,8 +93,7 @@ const App: React.FC = () => {
   
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, useStateError] = useState<string | null>(null);
-  const setError = (msg: string | null) => useStateError(msg);
+  const [error, setError] = useState<string | null>(null);
 
   // Full Screen State
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
@@ -294,16 +303,43 @@ const App: React.FC = () => {
 
   const [showPricing, setShowPricing] = useState(false);
 
+  // Billing page path detection
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  // Handle billing page navigation
+  const handleBillingContinue = () => {
+    window.history.pushState({}, '', '/');
+    setCurrentPath('/');
+  };
+
+  const handleBillingRetry = () => {
+    setShowPricing(true);
+    window.history.pushState({}, '', '/');
+    setCurrentPath('/');
+  };
+
   const handleGenerate = async () => {
     if (!file || !previewUrl) return;
+
+    // Rate limiting - prevent rapid clicks
+    const now = Date.now();
+    if (now - lastGenerateTime.current < GENERATE_COOLDOWN_MS) {
+      showToast('warning', 'Please wait before generating again');
+      return;
+    }
+    lastGenerateTime.current = now;
 
     // Check if user can generate (subscription or free trial)
     const { canGenerate, reason } = await subscription.checkCanGenerate();
     if (!canGenerate) {
       if (reason === 'FREE_TRIAL_EXHAUSTED') {
         setShowPricing(true);
+        showToast('info', 'Upgrade to continue generating');
+      } else if (reason === 'MONTHLY_LIMIT_REACHED') {
+        showToast('warning', 'Monthly generation limit reached. Resets next billing cycle.');
       } else {
         setError('Unable to generate. Please try again.');
+        showToast('error', 'Unable to generate. Please try again.');
       }
       return;
     }
@@ -511,15 +547,18 @@ const App: React.FC = () => {
       setGeneratedImage(result);
       // Increment usage count after successful generation
       await subscription.incrementUsage();
+      showToast('success', 'Night scene generated successfully!');
     } catch (err: any) {
       console.error(err);
       const errorMessage = err.toString().toLowerCase();
       if (errorMessage.includes('403') || errorMessage.includes('permission_denied') || errorMessage.includes('permission denied')) {
         setError("Permission denied. Please check your API Key configuration.");
+        showToast('error', 'Permission denied. Check your API key.');
         // Only try to open the modal if we are in the AI Studio environment
         if ((window as any).aistudio) await requestApiKey();
       } else {
         setError("Failed to generate night scene. Please try again.");
+        showToast('error', 'Generation failed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -528,6 +567,14 @@ const App: React.FC = () => {
 
   const handleFeedbackRegenerate = async () => {
     if (!file || !feedbackText) return;
+
+    // Rate limiting - prevent rapid clicks
+    const now = Date.now();
+    if (now - lastGenerateTime.current < GENERATE_COOLDOWN_MS) {
+      showToast('warning', 'Please wait before generating again');
+      return;
+    }
+    lastGenerateTime.current = now;
 
     setIsLoading(true);
     setError(null);
@@ -554,14 +601,17 @@ const App: React.FC = () => {
         setShowFeedback(false);
         setFeedbackText('');
         setIsLiked(false);
+        showToast('success', 'Scene regenerated with your feedback!');
     } catch (err: any) {
         console.error(err);
         const errorMessage = err.toString().toLowerCase();
         if (errorMessage.includes('403') || errorMessage.includes('permission_denied')) {
             setError("Permission denied. Please check your API Key configuration.");
+            showToast('error', 'Permission denied. Check your API key.');
             if ((window as any).aistudio) await requestApiKey();
         } else {
             setError("Failed to regenerate. Please try again.");
+            showToast('error', 'Regeneration failed. Please try again.');
         }
     } finally {
         setIsLoading(false);
@@ -645,19 +695,17 @@ const App: React.FC = () => {
   };
 
   const handleSaveProjectFromEditor = async () => {
-      console.log('Save Project clicked!', { hasImage: !!generatedImage });
       if (!generatedImage) {
-        console.log('No generated image, returning early');
         return;
       }
       const projectName = `Night Scene ${projects.length + 1}`;
-      console.log('Calling saveProject with:', projectName);
       const result = await saveProject(projectName, generatedImage, null);
-      console.log('saveProject result:', result);
       if (result) {
         setActiveTab('projects');
+        showToast('success', 'Project saved successfully!');
       } else {
         setError('Failed to save project. Please try again.');
+        showToast('error', 'Failed to save project');
       }
   };
 
@@ -666,13 +714,16 @@ const App: React.FC = () => {
       const result = await saveProject(projectName, generatedImage || '', quoteData);
       if (result) {
         setActiveTab('projects');
+        showToast('success', 'Quote saved to project!');
       } else {
         setError('Failed to save project. Please try again.');
+        showToast('error', 'Failed to save project');
       }
   };
 
   const handleDeleteProject = async (id: string) => {
       await deleteProject(id);
+      showToast('success', 'Project deleted');
   };
 
   const handleGenerateBOM = (quoteData: QuoteData) => {
@@ -690,8 +741,10 @@ const App: React.FC = () => {
       const result = await saveProject(projectName, generatedImage || '', currentQuote, bom);
       if (result) {
         setActiveTab('projects');
+        showToast('success', 'BOM saved to project!');
       } else {
         setError('Failed to save project. Please try again.');
+        showToast('error', 'Failed to save project');
       }
   };
 
@@ -934,6 +987,24 @@ Notes: ${invoice.notes || 'N/A'}
                 )}
             </div>
         </div>
+    );
+  }
+
+  // 4. Show Billing Success page
+  if (currentPath === '/billing/success') {
+    return (
+      <AuthWrapper>
+        <BillingSuccess onContinue={handleBillingContinue} />
+      </AuthWrapper>
+    );
+  }
+
+  // 5. Show Billing Canceled page
+  if (currentPath === '/billing/canceled') {
+    return (
+      <AuthWrapper>
+        <BillingCanceled onContinue={handleBillingContinue} onRetry={handleBillingRetry} />
+      </AuthWrapper>
     );
   }
 
@@ -1933,6 +2004,15 @@ Notes: ${invoice.notes || 'N/A'}
                 onPricingChange={setPricing}
                 fixtureCatalog={fixtureCatalog}
                 onFixtureCatalogChange={setFixtureCatalog}
+                subscription={{
+                  hasActiveSubscription: subscription.hasActiveSubscription,
+                  plan: subscription.plan,
+                  remainingFreeGenerations: subscription.remainingFreeGenerations,
+                  freeTrialLimit: subscription.freeTrialLimit,
+                  generationCount: subscription.generationCount,
+                }}
+                userId={user?.id}
+                onRequestUpgrade={() => setShowPricing(true)}
              />
           )}
 
