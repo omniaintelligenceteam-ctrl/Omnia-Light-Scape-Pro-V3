@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, DollarSign, Receipt, Building2, Hash } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 
@@ -27,12 +28,12 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
 
   // Line Items State
   const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || [
-    { ...getPrice('up'), quantity: 12 }, 
+    { ...getPrice('up'), quantity: 12 },
     { ...getPrice('path'), quantity: 6 },
-    { ...getPrice('gutter'), quantity: 4 }, 
-    { ...getPrice('soffit'), quantity: 4 },  
-    { ...getPrice('hardscape'), quantity: 8 },  
-    { ...getPrice('transformer'), quantity: 1 }, 
+    { ...getPrice('gutter'), quantity: 4 },
+    { ...getPrice('soffit'), quantity: 4 },
+    { ...getPrice('hardscape'), quantity: 8 },
+    { ...getPrice('transformer'), quantity: 1 },
   ]);
 
   const [taxRate, setTaxRate] = useState<number>(initialData?.taxRate ?? 0.07);
@@ -49,7 +50,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [clientEmail, setClientEmail] = useState(initialData?.clientDetails.email || "john.smith@example.com");
   const [clientPhone, setClientPhone] = useState(initialData?.clientDetails.phone || "(555) 123-4567");
   const [projectAddress, setProjectAddress] = useState(initialData?.clientDetails.address || "5500 Oak Hollow Drive\nBeverly Hills, CA 90210");
-  
+
   const handleUpdateItem = (index: number, field: keyof LineItem, value: any) => {
     const newItems = [...lineItems];
     newItems[index] = { ...newItems[index], [field]: value };
@@ -77,7 +78,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const taxableAmount = Math.max(0, subtotal - discount);
   const tax = taxableAmount * taxRate;
   const total = taxableAmount + tax;
-  
+
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   const handleSaveClick = () => {
@@ -190,76 +191,127 @@ ${customMessage ? `\n${customMessage}\n` : ''}
     <div className="flex flex-col h-full bg-[#050505] p-2 md:p-8 overflow-y-auto relative">
       {/* Background Ambient Glow */}
       <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none print:hidden ambient-glow"></div>
+      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[400px] bg-[#F6B45A]/3 blur-[100px] rounded-full pointer-events-none print:hidden"></div>
 
       <div className="max-w-4xl mx-auto w-full space-y-4 md:space-y-6 relative z-10">
-        
-        {/* Toolbar */}
+
+        {/* Premium Toolbar */}
         {!hideToolbar && (
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#111]/90 backdrop-blur-xl p-3 md:p-4 rounded-xl border border-white/10 shadow-2xl print:hidden sticky top-0 z-20">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#F6B45A]/10 rounded-lg border border-[#F6B45A]/20">
-                    <FileText className="w-5 h-5 text-[#F6B45A]" />
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative bg-gradient-to-b from-white/[0.08] to-[#111]/95 backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] print:hidden sticky top-0 z-20 overflow-hidden"
+            >
+                {/* Top gradient line */}
+                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/40 to-transparent" />
+
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <motion.div
+                            className="relative p-3 rounded-xl bg-gradient-to-br from-[#F6B45A]/20 to-[#F6B45A]/5 border border-[#F6B45A]/30"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <FileText className="w-5 h-5 md:w-6 md:h-6 text-[#F6B45A]" />
+                            <div className="absolute -inset-1 bg-[#F6B45A]/20 blur-xl -z-10" />
+                        </motion.div>
+                        <div>
+                            <h2 className="text-base md:text-lg font-bold text-white tracking-wide font-serif">
+                                QUOTE <span className="text-[#F6B45A]">GENERATOR</span>
+                            </h2>
+                            <p className="text-[10px] text-gray-500">Professional lighting estimates</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 md:gap-3">
+                        {/* Save Button */}
+                        <motion.button
+                            onClick={handleSaveClick}
+                            className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-4 md:px-5 py-2.5 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
+                            whileHover={{ scale: 1.02, y: -1 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <Save className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                            <span className="hidden sm:inline">Save Project</span>
+                            <span className="sm:hidden">Save</span>
+                            <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]"
+                                initial={{ x: '-100%' }}
+                                whileHover={{ x: '200%' }}
+                                transition={{ duration: 0.6 }}
+                            />
+                        </motion.button>
+
+                        {/* BOM Button */}
+                        {onGenerateBOM && (
+                            <motion.button
+                                onClick={handleGenerateBOMClick}
+                                className="bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-white/10 hover:border-white/20 transition-all"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <ClipboardList className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                <span className="hidden sm:inline">Generate BOM</span>
+                                <span className="sm:hidden">BOM</span>
+                            </motion.button>
+                        )}
+
+                        <div className="w-px h-8 bg-white/10 mx-1 hidden sm:block"></div>
+
+                        {/* Send Quote Button */}
+                        <motion.button
+                            onClick={() => setShowSendModal(true)}
+                            className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            title="Send Quote"
+                        >
+                            <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                            <span className="hidden sm:inline">Send</span>
+                        </motion.button>
+
+                        {/* Download PDF Button */}
+                        <motion.button
+                            onClick={handleDownloadPdf}
+                            disabled={isGeneratingPdf}
+                            className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 md:px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            whileHover={!isGeneratingPdf ? { scale: 1.02 } : {}}
+                            whileTap={!isGeneratingPdf ? { scale: 0.98 } : {}}
+                            title="Download PDF"
+                        >
+                            {isGeneratingPdf ? (
+                                <Loader2 className="w-3.5 h-3.5 md:w-4 md:h-4 animate-spin" />
+                            ) : (
+                                <Download className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                            )}
+                            <span className="hidden sm:inline">{isGeneratingPdf ? 'Generating...' : 'PDF'}</span>
+                        </motion.button>
+                    </div>
                 </div>
-                <h2 className="text-sm md:text-lg font-bold text-white tracking-wide font-serif">QUOTE <span className="text-[#F6B45A]">GENERATOR</span></h2>
-            </div>
-            
-            <div className="flex items-center gap-1 md:gap-2">
-                <button
-                    onClick={handleSaveClick}
-                    className="bg-[#F6B45A] text-[#111] px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-[#ffc67a] hover:scale-105 transition-all shadow-[0_0_15px_rgba(246,180,90,0.3)]"
-                >
-                    <Save className="w-3 h-3 md:w-4 md:h-4" />
-                    <span className="hidden sm:inline">Save Project</span>
-                    <span className="sm:hidden">Save</span>
-                </button>
-                {onGenerateBOM && (
-                    <button
-                        onClick={handleGenerateBOMClick}
-                        className="bg-white/10 text-white px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-white/20 hover:scale-105 transition-all border border-white/10"
-                    >
-                        <ClipboardList className="w-3 h-3 md:w-4 md:h-4" />
-                        <span className="hidden sm:inline">Generate BOM</span>
-                        <span className="sm:hidden">BOM</span>
-                    </button>
-                )}
-                <div className="w-px h-6 bg-white/10 mx-1"></div>
-                {/* Send Quote Button */}
-                <button
-                    onClick={() => setShowSendModal(true)}
-                    className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10"
-                    title="Send Quote"
-                >
-                    <Send className="w-3 h-3 md:w-4 md:h-4" />
-                    <span className="hidden sm:inline">Send</span>
-                </button>
-                {/* Download PDF Button */}
-                <button
-                    onClick={handleDownloadPdf}
-                    disabled={isGeneratingPdf}
-                    className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Download PDF"
-                >
-                    {isGeneratingPdf ? (
-                        <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
-                    ) : (
-                        <Download className="w-3 h-3 md:w-4 md:h-4" />
-                    )}
-                    <span className="hidden sm:inline">{isGeneratingPdf ? 'Generating...' : 'Download PDF'}</span>
-                </button>
-            </div>
-            </div>
+            </motion.div>
         )}
 
         {/* Paper Document / Digital Datapad */}
-        <div id={containerId} className="bg-[#0F0F0F] rounded-xl md:rounded-[24px] shadow-2xl border border-white/5 min-h-auto md:min-h-[1000px] p-4 md:p-12 relative print:shadow-none print:border-none print:m-0 print:w-full print:bg-white print:text-black">
-          
+        <motion.div
+            id={containerId}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-2xl md:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-white/10 min-h-auto md:min-h-[1000px] p-5 md:p-12 overflow-hidden print:shadow-none print:border-none print:m-0 print:w-full print:bg-white print:text-black"
+        >
+          {/* Decorative corner accents */}
+          <div className="absolute top-4 left-4 w-8 h-8 border-l-2 border-t-2 border-[#F6B45A]/20 rounded-tl-lg print:hidden" />
+          <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-[#F6B45A]/20 rounded-tr-lg print:hidden" />
+          <div className="absolute bottom-4 left-4 w-8 h-8 border-l-2 border-b-2 border-[#F6B45A]/20 rounded-bl-lg print:hidden" />
+          <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-[#F6B45A]/20 rounded-br-lg print:hidden" />
+
           {/* Header */}
-          <header className="mb-8 md:mb-12 border-b border-white/10 pb-6 print:border-gray-200">
+          <header className="mb-8 md:mb-12 border-b border-white/10 pb-6 print:border-gray-200 relative">
              <div className="flex justify-between items-start">
                  <div className="w-full">
                     {/* Company Name & Logo Row */}
                     <div className="flex items-center gap-6 mb-4">
-                        <h1 className="text-2xl md:text-3xl font-bold text-[#F6B45A] tracking-tight font-serif print:text-[#111]">
+                        <h1 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] tracking-tight font-serif print:text-[#111]">
                              {companyProfile.name}
                         </h1>
                         {companyProfile.logo && (
@@ -267,113 +319,158 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         )}
                     </div>
                     {/* Address & Date */}
-                    <div className="text-xs md:text-sm text-gray-200 space-y-0.5 md:space-y-1 whitespace-pre-line print:text-gray-600">
+                    <div className="text-xs md:text-sm text-gray-400 space-y-0.5 md:space-y-1 whitespace-pre-line print:text-gray-600">
                         {companyProfile.address}
                     </div>
-                    <div className="mt-4 flex items-center gap-2 text-sm">
-                        <span className="font-bold text-[#F6B45A] uppercase tracking-wider text-xs flex items-center gap-1 print:text-gray-800"><Calendar className="w-3 h-3"/> Date:</span>
-                        <span className="text-xs md:text-sm font-medium text-white print:text-black">{today}</span>
+                    <div className="mt-4 flex items-center gap-3">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20">
+                            <Calendar className="w-3.5 h-3.5 text-[#F6B45A]"/>
+                            <span className="text-xs font-bold text-[#F6B45A] uppercase tracking-wider">Date</span>
+                        </div>
+                        <span className="text-sm font-medium text-white print:text-black">{today}</span>
                     </div>
                  </div>
+             </div>
+
+             {/* Quote number badge */}
+             <div className="absolute top-0 right-0 flex items-center gap-2 px-4 py-2 rounded-bl-xl bg-white/5 border-l border-b border-white/10 print:hidden">
+                 <Hash className="w-3 h-3 text-gray-500" />
+                 <span className="text-[10px] font-mono text-gray-400">QT-{Date.now().toString(36).toUpperCase().slice(-6)}</span>
              </div>
           </header>
 
           {/* Client & Project Info */}
-          <div className="grid grid-cols-2 gap-4 md:gap-12 mb-8 md:mb-12">
-             <div className="bg-[#111]/50 p-4 rounded-xl border border-white/5 print:border-none print:p-0 print:bg-transparent">
-                <h3 className="text-[10px] md:text-xs font-bold text-[#F6B45A] uppercase tracking-[0.2em] mb-3 md:mb-4 border-b border-white/10 pb-2 print:text-gray-800 print:border-gray-200">Quote For</h3>
-                <div className="text-gray-200 text-sm space-y-2 print:text-black">
-                    <div className="flex items-center gap-3 text-gray-300 pt-1">
-                        <User className="w-3 h-3 md:w-4 md:h-4 shrink-0 text-[#F6B45A] print:text-gray-400" />
-                        <input 
-                            type="text" 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-8 md:mb-12">
+             <motion.div
+                 className="relative bg-gradient-to-br from-white/[0.04] to-transparent p-5 rounded-2xl border border-white/10 overflow-hidden print:border-none print:p-0 print:bg-transparent"
+                 whileHover={{ borderColor: 'rgba(246,180,90,0.3)' }}
+             >
+                {/* Section icon */}
+                <div className="absolute -top-2 -left-2 w-12 h-12 bg-[#F6B45A]/10 rounded-full blur-xl print:hidden" />
+
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20">
+                        <User className="w-4 h-4 text-[#F6B45A]" />
+                    </div>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em] print:text-gray-800">Quote For</h3>
+                </div>
+
+                <div className="space-y-3 print:text-black">
+                    <div className="group">
+                        <input
+                            type="text"
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
-                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-base font-bold text-white bg-transparent placeholder-gray-400 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
+                            className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-2 text-lg font-bold text-white placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
                             placeholder="Client Name"
                         />
                     </div>
-                    <div className="flex items-center gap-3 text-gray-300">
-                        <Mail className="w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-300 print:text-gray-400" />
-                         <input 
-                            type="text" 
+                    <div className="flex items-center gap-3 text-gray-400 group">
+                        <Mail className="w-4 h-4 shrink-0 group-hover:text-[#F6B45A] transition-colors print:text-gray-400" />
+                         <input
+                            type="text"
                             value={clientEmail}
                             onChange={(e) => setClientEmail(e.target.value)}
-                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-xs md:text-sm text-gray-200 bg-transparent placeholder-gray-400 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
+                            className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-1 text-sm text-gray-300 placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
                             placeholder="Client Email"
                         />
                     </div>
-                    <div className="flex items-center gap-3 text-gray-300">
-                        <Phone className="w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-300 print:text-gray-400" />
-                         <input 
-                            type="text" 
+                    <div className="flex items-center gap-3 text-gray-400 group">
+                        <Phone className="w-4 h-4 shrink-0 group-hover:text-[#F6B45A] transition-colors print:text-gray-400" />
+                         <input
+                            type="text"
                             value={clientPhone}
                             onChange={(e) => setClientPhone(e.target.value)}
-                            className="w-full border-b border-white/10 focus:border-[#F6B45A] focus:ring-0 p-1 text-xs md:text-sm text-gray-200 bg-transparent placeholder-gray-400 min-w-0 transition-colors print:text-black print:border-none print:p-0" 
+                            className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-1 text-sm text-gray-300 placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
                             placeholder="Cell Phone"
                         />
                     </div>
                 </div>
-             </div>
-             <div className="bg-[#111]/50 p-4 rounded-xl border border-white/5 print:border-none print:p-0 print:bg-transparent">
-                <h3 className="text-[10px] md:text-xs font-bold text-[#F6B45A] uppercase tracking-[0.2em] mb-3 md:mb-4 border-b border-white/10 pb-2 print:text-gray-800 print:border-gray-200">Project Site</h3>
-                <div className="text-gray-200 text-sm space-y-1 print:text-black">
-                    <div className="flex items-start gap-3 text-gray-300 pt-1">
-                        <MapPin className="w-3 h-3 md:w-4 md:h-4 mt-1.5 shrink-0 text-[#F6B45A] print:text-gray-400" />
-                        <textarea 
-                            className="w-full border-none focus:ring-0 p-1 text-xs md:text-sm text-gray-200 resize-none h-20 bg-transparent placeholder-gray-400 leading-relaxed print:text-black print:p-0"
-                            value={projectAddress}
-                            onChange={(e) => setProjectAddress(e.target.value)}
-                            placeholder="Project Address"
-                        />
+             </motion.div>
+
+             <motion.div
+                 className="relative bg-gradient-to-br from-white/[0.04] to-transparent p-5 rounded-2xl border border-white/10 overflow-hidden print:border-none print:p-0 print:bg-transparent"
+                 whileHover={{ borderColor: 'rgba(246,180,90,0.3)' }}
+             >
+                {/* Section icon */}
+                <div className="absolute -top-2 -right-2 w-12 h-12 bg-[#F6B45A]/10 rounded-full blur-xl print:hidden" />
+
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20">
+                        <MapPin className="w-4 h-4 text-[#F6B45A]" />
                     </div>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em] print:text-gray-800">Project Site</h3>
                 </div>
-             </div>
+
+                <div className="print:text-black">
+                    <textarea
+                        className="w-full bg-transparent border-b border-white/10 hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-2 text-sm text-gray-300 resize-none h-24 placeholder-gray-500 leading-relaxed transition-colors print:text-black print:border-none print:p-0"
+                        value={projectAddress}
+                        onChange={(e) => setProjectAddress(e.target.value)}
+                        placeholder="Project Address"
+                    />
+                </div>
+             </motion.div>
+          </div>
+
+          {/* Line Items Section Header */}
+          <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                  <Receipt className="w-4 h-4 text-gray-400" />
+              </div>
+              <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em]">Line Items</h3>
+              <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
           </div>
 
           {/* Line Items - DESKTOP TABLE */}
-          <div className="hidden md:block mb-8">
+          <div className="hidden md:block mb-8 bg-white/[0.02] rounded-2xl border border-white/10 overflow-hidden">
             <table className="w-full text-left border-collapse">
                 <thead>
-                    <tr className="border-b border-white/10 print:border-black">
-                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 w-[50%] print:text-black">Description</th>
-                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 text-center w-[10%] print:text-black">Qty</th>
-                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 text-right w-[15%] print:text-black">Rate</th>
-                        <th className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 text-right w-[15%] print:text-black">Amount</th>
-                        <th className="py-4 w-[5%] print:hidden"></th>
+                    <tr className="bg-white/5">
+                        <th className="py-4 px-5 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 w-[50%] print:text-black">Description</th>
+                        <th className="py-4 px-3 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 text-center w-[10%] print:text-black">Qty</th>
+                        <th className="py-4 px-3 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 text-right w-[15%] print:text-black">Rate</th>
+                        <th className="py-4 px-5 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 text-right w-[15%] print:text-black">Amount</th>
+                        <th className="py-4 px-3 w-[5%] print:hidden"></th>
                     </tr>
                 </thead>
                 <tbody className="text-sm">
                     {lineItems.map((item, index) => (
-                        <tr key={index} className="border-b border-white/5 group hover:bg-white/5 transition-colors print:border-gray-200">
-                            <td className="py-4 pr-4 align-top">
-                                <input 
-                                    type="text" 
+                        <motion.tr
+                            key={index}
+                            className="border-t border-white/5 group hover:bg-white/[0.03] transition-colors print:border-gray-200"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                        >
+                            <td className="py-4 px-5 align-top">
+                                <input
+                                    type="text"
                                     value={item.name}
                                     onChange={(e) => handleUpdateItem(index, 'name', e.target.value)}
-                                    className="font-bold text-white mb-1 w-full bg-transparent border-none p-0 focus:ring-0 rounded px-1 -ml-1 print:text-black"
+                                    className="font-bold text-white mb-1 w-full bg-transparent border-none p-0 focus:ring-0 rounded print:text-black"
                                 />
-                                <textarea 
+                                <textarea
                                     value={item.description}
                                     onChange={(e) => handleUpdateItem(index, 'description', e.target.value)}
-                                    className="text-gray-300 text-xs whitespace-pre-line leading-relaxed w-full bg-transparent border-none p-0 focus:ring-0 rounded px-1 -ml-1 resize-y min-h-[40px] font-mono print:text-gray-600"
+                                    className="text-gray-400 text-xs whitespace-pre-line leading-relaxed w-full bg-transparent border-none p-0 focus:ring-0 rounded resize-y min-h-[40px] font-mono print:text-gray-600"
                                     rows={2}
                                 />
                             </td>
-                            <td className="py-4 text-center align-top">
-                                <input 
-                                    type="number" 
+                            <td className="py-4 px-3 text-center align-top">
+                                <input
+                                    type="number"
                                     value={item.quantity}
                                     min="0"
                                     onChange={(e) => handleUpdateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                                    className="w-16 text-center font-bold text-[#F6B45A] bg-[#111] border border-white/10 focus:border-[#F6B45A] rounded p-1 print:text-black print:bg-transparent print:border-none"
+                                    className="w-16 text-center font-bold text-[#F6B45A] bg-[#0a0a0a] border border-white/10 focus:border-[#F6B45A] rounded-lg p-2 transition-colors print:text-black print:bg-transparent print:border-none"
                                 />
                             </td>
-                            <td className="py-4 text-right align-top">
+                            <td className="py-4 px-3 text-right align-top">
                                 <div className="flex items-center justify-end gap-1">
-                                    <span className="text-gray-400 text-xs">$</span>
-                                    <input 
-                                        type="number" 
+                                    <span className="text-gray-500 text-xs">$</span>
+                                    <input
+                                        type="number"
                                         value={item.unitPrice}
                                         min="0"
                                         step="0.01"
@@ -382,18 +479,20 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                                     />
                                 </div>
                             </td>
-                            <td className="py-4 text-right font-bold text-white text-base align-top pt-5 print:text-black">
+                            <td className="py-4 px-5 text-right font-bold text-white text-base align-top pt-5 font-mono print:text-black">
                                 ${(item.unitPrice * item.quantity).toFixed(2)}
                             </td>
-                            <td className="py-4 text-right align-top print:hidden">
-                                <button 
+                            <td className="py-4 px-3 text-right align-top print:hidden">
+                                <motion.button
                                     onClick={() => handleRemoveItem(index)}
-                                    className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                 >
                                     <Trash2 className="w-4 h-4" />
-                                </button>
+                                </motion.button>
                             </td>
-                        </tr>
+                        </motion.tr>
                     ))}
                 </tbody>
             </table>
@@ -401,262 +500,328 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 
           {/* Line Items - MOBILE CARDS */}
           <div className="md:hidden space-y-4 mb-8">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-300 border-b border-white/10 pb-2">Line Items</h3>
             {lineItems.map((item, index) => (
-                <div key={index} className="bg-[#111] border border-white/10 rounded-xl p-4 shadow-lg relative print:bg-transparent print:border-gray-200">
+                <motion.div
+                    key={index}
+                    className="relative bg-gradient-to-br from-white/[0.04] to-transparent border border-white/10 rounded-2xl p-5 shadow-lg overflow-hidden print:bg-transparent print:border-gray-200"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                >
                     {/* Remove Button */}
-                    <button 
+                    <motion.button
                         onClick={() => handleRemoveItem(index)}
-                        className="absolute top-3 right-3 p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors print:hidden"
+                        className="absolute top-3 right-3 p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors print:hidden"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                     >
                         <Trash2 className="w-4 h-4" />
-                    </button>
+                    </motion.button>
 
                     {/* Name & Desc */}
-                    <div className="pr-8 mb-4">
-                        <input 
-                            type="text" 
+                    <div className="pr-10 mb-4">
+                        <input
+                            type="text"
                             value={item.name}
                             onChange={(e) => handleUpdateItem(index, 'name', e.target.value)}
-                            className="font-bold text-white text-base mb-1 w-full bg-transparent border-none p-0 focus:ring-0 placeholder-gray-400 print:text-black"
+                            className="font-bold text-white text-lg mb-1 w-full bg-transparent border-none p-0 focus:ring-0 placeholder-gray-500 print:text-black"
                             placeholder="Item Name"
                         />
-                        <textarea 
+                        <textarea
                             value={item.description}
                             onChange={(e) => handleUpdateItem(index, 'description', e.target.value)}
-                            className="text-gray-300 text-xs w-full bg-transparent border-none p-0 focus:ring-0 resize-none min-h-[40px] font-mono print:text-gray-600"
+                            className="text-gray-400 text-xs w-full bg-transparent border-none p-0 focus:ring-0 resize-none min-h-[40px] font-mono print:text-gray-600"
                             rows={2}
                             placeholder="Description"
                         />
                     </div>
 
                     {/* Controls Grid */}
-                    <div className="grid grid-cols-3 gap-3 border-t border-white/5 pt-3">
-                        <div className="bg-[#1a1a1a] rounded-lg p-2 border border-white/5 print:bg-transparent print:border-gray-100">
-                            <label className="text-[9px] font-bold uppercase text-gray-300 block mb-1">Qty</label>
-                            <input 
-                                type="number" 
+                    <div className="grid grid-cols-3 gap-3 border-t border-white/10 pt-4">
+                        <div className="bg-white/5 rounded-xl p-3 border border-white/5 print:bg-transparent print:border-gray-100">
+                            <label className="text-[9px] font-bold uppercase text-gray-500 block mb-1">Qty</label>
+                            <input
+                                type="number"
                                 value={item.quantity}
                                 min="0"
                                 onChange={(e) => handleUpdateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                                className="w-full text-base font-bold text-[#F6B45A] bg-transparent border-none p-0 focus:ring-0 print:text-black"
+                                className="w-full text-lg font-bold text-[#F6B45A] bg-transparent border-none p-0 focus:ring-0 print:text-black"
                             />
                         </div>
-                        <div className="bg-[#1a1a1a] rounded-lg p-2 border border-white/5 print:bg-transparent print:border-gray-100">
-                            <label className="text-[9px] font-bold uppercase text-gray-300 block mb-1">Rate</label>
+                        <div className="bg-white/5 rounded-xl p-3 border border-white/5 print:bg-transparent print:border-gray-100">
+                            <label className="text-[9px] font-bold uppercase text-gray-500 block mb-1">Rate</label>
                             <div className="flex items-center">
-                                <span className="text-[10px] text-gray-400 mr-0.5">$</span>
-                                <input 
-                                    type="number" 
+                                <span className="text-xs text-gray-500 mr-1">$</span>
+                                <input
+                                    type="number"
                                     value={item.unitPrice}
                                     step="0.01"
                                     onChange={(e) => handleUpdateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                    className="w-full text-base font-bold text-white bg-transparent border-none p-0 focus:ring-0 print:text-black"
+                                    className="w-full text-lg font-bold text-white bg-transparent border-none p-0 focus:ring-0 print:text-black"
                                 />
                             </div>
                         </div>
-                        <div className="bg-[#F6B45A]/10 rounded-lg p-2 border border-[#F6B45A]/20 flex flex-col justify-center items-end print:bg-gray-100 print:border-gray-200">
+                        <div className="bg-[#F6B45A]/10 rounded-xl p-3 border border-[#F6B45A]/20 flex flex-col justify-center items-end print:bg-gray-100 print:border-gray-200">
                             <label className="text-[9px] font-bold uppercase text-[#F6B45A] block mb-0.5 print:text-gray-600">Total</label>
-                            <span className="text-base font-black text-white print:text-black">
+                            <span className="text-lg font-black text-white font-mono print:text-black">
                                 ${(item.unitPrice * item.quantity).toFixed(2)}
                             </span>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             ))}
           </div>
 
           {/* Add Item Button */}
           {!hideToolbar && (
             <div className="mb-12 print:hidden">
-                <button 
+                <motion.button
                     onClick={handleAddItem}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#e5a040] hover:bg-[#F6B45A]/10 px-6 py-3 rounded-xl border border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A] transition-colors"
+                    className="w-full md:w-auto flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#ffc67a] hover:bg-[#F6B45A]/10 px-8 py-4 rounded-xl border-2 border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A]/60 transition-all"
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                 >
-                    <Plus className="w-4 h-4" />
-                    ADD ITEM
-                </button>
+                    <Plus className="w-5 h-5" />
+                    ADD LINE ITEM
+                </motion.button>
             </div>
           )}
 
           {/* Totals */}
-          <div className="flex flex-col md:items-end gap-3 mb-12 md:mb-16 bg-[#111]/30 p-6 rounded-2xl border border-white/5 print:bg-transparent print:border-none print:p-0">
-             <div className="w-full md:w-1/2 flex justify-between py-2 text-sm text-gray-200 print:text-gray-600">
-                <span>Subtotal</span>
-                <span className="font-bold text-base text-white print:text-black">${subtotal.toFixed(2)}</span>
-             </div>
-             
-             {/* Discount Row */}
-             <div className="w-full md:w-1/2 flex justify-between items-center py-2 text-sm text-gray-200 print:text-gray-600">
-                <span className="flex items-center gap-2 text-white font-medium print:text-black"><Tag className="w-3 h-3 text-gray-400" /> Discount</span>
-                <div className="flex items-center gap-1">
-                    <span className="text-gray-400 text-sm">$</span>
-                    <input
-                        type="number"
-                        value={discount}
-                        onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                        className="w-28 text-right bg-[#1a1a1a] border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:ring-0 focus:border-[#F6B45A] font-bold placeholder-gray-600 print:bg-transparent print:border-gray-200 print:text-black"
-                        min="0"
-                        placeholder="0.00"
-                    />
-                </div>
-             </div>
+          <motion.div
+              className="relative bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 md:p-8 rounded-2xl border border-white/10 mb-12 md:mb-16 overflow-hidden print:bg-transparent print:border-none print:p-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+          >
+             {/* Decorative glow */}
+             <div className="absolute top-0 right-0 w-32 h-32 bg-[#F6B45A]/10 rounded-full blur-3xl pointer-events-none print:hidden" />
 
-             <div className="w-full md:w-1/2 flex justify-between items-center py-2 text-sm text-gray-200 border-b border-white/10 print:border-gray-200 print:text-gray-600">
-                <div className="flex items-center gap-2">
-                    <span>Tax Rate</span>
-                    <div className="flex items-center bg-[#1a1a1a] rounded px-2 py-1 border border-white/5 print:bg-gray-50 print:border-none">
-                        <input 
+             <div className="flex flex-col md:items-end gap-3 relative z-10">
+                 <div className="w-full md:w-80 flex justify-between py-3 text-sm text-gray-300 print:text-gray-600">
+                    <span>Subtotal</span>
+                    <span className="font-bold text-lg text-white font-mono print:text-black">${subtotal.toFixed(2)}</span>
+                 </div>
+
+                 {/* Discount Row */}
+                 <div className="w-full md:w-80 flex justify-between items-center py-3 text-sm text-gray-300 print:text-gray-600">
+                    <span className="flex items-center gap-2 text-white font-medium print:text-black">
+                        <Tag className="w-4 h-4 text-gray-500" />
+                        Discount
+                    </span>
+                    <div className="flex items-center gap-1">
+                        <span className="text-gray-500 text-sm">-$</span>
+                        <input
                             type="number"
-                            value={(taxRate * 100).toFixed(1)}
-                            onChange={(e) => setTaxRate((parseFloat(e.target.value) || 0) / 100)}
-                            className="w-10 text-right bg-transparent border-none p-0 text-xs focus:ring-0 font-medium text-gray-200 print:text-black"
-                            step="0.1"
+                            value={discount}
+                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                            className="w-24 text-right bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-0 focus:border-[#F6B45A] font-bold placeholder-gray-600 font-mono transition-colors print:bg-transparent print:border-gray-200 print:text-black"
+                            min="0"
+                            placeholder="0.00"
                         />
-                        <Percent className="w-3 h-3 ml-0.5 text-gray-400" />
                     </div>
-                </div>
-                <span className="font-bold text-base text-white print:text-black">${tax.toFixed(2)}</span>
+                 </div>
+
+                 <div className="w-full md:w-80 flex justify-between items-center py-3 text-sm text-gray-300 border-b border-white/10 print:border-gray-200 print:text-gray-600">
+                    <div className="flex items-center gap-2">
+                        <span>Tax Rate</span>
+                        <div className="flex items-center bg-[#0a0a0a] rounded-lg px-3 py-2 border border-white/10 print:bg-gray-50 print:border-none">
+                            <input
+                                type="number"
+                                value={(taxRate * 100).toFixed(1)}
+                                onChange={(e) => setTaxRate((parseFloat(e.target.value) || 0) / 100)}
+                                className="w-12 text-right bg-transparent border-none p-0 text-sm focus:ring-0 font-medium text-white font-mono print:text-black"
+                                step="0.1"
+                            />
+                            <Percent className="w-3 h-3 ml-1 text-gray-500" />
+                        </div>
+                    </div>
+                    <span className="font-bold text-lg text-white font-mono print:text-black">${tax.toFixed(2)}</span>
+                 </div>
+
+                 {/* Grand Total */}
+                 <div className="w-full md:w-80 flex justify-between items-center py-4 mt-2">
+                    <span className="text-lg font-bold text-white print:text-black">Grand Total</span>
+                    <div className="relative">
+                        <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#F6B45A] to-[#ffd699] font-mono print:text-black">
+                            ${total.toFixed(2)}
+                        </span>
+                        <div className="absolute -inset-2 bg-[#F6B45A]/20 blur-xl -z-10 print:hidden" />
+                    </div>
+                 </div>
              </div>
-             <div className="w-full md:w-1/2 flex justify-between py-4 text-2xl font-serif font-bold text-[#F6B45A] print:text-black">
-                <span>Total</span>
-                <span>${total.toFixed(2)}</span>
-             </div>
-          </div>
+          </motion.div>
 
           {/* Footer / Terms */}
           <div className="mt-auto pt-8 border-t border-white/10 print:border-gray-200">
-             <h4 className="text-xs font-bold uppercase tracking-wider text-[#F6B45A] mb-3 print:text-gray-800">Terms & Conditions</h4>
-             <textarea 
-                className="w-full text-[10px] text-gray-300 leading-relaxed max-w-2xl mb-8 md:mb-12 border-none resize-none bg-transparent focus:bg-[#111] p-2 rounded focus:ring-0 min-h-[80px] print:text-gray-600"
+             <div className="flex items-center gap-3 mb-4">
+                 <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                     <FileText className="w-4 h-4 text-gray-400" />
+                 </div>
+                 <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-white print:text-gray-800">Terms & Conditions</h4>
+             </div>
+             <textarea
+                className="w-full text-xs text-gray-400 leading-relaxed max-w-2xl mb-8 md:mb-12 border-none resize-none bg-transparent focus:bg-white/5 p-3 rounded-xl focus:ring-0 min-h-[100px] transition-colors print:text-gray-600"
                 defaultValue="This estimate is valid for 30 days. A 50% deposit is required to schedule installation. The remaining balance is due upon completion of the project. Any changes to this scope of work must be approved in writing and may result in additional charges. Lifetime warranty on fixtures covers manufacturer defects; labor warranty is valid for 2 years from installation date."
              />
 
              <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 md:gap-12">
-                <div className="w-full md:flex-1 border-b border-white/20 pb-2 print:border-gray-300">
-                    <p className="text-xs text-gray-300 uppercase tracking-widest mb-8 md:mb-8 mt-4 md:mt-0 print:text-gray-400">Authorized Signature</p>
+                <div className="w-full md:flex-1">
+                    <div className="border-b-2 border-white/20 pb-2 mb-2 print:border-gray-300" />
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest print:text-gray-400">Authorized Signature</p>
                 </div>
-                <div className="w-full md:flex-1 border-b border-white/20 pb-2 print:border-gray-300">
-                     <p className="text-xs text-gray-300 uppercase tracking-widest mb-8 md:mb-8 mt-4 md:mt-0 print:text-gray-400">Date</p>
+                <div className="w-full md:flex-1">
+                     <div className="border-b-2 border-white/20 pb-2 mb-2 print:border-gray-300" />
+                     <p className="text-[10px] text-gray-500 uppercase tracking-widest print:text-gray-400">Date</p>
                 </div>
              </div>
           </div>
 
-        </div>
+        </motion.div>
       </div>
 
       {/* Send Quote Modal */}
-      {showSendModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#111] rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#F6B45A]/10 rounded-lg">
-                  <Send className="w-4 h-4 text-[#F6B45A]" />
-                </div>
-                <h3 className="font-bold text-lg text-white font-serif">Send Quote</h3>
-              </div>
-              <button
-                onClick={() => setShowSendModal(false)}
-                className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+      <AnimatePresence>
+          {showSendModal && (
+            <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+            >
+              <motion.div
+                  className="w-full max-w-md bg-gradient-to-b from-[#151515] to-[#0a0a0a] rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden"
+                  initial={{ scale: 0.9, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.9, y: 20 }}
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 space-y-5">
-              {/* Recipient Info */}
-              <div className="bg-[#0a0a0a] rounded-xl p-4 border border-white/5">
-                <div className="flex items-center gap-3 mb-3">
-                  <User className="w-4 h-4 text-[#F6B45A]" />
-                  <span className="font-bold text-white">{clientName || 'No name set'}</span>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-3 text-gray-400">
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>{clientEmail || 'No email set'}</span>
+                {/* Modal Header */}
+                <div className="relative flex items-center justify-between p-5 border-b border-white/10">
+                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/30 to-transparent" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-[#F6B45A]/10 rounded-xl border border-[#F6B45A]/20">
+                      <Send className="w-5 h-5 text-[#F6B45A]" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg text-white font-serif">Send Quote</h3>
+                        <p className="text-[10px] text-gray-500">Choose delivery method</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-400">
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>{clientPhone || 'No phone set'}</span>
+                  <motion.button
+                    onClick={() => setShowSendModal(false)}
+                    className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-5 space-y-5">
+                  {/* Recipient Info */}
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <User className="w-4 h-4 text-[#F6B45A]" />
+                      <span className="font-bold text-white">{clientName || 'No name set'}</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-3 text-gray-400">
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>{clientEmail || 'No email set'}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-gray-400">
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>{clientPhone || 'No phone set'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Send Method Toggle */}
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">Send via</label>
+                    <div className="flex gap-3">
+                      <motion.button
+                        onClick={() => setSendMethod('email')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+                          sendMethod === 'email'
+                            ? 'bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black shadow-lg shadow-[#F6B45A]/20'
+                            : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Mail className="w-4 h-4" />
+                        Email
+                      </motion.button>
+                      <motion.button
+                        onClick={() => setSendMethod('sms')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
+                          sendMethod === 'sms'
+                            ? 'bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black shadow-lg shadow-[#F6B45A]/20'
+                            : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        SMS
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Custom Message */}
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Add a personal message (optional)</label>
+                    <textarea
+                      value={customMessage}
+                      onChange={(e) => setCustomMessage(e.target.value)}
+                      placeholder="Thanks for choosing us! Let me know if you have any questions..."
+                      className="w-full h-24 bg-white/5 border border-white/10 rounded-xl p-4 text-white text-sm focus:border-[#F6B45A]/50 focus:outline-none resize-none placeholder-gray-500 transition-colors"
+                    />
+                  </div>
+
+                  {/* Quote Preview */}
+                  <div className="bg-gradient-to-br from-[#F6B45A]/10 to-transparent rounded-xl p-4 border border-[#F6B45A]/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Quote Total</span>
+                      <span className="text-xl font-bold text-[#F6B45A] font-mono">${total.toFixed(2)}</span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {lineItems.filter(i => i.quantity > 0).length} items
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Send Method Toggle */}
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">Send via</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSendMethod('email')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all active:scale-95 ${
-                      sendMethod === 'email'
-                        ? 'bg-[#F6B45A] text-black'
-                        : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10'
-                    }`}
+                {/* Modal Footer */}
+                <div className="p-5 border-t border-white/10 bg-black/30">
+                  <motion.button
+                    onClick={sendMethod === 'email' ? handleSendEmail : handleSendSMS}
+                    disabled={sendMethod === 'email' ? !clientEmail : !clientPhone}
+                    className="relative w-full overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black py-4 rounded-xl font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#F6B45A]/20"
+                    whileHover={!(sendMethod === 'email' ? !clientEmail : !clientPhone) ? { scale: 1.01 } : {}}
+                    whileTap={!(sendMethod === 'email' ? !clientEmail : !clientPhone) ? { scale: 0.99 } : {}}
                   >
-                    <Mail className="w-4 h-4" />
-                    Email
-                  </button>
-                  <button
-                    onClick={() => setSendMethod('sms')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all active:scale-95 ${
-                      sendMethod === 'sms'
-                        ? 'bg-[#F6B45A] text-black'
-                        : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10'
-                    }`}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    SMS
-                  </button>
+                    {sendMethod === 'email' ? <Mail className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+                    Send via {sendMethod === 'email' ? 'Email' : 'SMS'}
+                    <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]"
+                        initial={{ x: '-100%' }}
+                        whileHover={{ x: '200%' }}
+                        transition={{ duration: 0.6 }}
+                    />
+                  </motion.button>
+                  {sendMethod === 'email' && !clientEmail && (
+                    <p className="text-xs text-red-400 text-center mt-3">Please add a client email address first</p>
+                  )}
+                  {sendMethod === 'sms' && !clientPhone && (
+                    <p className="text-xs text-red-400 text-center mt-3">Please add a client phone number first</p>
+                  )}
                 </div>
-              </div>
-
-              {/* Custom Message */}
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Add a personal message (optional)</label>
-                <textarea
-                  value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                  placeholder="Thanks for choosing us! Let me know if you have any questions..."
-                  className="w-full h-24 bg-[#0a0a0a] border border-white/10 rounded-xl p-3 text-white text-sm focus:border-[#F6B45A] focus:outline-none resize-none placeholder-gray-500"
-                />
-              </div>
-
-              {/* Quote Preview */}
-              <div className="bg-[#0a0a0a] rounded-xl p-4 border border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Quote Total</span>
-                  <span className="text-lg font-bold text-[#F6B45A]">${total.toFixed(2)}</span>
-                </div>
-                <div className="text-xs text-gray-500">
-                  {lineItems.filter(i => i.quantity > 0).length} items
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-5 border-t border-white/10 bg-[#0a0a0a]">
-              <button
-                onClick={sendMethod === 'email' ? handleSendEmail : handleSendSMS}
-                disabled={sendMethod === 'email' ? !clientEmail : !clientPhone}
-                className="w-full bg-[#F6B45A] text-black py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#ffc67a] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#F6B45A]/20"
-              >
-                {sendMethod === 'email' ? <Mail className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
-                Send via {sendMethod === 'email' ? 'Email' : 'SMS'}
-              </button>
-              {sendMethod === 'email' && !clientEmail && (
-                <p className="text-xs text-red-400 text-center mt-2">Please add a client email address first</p>
-              )}
-              {sendMethod === 'sms' && !clientPhone && (
-                <p className="text-xs text-red-400 text-center mt-2">Please add a client phone number first</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+              </motion.div>
+            </motion.div>
+          )}
+      </AnimatePresence>
     </div>
   );
 };

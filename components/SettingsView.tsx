@@ -45,6 +45,9 @@ interface SettingsViewProps {
   onNotificationsChange?: (prefs: NotificationPreferences) => void;
   // Sign out
   onSignOut?: () => void;
+  // Save all settings
+  onSaveSettings?: () => void;
+  isSaving?: boolean;
 }
 
 // --- UI COMPONENTS ---
@@ -334,7 +337,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     notifications,
     onNotificationsChange,
     // Sign out
-    onSignOut
+    onSignOut,
+    // Save all settings
+    onSaveSettings,
+    isSaving = false
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('company');
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
@@ -453,9 +459,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     <div className="h-full bg-[#050505] overflow-y-auto relative">
       <div className="max-w-3xl mx-auto p-4 md:p-12 pb-24 relative z-10">
         
-        <div className="mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Settings</h2>
-            <div className="h-1 w-20 bg-[#F6B45A] rounded-full"></div>
+        <div className="mb-10 flex items-end justify-between">
+            <div>
+                <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Settings</h2>
+                <div className="h-1 w-20 bg-[#F6B45A] rounded-full"></div>
+            </div>
+            {onSaveSettings && (
+                <motion.button
+                    onClick={onSaveSettings}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 px-6 py-3 bg-[#F6B45A] text-[#050505] rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-[#ffc67a] active:scale-95 shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                >
+                    {isSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Save className="w-4 h-4" />
+                    )}
+                    {isSaving ? 'Saving...' : 'Save Settings'}
+                </motion.button>
+            )}
         </div>
 
         {/* --- THEME CUSTOMIZATION SECTION --- */}

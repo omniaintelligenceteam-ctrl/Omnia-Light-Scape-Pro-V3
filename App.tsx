@@ -21,7 +21,7 @@ import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ArrowUp, Navigation, CircleDot, Home, Lamp, LayoutGrid, Sun, Settings2 } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences } from './types';
 
@@ -163,6 +163,9 @@ const App: React.FC = () => {
     soundEffects: true,
   });
 
+  // Settings Save State
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
   // Auth State (API Key)
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
@@ -229,6 +232,46 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('omnia_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Load saved settings (company profile, pricing, catalog, lighting) on mount
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem('omnia_settings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        if (settings.companyProfile) setCompanyProfile(settings.companyProfile);
+        if (settings.pricing) setPricing(settings.pricing);
+        if (settings.fixtureCatalog) setFixtureCatalog(settings.fixtureCatalog);
+        if (settings.colorTemp) setColorTemp(settings.colorTemp);
+        if (settings.lightIntensity !== undefined) setLightIntensity(settings.lightIntensity);
+        if (settings.beamAngle !== undefined) setBeamAngle(settings.beamAngle);
+      }
+    } catch (e) {
+      console.error('Failed to load saved settings', e);
+    }
+  }, []);
+
+  // Save all settings to localStorage
+  const handleSaveSettings = () => {
+    setIsSavingSettings(true);
+    try {
+      const settings = {
+        companyProfile,
+        pricing,
+        fixtureCatalog,
+        colorTemp,
+        lightIntensity,
+        beamAngle,
+      };
+      localStorage.setItem('omnia_settings', JSON.stringify(settings));
+      showToast('success', 'Settings saved successfully!');
+    } catch (e) {
+      console.error('Failed to save settings', e);
+      showToast('error', 'Failed to save settings');
+    } finally {
+      setTimeout(() => setIsSavingSettings(false), 500);
+    }
+  };
 
   // Effect to handle invisible PDF generation from Projects List
   useEffect(() => {
@@ -1440,77 +1483,260 @@ Notes: ${invoice.notes || 'N/A'}
                     {/* Controls */}
                     <div className="flex flex-col gap-6">
                         
-                        {/* NEW: Button-Based Fixture Selection */}
-                        <div className="flex flex-col gap-3">
-                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 ml-1 flex items-center gap-2">
-                                <Sparkles className="w-3 h-3 text-[#F6B45A]" />
-                                Active Fixtures
-                            </label>
-                            
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-1">
+                        {/* Premium Fixture Selection */}
+                        <div className="flex flex-col gap-4">
+                            {/* Section Header */}
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#F6B45A]/20 to-[#F6B45A]/5 border border-[#F6B45A]/20">
+                                    <Sparkles className="w-4 h-4 text-[#F6B45A]" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-white">Active Fixtures</h3>
+                                    <p className="text-[10px] text-gray-500">Select lighting types to include</p>
+                                </div>
+                            </div>
+
+                            {/* Fixture Grid */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                                 {FIXTURE_TYPES.map((ft) => {
                                     const isSelected = selectedFixtures.includes(ft.id);
-                                    // Check if this fixture has sub-options selected
                                     const subOpts = fixtureSubOptions[ft.id];
                                     const hasSubOpts = subOpts && subOpts.length > 0;
-                                    
-                                    // Helper to get labels for sub-options
+
                                     const getSubLabel = (id: string) => {
                                         return ft.subOptions?.find(o => o.id === id)?.label || '';
                                     };
 
+                                    // Icon mapping for each fixture type
+                                    const getFixtureIcon = (id: string) => {
+                                        switch(id) {
+                                            case 'up': return ArrowUp;
+                                            case 'path': return Navigation;
+                                            case 'coredrill': return CircleDot;
+                                            case 'gutter': return Home;
+                                            case 'soffit': return Lamp;
+                                            case 'hardscape': return LayoutGrid;
+                                            default: return Sun;
+                                        }
+                                    };
+                                    const Icon = getFixtureIcon(ft.id);
+
                                     return (
-                                        <button
+                                        <motion.button
                                             key={ft.id}
                                             onClick={() => toggleFixture(ft.id)}
-                                            className={`py-3 px-4 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all duration-200 border flex flex-col items-center justify-center text-center ${
-                                                isSelected 
-                                                ? 'bg-[#F6B45A] text-[#111] border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.3)] scale-[1.02]' 
-                                                : 'bg-[#111] text-gray-300 border-white/10 hover:bg-[#1a1a1a] hover:border-white/20 hover:text-white'
+                                            className={`relative overflow-hidden rounded-xl transition-all duration-300 ${
+                                                isSelected
+                                                    ? 'bg-gradient-to-b from-[#F6B45A] via-[#f0a847] to-[#e59a3a]'
+                                                    : 'bg-gradient-to-b from-white/[0.06] to-white/[0.02]'
                                             }`}
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                            whileTap={{ scale: 0.98 }}
                                         >
-                                            <span>{ft.label}</span>
-                                            {hasSubOpts && (
-                                                <span className="text-[8px] opacity-70 mt-1 max-w-full truncate px-1">
-                                                    ({subOpts.map(id => getSubLabel(id)).filter(Boolean).join(', ')})
-                                                </span>
+                                            {/* Border gradient overlay */}
+                                            <div className={`absolute inset-0 rounded-xl border ${
+                                                isSelected
+                                                    ? 'border-[#F6B45A]/50'
+                                                    : 'border-white/10 hover:border-white/20'
+                                            }`} />
+
+                                            {/* Inner glow when selected */}
+                                            {isSelected && (
+                                                <>
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20 pointer-events-none" />
+                                                    <motion.div
+                                                        className="absolute -inset-1 bg-[#F6B45A]/20 blur-xl pointer-events-none"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                    />
+                                                </>
                                             )}
-                                        </button>
+
+                                            {/* Content */}
+                                            <div className="relative z-10 flex flex-col items-center justify-center py-4 px-3 md:py-5 md:px-4">
+                                                {/* Icon container */}
+                                                <div className={`relative mb-2 ${isSelected ? '' : ''}`}>
+                                                    <Icon
+                                                        className={`w-5 h-5 md:w-6 md:h-6 transition-all duration-300 ${
+                                                            isSelected
+                                                                ? 'text-[#1a1a1a]'
+                                                                : 'text-gray-400'
+                                                        }`}
+                                                        strokeWidth={isSelected ? 2.5 : 2}
+                                                    />
+                                                    {/* Icon glow ring when selected */}
+                                                    {isSelected && (
+                                                        <motion.div
+                                                            className="absolute inset-0 rounded-full bg-[#1a1a1a]/10 blur-sm scale-150"
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                        />
+                                                    )}
+                                                </div>
+
+                                                {/* Label */}
+                                                <span className={`text-[10px] md:text-[11px] font-bold uppercase tracking-[0.1em] transition-colors duration-300 ${
+                                                    isSelected
+                                                        ? 'text-[#1a1a1a]'
+                                                        : 'text-gray-300'
+                                                }`}>
+                                                    {ft.label}
+                                                </span>
+
+                                                {/* Sub-options badge */}
+                                                {hasSubOpts && (
+                                                    <motion.div
+                                                        className={`mt-1.5 px-2 py-0.5 rounded-full text-[8px] font-medium max-w-full truncate ${
+                                                            isSelected
+                                                                ? 'bg-[#1a1a1a]/15 text-[#1a1a1a]/80'
+                                                                : 'bg-white/5 text-gray-500'
+                                                        }`}
+                                                        initial={{ opacity: 0, y: -5 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                    >
+                                                        {subOpts.map(id => getSubLabel(id)).filter(Boolean).join(', ')}
+                                                    </motion.div>
+                                                )}
+
+                                                {/* Checkmark indicator */}
+                                                <AnimatePresence>
+                                                    {isSelected && (
+                                                        <motion.div
+                                                            className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#1a1a1a]/20 flex items-center justify-center"
+                                                            initial={{ scale: 0, opacity: 0 }}
+                                                            animate={{ scale: 1, opacity: 1 }}
+                                                            exit={{ scale: 0, opacity: 0 }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                                        >
+                                                            <Check className="w-2.5 h-2.5 text-[#1a1a1a]" strokeWidth={3} />
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+
+                                            {/* Shine effect when selected */}
+                                            {isSelected && (
+                                                <motion.div
+                                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg] pointer-events-none"
+                                                    initial={{ x: '-100%' }}
+                                                    animate={{ x: '200%' }}
+                                                    transition={{
+                                                        repeat: Infinity,
+                                                        repeatDelay: 4,
+                                                        duration: 0.8,
+                                                        ease: "easeInOut"
+                                                    }}
+                                                />
+                                            )}
+                                        </motion.button>
                                     );
                                 })}
                             </div>
                         </div>
 
-                        {/* Description Textarea */}
-                        <div className="relative group mt-2">
-                            <textarea
-                                className="w-full h-16 bg-[#0F0F0F] border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:border-[#F6B45A]/50 focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 transition-all resize-none font-mono"
-                                placeholder="Type of Fixtures and Number of fixtures (e.g. '10 Up lights, 3 Gutter up lights, 6 Path lights')"
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                            />
-                            <div className="absolute right-3 bottom-3 text-[10px] text-gray-400 font-mono uppercase tracking-widest">
-                                Custom Notes
+                        {/* Premium Custom Notes Input */}
+                        <div className="relative mt-4">
+                            {/* Section Header */}
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-white/10 to-white/5 border border-white/10">
+                                    <Settings2 className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-white">Custom Notes</h3>
+                                    <p className="text-[10px] text-gray-500">Add specific instructions (optional)</p>
+                                </div>
+                            </div>
+
+                            {/* Textarea Container */}
+                            <div className="relative group">
+                                {/* Gradient border effect on focus */}
+                                <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-[#F6B45A]/0 via-[#F6B45A]/0 to-[#F6B45A]/0 group-focus-within:from-[#F6B45A]/50 group-focus-within:via-[#F6B45A]/30 group-focus-within:to-[#F6B45A]/50 transition-all duration-500 blur-[1px]" />
+
+                                <div className="relative bg-gradient-to-b from-white/[0.04] to-black/40 rounded-xl border border-white/10 group-focus-within:border-[#F6B45A]/30 transition-all duration-300 overflow-hidden">
+                                    <textarea
+                                        className="w-full h-20 bg-transparent p-4 text-sm text-gray-200 placeholder-gray-500 focus:outline-none resize-none"
+                                        placeholder="e.g., '10 Up lights on siding, 3 Gutter lights, 6 Path lights along walkway...'"
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                    />
+
+                                    {/* Bottom bar with character count */}
+                                    <div className="flex items-center justify-between px-4 py-2 border-t border-white/5 bg-black/20">
+                                        <span className="text-[9px] text-gray-600 font-mono uppercase tracking-widest">
+                                            Optional Details
+                                        </span>
+                                        <span className={`text-[9px] font-mono transition-colors ${
+                                            prompt.length > 200 ? 'text-[#F6B45A]' : 'text-gray-600'
+                                        }`}>
+                                            {prompt.length}/500
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         {/* Error Message */}
-                        {error && (
-                            <div className="p-3 bg-red-900/20 border border-red-900/50 rounded-xl flex items-center gap-3 animate-pulse">
-                                <AlertCircle className="w-4 h-4 text-red-500" />
-                                <p className="text-xs text-red-400 font-bold">{error}</p>
-                            </div>
-                        )}
+                        <AnimatePresence>
+                            {error && (
+                                <motion.div
+                                    className="p-4 bg-gradient-to-r from-red-900/20 to-red-900/10 border border-red-500/30 rounded-xl flex items-center gap-3"
+                                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                >
+                                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 shrink-0">
+                                        <AlertCircle className="w-4 h-4 text-red-400" />
+                                    </div>
+                                    <p className="text-xs text-red-300 font-medium">{error}</p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                        {/* Generate Button */}
-                        <button
+                        {/* Premium Generate Button */}
+                        <motion.button
                             onClick={handleGenerate}
                             disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
-                            className="w-full bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] rounded-xl py-4 font-black text-xs uppercase tracking-[0.25em] hover:shadow-[0_0_30px_rgba(246,180,90,0.4)] hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-3 group"
+                            className="relative w-full overflow-hidden rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group"
+                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.01, y: -2 } : {}}
+                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.98 } : {}}
                         >
-                            <Wand2 className="w-4 h-4 text-black group-hover:rotate-12 transition-transform" />
-                            Generate Scene
-                        </button>
+                            {/* Background gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#F6B45A] via-[#ffc67a] to-[#F6B45A] bg-[length:200%_100%] group-hover:animate-gradient-x" />
+
+                            {/* Inner glow */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/25" />
+
+                            {/* Outer glow on hover */}
+                            <div className="absolute -inset-1 bg-[#F6B45A]/0 group-hover:bg-[#F6B45A]/30 blur-xl transition-all duration-500 pointer-events-none" />
+
+                            {/* Content */}
+                            <div className="relative z-10 flex items-center justify-center gap-3 py-4 md:py-5">
+                                <motion.div
+                                    animate={isLoading ? { rotate: 360 } : { rotate: 0 }}
+                                    transition={isLoading ? { repeat: Infinity, duration: 1, ease: "linear" } : {}}
+                                >
+                                    {isLoading ? (
+                                        <Loader2 className="w-5 h-5 text-[#111]" />
+                                    ) : (
+                                        <Wand2 className="w-5 h-5 text-[#111] group-hover:rotate-12 transition-transform duration-300" />
+                                    )}
+                                </motion.div>
+                                <span className="text-[#111] font-black text-sm uppercase tracking-[0.2em]">
+                                    {isLoading ? 'Generating...' : 'Generate Scene'}
+                                </span>
+                            </div>
+
+                            {/* Shine sweep effect */}
+                            <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] pointer-events-none opacity-0 group-hover:opacity-100"
+                                initial={{ x: '-100%' }}
+                                whileHover={{ x: '200%' }}
+                                transition={{ duration: 0.6, ease: "easeInOut" }}
+                            />
+
+                            {/* Border highlight */}
+                            <div className="absolute inset-0 rounded-xl border border-white/20 pointer-events-none" />
+                        </motion.button>
                     </div>
                 </div>
                 )
@@ -1671,7 +1897,36 @@ Notes: ${invoice.notes || 'N/A'}
                                  </motion.button>
                              </motion.div>
                          ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                            <>
+                            {/* Mobile Compact List View */}
+                            <div className="md:hidden space-y-3">
+                                {filteredUnapprovedProjects.map((p, index) => (
+                                    <motion.div key={p.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }} className="group bg-[#111] border border-white/5 rounded-xl overflow-hidden active:scale-[0.99] transition-transform">
+                                        <div className="flex items-center gap-3 p-3">
+                                            <div onClick={() => { if (p.image) { setGeneratedImage(p.image); setActiveTab('editor'); }}} className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-black">
+                                                {p.image ? <img src={p.image} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]"><Wand2 className="w-5 h-5 text-gray-600" /></div>}
+                                                <div className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ${STATUS_CONFIG[p.status].bgColor.replace('/10', '')} border border-black`}></div>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-bold text-sm text-white truncate">{p.name}</h3>
+                                                <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-bold uppercase ${STATUS_CONFIG[p.status].color}`}>{STATUS_CONFIG[p.status].label}</span><span className="text-gray-600">•</span><span className="text-[10px] text-gray-500">{p.date}</span></div>
+                                                {p.quote && <div className="text-xs font-bold text-[#F6B45A] mt-1">${p.quote.total.toFixed(0)}</div>}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {p.quote?.clientDetails?.phone && <a href={`tel:${p.quote.clientDetails.phone}`} className="p-2 text-gray-400 active:text-[#F6B45A] rounded-full"><Phone className="w-4 h-4" /></a>}
+                                                <button onClick={() => handleDeleteProject(p.id)} className="p-2 text-gray-500 active:text-red-500 rounded-full"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center border-t border-white/5 divide-x divide-white/5">
+                                            <button onClick={() => handleDownloadImage(p)} disabled={!p.image} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-gray-400 active:text-white active:bg-white/5 flex items-center justify-center gap-1.5 disabled:opacity-30"><ImageIcon className="w-3.5 h-3.5" />Save</button>
+                                            <button onClick={() => { if (p.image) setGeneratedImage(p.image); if (p.quote) setCurrentQuote(p.quote); else setCurrentQuote(null); setProjectsSubTab('quotes'); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-purple-400 active:text-purple-300 active:bg-purple-500/10 flex items-center justify-center gap-1.5"><FileText className="w-3.5 h-3.5" />Quote</button>
+                                            <button onClick={() => handleApproveProject(p.id)} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-emerald-500 active:text-emerald-400 active:bg-emerald-500/10 flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />Approve</button>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                            {/* Desktop Card Grid View */}
+                            <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
                                 {filteredUnapprovedProjects.map((p, index) => (
                                     <motion.div
                                       key={p.id}
@@ -1841,6 +2096,7 @@ Notes: ${invoice.notes || 'N/A'}
                                     </motion.div>
                                 ))}
                             </div>
+                            </>
                          )}
                      </>
                  )}
@@ -2014,183 +2270,285 @@ Notes: ${invoice.notes || 'N/A'}
                      <>
                          {currentInvoice ? (
                              /* Invoice Editor View */
-                             <div className="max-w-4xl mx-auto">
+                             <motion.div
+                                 initial={{ opacity: 0, y: 20 }}
+                                 animate={{ opacity: 1, y: 0 }}
+                                 transition={{ duration: 0.4 }}
+                                 className="max-w-4xl mx-auto"
+                             >
                                  {/* Invoice Header */}
-                                 <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden">
+                                 <div className="bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden relative">
+                                     {/* Ambient glow effects */}
+                                     <div className="absolute top-0 left-1/4 w-96 h-48 bg-blue-500/10 blur-3xl pointer-events-none" />
+                                     <div className="absolute top-0 right-1/4 w-64 h-32 bg-cyan-500/5 blur-2xl pointer-events-none" />
+
+                                     {/* Decorative corner accents */}
+                                     <div className="absolute top-0 left-0 w-16 h-16 border-l-2 border-t-2 border-blue-500/30 rounded-tl-2xl" />
+                                     <div className="absolute top-0 right-0 w-16 h-16 border-r-2 border-t-2 border-blue-500/30 rounded-tr-2xl" />
+
                                      {/* Top Bar */}
-                                     <div className="flex items-center justify-between p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-transparent">
+                                     <div className="flex items-center justify-between p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 via-transparent to-cyan-500/5 relative z-10">
                                          <div className="flex items-center gap-4">
-                                             <div className="p-3 bg-blue-500/20 rounded-xl">
-                                                 <Receipt className="w-6 h-6 text-blue-500" />
-                                             </div>
+                                             <motion.div
+                                                 whileHover={{ scale: 1.05, rotate: 5 }}
+                                                 className="p-3 bg-gradient-to-br from-blue-500/30 to-cyan-500/20 rounded-xl border border-blue-500/20 shadow-lg shadow-blue-500/10"
+                                             >
+                                                 <Receipt className="w-6 h-6 text-blue-400" />
+                                             </motion.div>
                                              <div>
-                                                 <h3 className="text-xl font-bold text-white font-serif">{currentInvoice.invoiceNumber}</h3>
-                                                 <p className="text-xs text-gray-400">{currentInvoice.projectName}</p>
+                                                 <h3 className="text-xl font-bold text-white font-serif tracking-wide">{currentInvoice.invoiceNumber}</h3>
+                                                 <p className="text-xs text-gray-400 flex items-center gap-2">
+                                                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50" />
+                                                     {currentInvoice.projectName}
+                                                 </p>
                                              </div>
                                          </div>
                                          <div className="flex items-center gap-3">
-                                             <span className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                                 currentInvoice.status === 'draft' ? 'bg-gray-500/20 text-gray-400' :
-                                                 currentInvoice.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
-                                                 'bg-emerald-500/20 text-emerald-400'
-                                             }`}>
-                                                 {currentInvoice.status}
-                                             </span>
-                                             <button
+                                             <motion.span
+                                                 initial={{ scale: 0.9 }}
+                                                 animate={{ scale: 1 }}
+                                                 className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                                     currentInvoice.status === 'draft' ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' :
+                                                     currentInvoice.status === 'sent' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-lg shadow-blue-500/10' :
+                                                     'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-lg shadow-emerald-500/10'
+                                                 }`}
+                                             >
+                                                 <span className="flex items-center gap-2">
+                                                     <span className={`w-1.5 h-1.5 rounded-full ${
+                                                         currentInvoice.status === 'draft' ? 'bg-gray-400' :
+                                                         currentInvoice.status === 'sent' ? 'bg-blue-400 animate-pulse' :
+                                                         'bg-emerald-400'
+                                                     }`} />
+                                                     {currentInvoice.status}
+                                                 </span>
+                                             </motion.span>
+                                             <motion.button
+                                                 whileHover={{ scale: 1.1, rotate: 90 }}
+                                                 whileTap={{ scale: 0.9 }}
                                                  onClick={() => setCurrentInvoice(null)}
-                                                 className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                                 className="p-2 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-all border border-transparent hover:border-white/10"
                                              >
                                                  <X className="w-5 h-5" />
-                                             </button>
+                                             </motion.button>
                                          </div>
                                      </div>
 
                                      {/* Invoice Details */}
-                                     <div className="p-6 space-y-6">
+                                     <div className="p-6 space-y-8 relative z-10">
                                          {/* Dates Row */}
-                                         <div className="grid grid-cols-2 gap-4">
-                                             <div>
-                                                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Invoice Date</label>
+                                         <motion.div
+                                             initial={{ opacity: 0, x: -20 }}
+                                             animate={{ opacity: 1, x: 0 }}
+                                             transition={{ delay: 0.1 }}
+                                             className="grid grid-cols-2 gap-6"
+                                         >
+                                             <div className="group">
+                                                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
+                                                     <Calendar className="w-3 h-3 text-blue-500" />
+                                                     Invoice Date
+                                                 </label>
                                                  <div className="relative">
-                                                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                                     <input
-                                                         type="date"
-                                                         value={currentInvoice.invoiceDate}
-                                                         onChange={(e) => handleInvoiceChange('invoiceDate', e.target.value)}
-                                                         className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors"
-                                                     />
+                                                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                     <div className="relative bg-[#0a0a0a] border border-white/10 rounded-xl overflow-hidden group-hover:border-blue-500/30 transition-colors">
+                                                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
+                                                         <input
+                                                             type="date"
+                                                             value={currentInvoice.invoiceDate}
+                                                             onChange={(e) => handleInvoiceChange('invoiceDate', e.target.value)}
+                                                             className="w-full bg-transparent pl-12 pr-4 py-3.5 text-white text-sm focus:outline-none"
+                                                         />
+                                                     </div>
                                                  </div>
                                              </div>
-                                             <div>
-                                                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Due Date</label>
+                                             <div className="group">
+                                                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
+                                                     <Clock className="w-3 h-3 text-cyan-500" />
+                                                     Due Date
+                                                 </label>
                                                  <div className="relative">
-                                                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                                     <input
-                                                         type="date"
-                                                         value={currentInvoice.dueDate}
-                                                         onChange={(e) => handleInvoiceChange('dueDate', e.target.value)}
-                                                         className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors"
-                                                     />
+                                                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                     <div className="relative bg-[#0a0a0a] border border-white/10 rounded-xl overflow-hidden group-hover:border-cyan-500/30 transition-colors">
+                                                         <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-500/50" />
+                                                         <input
+                                                             type="date"
+                                                             value={currentInvoice.dueDate}
+                                                             onChange={(e) => handleInvoiceChange('dueDate', e.target.value)}
+                                                             className="w-full bg-transparent pl-12 pr-4 py-3.5 text-white text-sm focus:outline-none"
+                                                         />
+                                                     </div>
                                                  </div>
                                              </div>
-                                         </div>
+                                         </motion.div>
 
                                          {/* Client Details */}
-                                         <div>
-                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Bill To</label>
-                                             <div className="grid grid-cols-2 gap-4">
-                                                 <input
-                                                     type="text"
-                                                     value={currentInvoice.clientDetails.name}
-                                                     onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, name: e.target.value })}
-                                                     placeholder="Client Name"
-                                                     className="bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500"
-                                                 />
-                                                 <input
-                                                     type="email"
-                                                     value={currentInvoice.clientDetails.email}
-                                                     onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, email: e.target.value })}
-                                                     placeholder="Client Email"
-                                                     className="bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={currentInvoice.clientDetails.phone}
-                                                     onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, phone: e.target.value })}
-                                                     placeholder="Phone"
-                                                     className="bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={currentInvoice.clientDetails.address}
-                                                     onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, address: e.target.value })}
-                                                     placeholder="Address"
-                                                     className="bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500"
-                                                 />
+                                         <motion.div
+                                             initial={{ opacity: 0, x: -20 }}
+                                             animate={{ opacity: 1, x: 0 }}
+                                             transition={{ delay: 0.2 }}
+                                         >
+                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
+                                                 <User className="w-3 h-3 text-blue-500" />
+                                                 Bill To
+                                             </label>
+                                             <div className="bg-[#0a0a0a]/50 border border-white/10 rounded-xl p-4 space-y-4 hover:border-blue-500/20 transition-colors">
+                                                 <div className="grid grid-cols-2 gap-4">
+                                                     <div className="relative group">
+                                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                                                         <input
+                                                             type="text"
+                                                             value={currentInvoice.clientDetails.name}
+                                                             onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, name: e.target.value })}
+                                                             placeholder="Client Name"
+                                                             className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all placeholder-gray-600"
+                                                         />
+                                                     </div>
+                                                     <div className="relative group">
+                                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-500 transition-colors text-sm">@</span>
+                                                         <input
+                                                             type="email"
+                                                             value={currentInvoice.clientDetails.email}
+                                                             onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, email: e.target.value })}
+                                                             placeholder="Client Email"
+                                                             className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all placeholder-gray-600"
+                                                         />
+                                                     </div>
+                                                     <div className="relative group">
+                                                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                                                         <input
+                                                             type="text"
+                                                             value={currentInvoice.clientDetails.phone}
+                                                             onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, phone: e.target.value })}
+                                                             placeholder="Phone"
+                                                             className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all placeholder-gray-600"
+                                                         />
+                                                     </div>
+                                                     <div className="relative group">
+                                                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                                                         <input
+                                                             type="text"
+                                                             value={currentInvoice.clientDetails.address}
+                                                             onChange={(e) => handleInvoiceChange('clientDetails', { ...currentInvoice.clientDetails, address: e.target.value })}
+                                                             placeholder="Address"
+                                                             className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all placeholder-gray-600"
+                                                         />
+                                                     </div>
+                                                 </div>
                                              </div>
-                                         </div>
+                                         </motion.div>
 
                                          {/* Line Items */}
-                                         <div>
-                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">Line Items</label>
-                                             <div className="bg-[#0a0a0a] rounded-xl border border-white/10 overflow-hidden">
+                                         <motion.div
+                                             initial={{ opacity: 0, x: -20 }}
+                                             animate={{ opacity: 1, x: 0 }}
+                                             transition={{ delay: 0.3 }}
+                                         >
+                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
+                                                 <Receipt className="w-3 h-3 text-blue-500" />
+                                                 Line Items
+                                                 <span className="ml-auto text-blue-500/50">{currentInvoice.lineItems.length} items</span>
+                                             </label>
+                                             <div className="bg-gradient-to-b from-[#0a0a0a] to-[#080808] rounded-xl border border-white/10 overflow-hidden shadow-xl shadow-black/20">
                                                  {/* Header */}
-                                                 <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/10 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                                                     <div className="col-span-4">Description</div>
-                                                     <div className="col-span-2 text-center">Qty</div>
-                                                     <div className="col-span-2 text-center">Unit Price</div>
-                                                     <div className="col-span-3 text-right">Total</div>
+                                                 <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/10 text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-blue-500/5 to-transparent">
+                                                     <div className="col-span-4 text-gray-400">Description</div>
+                                                     <div className="col-span-2 text-center text-gray-400">Qty</div>
+                                                     <div className="col-span-2 text-center text-gray-400">Unit Price</div>
+                                                     <div className="col-span-3 text-right text-gray-400">Total</div>
                                                      <div className="col-span-1"></div>
                                                  </div>
                                                  {/* Items */}
-                                                 {currentInvoice.lineItems.map((item) => (
-                                                     <div key={item.id} className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 items-center hover:bg-white/5 transition-colors group">
-                                                         <div className="col-span-4">
-                                                             <input
-                                                                 type="text"
-                                                                 value={item.description}
-                                                                 onChange={(e) => handleInvoiceLineItemChange(item.id, 'description', e.target.value)}
-                                                                 placeholder="Enter description..."
-                                                                 className="w-full bg-transparent text-white text-sm focus:outline-none placeholder-gray-600"
-                                                             />
-                                                         </div>
-                                                         <div className="col-span-2 flex items-center justify-center gap-1">
-                                                             <button
-                                                                 onClick={() => handleInvoiceLineItemChange(item.id, 'quantity', Math.max(1, item.quantity - 1))}
-                                                                 className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white"
-                                                             >
-                                                                 <Minus className="w-3 h-3" />
-                                                             </button>
-                                                             <input
-                                                                 type="number"
-                                                                 value={item.quantity}
-                                                                 onChange={(e) => handleInvoiceLineItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                                                                 className="w-12 bg-transparent text-white text-sm text-center focus:outline-none"
-                                                             />
-                                                             <button
-                                                                 onClick={() => handleInvoiceLineItemChange(item.id, 'quantity', item.quantity + 1)}
-                                                                 className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white"
-                                                             >
-                                                                 <Plus className="w-3 h-3" />
-                                                             </button>
-                                                         </div>
-                                                         <div className="col-span-2 flex items-center justify-center">
-                                                             <span className="text-gray-400 mr-1">$</span>
-                                                             <input
-                                                                 type="number"
-                                                                 value={item.unitPrice}
-                                                                 onChange={(e) => handleInvoiceLineItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                                                 className="w-20 bg-transparent text-white text-sm text-center focus:outline-none"
-                                                             />
-                                                         </div>
-                                                         <div className="col-span-3 text-right text-white font-mono font-bold">
-                                                             ${item.total.toFixed(2)}
-                                                         </div>
-                                                         <div className="col-span-1 flex justify-center">
-                                                             <button
-                                                                 onClick={() => handleRemoveInvoiceLineItem(item.id)}
-                                                                 className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                                                 title="Remove item"
-                                                             >
-                                                                 <Trash2 className="w-3.5 h-3.5" />
-                                                             </button>
-                                                         </div>
-                                                     </div>
-                                                 ))}
+                                                 <AnimatePresence mode="popLayout">
+                                                     {currentInvoice.lineItems.map((item, index) => (
+                                                         <motion.div
+                                                             key={item.id}
+                                                             initial={{ opacity: 0, x: -20 }}
+                                                             animate={{ opacity: 1, x: 0 }}
+                                                             exit={{ opacity: 0, x: 20, height: 0 }}
+                                                             transition={{ delay: index * 0.05 }}
+                                                             className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 items-center hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-transparent transition-all group"
+                                                         >
+                                                             <div className="col-span-4">
+                                                                 <input
+                                                                     type="text"
+                                                                     value={item.description}
+                                                                     onChange={(e) => handleInvoiceLineItemChange(item.id, 'description', e.target.value)}
+                                                                     placeholder="Enter description..."
+                                                                     className="w-full bg-transparent text-white text-sm focus:outline-none placeholder-gray-600"
+                                                                 />
+                                                             </div>
+                                                             <div className="col-span-2 flex items-center justify-center gap-1">
+                                                                 <motion.button
+                                                                     whileHover={{ scale: 1.1 }}
+                                                                     whileTap={{ scale: 0.9 }}
+                                                                     onClick={() => handleInvoiceLineItemChange(item.id, 'quantity', Math.max(1, item.quantity - 1))}
+                                                                     className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+                                                                 >
+                                                                     <Minus className="w-3 h-3" />
+                                                                 </motion.button>
+                                                                 <input
+                                                                     type="number"
+                                                                     value={item.quantity}
+                                                                     onChange={(e) => handleInvoiceLineItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                                                                     className="w-12 bg-[#0a0a0a] border border-white/10 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500/50 py-1"
+                                                                 />
+                                                                 <motion.button
+                                                                     whileHover={{ scale: 1.1 }}
+                                                                     whileTap={{ scale: 0.9 }}
+                                                                     onClick={() => handleInvoiceLineItemChange(item.id, 'quantity', item.quantity + 1)}
+                                                                     className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+                                                                 >
+                                                                     <Plus className="w-3 h-3" />
+                                                                 </motion.button>
+                                                             </div>
+                                                             <div className="col-span-2 flex items-center justify-center">
+                                                                 <span className="text-blue-500/50 mr-1">$</span>
+                                                                 <input
+                                                                     type="number"
+                                                                     value={item.unitPrice}
+                                                                     onChange={(e) => handleInvoiceLineItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                                                     className="w-20 bg-[#0a0a0a] border border-white/10 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500/50 py-1"
+                                                                 />
+                                                             </div>
+                                                             <div className="col-span-3 text-right">
+                                                                 <span className="text-white font-mono font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                                                                     ${item.total.toFixed(2)}
+                                                                 </span>
+                                                             </div>
+                                                             <div className="col-span-1 flex justify-center">
+                                                                 <motion.button
+                                                                     whileHover={{ scale: 1.1 }}
+                                                                     whileTap={{ scale: 0.9 }}
+                                                                     onClick={() => handleRemoveInvoiceLineItem(item.id)}
+                                                                     className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-red-500/20"
+                                                                     title="Remove item"
+                                                                 >
+                                                                     <Trash2 className="w-3.5 h-3.5" />
+                                                                 </motion.button>
+                                                             </div>
+                                                         </motion.div>
+                                                     ))}
+                                                 </AnimatePresence>
                                                  {/* Add Item Button */}
-                                                 <button
+                                                 <motion.button
+                                                     whileHover={{ scale: 1.01 }}
+                                                     whileTap={{ scale: 0.99 }}
                                                      onClick={handleAddInvoiceLineItem}
-                                                     className="w-full p-4 text-gray-400 hover:text-blue-400 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider"
+                                                     className="w-full p-4 text-gray-400 hover:text-blue-400 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent hover:via-blue-500/10 transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider border-t border-white/5"
                                                  >
                                                      <Plus className="w-4 h-4" />
                                                      Add Line Item
-                                                 </button>
+                                                 </motion.button>
                                              </div>
-                                         </div>
+                                         </motion.div>
 
                                          {/* Totals */}
-                                         <div className="flex justify-end">
-                                             <div className="w-72 space-y-3">
+                                         <motion.div
+                                             initial={{ opacity: 0, x: 20 }}
+                                             animate={{ opacity: 1, x: 0 }}
+                                             transition={{ delay: 0.4 }}
+                                             className="flex justify-end"
+                                         >
+                                             <div className="w-80 bg-gradient-to-br from-[#0a0a0a] to-[#080808] border border-white/10 rounded-xl p-5 space-y-4 shadow-xl shadow-black/20">
                                                  <div className="flex justify-between items-center text-sm">
                                                      <span className="text-gray-400">Subtotal</span>
                                                      <span className="text-white font-mono">${currentInvoice.subtotal.toFixed(2)}</span>
@@ -2202,56 +2560,84 @@ Notes: ${invoice.notes || 'N/A'}
                                                  <div className="flex justify-between items-center text-sm">
                                                      <span className="text-gray-400">Discount</span>
                                                      <div className="flex items-center gap-1">
-                                                         <span className="text-gray-400">-$</span>
+                                                         <span className="text-red-400/70">-$</span>
                                                          <input
                                                              type="number"
                                                              value={currentInvoice.discount}
                                                              onChange={(e) => handleInvoiceChange('discount', parseFloat(e.target.value) || 0)}
-                                                             className="w-20 bg-[#0a0a0a] border border-white/10 rounded px-2 py-1 text-white text-sm text-right focus:outline-none focus:border-blue-500"
+                                                             className="w-20 bg-[#0a0a0a] border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm text-right focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
                                                          />
                                                      </div>
                                                  </div>
-                                                 <div className="flex justify-between items-center text-lg pt-3 border-t border-white/10">
-                                                     <span className="text-white font-bold">Total</span>
-                                                     <span className="text-blue-500 font-mono font-bold">${currentInvoice.total.toFixed(2)}</span>
+                                                 <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                                                     <span className="text-white font-bold text-lg">Grand Total</span>
+                                                     <div className="relative">
+                                                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 blur-lg opacity-30" />
+                                                         <span className="relative text-2xl font-mono font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                                                             ${currentInvoice.total.toFixed(2)}
+                                                         </span>
+                                                     </div>
                                                  </div>
                                              </div>
-                                         </div>
+                                         </motion.div>
 
                                          {/* Notes */}
-                                         <div>
-                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Notes</label>
-                                             <textarea
-                                                 value={currentInvoice.notes}
-                                                 onChange={(e) => handleInvoiceChange('notes', e.target.value)}
-                                                 placeholder="Add any notes or payment instructions..."
-                                                 className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors placeholder-gray-500 resize-none h-24"
-                                             />
-                                         </div>
+                                         <motion.div
+                                             initial={{ opacity: 0, y: 20 }}
+                                             animate={{ opacity: 1, y: 0 }}
+                                             transition={{ delay: 0.5 }}
+                                             className="group"
+                                         >
+                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
+                                                 <FileText className="w-3 h-3 text-blue-500" />
+                                                 Notes & Payment Instructions
+                                             </label>
+                                             <div className="relative">
+                                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                                                 <textarea
+                                                     value={currentInvoice.notes}
+                                                     onChange={(e) => handleInvoiceChange('notes', e.target.value)}
+                                                     placeholder="Add any notes or payment instructions..."
+                                                     className="relative w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all placeholder-gray-600 resize-none h-28"
+                                                 />
+                                             </div>
+                                         </motion.div>
                                      </div>
 
                                      {/* Footer Actions */}
-                                     <div className="flex items-center justify-between p-6 border-t border-white/10 bg-[#0a0a0a]">
-                                         <button
+                                     <div className="flex items-center justify-between p-6 border-t border-white/10 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a] to-blue-500/5 relative z-10">
+                                         {/* Bottom decorative accents */}
+                                         <div className="absolute bottom-0 left-0 w-16 h-16 border-l-2 border-b-2 border-blue-500/20 rounded-bl-2xl" />
+                                         <div className="absolute bottom-0 right-0 w-16 h-16 border-r-2 border-b-2 border-blue-500/20 rounded-br-2xl" />
+
+                                         <motion.button
+                                             whileHover={{ scale: 1.02 }}
+                                             whileTap={{ scale: 0.98 }}
                                              onClick={() => handleInvoiceChange('status', currentInvoice.status === 'draft' ? 'sent' : currentInvoice.status === 'sent' ? 'paid' : 'draft')}
-                                             className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                                                 currentInvoice.status === 'draft' ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white' :
-                                                 currentInvoice.status === 'sent' ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white' :
-                                                 'bg-gray-500/20 text-gray-400 hover:bg-gray-500 hover:text-white'
+                                             className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                                                 currentInvoice.status === 'draft' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500 hover:text-white hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20' :
+                                                 currentInvoice.status === 'sent' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20' :
+                                                 'bg-gray-500/10 text-gray-400 border-gray-500/20 hover:bg-gray-500 hover:text-white hover:border-gray-500'
                                              }`}
                                          >
                                              {currentInvoice.status === 'draft' ? 'Mark as Sent' : currentInvoice.status === 'sent' ? 'Mark as Paid' : 'Reset to Draft'}
-                                         </button>
-                                         <button
+                                         </motion.button>
+                                         <motion.button
+                                             whileHover={{ scale: 1.02 }}
+                                             whileTap={{ scale: 0.98 }}
                                              onClick={() => handleDownloadInvoicePDF(currentInvoice)}
-                                             className="flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-blue-500/20"
+                                             className="relative group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all overflow-hidden"
                                          >
-                                             <Download className="w-4 h-4" />
-                                             Download PDF
-                                         </button>
+                                             {/* Shine effect */}
+                                             <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                                             {/* Glow */}
+                                             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 blur-lg opacity-50 group-hover:opacity-70 transition-opacity" />
+                                             <Download className="relative w-4 h-4" />
+                                             <span className="relative">Download PDF</span>
+                                         </motion.button>
                                      </div>
                                  </div>
-                             </div>
+                             </motion.div>
                          ) : (
                              /* Invoice List View */
                              <>
@@ -2282,49 +2668,82 @@ Notes: ${invoice.notes || 'N/A'}
                                          </motion.button>
                                      </motion.div>
                                  ) : (
-                                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                         {invoices.map((invoice) => (
-                                             <div
+                                     <motion.div
+                                         initial={{ opacity: 0 }}
+                                         animate={{ opacity: 1 }}
+                                         className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+                                     >
+                                         {invoices.map((invoice, index) => (
+                                             <motion.div
                                                  key={invoice.id}
-                                                 className="bg-[#111] border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all cursor-pointer group relative"
+                                                 initial={{ opacity: 0, y: 20 }}
+                                                 animate={{ opacity: 1, y: 0 }}
+                                                 transition={{ delay: index * 0.05 }}
+                                                 whileHover={{ y: -4, scale: 1.01 }}
+                                                 className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl p-6 hover:border-blue-500/30 transition-all cursor-pointer group relative overflow-hidden"
                                              >
+                                                 {/* Ambient glow on hover */}
+                                                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 bg-blue-500/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                                 {/* Decorative corner */}
+                                                 <div className="absolute top-0 right-0 w-12 h-12 border-r-2 border-t-2 border-blue-500/0 group-hover:border-blue-500/30 rounded-tr-2xl transition-colors" />
+
                                                  {/* Delete Button */}
-                                                 <button
+                                                 <motion.button
+                                                     whileHover={{ scale: 1.1 }}
+                                                     whileTap={{ scale: 0.9 }}
                                                      onClick={(e) => {
                                                          e.stopPropagation();
                                                          handleDeleteInvoice(invoice.id);
                                                      }}
-                                                     className="absolute top-3 right-3 p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                                     className="absolute top-3 right-3 p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-red-500/20"
                                                      title="Delete invoice"
                                                  >
                                                      <Trash2 className="w-4 h-4" />
-                                                 </button>
+                                                 </motion.button>
 
-                                                 <div onClick={() => setCurrentInvoice(invoice)} className="flex items-start justify-between mb-4">
+                                                 <div onClick={() => setCurrentInvoice(invoice)} className="flex items-start justify-between mb-4 relative z-10">
                                                      <div>
-                                                         <p className="text-[10px] text-blue-500 font-mono mb-1">{invoice.invoiceNumber}</p>
-                                                         <h4 className="font-bold text-white">{invoice.projectName}</h4>
-                                                         <p className="text-xs text-gray-400">{invoice.clientDetails.name || 'No client'}</p>
+                                                         <p className="text-[10px] text-blue-400/70 font-mono mb-1 flex items-center gap-1.5">
+                                                             <Receipt className="w-3 h-3" />
+                                                             {invoice.invoiceNumber}
+                                                         </p>
+                                                         <h4 className="font-bold text-white font-serif tracking-wide">{invoice.projectName}</h4>
+                                                         <p className="text-xs text-gray-400 flex items-center gap-1.5 mt-1">
+                                                             <User className="w-3 h-3" />
+                                                             {invoice.clientDetails.name || 'No client'}
+                                                         </p>
                                                      </div>
-                                                     <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${
-                                                         invoice.status === 'draft' ? 'bg-gray-500/20 text-gray-400' :
-                                                         invoice.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
-                                                         'bg-emerald-500/20 text-emerald-400'
+                                                     <span className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                                                         invoice.status === 'draft' ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' :
+                                                         invoice.status === 'sent' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                                         'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                                      }`}>
-                                                         {invoice.status}
+                                                         <span className="flex items-center gap-1.5">
+                                                             <span className={`w-1.5 h-1.5 rounded-full ${
+                                                                 invoice.status === 'draft' ? 'bg-gray-400' :
+                                                                 invoice.status === 'sent' ? 'bg-blue-400 animate-pulse' :
+                                                                 'bg-emerald-400'
+                                                             }`} />
+                                                             {invoice.status}
+                                                         </span>
                                                      </span>
                                                  </div>
-                                                 <div onClick={() => setCurrentInvoice(invoice)} className="flex items-center justify-between pt-4 border-t border-white/5">
-                                                     <div className="text-xs text-gray-400">
+                                                 <div onClick={() => setCurrentInvoice(invoice)} className="flex items-center justify-between pt-4 border-t border-white/5 relative z-10">
+                                                     <div className="text-xs text-gray-400 flex items-center gap-1.5">
+                                                         <Clock className="w-3 h-3" />
                                                          Due: {new Date(invoice.dueDate).toLocaleDateString()}
                                                      </div>
-                                                     <div className="text-lg font-bold text-blue-500 font-mono">
+                                                     <div className="text-lg font-bold font-mono bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                                                          ${invoice.total.toFixed(2)}
                                                      </div>
                                                  </div>
-                                             </div>
+
+                                                 {/* Bottom gradient line */}
+                                                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                             </motion.div>
                                          ))}
-                                     </div>
+                                     </motion.div>
                                  )}
                              </>
                          )}
@@ -2437,6 +2856,9 @@ Notes: ${invoice.notes || 'N/A'}
                 onNotificationsChange={setNotifications}
                 // Sign out
                 onSignOut={handleSignOut}
+                // Save settings
+                onSaveSettings={handleSaveSettings}
+                isSaving={isSavingSettings}
              />
           )}
 

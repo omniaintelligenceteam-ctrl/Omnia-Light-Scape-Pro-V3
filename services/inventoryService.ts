@@ -1,5 +1,3 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
 export interface InventoryItem {
   sku: string;
   name: string;
@@ -9,7 +7,7 @@ export interface InventoryItem {
 
 export async function getInventory(): Promise<InventoryItem[]> {
   try {
-    const response = await fetch(`${API_URL}/api/inventory`);
+    const response = await fetch('/api/inventory');
     if (!response.ok) throw new Error('Failed to fetch inventory');
     return await response.json();
   } catch (error) {
