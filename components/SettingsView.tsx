@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES } from '../constants';
 import { FixturePricing, CompanyProfile, FixtureCatalogItem } from '../types';
@@ -1058,7 +1058,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                  </div>
              ) : (
                  <div className="p-6">
-                     <button 
+                     <button
                         onClick={() => setActiveSection('ai')}
                         className="w-full py-4 rounded-xl border border-dashed border-[#F6B45A]/30 text-[#F6B45A] font-bold uppercase tracking-widest hover:bg-[#F6B45A]/10 transition-all flex items-center justify-center gap-2"
                      >
@@ -1067,6 +1067,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                      </button>
                  </div>
              )}
+        </div>
+
+        {/* --- CONTACT & SUPPORT SECTION --- */}
+        <div className="mt-6 bg-[#111] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+            <div className="p-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/5 rounded-xl">
+                        <Mail className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-white text-lg font-serif">Contact & Support</h3>
+                        <p className="text-xs text-gray-400 mt-1">Questions or feedback? We'd love to hear from you.</p>
+                    </div>
+                </div>
+                <a
+                    href="mailto:omniaintelligenceteam@gmail.com"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all"
+                >
+                    <Mail className="w-4 h-4" />
+                    Email Us
+                </a>
+            </div>
+            <div className="px-6 pb-6">
+                <div className="bg-[#0a0a0a] border border-white/5 rounded-xl p-4 flex items-center justify-between">
+                    <span className="text-gray-300 text-sm font-mono">omniaintelligenceteam@gmail.com</span>
+                    <button
+                        onClick={() => navigator.clipboard.writeText('omniaintelligenceteam@gmail.com')}
+                        className="text-xs text-[#F6B45A] hover:text-[#ffc67a] font-bold uppercase tracking-wider transition-colors"
+                    >
+                        Copy
+                    </button>
+                </div>
+            </div>
         </div>
 
       </div>
