@@ -92,7 +92,7 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
    - Mailboxes, house numbers, and accessories remain unchanged
 
 5. NIGHTTIME SKY REQUIREMENTS (MANDATORY):
-   - The sky MUST be converted to a DARK BLUE nighttime sky - deep navy/midnight blue color
+   - The sky MUST be converted to a Black nighttime sky 
    - The sky MUST include a REALISTIC FULL MOON - clearly visible, properly sized, with natural lunar detail
    - Moon position: place the moon in an aesthetically pleasing location (upper portion of sky, not behind house)
    - Moon appearance: realistic full moon with visible surface features (craters, maria), soft white/pale yellow glow
