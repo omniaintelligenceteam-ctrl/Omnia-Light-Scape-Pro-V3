@@ -157,13 +157,13 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
             {/* LIGHT SCAPE stacked to the right */}
             <div className="flex flex-col justify-center gap-0">
               <span
-                className="text-[8px] md:text-[12px] font-medium text-white/80 tracking-[0.15em] md:tracking-[0.2em] uppercase leading-none"
+                className="text-[10px] md:text-[16px] font-medium text-white/80 tracking-[0.15em] md:tracking-[0.2em] uppercase leading-none"
                 style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 LIGHT
               </span>
               <span
-                className="text-[8px] md:text-[12px] font-medium text-white/80 tracking-[0.15em] md:tracking-[0.2em] uppercase leading-none"
+                className="text-[10px] md:text-[16px] font-medium text-white/80 tracking-[0.15em] md:tracking-[0.2em] uppercase leading-none"
                 style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 SCAPE
