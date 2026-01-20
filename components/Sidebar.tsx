@@ -16,7 +16,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   ];
 
   return (
-    <nav className="w-full bg-gradient-to-t from-[#0a0a0a] via-[#0f0f0f] to-[#111] text-white shrink-0 z-50 sticky bottom-0">
+    <nav className="w-full bg-gradient-to-t from-[#0a0a0a] via-[#0f0f0f] to-[#111] text-white shrink-0 z-50 sticky bottom-0 pb-[env(safe-area-inset-bottom)]">
       {/* Top gradient line */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/40 to-transparent" />
 
@@ -27,13 +27,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-16 bg-[#F6B45A]/[0.03] blur-[50px] pointer-events-none" />
 
       <div className="flex flex-col items-center px-3 md:px-4 py-2 md:py-4">
-        {/* Brand text - hidden on mobile */}
-        <div className="hidden md:flex items-center gap-2 mb-3 text-[10px] text-gray-500">
-          <span className="font-mono tracking-wider">OMNIA LIGHT SCAPE PRO</span>
-          <span className="text-gray-600">|</span>
-          <span>{new Date().getFullYear()}</span>
-        </div>
-
         {/* Navigation Container - 4 separate buttons */}
         <div className="flex items-center justify-center gap-1.5 md:gap-3 w-full max-w-md">
           {menuItems.map((item) => {
@@ -175,15 +168,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         </div>
       </div>
 
-      {/* Decorative elements */}
-      <div className="absolute bottom-2 left-6 hidden md:flex items-center gap-1.5">
-        <div className="w-1 h-1 rounded-full bg-[#F6B45A]/30" />
-        <div className="w-6 h-[1px] bg-gradient-to-r from-[#F6B45A]/20 to-transparent" />
-      </div>
-      <div className="absolute bottom-2 right-6 hidden md:flex items-center gap-1.5">
-        <div className="w-6 h-[1px] bg-gradient-to-l from-[#F6B45A]/20 to-transparent" />
-        <div className="w-1 h-1 rounded-full bg-[#F6B45A]/30" />
-      </div>
     </nav>
   );
 };
