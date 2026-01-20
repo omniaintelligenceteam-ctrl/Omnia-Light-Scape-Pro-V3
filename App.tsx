@@ -188,6 +188,40 @@ const App: React.FC = () => {
     checkAuth();
   }, []);
 
+  // Load theme preferences from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('omnia_theme');
+      if (saved) {
+        const prefs = JSON.parse(saved);
+        if (prefs.theme) setTheme(prefs.theme);
+        if (prefs.accentColor) setAccentColor(prefs.accentColor);
+        if (prefs.fontSize) setFontSize(prefs.fontSize);
+        if (typeof prefs.highContrast === 'boolean') setHighContrast(prefs.highContrast);
+      }
+      const savedNotifs = localStorage.getItem('omnia_notifications');
+      if (savedNotifs) {
+        setNotifications(JSON.parse(savedNotifs));
+      }
+    } catch (e) {
+      console.error('Failed to load theme preferences', e);
+    }
+  }, []);
+
+  // Apply theme data attributes and persist to localStorage
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-accent', accentColor);
+    document.documentElement.setAttribute('data-fontsize', fontSize);
+    document.documentElement.setAttribute('data-high-contrast', String(highContrast));
+    localStorage.setItem('omnia_theme', JSON.stringify({ theme, accentColor, fontSize, highContrast }));
+  }, [theme, accentColor, fontSize, highContrast]);
+
+  // Persist notification preferences
+  useEffect(() => {
+    localStorage.setItem('omnia_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
   // Effect to handle invisible PDF generation from Projects List
   useEffect(() => {
     if (pdfProject && pdfProject.quote) {
@@ -2351,6 +2385,18 @@ Notes: ${invoice.notes || 'N/A'}
                 }}
                 userId={user?.id}
                 onRequestUpgrade={() => setShowPricing(true)}
+                // Theme props
+                theme={theme}
+                onThemeChange={setTheme}
+                accentColor={accentColor}
+                onAccentColorChange={setAccentColor}
+                fontSize={fontSize}
+                onFontSizeChange={setFontSize}
+                highContrast={highContrast}
+                onHighContrastChange={setHighContrast}
+                // Notification props
+                notifications={notifications}
+                onNotificationsChange={setNotifications}
              />
           )}
 

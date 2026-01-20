@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail, Palette, Bell, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
-import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES } from '../constants';
-import { FixturePricing, CompanyProfile, FixtureCatalogItem } from '../types';
+import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES, ACCENT_COLORS } from '../constants';
+import { FixturePricing, CompanyProfile, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences } from '../types';
 import { createPortalSession } from '../services/stripeservice';
 
 interface SubscriptionInfo {
@@ -30,6 +31,18 @@ interface SettingsViewProps {
   subscription?: SubscriptionInfo;
   userId?: string;
   onRequestUpgrade?: () => void;
+  // Theme props
+  theme?: 'light' | 'dark';
+  onThemeChange?: (theme: 'light' | 'dark') => void;
+  accentColor?: AccentColor;
+  onAccentColorChange?: (color: AccentColor) => void;
+  fontSize?: FontSize;
+  onFontSizeChange?: (size: FontSize) => void;
+  highContrast?: boolean;
+  onHighContrastChange?: (enabled: boolean) => void;
+  // Notification props
+  notifications?: NotificationPreferences;
+  onNotificationsChange?: (prefs: NotificationPreferences) => void;
 }
 
 // --- UI COMPONENTS ---
@@ -305,7 +318,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onFixtureCatalogChange,
     subscription,
     userId,
-    onRequestUpgrade
+    onRequestUpgrade,
+    // Theme props
+    theme = 'dark',
+    onThemeChange,
+    accentColor = 'gold',
+    onAccentColorChange,
+    fontSize = 'normal',
+    onFontSizeChange,
+    highContrast = false,
+    onHighContrastChange,
+    // Notification props
+    notifications,
+    onNotificationsChange
 }) => {
   const [activeSection, setActiveSection] = useState<string | null>('company');
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
