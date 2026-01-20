@@ -133,6 +133,7 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
    - Do NOT add decorative string lights unless explicitly requested
    - Do NOT add interior lights glowing through windows unless explicitly requested
    - Do NOT add street lights, car headlights, or ambient city glow
+   - ABSOLUTE PROHIBITION: NO SECURITY LIGHTS - even if security lights/floodlights exist on the home in the source image, they must remain OFF and DARK in the output
    - Light color temperature and beam characteristics follow active prompt specs
    - Unlit areas should remain in deep shadow for maximum contrast
 
@@ -143,7 +144,7 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - Source image landscaping = Output image landscaping (IDENTICAL)
 - Only differences: sky darkness + requested light fixtures/effects`,
 
-  globalNegativePrompt: `new architectural features, new windows, new doors, new dormers, new columns, new trim, new shutters, new porches, new decks, new balconies, new railings, roof changes, roof modifications, new hardscape, new driveways, new sidewalks, new walkways, new patios, new steps, new retaining walls, new pavers, new concrete, new landscaping, new trees, new shrubs, new bushes, new plants, new flowers, new mulch beds, new planters, new garden features, lawn changes, seasonal changes, snow, fall leaves, different foliage, new vehicles, new furniture, new outdoor objects, string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, bright moonlight, harsh moonlight, stars, starlight, blue sky, gradient sky, ambient sky glow, twilight, dusk colors, light fixtures not specified, paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, property modifications, house modifications, structure modifications, added features, removed features, altered features`,
+  globalNegativePrompt: `new architectural features, new windows, new doors, new dormers, new columns, new trim, new shutters, new porches, new decks, new balconies, new railings, roof changes, roof modifications, new hardscape, new driveways, new sidewalks, new walkways, new patios, new steps, new retaining walls, new pavers, new concrete, new landscaping, new trees, new shrubs, new bushes, new plants, new flowers, new mulch beds, new planters, new garden features, lawn changes, seasonal changes, snow, fall leaves, different foliage, new vehicles, new furniture, new outdoor objects, string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, bright moonlight, harsh moonlight, stars, starlight, blue sky, gradient sky, ambient sky glow, twilight, dusk colors, light fixtures not specified, paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, property modifications, house modifications, structure modifications, added features, removed features, altered features, security lights, security floodlights, motion sensor lights, existing security fixtures turned on, lit security lights`,
 
   closingReinforcement: `MASTER RULE - STRICT CATEGORY ENFORCEMENT:
 - ONLY generate fixtures for categories that are EXPLICITLY ENABLED
@@ -162,6 +163,20 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
   * Siding, Windows, Columns, Landscaping = MUST REMAIN DARK
 - Do NOT light unselected sub-options to "balance" or "complete" the design
 - This rule is ABSOLUTE and NON-NEGOTIABLE
+
+*** STRICT RULE - NO SECURITY LIGHTS ***:
+- SECURITY LIGHTS, FLOODLIGHTS, and MOTION SENSOR LIGHTS must NEVER be illuminated
+- Even if security fixtures exist on the home in the source image, they MUST remain OFF and DARK
+- Do NOT turn on, activate, or show light emanating from ANY existing security fixtures
+- This applies regardless of what other lighting is selected
+- Security lights are FORBIDDEN from being lit - NO EXCEPTIONS
+
+*** STRICT RULE - UP LIGHT FOUNDATION PROXIMITY ***:
+- ALL up lights MUST be placed WITHIN 6 INCHES of the home's foundation
+- EXCEPTION: Tree up lights - these are placed at the base of trees, not the foundation
+- For siding, windows, columns, entry, and all other up light sub-options: fixtures MUST be tight against the foundation
+- Do NOT place non-tree up lights far out in the landscaping away from the home
+- The fixture base should be nearly touching the foundation - 6 inches MAX distance
 
 FINAL REMINDER:
 You are converting a daytime photo to nighttime and adding ONLY the specified lighting fixtures.
@@ -1159,9 +1174,11 @@ IDENTIFICATION:
 - Types: gable dormers, shed dormers, hipped dormers, eyebrow dormers
 - Identify dormer face (front wall), dormer window, and dormer roof
 
-FIXTURE SPECIFICATIONS:
-- Type: compact brass bullet or mini flood up light with gutter-mount bracket
-- Housing: brass/bronze, low-profile
+FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
+- Type: SMALL compact brass bullet or mini flood up light with gutter-mount bracket
+- Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
+- Size: SMALL/COMPACT fixture - NOT large floodlights
+- Profile: LOW-PROFILE design that sits discreetly in/on gutter
 - Mounting: on gutter lip, inside gutter trough, or on fascia board adjacent to gutter
 - Beam spread: medium -- enough to wash dormer face
 
@@ -1226,9 +1243,11 @@ IDENTIFICATION:
 - Distinguish from DORMERS (dormers are separate structures; gables are part of main roof)
 - Identify: gable TRIANGLE (the triangular wall section), gutter line at gable BASE, gable APEX (peak point)
 
-FIXTURE SPECIFICATIONS:
-- Type: compact brass bullet or mini flood up light with gutter-mount bracket
-- Housing: brass/bronze, low-profile
+FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
+- Type: SMALL compact brass bullet or mini flood up light with gutter-mount bracket
+- Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
+- Size: SMALL/COMPACT fixture - NOT large floodlights
+- Profile: LOW-PROFILE design that sits discreetly in/on gutter
 - Mounting: on gutter lip, inside gutter trough, or on fascia board
 - Beam spread: narrow to medium -- focused vertical emphasis
 
