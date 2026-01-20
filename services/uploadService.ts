@@ -1,11 +1,20 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+let supabase: SupabaseClient | null = null;
+
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+}
 
 export async function uploadImage(base64Image: string, userId: string): Promise<string> {
+  if (!supabase) {
+    console.warn('Supabase not configured. Returning base64 image as fallback.');
+    return base64Image;
+  }
+
   // Extract base64 data and mime type
   const matches = base64Image.match(/^data:(.+);base64,(.+)$/);
   if (!matches) {
