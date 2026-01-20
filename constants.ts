@@ -302,7 +302,7 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
 IDENTIFICATION SCAN:
 - Locate every vertical solid wall section BETWEEN windows across the entire home facade
 - Wall pier materials: siding (lap, board & batten, shake), stucco, brick, stone, block
-- Include: corner sections at far left and far right of structure
+- Include: corner siding at far left and far right of structure
 - Include: wall sections between window groupings
 - Include: blank wall expanses with no windows
 
@@ -318,10 +318,10 @@ PLACEMENT GEOMETRY:
 - Place fixtures in planting bed or mulch ONLY -- never on concrete, pavers, or hardscape
 
 PLACEMENT SEQUENCE:
-1. Start with FAR LEFT corner of facade
-2. Then FAR RIGHT corner of facade
-3. Fill INWARD identifying each wall pier between windows
-4. Every vertical wall section receives one fixture
+1. Start with FAR LEFT corner of facade if under landscaping bed
+2. Then FAR RIGHT corner of facade if under landscaping bed
+3. Fill INWARD identifying each wall pier between windows, add 2 for large blank sections
+4. Every vertical wall section receives atleast one fixture
 
 WALL PIER IDENTIFICATION:
 - Measure from window edge to window edge
@@ -505,7 +505,8 @@ FIXTURE PLACEMENT (CRITICAL):
 PLACEMENT BY SCENARIO:
 - COLUMNS/PILASTERS flank door: place at base of each column, 4-6 inches from face, angled upward along shaft
 - SIDELIGHTS flank door: place at outer edge of sidelight assembly, grazing vertical trim/casing
-- PLAIN WALL/TRIM only: place at outer edges of door casing, grazing vertical molding
+- PLAIN WALL/TRIM only: place at outer edges of door casing, grazing vertical molding up to soffit line
+- PORTICO/ROOF OVERHANG above door: angle beams to illuminate underside of overhang
 - ARCHWAY surrounds door: illuminate arch legs to trace the curve overhead
 
 SETBACK & ANGLE:
