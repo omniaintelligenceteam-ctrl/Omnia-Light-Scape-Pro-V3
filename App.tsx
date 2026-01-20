@@ -1825,17 +1825,36 @@ Notes: ${invoice.notes || 'N/A'}
              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
 
                  {/* High-End Header */}
-                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6 border-b border-white/5 pb-6">
-                     <div>
-                        <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Project Library</h2>
-                        <div className="flex items-center gap-2">
-                             <div className="w-2 h-2 rounded-full bg-[#F6B45A] animate-pulse"></div>
-                             <span className="text-[10px] text-gray-300 font-mono uppercase tracking-widest">Database // Active Systems: {projects.length}</span>
+                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 mb-6 border-b border-white/5 pb-6">
+                     {/* Mobile: Title and Search in same row */}
+                     <div className="flex items-start justify-between w-full md:w-auto gap-3">
+                        <div className="flex-1 md:flex-none">
+                           <h2 className="text-2xl md:text-4xl font-bold text-white font-serif tracking-tight mb-1 md:mb-2">Project Library</h2>
+                           <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-[#F6B45A] animate-pulse"></div>
+                                <span className="text-[9px] md:text-[10px] text-gray-300 font-mono uppercase tracking-widest">Active: {projects.length}</span>
+                           </div>
+                        </div>
+
+                        {/* Mobile Search Icon/Input */}
+                        <div className="md:hidden relative">
+                           <div className="relative group">
+                              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                  <Search className="h-4 w-4 text-gray-400 group-focus-within:text-[#F6B45A] transition-colors" />
+                              </div>
+                              <input
+                                  type="text"
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                  className="block w-36 pl-8 pr-2 py-2 border border-white/10 rounded-lg leading-5 bg-[#111] text-gray-200 placeholder-gray-500 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 text-xs font-mono transition-all"
+                                  placeholder="Search..."
+                              />
+                           </div>
                         </div>
                      </div>
 
-                     {/* Search Bar Simulation */}
-                     <div className="w-full md:w-96 relative group">
+                     {/* Desktop Search Bar */}
+                     <div className="hidden md:block w-96 relative group">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-4 w-4 text-gray-400 group-focus-within:text-[#F6B45A] transition-colors" />
                         </div>

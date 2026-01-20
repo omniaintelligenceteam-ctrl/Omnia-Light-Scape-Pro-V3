@@ -202,40 +202,40 @@ ${customMessage ? `\n${customMessage}\n` : ''}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative bg-gradient-to-b from-white/[0.08] to-[#111]/95 backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] print:hidden sticky top-0 z-20 overflow-hidden"
+                className="relative bg-gradient-to-b from-white/[0.08] to-[#111]/95 backdrop-blur-xl p-3 md:p-5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] print:hidden sticky top-0 z-20 overflow-hidden"
             >
                 {/* Top gradient line */}
                 <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/40 to-transparent" />
 
-                <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Desktop Layout */}
+                <div className="hidden md:flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <motion.div
                             className="relative p-3 rounded-xl bg-gradient-to-br from-[#F6B45A]/20 to-[#F6B45A]/5 border border-[#F6B45A]/30"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            <FileText className="w-5 h-5 md:w-6 md:h-6 text-[#F6B45A]" />
+                            <FileText className="w-6 h-6 text-[#F6B45A]" />
                             <div className="absolute -inset-1 bg-[#F6B45A]/20 blur-xl -z-10" />
                         </motion.div>
                         <div>
-                            <h2 className="text-base md:text-lg font-bold text-white tracking-wide font-serif">
+                            <h2 className="text-lg font-bold text-white tracking-wide font-serif">
                                 QUOTE <span className="text-[#F6B45A]">GENERATOR</span>
                             </h2>
                             <p className="text-[10px] text-gray-500">Professional lighting estimates</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 md:gap-3">
+                    <div className="flex items-center gap-3">
                         {/* Save Button */}
                         <motion.button
                             onClick={handleSaveClick}
-                            className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-4 md:px-5 py-2.5 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
+                            className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
                             whileHover={{ scale: 1.02, y: -1 }}
                             whileTap={{ scale: 0.98 }}
                         >
-                            <Save className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                            <span className="hidden sm:inline">Save Project</span>
-                            <span className="sm:hidden">Save</span>
+                            <Save className="w-4 h-4" />
+                            Save Project
                             <motion.div
                                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]"
                                 initial={{ x: '-100%' }}
@@ -248,47 +248,95 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         {onGenerateBOM && (
                             <motion.button
                                 onClick={handleGenerateBOMClick}
-                                className="bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-white/10 hover:border-white/20 transition-all"
+                                className="bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-white/10 hover:border-white/20 transition-all"
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >
-                                <ClipboardList className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                <span className="hidden sm:inline">Generate BOM</span>
-                                <span className="sm:hidden">BOM</span>
+                                <ClipboardList className="w-4 h-4" />
+                                Generate BOM
                             </motion.button>
                         )}
 
-                        <div className="w-px h-8 bg-white/10 mx-1 hidden sm:block"></div>
+                        <div className="w-px h-8 bg-white/10 mx-1"></div>
 
                         {/* Send Quote Button */}
                         <motion.button
                             onClick={() => setShowSendModal(true)}
-                            className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20"
+                            className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             title="Send Quote"
                         >
-                            <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                            <span className="hidden sm:inline">Send</span>
+                            <Send className="w-4 h-4" />
+                            Send
                         </motion.button>
 
                         {/* Download PDF Button */}
                         <motion.button
                             onClick={handleDownloadPdf}
                             disabled={isGeneratingPdf}
-                            className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 md:px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                             whileHover={!isGeneratingPdf ? { scale: 1.02 } : {}}
                             whileTap={!isGeneratingPdf ? { scale: 0.98 } : {}}
                             title="Download PDF"
                         >
                             {isGeneratingPdf ? (
-                                <Loader2 className="w-3.5 h-3.5 md:w-4 md:h-4 animate-spin" />
+                                <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                                <Download className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                <Download className="w-4 h-4" />
                             )}
-                            <span className="hidden sm:inline">{isGeneratingPdf ? 'Generating...' : 'PDF'}</span>
+                            {isGeneratingPdf ? 'Generating...' : 'PDF'}
                         </motion.button>
                     </div>
+                </div>
+
+                {/* Mobile Layout - Compact row of buttons */}
+                <div className="flex md:hidden items-center justify-between gap-2">
+                    {/* Save Button with Icon */}
+                    <motion.button
+                        onClick={handleSaveClick}
+                        className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
+                        whileTap={{ scale: 0.98 }}
+                    >
+                        <FileText className="w-3.5 h-3.5" />
+                        <Save className="w-3.5 h-3.5" />
+                        Save
+                    </motion.button>
+
+                    {/* BOM Button */}
+                    {onGenerateBOM && (
+                        <motion.button
+                            onClick={handleGenerateBOMClick}
+                            className="bg-white/5 text-white px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10"
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <ClipboardList className="w-3.5 h-3.5" />
+                            BOM
+                        </motion.button>
+                    )}
+
+                    {/* Send Button */}
+                    <motion.button
+                        onClick={() => setShowSendModal(true)}
+                        className="text-gray-300 bg-white/5 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10"
+                        whileTap={{ scale: 0.98 }}
+                    >
+                        <Send className="w-3.5 h-3.5" />
+                    </motion.button>
+
+                    {/* PDF Button */}
+                    <motion.button
+                        onClick={handleDownloadPdf}
+                        disabled={isGeneratingPdf}
+                        className="text-gray-300 bg-white/5 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10 disabled:opacity-50"
+                        whileTap={!isGeneratingPdf ? { scale: 0.98 } : {}}
+                    >
+                        {isGeneratingPdf ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <Download className="w-3.5 h-3.5" />
+                        )}
+                    </motion.button>
                 </div>
             </motion.div>
         )}
