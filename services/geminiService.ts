@@ -51,33 +51,55 @@ export const generateNightScene = async (
     You are a professional Architectural Lighting Designer and Photo Retoucher.
     Task: Transform the provided daylight photograph into a realistic, high-end night-time landscape lighting scene.
 
-    # CORE CONSTRAINTS (STRICT)
-    1. **Structure**: Keep the original image geometry, architecture, and landscaping exactly as is. Do not crop or zoom.
-    2. **STRICT PROHIBITION: GEOMETRIC ADDITIONS**: You are FORBIDDEN from adding any physical objects.
-       - NO NEW TREES. NO NEW BUSHES.
-       - NO NEW SIDEWALKS. NO NEW DRIVEWAYS. NO NEW PATHS.
-       - NO NEW ARCHITECTURE (No wings, no dormers, no extra windows).
-       - NO NEW DECOR (No pots, no furniture).
-       - Your job is to ADD LIGHT, NOT MATTER.
-    3. **Background**: Trees in the background must remain dark silhouettes.
-    4. **Sky**: The night sky must feature a photorealistic FULL MOON and STARS. The moon should look natural with crater details and realistic luminance.
-    5. **Exclusive Generation Protocol**: If a lighting type or location is NOT explicitly listed in "DESIGN REQUEST" as "ALLOWED", it is FORBIDDEN. The default state for all unmentioned surfaces (roofs, paths, walls) is DARKNESS.
+    # STEP 1: SOURCE IMAGE ANALYSIS (MANDATORY)
+    BEFORE making any changes, you MUST analyze and catalog the input photograph:
+    - Count and note the exact position of every window, door, and architectural feature
+    - Identify all landscaping elements (trees, bushes, plants) and their EXACT positions
+    - Identify all hardscape elements (driveways, sidewalks, patios, walkways) OR note their ABSENCE
+    - Note the exact shape of the roof, any dormers, columns, or decorative elements
+    YOUR OUTPUT MUST PRESERVE THIS CATALOG EXACTLY. Every element stays; no elements added.
 
-    # LIGHTING SPECIFICATIONS
-    - **Style**: High-contrast Chiaroscuro. Pitch black environment with specific light sources. No generic ambient wash.
+    # STEP 2: PIXEL-PERFECT PRESERVATION (CRITICAL)
+    1. **ABSOLUTE STRUCTURE LOCK**: The generated image must be a 1:1 edit of the source photo.
+       - Every building, tree, bush, object MUST appear EXACTLY as shown in source.
+       - If source has NO sidewalk, output has NO sidewalk.
+       - If source has NO driveway, output has NO driveway.
+       - If source has NO front walkway (just grass to door), output has NO front walkway.
+       - You are ONLY permitted to: darken the scene to night, add the specific requested light fixtures.
+
+    2. **ABSOLUTE ZERO-ADDITION POLICY**:
+       - FORBIDDEN ADDITIONS: New trees, bushes, plants, walkways, driveways, patios, steps, railings, windows, doors, dormers, columns, decorations, paths, pots, furniture.
+       - If you are uncertain whether something exists in source, DO NOT ADD IT.
+       - Your job is to ADD LIGHT to existing elements, NOT to ADD MATTER.
+
+    3. **HARDSCAPE PRESERVATION**:
+       - Many homes do NOT have front walkways, sidewalks, or visible driveways. This is NORMAL.
+       - If source photo shows GRASS leading to front door, output MUST show GRASS (no path).
+       - Do NOT "complete" or "add" hardscape that seems missing. It is not missing.
+
+    4. **Sky**: Transform to realistic twilight/dusk. Natural darkening sky with subtle ambient starlight. NO artificial moon unless clearly visible in source photo.
+
+    5. **Background**: Trees in background remain dark silhouettes. Do not add trees.
+
+    # STEP 3: EXCLUSIVE LIGHTING RULES
+    - **PLACEMENT PRIORITY**: The "DESIGN REQUEST" below contains a strict ALLOW-LIST.
+    - **Zero Hallucination**: If user selects "Trees" only, House MUST remain DARK. If user selects "Path" only, House and Trees MUST remain DARK.
+    - **Soffit/Eave Defaults**: DEFAULT OFF unless explicitly requested.
+    - **Beam Hygiene**: Light sources must be realistic (cone shape, natural falloff).
     - **Color Temperature**: ${colorTemperaturePrompt}
     - **Intensity**: ${getIntensityPrompt(lightIntensity)}
     - **Beam**: ${getBeamAnglePrompt(beamAngle)}
-    
-    # EXCLUSIVE GENERATION RULES
-    - **PLACEMENT PRIORITY**: The "DESIGN REQUEST" below contains a strict ALLOW-LIST.
-    - **Zero Hallucination**: If the user selects "Trees" only, the House MUST remain DARK. If the user selects "Path" only, the House and Trees MUST remain DARK.
-    - **Soffit/Eave Defaults**: DEFAULT OFF. Unless explicitly requested in "DESIGN REQUEST".
-    - **Beam Hygiene**: Light sources must be realistic (cone shape, falloff).
+
+    # YOUR ONLY PERMITTED MODIFICATIONS:
+    1. Darken the overall scene to simulate nighttime
+    2. Add ONLY the specific light fixtures listed in DESIGN REQUEST
+    3. Add realistic light beams/glow from those fixtures
+    4. Subtle ambient starlight in sky (NO MOON unless in source)
+    EVERYTHING ELSE must remain pixel-for-pixel identical to the source image.
 
     # DESIGN REQUEST
     Apply the following specific configuration to the scene. These instructions override default placement rules if they conflict:
-    
+
     ${userInstructions}
   `;
 

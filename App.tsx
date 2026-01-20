@@ -22,7 +22,7 @@ import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight } from 'lucide-react';
-import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING } from './constants';
+import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences } from './types';
 
 // Helper to parse fixture quantities from text
@@ -420,15 +420,33 @@ const App: React.FC = () => {
     }
 
     // Construct Composite Prompt
-    let activePrompt = "EDITING TASK: Apply specific lighting to the EXISTING photo content.\n\n";
+    // Start with the master anti-hallucination instructions from constants.ts
+    let activePrompt = SYSTEM_PROMPT.masterInstruction + "\n\n";
+
+    // Step 1: Source Image Analysis (forces AI to catalog existing elements first)
+    activePrompt += "## SOURCE IMAGE ANALYSIS (MANDATORY FIRST STEP)\n";
+    activePrompt += "BEFORE making any changes, carefully analyze the input photograph:\n";
+    activePrompt += "- Count the EXACT number of windows, doors, and architectural features\n";
+    activePrompt += "- Note the EXACT position of all trees, bushes, and plants\n";
+    activePrompt += "- Identify ALL hardscape (driveways, sidewalks, patios, walkways) OR note their COMPLETE ABSENCE\n";
+    activePrompt += "- Many homes have NO front walkway - just grass leading to the door. THIS IS NORMAL.\n";
+    activePrompt += "YOUR OUTPUT MUST MATCH THIS ANALYSIS EXACTLY. Only add requested lights.\n\n";
 
     activePrompt += "### CRITICAL GEOMETRY LOCK (ZERO ADDITIONS):\n";
     activePrompt += "You are strictly forbidden from adding ANY physical matter to this scene. You are a lighting engine only, not a builder.\n";
     activePrompt += "1. NO NEW TREES. NO NEW BUSHES. NO NEW PLANTS.\n";
-    activePrompt += "2. NO NEW SIDEWALKS. NO NEW PATHWAYS. NO NEW DRIVEWAYS.\n";
+    activePrompt += "2. NO NEW SIDEWALKS. NO NEW PATHWAYS. NO NEW DRIVEWAYS. NO NEW WALKWAYS.\n";
     activePrompt += "3. NO NEW ARCHITECTURE. Do not add wings to the house, do not add dormers, do not add windows.\n";
     activePrompt += "4. NO NEW DECORATIONS. Do not add furniture, pots, or statues.\n";
     activePrompt += "VERIFICATION: If the object does not exist in the original daylight photo, it MUST NOT exist in the night render. Only add PHOTONS (Light).\n\n";
+
+    activePrompt += "### HARDSCAPE PRESERVATION RULE (CRITICAL):\n";
+    activePrompt += "MANY homes do NOT have front walkways, sidewalks, or visible driveways. This is NORMAL and INTENTIONAL.\n";
+    activePrompt += "- If source photo shows GRASS leading to the front door, output MUST show GRASS (no path).\n";
+    activePrompt += "- If source photo has NO sidewalk, output has NO sidewalk.\n";
+    activePrompt += "- If source photo has NO visible driveway, output has NO visible driveway.\n";
+    activePrompt += "- Do NOT 'complete' or 'add' hardscape that seems missing. It is NOT missing.\n";
+    activePrompt += "- NEVER add a walkway, path, or driveway that does not exist in the source.\n\n";
 
     activePrompt += "### CRITICAL COMPOSITION RULE:\n";
     activePrompt += "The WHOLE HOUSE must remain in the generated photo. Do NOT crop parts of the house out. Do NOT zoom in. You must preserve the full field of view of the original image.\n\n";
@@ -500,11 +518,12 @@ const App: React.FC = () => {
 
                  // 4. Add Explicit Negatives for UNSELECTED items
                  const unselected = allSubIds.filter(id => !selectedSubs.includes(id));
-                 p += `\nEXCLUSIONS:\n`;
+                 p += `\n## STRICT EXCLUSIONS FOR ${ft.label.toUpperCase()}:\n`;
+                 p += `The following surfaces are NOT SELECTED and MUST remain completely dark:\n`;
                  unselected.forEach(id => {
                      const opt = allOptionsList.find(o => o.id === id);
                      if (opt && 'negativePrompt' in opt) {
-                        p += `${(opt as any).negativePrompt}\n`;
+                        p += `FORBIDDEN: ${(opt as any).negativePrompt}\n`;
                      }
                  });
                  
@@ -563,10 +582,22 @@ const App: React.FC = () => {
         activePrompt += `\n\n[HARD CONSTRAINT]: UP LIGHTS ARE ACTIVE, BUT SOFFIT DOWNLIGHTS ARE DISABLED. Do NOT generate any recessed can lights or downlights in the roof overhangs/soffits. The ONLY light on the house must come from the GROUND UP. The eaves themselves should not be emitting light, though they may catch the wash from the up lights.`;
     }
     
-    // Final QA Instruction
-    activePrompt += "\n\n### FINAL QA PROTOCOL:\n";
-    activePrompt += "1. REVIEW GEOMETRY: Did you add any trees, sidewalks, or structural features? If yes, REMOVE THEM.\n";
-    activePrompt += "2. REVIEW EXCLUSIONS: Did you add lights to forbidden surfaces? If yes, REMOVE THEM.\n";
+    // Final QA Instruction - Comprehensive Verification Checklist
+    activePrompt += "\n\n### FINAL VERIFICATION CHECKLIST (MANDATORY):\n";
+    activePrompt += "Before outputting, verify each item. If ANY check fails, FIX IT:\n";
+    activePrompt += "[ ] WINDOW COUNT: Does output have the SAME number of windows as source? If not, FIX.\n";
+    activePrompt += "[ ] DOOR COUNT: Does output have the SAME number of doors as source? If not, FIX.\n";
+    activePrompt += "[ ] HARDSCAPE: Does output have the SAME driveway/sidewalk/walkway as source (or NONE if source has NONE)? If not, FIX.\n";
+    activePrompt += "[ ] TREES: Does output have the SAME trees in the SAME positions as source? If not, FIX.\n";
+    activePrompt += "[ ] LANDSCAPING: Does output have the SAME bushes and plants as source? If not, FIX.\n";
+    activePrompt += "[ ] ARCHITECTURE: Does output have the SAME house shape, roof, dormers as source? If not, FIX.\n";
+    activePrompt += "[ ] LIGHT PLACEMENT: Are lights ONLY on surfaces listed in ALLOWED sections above? If not, REMOVE.\n";
+    activePrompt += "[ ] FORBIDDEN SURFACES: Are all surfaces listed in EXCLUSIONS/FORBIDDEN sections dark? If not, FIX.\n";
+    activePrompt += "[ ] SKY: Is the sky natural twilight (no giant artificial moon)? If not, FIX.\n";
+    activePrompt += "[ ] COMPOSITION: Is the full house visible without cropping or zooming? If not, FIX.\n";
+
+    // Add closing reinforcement from constants.ts (category enforcement rules)
+    activePrompt += "\n\n" + SYSTEM_PROMPT.closingReinforcement;
 
     // Prepare Color Temperature Prompt
     const selectedColor = COLOR_TEMPERATURES.find(c => c.id === colorTemp);
@@ -1964,8 +1995,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                 {/* Invoice Button */}
                                                 <button
                                                     onClick={() => handleGenerateInvoice(p)}
-                                                    disabled={!p.quote}
-                                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+                                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20"
                                                 >
                                                     <Receipt className="w-4 h-4" />
                                                     Generate Invoice
