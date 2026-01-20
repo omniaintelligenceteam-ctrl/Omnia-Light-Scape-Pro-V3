@@ -6,11 +6,11 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
 // Create supabase client only if env vars are available
 // This prevents crashes during local development or when env vars are missing
-let supabase: SupabaseClient | null = null;
+let supabaseClient: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseServiceKey) {
   // Server-side Supabase client with service role key
-  supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -20,7 +20,16 @@ if (supabaseUrl && supabaseServiceKey) {
   console.warn('Supabase credentials not found. API will use mock data.');
 }
 
-export { supabase };
+// Export the client (may be null)
+export const supabase = supabaseClient;
+
+// Helper to get supabase client or throw - use this in API handlers
+export function getSupabase(): SupabaseClient {
+  if (!supabaseClient) {
+    throw new Error('Supabase not configured');
+  }
+  return supabaseClient;
+}
 
 // Helper to set RLS context for user
 export async function setUserContext(userId: string) {

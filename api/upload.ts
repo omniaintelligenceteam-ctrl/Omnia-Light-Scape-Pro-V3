@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from './lib/supabase.js';
+import { getSupabase } from './lib/supabase.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -26,6 +26,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Generate unique filename
     const extension = mimeType.split('/')[1] || 'png';
     const filename = `${userId}/${Date.now()}.${extension}`;
+
+    let supabase;
+    try {
+      supabase = getSupabase();
+    } catch {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
 
     // Upload to Supabase Storage
     const { error } = await supabase.storage

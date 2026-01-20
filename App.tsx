@@ -131,7 +131,7 @@ const App: React.FC = () => {
   // Company Profile State
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile>({
     name: 'Omnia Light Scape Pro',
-    email: 'dev@omnia.com',
+    email: 'omniaintelligenceteam@gmail.com',
     address: '123 Landscape Lane\nDesign District, CA 90210',
     logo: null
   });

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
-import { supabase } from './lib/supabase.js';
+import { getSupabase } from './lib/supabase.js';
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -15,6 +15,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!prompt || !userId) {
       return res.status(400).json({ error: 'Missing prompt or userId' });
+    }
+
+    let supabase;
+    try {
+      supabase = getSupabase();
+    } catch {
+      return res.status(500).json({ error: 'Database not configured' });
     }
 
     // Check if user has active subscription
@@ -86,12 +93,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Log failed render
     if (req.body?.userId) {
-      await supabase.from('render_logs').insert({
-        user_id: req.body.userId,
-        success: false,
-        error_message: error.message,
-        created_at: new Date().toISOString()
-      });
+      try {
+        const db = getSupabase();
+        await db.from('render_logs').insert({
+          user_id: req.body.userId,
+          success: false,
+          error_message: error.message,
+          created_at: new Date().toISOString()
+        });
+      } catch {
+        // Ignore logging errors
+      }
     }
 
     return res.status(500).json({

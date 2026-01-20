@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Webhook } from 'svix';
-import { supabase } from '../lib/supabase.js';
+import { getSupabase } from '../lib/supabase.js';
 
 const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
 
@@ -12,6 +12,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!webhookSecret) {
     console.error('Missing CLERK_WEBHOOK_SECRET');
     return res.status(500).json({ error: 'Webhook secret not configured' });
+  }
+
+  let supabase;
+  try {
+    supabase = getSupabase();
+  } catch {
+    return res.status(500).json({ error: 'Database not configured' });
   }
 
   try {

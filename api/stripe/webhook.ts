@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
-import { supabase } from '../lib/supabase.js';
+import { getSupabase } from '../lib/supabase.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
     apiVersion: '2025-12-15.clover'
@@ -49,6 +49,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (err) {
         console.error('Webhook signature verification failed:', err);
         return res.status(400).json({ error: 'Webhook signature verification failed' });
+    }
+
+    let supabase;
+    try {
+        supabase = getSupabase();
+    } catch {
+        return res.status(500).json({ error: 'Database not configured' });
     }
 
     try {

@@ -1,11 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../lib/supabase.js';
+import { getSupabase } from '../lib/supabase.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { id, userId: clerkUserId } = req.query;
 
   if (!id || typeof id !== 'string' || !clerkUserId || typeof clerkUserId !== 'string') {
     return res.status(400).json({ error: 'Missing id or userId parameter' });
+  }
+
+  let supabase;
+  try {
+    supabase = getSupabase();
+  } catch {
+    return res.status(500).json({ error: 'Database not configured' });
   }
 
   try {

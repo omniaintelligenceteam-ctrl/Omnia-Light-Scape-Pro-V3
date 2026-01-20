@@ -67,7 +67,7 @@ export const BillingCanceled: React.FC<BillingCanceledProps> = ({ onContinue, on
         {/* Help link */}
         <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
           <HelpCircle className="w-3 h-3" />
-          <span>Having issues? Contact support@omnia.com</span>
+          <span>Having issues? Contact omniaintelligenceteam@gmail.com</span>
         </div>
       </div>
     </div>
