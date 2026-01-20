@@ -21,7 +21,7 @@ import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, DollarSign, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ArrowUp, Navigation, CircleDot, Home, Lamp, LayoutGrid, Sun, Settings2 } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ArrowUp, ArrowDown, Navigation, CircleDot, Triangle, Sun, Settings2, GalleryVerticalEnd } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences } from './types';
 
@@ -1583,9 +1583,9 @@ Notes: ${invoice.notes || 'N/A'}
                                             case 'up': return ArrowUp;
                                             case 'path': return Navigation;
                                             case 'coredrill': return CircleDot;
-                                            case 'gutter': return Home;
-                                            case 'soffit': return Lamp;
-                                            case 'hardscape': return LayoutGrid;
+                                            case 'gutter': return Triangle;
+                                            case 'soffit': return ArrowDown;
+                                            case 'hardscape': return GalleryVerticalEnd;
                                             default: return Sun;
                                         }
                                     };
