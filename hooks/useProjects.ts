@@ -65,28 +65,7 @@ export function useProjects() {
 
       let imageUrl = generatedImage;
 
-      // If image is base64, upload to storage first
-      if (generatedImage && generatedImage.startsWith('data:')) {
-        console.log('Uploading image to storage...');
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            image: generatedImage,
-            userId: user.id
-          })
-        });
-
-        if (!uploadResponse.ok) {
-          const errorText = await uploadResponse.text();
-          console.error('Upload failed:', errorText);
-          throw new Error('Failed to upload image');
-        }
-
-        const uploadData = await uploadResponse.json();
-        imageUrl = uploadData.url;
-        console.log('Image uploaded:', imageUrl);
-      }
+    }
 
       // Build prompt_config object with all available data
       const promptConfig: Record<string, any> = { savedFromEditor: true };
@@ -100,7 +79,7 @@ export function useProjects() {
         },
         body: JSON.stringify({
           name,
-          generated_image_url: imageUrl,
+          generated_image_url: generatedImage,
           prompt_config: promptConfig
         }),
       });
