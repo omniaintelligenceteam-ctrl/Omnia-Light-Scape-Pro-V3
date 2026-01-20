@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { uploadImage } from '../services/uploadService';
 import { useUser } from '@clerk/clerk-react';
 import { SavedProject, QuoteData, BOMData } from '../types';
 
