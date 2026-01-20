@@ -187,6 +187,18 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - This applies to EVERY up light on siding and windows, regardless of how many fixtures there are
 - Each up light creates a vertical column of light that reaches the soffit line above it
 
+*** HARD RULE - UP LIGHT WATTAGE & SOFFIT FALLOFF ***:
+- The light beam MUST reach and FALL OFF at the soffit line DIRECTLY ABOVE the fixture
+- Adjust the perceived wattage/intensity based on how HIGH the soffit is above the fixture:
+  * Taller walls = brighter/higher wattage appearance to reach the soffit
+  * Shorter walls = softer/lower wattage appearance
+- The UNDERSIDE OF THE SOFFIT must be NOTICEABLY LIT by the up light
+- The light should "kiss" the soffit - illuminating its underside before falling off
+- Do NOT let the beam stop short of the soffit
+- Do NOT let the beam blast past the soffit onto the roof
+- The soffit directly above each up light should show visible illumination on its underside
+- This creates the proper "wall wash" effect that terminates at the architectural soffit line
+
 FINAL REMINDER:
 You are converting a daytime photo to nighttime and adding ONLY the specified lighting fixtures.
 The home, landscaping, hardscape, and all physical features must be PIXEL-PERFECT identical to the source.
