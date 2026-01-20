@@ -51,6 +51,14 @@ export const generateNightScene = async (
     You are a professional Architectural Lighting Designer and Photo Retoucher.
     Task: Transform the provided daylight photograph into a realistic, high-end night-time landscape lighting scene.
 
+    # STEP 0: FRAMING & COMPOSITION PRESERVATION (CRITICAL)
+    - The output image must have the EXACT SAME framing and composition as the source image
+    - Keep the ENTIRE house in frame - do NOT crop, zoom in, or cut off any part of the home
+    - Do NOT change the camera angle, perspective, or viewpoint
+    - All edges of the property visible in the source must remain visible in the output
+    - The aspect ratio and boundaries must match the source image exactly
+    - If the source shows the full front facade, the output MUST show the full front facade
+
     # STEP 1: SOURCE IMAGE ANALYSIS (MANDATORY)
     BEFORE making any changes, you MUST analyze and catalog the input photograph:
     - Count and note the exact position of every window, door, and architectural feature

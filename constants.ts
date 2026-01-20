@@ -60,6 +60,15 @@ export const SYSTEM_PROMPT: SystemPromptConfig = {
 
 ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
 
+0. FRAMING & COMPOSITION PRESERVATION (CRITICAL):
+   - The output image must have the EXACT SAME framing and composition as the source image
+   - Keep the ENTIRE house in frame - do NOT crop, zoom in, or cut off any part of the home
+   - Do NOT change the camera angle, perspective, or viewpoint
+   - All edges of the property visible in the source must remain visible in the output
+   - The aspect ratio and boundaries must match the source image exactly
+   - If the source shows the full front facade, the output MUST show the full front facade
+   - Do NOT zoom in on specific areas or features
+
 1. ARCHITECTURAL PRESERVATION (ZERO TOLERANCE):
    - The home's structure, shape, roofline, windows, doors, columns, and ALL architectural features must remain EXACTLY as shown in the source image
    - Do NOT add, remove, move, or modify ANY architectural element
@@ -128,6 +137,7 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
    - Unlit areas should remain in deep shadow for maximum contrast
 
 VALIDATION CHECK (PERFORM BEFORE GENERATING):
+- Source image FRAMING = Output image FRAMING (IDENTICAL - whole house in frame)
 - Source image architecture = Output image architecture (IDENTICAL)
 - Source image hardscape = Output image hardscape (IDENTICAL)
 - Source image landscaping = Output image landscaping (IDENTICAL)
