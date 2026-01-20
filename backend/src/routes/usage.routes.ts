@@ -9,8 +9,8 @@ interface UsageCheckRequest {
     userId: string;
 }
 
-// GET /api/usage/status - Check user's usage status
-router.get('/status', async (req: Request, res: Response) => {
+// Handler function for status check
+async function handleStatus(req: Request, res: Response) {
     try {
         const userId = req.query.userId as string;
 
@@ -18,8 +18,17 @@ router.get('/status', async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Missing userId parameter' });
         }
 
+        // Return mock data if supabase is not available (local dev)
         if (!supabase) {
-            return res.status(500).json({ error: 'Database not configured' });
+            return res.json({
+                hasActiveSubscription: false,
+                generationCount: 0,
+                freeTrialLimit: FREE_TRIAL_LIMIT,
+                remainingFreeGenerations: FREE_TRIAL_LIMIT,
+                canGenerate: true,
+                plan: null,
+                monthlyLimit: 0
+            });
         }
 
         // Get user's generation count
@@ -81,10 +90,35 @@ router.get('/status', async (req: Request, res: Response) => {
         console.error('Usage status error:', err);
         res.status(500).json({ error: 'Failed to get usage status' });
     }
+}
+
+// Query-param based routing (for frontend compatibility)
+// Handles: /api/usage?action=status, /api/usage?action=increment, /api/usage?action=can-generate
+router.get('/', async (req: Request, res: Response) => {
+    const action = req.query.action as string;
+
+    if (action === 'status') {
+        return handleStatus(req, res);
+    }
+
+    return res.status(400).json({ error: 'Invalid action for GET. Use: status' });
 });
 
-// POST /api/usage/increment - Increment generation count (call after successful generation)
-router.post('/increment', async (req: Request<{}, {}, UsageCheckRequest>, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
+    const action = req.query.action as string;
+
+    if (action === 'increment') {
+        return handleIncrement(req, res);
+    }
+    if (action === 'can-generate') {
+        return handleCanGenerate(req, res);
+    }
+
+    return res.status(400).json({ error: 'Invalid action for POST. Use: increment or can-generate' });
+});
+
+// Handler function for increment
+async function handleIncrement(req: Request, res: Response) {
     try {
         const { userId } = req.body;
 
@@ -92,26 +126,21 @@ router.post('/increment', async (req: Request<{}, {}, UsageCheckRequest>, res: R
             return res.status(400).json({ error: 'Missing userId' });
         }
 
+        // Return mock data if supabase is not available (local dev)
         if (!supabase) {
-            return res.status(500).json({ error: 'Database not configured' });
+            return res.json({
+                generationCount: 1,
+                remainingFreeGenerations: FREE_TRIAL_LIMIT - 1,
+                hasActiveSubscription: false
+            });
         }
 
-        // Increment generation count
-        const { data: userData, error: updateError } = await supabase
-            .from('users')
-            .update({
-                generation_count: (typeof supabase.rpc === 'function') ? undefined : 0 // Will use RPC below
-            })
-            .eq('clerk_user_id', userId)
-            .select('id, generation_count')
-            .single();
-
-        // Use raw SQL to increment
-        const { data, error } = await supabase.rpc('increment_generation_count', {
+        // Try RPC first, then fallback to manual increment
+        const { error: rpcError } = await supabase.rpc('increment_generation_count', {
             user_clerk_id: userId
         });
 
-        if (error) {
+        if (rpcError) {
             // Fallback: manual increment if RPC doesn't exist
             const { data: user } = await supabase
                 .from('users')
@@ -158,10 +187,10 @@ router.post('/increment', async (req: Request<{}, {}, UsageCheckRequest>, res: R
         console.error('Usage increment error:', err);
         res.status(500).json({ error: 'Failed to increment usage' });
     }
-});
+}
 
-// POST /api/usage/can-generate - Check if user can generate (and increment if yes)
-router.post('/can-generate', async (req: Request<{}, {}, UsageCheckRequest>, res: Response) => {
+// Handler function for can-generate check
+async function handleCanGenerate(req: Request, res: Response) {
     try {
         const { userId } = req.body;
 
@@ -169,8 +198,15 @@ router.post('/can-generate', async (req: Request<{}, {}, UsageCheckRequest>, res
             return res.status(400).json({ error: 'Missing userId' });
         }
 
+        // Return mock data if supabase is not available (local dev)
         if (!supabase) {
-            return res.status(500).json({ error: 'Database not configured' });
+            return res.json({
+                canGenerate: true,
+                hasActiveSubscription: false,
+                generationCount: 0,
+                remainingFreeGenerations: FREE_TRIAL_LIMIT,
+                monthlyLimit: 0
+            });
         }
 
         // Get user
@@ -247,6 +283,15 @@ router.post('/can-generate', async (req: Request<{}, {}, UsageCheckRequest>, res
         console.error('Can generate check error:', err);
         res.status(500).json({ error: 'Failed to check generation status' });
     }
-});
+}
+
+// GET /api/usage/status - Check user's usage status (path-based routing)
+router.get('/status', handleStatus);
+
+// POST /api/usage/increment - Increment generation count (path-based routing)
+router.post('/increment', handleIncrement);
+
+// POST /api/usage/can-generate - Check if user can generate (path-based routing)
+router.post('/can-generate', handleCanGenerate);
 
 export default router;

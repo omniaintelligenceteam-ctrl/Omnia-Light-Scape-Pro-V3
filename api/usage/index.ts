@@ -32,6 +32,19 @@ async function handleStatus(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Missing userId parameter' });
         }
 
+        // Return mock data if supabase is not available (local dev)
+        if (!supabase) {
+            return res.json({
+                hasActiveSubscription: false,
+                generationCount: 0,
+                freeTrialLimit: FREE_TRIAL_LIMIT,
+                remainingFreeGenerations: FREE_TRIAL_LIMIT,
+                canGenerate: true,
+                plan: null,
+                monthlyLimit: 0
+            });
+        }
+
         // Get user's generation count
         const { data: userData, error: userError } = await supabase
             .from('users')
@@ -106,6 +119,15 @@ async function handleIncrement(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Missing userId' });
         }
 
+        // Return mock data if supabase is not available (local dev)
+        if (!supabase) {
+            return res.json({
+                generationCount: 1,
+                remainingFreeGenerations: FREE_TRIAL_LIMIT - 1,
+                hasActiveSubscription: false
+            });
+        }
+
         // Try RPC first, then fallback to manual increment
         const { error: rpcError } = await supabase.rpc('increment_generation_count', {
             user_clerk_id: userId
@@ -173,6 +195,17 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse) {
 
         if (!userId) {
             return res.status(400).json({ error: 'Missing userId' });
+        }
+
+        // Return mock data if supabase is not available (local dev)
+        if (!supabase) {
+            return res.json({
+                canGenerate: true,
+                hasActiveSubscription: false,
+                generationCount: 0,
+                remainingFreeGenerations: FREE_TRIAL_LIMIT,
+                monthlyLimit: 0
+            });
         }
 
         // Get user
