@@ -662,6 +662,18 @@ const App: React.FC = () => {
                     if (selectedSubs.includes('windows') && !selectedSubs.includes('siding')) {
                         p += "\n\n[CRITICAL CONSTRAINT]: Windows are selected, but Siding/Piers are NOT. You must STRICTLY limit up-lighting to the window glass/mullions only. The brick/siding piers BETWEEN the windows must remain completely dark. Do not graze the wall sections.";
                     }
+                    if (selectedSubs.includes('siding')) {
+                        p += "\n\n[STRICT RULE - SIDING UP LIGHT PLACEMENT]:\n";
+                        p += "*** MANDATORY PLACEMENT ORDER - READ CAREFULLY ***\n";
+                        p += "- START at EACH END of the home's facade (left corner and right corner)\n";
+                        p += "- Place the FIRST up lights in the landscaping beds at BOTH ends of the home\n";
+                        p += "- These corner/end lights are REQUIRED - they anchor the design\n";
+                        p += "- Then work INWARD from both ends, spacing lights evenly along the siding\n";
+                        p += "- Lights must be positioned IN THE LANDSCAPING (mulch beds, plant beds) - NOT in grass\n";
+                        p += "- The light beam should graze UP the wall surface to create wall-washing effect\n";
+                        p += "- FORBIDDEN: Starting in the middle, skipping corners, placing lights in open lawn\n";
+                        p += "- REQUIRED: Both left and right ends of home facade MUST have up lights\n";
+                    }
                     p += "\n\nGENERAL SAFETY: Do NOT generate new trees. Do NOT place lights in open grass without a target.";
                  }
 

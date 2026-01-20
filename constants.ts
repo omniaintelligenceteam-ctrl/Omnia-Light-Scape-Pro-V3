@@ -383,7 +383,7 @@ STRICT EXCLUSION ZONES:
 - Do NOT create downlighting from soffit (this is UP lighting only)
 - Do NOT skip corner sections -- corners are critical anchor points
 - Wall sections immediately adjacent to windows receive SPILL light only, not direct fixtures`,
-  negativePrompt: `ABSOLUTE PROHIBITION (SIDING): Do NOT place up lights directly under windows. Do NOT place on concrete or hardscape. Do NOT skip corner wall sections. Do NOT aim beams at window glass. Wall piers between windows only.`
+  negativePrompt: `ABSOLUTE PROHIBITION (SIDING): Do NOT skip the corners/ends of the home - both left and right ends MUST have up lights. Do NOT start placement in the middle of the facade. Do NOT place up lights directly under windows. Do NOT place on concrete, hardscape, or open lawn - ONLY in landscaping beds. Do NOT aim beams at window glass.`
 
       },
       {
