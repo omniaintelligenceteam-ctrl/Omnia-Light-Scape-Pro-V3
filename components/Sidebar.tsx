@@ -16,17 +16,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   ];
 
   return (
-    <nav className="w-full bg-gradient-to-t from-[#0a0a0a] via-[#0f0f0f] to-[#111] text-white shrink-0 z-50 relative">
+    <nav className="w-full bg-gradient-to-t from-[#0a0a0a] via-[#0f0f0f] to-[#111] text-white shrink-0 z-50 sticky bottom-0">
       {/* Top gradient line */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/40 to-transparent" />
 
       {/* Secondary subtle line */}
       <div className="absolute top-[1px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-      {/* Ambient glow behind navigation */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-16 bg-[#F6B45A]/[0.03] blur-[50px] pointer-events-none" />
+      {/* Ambient glow behind navigation - hidden on mobile */}
+      <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-16 bg-[#F6B45A]/[0.03] blur-[50px] pointer-events-none" />
 
-      <div className="flex flex-col items-center px-4 py-3 md:py-4">
+      <div className="flex flex-col items-center px-3 md:px-4 py-2 md:py-4">
         {/* Brand text - hidden on mobile */}
         <div className="hidden md:flex items-center gap-2 mb-3 text-[10px] text-gray-500">
           <span className="font-mono tracking-wider">OMNIA LIGHT SCAPE PRO</span>
@@ -35,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         </div>
 
         {/* Navigation Container - 4 separate buttons */}
-        <div className="flex items-center justify-center gap-2 md:gap-3 w-full max-w-md">
+        <div className="flex items-center justify-center gap-1.5 md:gap-3 w-full max-w-md">
           {menuItems.map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
@@ -157,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
                 {/* Label */}
                 <motion.span
-                  className={`relative z-10 text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.05em] transition-all duration-300 whitespace-nowrap ${
+                  className={`relative z-10 text-[9px] md:text-[11px] font-semibold uppercase tracking-[0.02em] md:tracking-[0.05em] transition-all duration-300 whitespace-nowrap ${
                     isActive
                       ? 'text-[#1a1a1a] font-bold'
                       : 'text-gray-500'
