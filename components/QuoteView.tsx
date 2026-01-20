@@ -190,12 +190,12 @@ ${customMessage ? `\n${customMessage}\n` : ''}
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#050505] p-2 md:p-8 overflow-y-auto relative">
-      {/* Background Ambient Glow */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none print:hidden ambient-glow"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[400px] bg-[#F6B45A]/3 blur-[100px] rounded-full pointer-events-none print:hidden"></div>
+    <div className="flex flex-col h-full bg-[#050505] px-3 py-4 md:p-8 overflow-y-auto overflow-x-hidden relative scroll-smooth [-webkit-overflow-scrolling:touch]">
+      {/* Background Ambient Glow - hidden on mobile for performance */}
+      <div className="hidden md:block absolute top-[-10%] right-[-10%] w-[50%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none print:hidden ambient-glow"></div>
+      <div className="hidden md:block absolute bottom-[-10%] left-[-10%] w-[40%] h-[400px] bg-[#F6B45A]/3 blur-[100px] rounded-full pointer-events-none print:hidden"></div>
 
-      <div className="max-w-4xl mx-auto w-full space-y-4 md:space-y-6 relative z-10">
+      <div className="max-w-4xl mx-auto w-full space-y-3 md:space-y-6 relative z-10">
 
         {/* Premium Toolbar */}
         {!hideToolbar && (
@@ -762,23 +762,23 @@ ${customMessage ? `\n${customMessage}\n` : ''}
              <div className="hidden md:block absolute top-0 right-0 w-32 h-32 bg-[#F6B45A]/10 rounded-full blur-3xl pointer-events-none print:hidden" />
 
              <div className="flex flex-col md:flex-row gap-3 md:gap-8 relative z-10">
-                 {/* Project Image - smaller on mobile */}
-                 <div className="md:flex-[1.2]">
+                 {/* Project Image - DESKTOP ONLY (left side) */}
+                 <div className="hidden md:block md:flex-[1.2]">
                      {projectImage ? (
-                         <div className="relative rounded-lg md:rounded-xl overflow-hidden border border-white/10 bg-black/30 print:border-gray-200">
+                         <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/30 print:border-gray-200">
                              <img
                                  src={projectImage}
                                  alt="Project Design"
-                                 className="w-full h-auto object-cover max-h-32 md:max-h-none"
+                                 className="w-full h-auto object-cover"
                              />
-                             {/* Tech corners - hidden on mobile */}
-                             <div className="hidden md:block absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
-                             <div className="hidden md:block absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
-                             <div className="hidden md:block absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
-                             <div className="hidden md:block absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
+                             {/* Tech corners */}
+                             <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
+                             <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
                          </div>
                      ) : (
-                         <div className="hidden md:flex h-full min-h-[280px] rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex-col items-center justify-center text-center p-6 print:hidden">
+                         <div className="flex h-full min-h-[280px] rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex-col items-center justify-center text-center p-6 print:hidden">
                              <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
                                  <Sparkles className="w-6 h-6 text-gray-600" />
                              </div>
@@ -842,6 +842,19 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         </div>
                      </div>
                  </div>
+
+                 {/* Project Image - MOBILE ONLY (below totals) */}
+                 {projectImage && (
+                     <div className="md:hidden mt-3">
+                         <div className="relative rounded-lg overflow-hidden border border-white/10 bg-black/30">
+                             <img
+                                 src={projectImage}
+                                 alt="Project Design"
+                                 className="w-full h-auto object-cover"
+                             />
+                         </div>
+                     </div>
+                 )}
              </div>
           </motion.div>
 
