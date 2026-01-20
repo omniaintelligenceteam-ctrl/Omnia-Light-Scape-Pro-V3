@@ -26,9 +26,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       {/* Ambient glow behind navigation - hidden on mobile */}
       <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-16 bg-[#F6B45A]/[0.03] blur-[50px] pointer-events-none" />
 
-      <div className="flex flex-col items-center px-3 md:px-4 py-2 md:py-4">
+      <div className="flex flex-col items-center px-3 md:px-6 py-2 md:py-6">
         {/* Navigation Container - 4 separate buttons */}
-        <div className="flex items-center justify-center gap-1.5 md:gap-3 w-full max-w-md">
+        <div className="flex items-center justify-center gap-1.5 md:gap-4 w-full max-w-lg">
           {menuItems.map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
@@ -37,13 +37,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               <motion.button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className="relative flex-1 flex flex-col items-center justify-center gap-1 md:gap-1.5 py-2.5 md:py-3 rounded-xl transition-all duration-300 overflow-hidden"
+                className="relative flex-1 flex flex-col items-center justify-center gap-1 md:gap-2 py-2.5 md:py-5 rounded-xl md:rounded-2xl transition-all duration-300 overflow-hidden"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.95 }}
               >
                 {/* Button background - individual for each button */}
                 <motion.div
-                  className="absolute inset-0 rounded-xl"
+                  className="absolute inset-0 rounded-xl md:rounded-2xl"
                   initial={false}
                   animate={{
                     background: isActive
@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 <AnimatePresence>
                   {isActive && (
                     <motion.div
-                      className="absolute inset-0 rounded-xl bg-gradient-to-t from-transparent via-white/10 to-white/20"
+                      className="absolute inset-0 rounded-xl md:rounded-2xl bg-gradient-to-t from-transparent via-white/10 to-white/20"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 <AnimatePresence>
                   {isActive && (
                     <motion.div
-                      className="absolute inset-0 rounded-xl overflow-hidden"
+                      className="absolute inset-0 rounded-xl md:rounded-2xl overflow-hidden"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -98,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 <AnimatePresence>
                   {isActive && (
                     <motion.div
-                      className="absolute -inset-1 bg-[#F6B45A]/30 blur-xl -z-10 rounded-xl"
+                      className="absolute -inset-1 bg-[#F6B45A]/30 blur-xl -z-10 rounded-xl md:rounded-2xl"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -134,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                             transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 1.5 }}
                           >
                             <FolderOpen
-                              className="w-[18px] h-[18px] md:w-5 md:h-5 text-[#1a1a1a]"
+                              className="w-[18px] h-[18px] md:w-7 md:h-7 text-[#1a1a1a]"
                               strokeWidth={2.5}
                             />
                           </motion.div>
@@ -143,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'projects' ? (
                     <FolderClosed
-                      className="w-[18px] h-[18px] md:w-5 md:h-5 text-gray-500"
+                      className="w-[18px] h-[18px] md:w-7 md:h-7 text-gray-500"
                       strokeWidth={2}
                     />
                   ) : /* Inventory - Package open/close animation */
@@ -156,13 +156,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 1, repeat: Infinity, repeatDelay: 1.2 }}
                     >
                       <PackageOpen
-                        className="w-[18px] h-[18px] md:w-5 md:h-5 text-[#1a1a1a]"
+                        className="w-[18px] h-[18px] md:w-7 md:h-7 text-[#1a1a1a]"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : item.id === 'inventory' ? (
                     <Package
-                      className="w-[18px] h-[18px] md:w-5 md:h-5 text-gray-500"
+                      className="w-[18px] h-[18px] md:w-7 md:h-7 text-gray-500"
                       strokeWidth={2}
                     />
                   ) : /* Settings - Gear rotation animation */
@@ -174,13 +174,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
                       <Settings
-                        className="w-[18px] h-[18px] md:w-5 md:h-5 text-[#1a1a1a]"
+                        className="w-[18px] h-[18px] md:w-7 md:h-7 text-[#1a1a1a]"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : (
                     <Icon
-                      className={`w-[18px] h-[18px] md:w-5 md:h-5 transition-all duration-300 ${
+                      className={`w-[18px] h-[18px] md:w-7 md:h-7 transition-all duration-300 ${
                         isActive
                           ? 'text-[#1a1a1a]'
                           : 'text-gray-500'
@@ -216,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
                 {/* Label */}
                 <motion.span
-                  className={`relative z-10 text-[9px] md:text-[11px] font-semibold uppercase tracking-[0.02em] md:tracking-[0.05em] transition-all duration-300 whitespace-nowrap ${
+                  className={`relative z-10 text-[9px] md:text-sm font-semibold uppercase tracking-[0.02em] md:tracking-[0.08em] transition-all duration-300 whitespace-nowrap ${
                     isActive
                       ? 'text-[#1a1a1a] font-bold'
                       : 'text-gray-500'

@@ -178,6 +178,15 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - Do NOT place non-tree up lights far out in the landscaping away from the home
 - The fixture base should be nearly touching the foundation - 6 inches MAX distance
 
+*** STRICT RULE - UP LIGHT BEAM HEIGHT ***:
+- ALL up lights on siding AND 1st story windows MUST shine ALL THE WAY UP to the soffit line above them
+- The light beam must travel the FULL HEIGHT of the wall section from ground to soffit
+- Do NOT create short beams that stop partway up the wall
+- Do NOT create beams that fade out before reaching the soffit
+- The up light effect should wash the ENTIRE vertical surface from foundation to soffit
+- This applies to EVERY up light on siding and windows, regardless of how many fixtures there are
+- Each up light creates a vertical column of light that reaches the soffit line above it
+
 FINAL REMINDER:
 You are converting a daytime photo to nighttime and adding ONLY the specified lighting fixtures.
 The home, landscaping, hardscape, and all physical features must be PIXEL-PERFECT identical to the source.
