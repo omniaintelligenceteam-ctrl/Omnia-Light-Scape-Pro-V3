@@ -24,7 +24,7 @@ import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ArrowUp, ArrowDown, Navigation, CircleDot, Triangle, Sun, Settings2, GalleryVerticalEnd } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -236,6 +236,21 @@ const App: React.FC = () => {
   const [completionNotes, setCompletionNotes] = useState<string>('');
   const [autoGenerateInvoice, setAutoGenerateInvoice] = useState(false);
 
+  // Calendar Events State
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventType, setEventType] = useState<EventType>('consultation');
+  const [eventDate, setEventDate] = useState<Date>(new Date());
+  const [eventTimeSlot, setEventTimeSlot] = useState<TimeSlot>('morning');
+  const [eventCustomTime, setEventCustomTime] = useState('09:00');
+  const [eventDuration, setEventDuration] = useState(1);
+  const [eventLocation, setEventLocation] = useState('');
+  const [eventNotes, setEventNotes] = useState('');
+  const [eventClientName, setEventClientName] = useState('');
+  const [eventClientPhone, setEventClientPhone] = useState('');
+
   // Inventory Sub-Tab State
   const [inventorySubTab, setInventorySubTab] = useState<'bom' | 'inventory'>('bom');
 
@@ -323,6 +338,26 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('omnia_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Load calendar events from localStorage
+  useEffect(() => {
+    try {
+      const savedEvents = localStorage.getItem('omnia_calendar_events');
+      if (savedEvents) {
+        const events = JSON.parse(savedEvents);
+        if (Array.isArray(events)) {
+          setCalendarEvents(events);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load calendar events', e);
+    }
+  }, []);
+
+  // Persist calendar events
+  useEffect(() => {
+    localStorage.setItem('omnia_calendar_events', JSON.stringify(calendarEvents));
+  }, [calendarEvents]);
 
   // Load saved settings (company profile, pricing, catalog, lighting) on mount
   useEffect(() => {
@@ -1116,6 +1151,90 @@ const App: React.FC = () => {
       setCurrentInvoice(newInvoice);
       setInvoices(prev => [...prev, newInvoice]);
       setProjectsSubTab('invoicing');
+  };
+
+  // === CALENDAR EVENT HANDLERS ===
+
+  // Reset event form
+  const resetEventForm = () => {
+    setEditingEventId(null);
+    setEventTitle('');
+    setEventType('consultation');
+    setEventDate(new Date());
+    setEventTimeSlot('morning');
+    setEventCustomTime('09:00');
+    setEventDuration(1);
+    setEventLocation('');
+    setEventNotes('');
+    setEventClientName('');
+    setEventClientPhone('');
+  };
+
+  // Open create event modal
+  const handleCreateEvent = () => {
+    resetEventForm();
+    setEventDate(selectedCalendarDate); // Use currently selected date
+    setShowEventModal(true);
+  };
+
+  // Open edit event modal
+  const handleEditEvent = (event: CalendarEvent) => {
+    setEditingEventId(event.id);
+    setEventTitle(event.title);
+    setEventType(event.eventType);
+    setEventDate(new Date(event.date));
+    setEventTimeSlot(event.timeSlot);
+    setEventCustomTime(event.customTime || '09:00');
+    setEventDuration(event.duration);
+    setEventLocation(event.location || '');
+    setEventNotes(event.notes || '');
+    setEventClientName(event.clientName || '');
+    setEventClientPhone(event.clientPhone || '');
+    setShowEventModal(true);
+  };
+
+  // Save event (create or update)
+  const handleSaveEvent = () => {
+    if (!eventTitle.trim()) {
+      showToast('Please enter an event title', 'error');
+      return;
+    }
+
+    const eventData: CalendarEvent = {
+      id: editingEventId || `event-${Date.now()}`,
+      title: eventTitle.trim(),
+      eventType: eventType,
+      date: eventDate.toISOString().split('T')[0],
+      timeSlot: eventTimeSlot,
+      customTime: eventTimeSlot === 'custom' ? eventCustomTime : undefined,
+      duration: eventDuration,
+      location: eventLocation.trim() || undefined,
+      notes: eventNotes.trim() || undefined,
+      clientName: eventClientName.trim() || undefined,
+      clientPhone: eventClientPhone.trim() || undefined,
+      createdAt: editingEventId
+        ? calendarEvents.find(e => e.id === editingEventId)?.createdAt || new Date().toISOString()
+        : new Date().toISOString(),
+    };
+
+    if (editingEventId) {
+      // Update existing event
+      setCalendarEvents(prev => prev.map(e => e.id === editingEventId ? eventData : e));
+      showToast('Event updated!', 'success');
+    } else {
+      // Create new event
+      setCalendarEvents(prev => [...prev, eventData]);
+      showToast('Event created!', 'success');
+    }
+
+    setShowEventModal(false);
+    resetEventForm();
+  };
+
+  // Delete event
+  const handleDeleteEvent = (eventId: string) => {
+    setCalendarEvents(prev => prev.filter(e => e.id !== eventId));
+    showToast('Event deleted', 'success');
   };
 
   // Update invoice field
@@ -1946,7 +2065,36 @@ Notes: ${invoice.notes || 'N/A'}
                      </div>
                  </div>
 
-                 {/* Status Pipeline - Hidden on mobile */}
+                 {/* Mobile Status Pipeline - Compact */}
+                 <div className="md:hidden mb-4">
+                     <div className="flex items-center justify-between gap-1 p-2 bg-[#0a0a0a] rounded-xl border border-white/5">
+                         {(['draft', 'quoted', 'approved', 'scheduled', 'completed'] as ProjectStatus[]).map((status, index) => {
+                             const config = STATUS_CONFIG[status];
+                             const count = statusCounts[status];
+                             return (
+                                 <React.Fragment key={status}>
+                                     <motion.button
+                                         onClick={() => {
+                                           if (status === 'draft') setProjectsSubTab('projects');
+                                           else if (status === 'quoted') setProjectsSubTab('quotes');
+                                           else if (status === 'approved' || status === 'scheduled' || status === 'completed') setProjectsSubTab('approved');
+                                         }}
+                                         className={`flex-1 flex flex-col items-center py-1.5 px-1 rounded-lg ${config.bgColor} border ${config.borderColor}`}
+                                         whileTap={{ scale: 0.95 }}
+                                     >
+                                         <span className={`text-base font-bold ${config.color}`}>{count}</span>
+                                         <span className={`text-[7px] font-bold uppercase tracking-wide ${config.color}`}>{config.label}</span>
+                                     </motion.button>
+                                     {index < 4 && (
+                                         <ChevronRight className="w-3 h-3 text-gray-700 flex-shrink-0" />
+                                     )}
+                                 </React.Fragment>
+                             );
+                         })}
+                     </div>
+                 </div>
+
+                 {/* Desktop Status Pipeline */}
                  <div className="hidden md:block mb-6 p-4 bg-[#111] rounded-2xl border border-white/5">
                      <div className="flex items-center gap-2 overflow-x-auto pb-2">
                          {(['draft', 'quoted', 'approved', 'scheduled', 'completed'] as ProjectStatus[]).map((status, index) => {
@@ -3152,6 +3300,10 @@ Notes: ${invoice.notes || 'N/A'}
                     setAutoGenerateInvoice(false);
                     setShowCompletionModal(true);
                   }}
+                  events={calendarEvents}
+                  onCreateEvent={handleCreateEvent}
+                  onEditEvent={handleEditEvent}
+                  onDeleteEvent={handleDeleteEvent}
                 />
               </div>
             </div>
@@ -3572,6 +3724,248 @@ Notes: ${invoice.notes || 'N/A'}
                   whileTap={{ scale: 0.98 }}
                 >
                   Mark Complete
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Event Modal */}
+      <AnimatePresence>
+        {showEventModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowEventModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">
+                    {editingEventId ? 'Edit Event' : 'Create Event'}
+                  </h3>
+                </div>
+                <motion.button
+                  onClick={() => setShowEventModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </motion.button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 space-y-4">
+                {/* Event Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Event Title *</label>
+                  <input
+                    type="text"
+                    value={eventTitle}
+                    onChange={(e) => setEventTitle(e.target.value)}
+                    placeholder="Enter event title..."
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+
+                {/* Event Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Event Type</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['consultation', 'meeting', 'site-visit', 'follow-up', 'personal', 'other'] as EventType[]).map(type => {
+                      const typeLabels: Record<EventType, string> = {
+                        'consultation': 'Consultation',
+                        'meeting': 'Meeting',
+                        'site-visit': 'Site Visit',
+                        'follow-up': 'Follow-up',
+                        'personal': 'Personal',
+                        'other': 'Other'
+                      };
+                      const typeColors: Record<EventType, string> = {
+                        'consultation': 'purple',
+                        'meeting': 'blue',
+                        'site-visit': 'green',
+                        'follow-up': 'orange',
+                        'personal': 'pink',
+                        'other': 'gray'
+                      };
+                      const color = typeColors[type];
+                      const isSelected = eventType === type;
+                      return (
+                        <motion.button
+                          key={type}
+                          onClick={() => setEventType(type)}
+                          className={`p-2 rounded-xl border text-sm font-medium transition-all ${
+                            isSelected
+                              ? color === 'purple' ? 'bg-purple-500/20 border-purple-500 text-purple-400'
+                              : color === 'blue' ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                              : color === 'green' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                              : color === 'orange' ? 'bg-orange-500/20 border-orange-500 text-orange-400'
+                              : color === 'pink' ? 'bg-pink-500/20 border-pink-500 text-pink-400'
+                              : 'bg-gray-500/20 border-gray-500 text-gray-400'
+                              : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {typeLabels[type]}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Date Picker */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={eventDate.toISOString().split('T')[0]}
+                    onChange={(e) => setEventDate(new Date(e.target.value))}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+
+                {/* Time Slot */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Time Slot</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {(['morning', 'afternoon', 'evening', 'custom'] as const).map(slot => (
+                      <motion.button
+                        key={slot}
+                        onClick={() => setEventTimeSlot(slot)}
+                        className={`p-3 rounded-xl border transition-all ${
+                          eventTimeSlot === slot
+                            ? 'bg-purple-500/20 border-purple-500 text-purple-400'
+                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="text-sm font-medium capitalize">{slot}</div>
+                        <div className="text-xs opacity-70">
+                          {slot === 'morning' && '8-12'}
+                          {slot === 'afternoon' && '12-5'}
+                          {slot === 'evening' && '5-8'}
+                          {slot === 'custom' && 'Set time'}
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                  {eventTimeSlot === 'custom' && (
+                    <input
+                      type="time"
+                      value={eventCustomTime}
+                      onChange={(e) => setEventCustomTime(e.target.value)}
+                      className="w-full mt-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                  )}
+                </div>
+
+                {/* Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Duration</label>
+                  <div className="flex items-center gap-3">
+                    <motion.button
+                      onClick={() => setEventDuration(Math.max(0.5, eventDuration - 0.5))}
+                      className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Minus className="w-4 h-4 text-gray-400" />
+                    </motion.button>
+                    <div className="flex-1 text-center">
+                      <span className="text-2xl font-bold text-white">{eventDuration}</span>
+                      <span className="text-gray-400 ml-1">hour{eventDuration !== 1 ? 's' : ''}</span>
+                    </div>
+                    <motion.button
+                      onClick={() => setEventDuration(Math.min(12, eventDuration + 0.5))}
+                      className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Plus className="w-4 h-4 text-gray-400" />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Location (optional)</label>
+                  <input
+                    type="text"
+                    value={eventLocation}
+                    onChange={(e) => setEventLocation(e.target.value)}
+                    placeholder="Enter location..."
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+
+                {/* Client Info (collapsible) */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">Client Info (optional)</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={eventClientName}
+                      onChange={(e) => setEventClientName(e.target.value)}
+                      placeholder="Client name..."
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                    <input
+                      type="tel"
+                      value={eventClientPhone}
+                      onChange={(e) => setEventClientPhone(e.target.value)}
+                      placeholder="Phone number..."
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Notes (optional)</label>
+                  <textarea
+                    value={eventNotes}
+                    onChange={(e) => setEventNotes(e.target.value)}
+                    placeholder="Add any notes about this event..."
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
+                <motion.button
+                  onClick={() => setShowEventModal(false)}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={handleSaveEvent}
+                  className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-xl transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {editingEventId ? 'Save Changes' : 'Create Event'}
                 </motion.button>
               </div>
             </motion.div>

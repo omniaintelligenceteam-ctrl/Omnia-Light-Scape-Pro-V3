@@ -164,13 +164,23 @@ export function useProjects() {
     }
 
     try {
-      // Get current project to merge prompt_config
+      // Get current project to merge prompt_config (API replaces entire JSONB, so we must include existing data)
       const currentProject = projects.find(p => p.id === projectId);
+
+      // Build merged prompt_config - start with existing data
       const promptConfig: Record<string, any> = {};
-      if (updates.quote) promptConfig.quote = updates.quote;
-      if (updates.bom) promptConfig.bom = updates.bom;
-      if (updates.status) promptConfig.status = updates.status;
-      if (updates.schedule) promptConfig.schedule = updates.schedule;
+
+      // Preserve existing data from current project
+      if (currentProject?.quote) promptConfig.quote = currentProject.quote;
+      if (currentProject?.bom) promptConfig.bom = currentProject.bom;
+      if (currentProject?.status) promptConfig.status = currentProject.status;
+      if (currentProject?.schedule) promptConfig.schedule = currentProject.schedule;
+
+      // Apply updates (overwrite specific fields)
+      if (updates.quote !== undefined) promptConfig.quote = updates.quote;
+      if (updates.bom !== undefined) promptConfig.bom = updates.bom;
+      if (updates.status !== undefined) promptConfig.status = updates.status;
+      if (updates.schedule !== undefined) promptConfig.schedule = updates.schedule;
 
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'PATCH',
@@ -184,6 +194,8 @@ export function useProjects() {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Update failed:', response.status, errorText);
         throw new Error('Failed to update project');
       }
 
@@ -192,10 +204,10 @@ export function useProjects() {
           return {
             ...p,
             name: updates.name || p.name,
-            quote: updates.quote || p.quote,
-            bom: updates.bom || p.bom,
-            status: updates.status || p.status,
-            schedule: updates.schedule || p.schedule
+            quote: updates.quote !== undefined ? updates.quote : p.quote,
+            bom: updates.bom !== undefined ? updates.bom : p.bom,
+            status: updates.status !== undefined ? updates.status : p.status,
+            schedule: updates.schedule !== undefined ? updates.schedule : p.schedule
           };
         }
         return p;

@@ -164,3 +164,22 @@ export interface NotificationPreferences {
   marketingEmails: boolean;
   soundEffects: boolean;
 }
+
+// === CALENDAR EVENT TYPES ===
+export type EventType = 'consultation' | 'meeting' | 'site-visit' | 'follow-up' | 'personal' | 'other';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  eventType: EventType;
+  date: string;              // ISO date "2024-01-15"
+  timeSlot: TimeSlot;
+  customTime?: string;       // "09:00" if timeSlot is 'custom'
+  duration: number;          // Hours
+  location?: string;
+  notes?: string;
+  clientName?: string;
+  clientPhone?: string;
+  color?: string;            // Custom color for the event
+  createdAt: string;
+}
