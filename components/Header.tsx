@@ -2,91 +2,241 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Sparkles } from 'lucide-react';
 
-// Animated Penrose Triangle (Impossible Triangle) Logo
+// Premium Animated Penrose Triangle (Impossible Triangle) Logo with High-End Effects
 const PenroseTriangle: React.FC<{ className?: string }> = ({ className = "w-6 h-6 md:w-10 md:h-10" }) => (
-  <motion.svg
-    viewBox="0 0 48 48"
-    className={className}
-    initial={{ opacity: 0, scale: 0.8 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.6, ease: "easeOut" }}
-  >
-    <defs>
-      {/* Golden gradient */}
-      <linearGradient id="penroseGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#F6B45A" />
-        <stop offset="100%" stopColor="#FFD700" />
-      </linearGradient>
-      <linearGradient id="penroseGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#D4973D" />
-        <stop offset="100%" stopColor="#F6B45A" />
-      </linearGradient>
-      <linearGradient id="penroseGradient3" x1="50%" y1="100%" x2="50%" y2="0%">
-        <stop offset="0%" stopColor="#FFD700" />
-        <stop offset="100%" stopColor="#FFF0C4" />
-      </linearGradient>
-      {/* Glow filter */}
-      <filter id="penroseGlow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="1" result="blur" />
-        <feMerge>
-          <feMergeNode in="blur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
-    </defs>
-
-    {/* Impossible Triangle - Three interlocking bars */}
-    {/* Left bar */}
-    <motion.path
-      d="M24 6 L10 30 L14 30 L24 12 L34 30 L24 30 L24 34 L38 34 L24 6"
-      fill="url(#penroseGradient1)"
-      filter="url(#penroseGlow)"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 1.2, ease: "easeOut", delay: 0.1 }}
-    />
-    {/* Right bar */}
-    <motion.path
-      d="M38 34 L24 34 L24 30 L34 30 L28 20 L32 20 L42 38 L38 38 L38 34"
-      fill="url(#penroseGradient2)"
-      filter="url(#penroseGlow)"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-    />
-    {/* Bottom bar */}
-    <motion.path
-      d="M6 38 L10 30 L14 30 L10 38 L38 38 L42 38 L6 38"
-      fill="url(#penroseGradient3)"
-      filter="url(#penroseGlow)"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 1.2, ease: "easeOut", delay: 0.5 }}
+  <div className="relative">
+    {/* Outer rotating ring */}
+    <motion.div
+      className="absolute inset-[-8px] md:inset-[-12px] rounded-full border border-[#F6B45A]/20"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      style={{ borderStyle: 'dashed' }}
     />
 
-    {/* Glowing vertices */}
-    <motion.circle
-      cx="24" cy="6" r="2"
-      fill="#FFD700"
-      initial={{ scale: 0 }}
-      animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
-      transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+    {/* Secondary counter-rotating ring */}
+    <motion.div
+      className="absolute inset-[-4px] md:inset-[-6px] rounded-full border border-[#F6B45A]/10"
+      animate={{ rotate: -360 }}
+      transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
     />
-    <motion.circle
-      cx="6" cy="38" r="2"
-      fill="#F6B45A"
-      initial={{ scale: 0 }}
-      animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
-      transition={{ duration: 2, repeat: Infinity, delay: 1.3 }}
+
+    {/* Orbiting particles */}
+    {[0, 1, 2].map((i) => (
+      <motion.div
+        key={i}
+        className="absolute w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-[#F6B45A]"
+        style={{
+          top: '50%',
+          left: '50%',
+          marginTop: '-2px',
+          marginLeft: '-2px',
+          boxShadow: '0 0 6px 2px rgba(246,180,90,0.6)',
+        }}
+        animate={{
+          x: [0, 20, 0, -20, 0].map(v => v * (i === 1 ? 1.2 : i === 2 ? 0.8 : 1)),
+          y: [20, 0, -20, 0, 20].map(v => v * (i === 1 ? 1.2 : i === 2 ? 0.8 : 1)),
+          opacity: [0.3, 1, 0.3, 1, 0.3],
+          scale: [0.5, 1, 0.5, 1, 0.5],
+        }}
+        transition={{
+          duration: 4 + i,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: i * 1.3,
+        }}
+      />
+    ))}
+
+    {/* Main SVG Logo */}
+    <motion.svg
+      viewBox="0 0 48 48"
+      className={className}
+      initial={{ opacity: 0, scale: 0.5, rotate: -180 }}
+      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+      transition={{ duration: 1.2, ease: [0.34, 1.56, 0.64, 1] }}
+    >
+      <defs>
+        {/* Animated golden gradient */}
+        <linearGradient id="penroseGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <motion.stop
+            offset="0%"
+            animate={{ stopColor: ['#F6B45A', '#FFD700', '#F6B45A'] }}
+            transition={{ duration: 3, repeat: Infinity }}
+          />
+          <motion.stop
+            offset="100%"
+            animate={{ stopColor: ['#FFD700', '#FFF0C4', '#FFD700'] }}
+            transition={{ duration: 3, repeat: Infinity }}
+          />
+        </linearGradient>
+        <linearGradient id="penroseGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
+          <motion.stop
+            offset="0%"
+            animate={{ stopColor: ['#D4973D', '#F6B45A', '#D4973D'] }}
+            transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+          />
+          <motion.stop
+            offset="100%"
+            animate={{ stopColor: ['#F6B45A', '#FFD700', '#F6B45A'] }}
+            transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+          />
+        </linearGradient>
+        <linearGradient id="penroseGradient3" x1="50%" y1="100%" x2="50%" y2="0%">
+          <motion.stop
+            offset="0%"
+            animate={{ stopColor: ['#FFD700', '#FFF0C4', '#FFD700'] }}
+            transition={{ duration: 3, repeat: Infinity, delay: 1 }}
+          />
+          <motion.stop
+            offset="100%"
+            animate={{ stopColor: ['#FFF0C4', '#FFFFFF', '#FFF0C4'] }}
+            transition={{ duration: 3, repeat: Infinity, delay: 1 }}
+          />
+        </linearGradient>
+
+        {/* Premium glow filter */}
+        <filter id="penroseGlow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feFlood floodColor="#F6B45A" floodOpacity="0.5" result="color"/>
+          <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+          <feMerge>
+            <feMergeNode in="shadow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        {/* Shimmer effect */}
+        <linearGradient id="shimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="transparent" />
+          <stop offset="50%" stopColor="rgba(255,255,255,0.4)" />
+          <stop offset="100%" stopColor="transparent" />
+        </linearGradient>
+      </defs>
+
+      {/* Background pulse glow */}
+      <motion.circle
+        cx="24" cy="24" r="20"
+        fill="none"
+        stroke="#F6B45A"
+        strokeWidth="0.5"
+        opacity="0.3"
+        animate={{
+          r: [18, 22, 18],
+          opacity: [0.1, 0.3, 0.1],
+        }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* Impossible Triangle - Three interlocking bars with staggered animation */}
+      {/* Left/Top bar */}
+      <motion.path
+        d="M24 6 L10 30 L14 30 L24 12 L34 30 L24 30 L24 34 L38 34 L24 6"
+        fill="url(#penroseGradient1)"
+        filter="url(#penroseGlow)"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+      />
+      {/* Right bar */}
+      <motion.path
+        d="M38 34 L24 34 L24 30 L34 30 L28 20 L32 20 L42 38 L38 38 L38 34"
+        fill="url(#penroseGradient2)"
+        filter="url(#penroseGlow)"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 1.5, ease: "easeOut", delay: 0.5 }}
+      />
+      {/* Bottom bar */}
+      <motion.path
+        d="M6 38 L10 30 L14 30 L10 38 L38 38 L42 38 L6 38"
+        fill="url(#penroseGradient3)"
+        filter="url(#penroseGlow)"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 1.5, ease: "easeOut", delay: 0.8 }}
+      />
+
+      {/* Animated shimmer overlay that sweeps across */}
+      <motion.rect
+        x="-10" y="0" width="20" height="48"
+        fill="url(#shimmer)"
+        initial={{ x: -10 }}
+        animate={{ x: 58 }}
+        transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
+      />
+
+      {/* Pulsing vertex lights */}
+      <motion.circle
+        cx="24" cy="6" r="2.5"
+        fill="#FFD700"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{
+          scale: [0, 1, 1.4, 1],
+          opacity: [0, 1, 0.6, 1],
+        }}
+        transition={{ duration: 2.5, repeat: Infinity, delay: 1.2 }}
+        style={{ filter: 'blur(0.5px)' }}
+      />
+      <motion.circle
+        cx="6" cy="38" r="2.5"
+        fill="#F6B45A"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{
+          scale: [0, 1, 1.4, 1],
+          opacity: [0, 1, 0.6, 1],
+        }}
+        transition={{ duration: 2.5, repeat: Infinity, delay: 1.6 }}
+        style={{ filter: 'blur(0.5px)' }}
+      />
+      <motion.circle
+        cx="42" cy="38" r="2.5"
+        fill="#FFD700"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{
+          scale: [0, 1, 1.4, 1],
+          opacity: [0, 1, 0.6, 1],
+        }}
+        transition={{ duration: 2.5, repeat: Infinity, delay: 2 }}
+        style={{ filter: 'blur(0.5px)' }}
+      />
+
+      {/* Connecting energy lines between vertices */}
+      <motion.line
+        x1="24" y1="6" x2="6" y2="38"
+        stroke="#F6B45A"
+        strokeWidth="0.5"
+        opacity="0"
+        animate={{ opacity: [0, 0.4, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, delay: 2 }}
+      />
+      <motion.line
+        x1="6" y1="38" x2="42" y2="38"
+        stroke="#F6B45A"
+        strokeWidth="0.5"
+        opacity="0"
+        animate={{ opacity: [0, 0.4, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, delay: 2.5 }}
+      />
+      <motion.line
+        x1="42" y1="38" x2="24" y2="6"
+        stroke="#F6B45A"
+        strokeWidth="0.5"
+        opacity="0"
+        animate={{ opacity: [0, 0.4, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, delay: 3 }}
+      />
+    </motion.svg>
+
+    {/* Ambient glow beneath logo */}
+    <motion.div
+      className="absolute inset-0 rounded-full bg-[#F6B45A]/30 blur-xl -z-10"
+      animate={{
+        opacity: [0.2, 0.4, 0.2],
+        scale: [0.8, 1.1, 0.8],
+      }}
+      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
     />
-    <motion.circle
-      cx="42" cy="38" r="2"
-      fill="#FFD700"
-      initial={{ scale: 0 }}
-      animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
-      transition={{ duration: 2, repeat: Infinity, delay: 1.6 }}
-    />
-  </motion.svg>
+  </div>
 );
 
 interface HeaderProps {
@@ -126,20 +276,13 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
           whileHover={{ scale: 1.01 }}
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
         >
-          {/* Logo Mark - Golden Ratio Spiral */}
+          {/* Logo Mark - Premium Penrose Triangle */}
           <motion.div
-            className="relative w-8 h-8 md:w-12 md:h-12 flex items-center justify-center"
-            animate={{
-              filter: [
-                'drop-shadow(0 0 8px rgba(246,180,90,0.3))',
-                'drop-shadow(0 0 12px rgba(246,180,90,0.5))',
-                'drop-shadow(0 0 8px rgba(246,180,90,0.3))'
-              ]
-            }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="relative w-10 h-10 md:w-14 md:h-14 flex items-center justify-center"
+            whileHover={{ scale: 1.1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             <PenroseTriangle className="w-6 h-6 md:w-10 md:h-10" />
-            <div className="absolute inset-0 bg-[#F6B45A]/20 blur-xl rounded-full -z-10"></div>
           </motion.div>
 
           {/* Text Logo - Premium Typography */}
