@@ -158,8 +158,19 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
     <div className="min-h-full bg-gradient-to-b from-[#050505] to-[#0a0a0a]">
       {/* Header */}
       <div className="px-4 py-6 border-b border-white/5">
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your preferences</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Settings</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage your preferences</p>
+          </div>
+          <button
+            onClick={onSignOut}
+            className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 text-gray-300 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 rounded-xl text-sm font-medium transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
       </div>
 
       {/* Menu Items */}

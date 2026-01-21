@@ -94,18 +94,29 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
         <div className="sticky top-0 z-20 bg-[#050505]/90 backdrop-blur-xl border-b border-white/5">
           <div className="flex items-center justify-between px-8 py-5">
             <h1 className="text-2xl font-bold text-white capitalize">{activeSection}</h1>
-            {onSaveSettings && (
+            <div className="flex items-center gap-3">
+              {onSaveSettings && (
+                <motion.button
+                  onClick={onSaveSettings}
+                  disabled={isSaving}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#F6B45A] text-black rounded-xl font-semibold text-sm disabled:opacity-50 shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.3)] transition-all"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </motion.button>
+              )}
               <motion.button
-                onClick={onSaveSettings}
-                disabled={isSaving}
+                onClick={onSignOut}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#F6B45A] text-black rounded-xl font-semibold text-sm disabled:opacity-50 shadow-[0_0_20px_rgba(246,180,90,0.2)] hover:shadow-[0_0_30px_rgba(246,180,90,0.3)] transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-gray-300 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 rounded-xl font-medium text-sm transition-all"
               >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                <LogOut className="w-4 h-4" />
+                Sign Out
               </motion.button>
-            )}
+            </div>
           </div>
         </div>
 
