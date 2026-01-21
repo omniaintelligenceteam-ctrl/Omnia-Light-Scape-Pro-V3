@@ -208,25 +208,45 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     />
                   )}
 
-                  {/* Magic sparkles for Editor tab */}
+                  {/* Magic sparkles for Editor tab - only at brush tip (bottom-left) */}
                   <AnimatePresence>
                     {item.id === 'editor' && isActive && (
                       <>
+                        {/* Sparkle 1 - directly at brush tip */}
                         <motion.div
-                          className="absolute -top-1 -right-1"
+                          className="absolute -bottom-1 -left-1.5"
                           initial={{ opacity: 0, scale: 0 }}
                           animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
                           transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 0.5 }}
                         >
-                          <Sparkles className="w-2 h-2 text-[#1a1a1a]" />
+                          <Sparkles className="w-2.5 h-2.5 text-[#1a1a1a]" />
                         </motion.div>
+                        {/* Sparkle 2 - slightly below tip */}
                         <motion.div
-                          className="absolute -bottom-0.5 -left-1"
+                          className="absolute -bottom-2.5 -left-0.5"
                           initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-                          transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 0.8, delay: 0.3 }}
+                          animate={{ opacity: [0, 1, 0], scale: [0.4, 0.9, 0.4] }}
+                          transition={{ duration: 1.3, repeat: Infinity, repeatDelay: 0.6, delay: 0.2 }}
+                        >
+                          <Sparkles className="w-2 h-2 text-[#1a1a1a]/80" />
+                        </motion.div>
+                        {/* Sparkle 3 - to the left of tip */}
+                        <motion.div
+                          className="absolute -bottom-0.5 -left-3"
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: [0, 0.9, 0], scale: [0.3, 0.8, 0.3] }}
+                          transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 0.7, delay: 0.4 }}
                         >
                           <Sparkles className="w-1.5 h-1.5 text-[#1a1a1a]/70" />
+                        </motion.div>
+                        {/* Sparkle 4 - diagonal from tip */}
+                        <motion.div
+                          className="absolute -bottom-2 -left-2.5"
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: [0, 0.8, 0], scale: [0.3, 0.7, 0.3] }}
+                          transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 0.9, delay: 0.6 }}
+                        >
+                          <Sparkles className="w-1.5 h-1.5 text-[#1a1a1a]/60" />
                         </motion.div>
                       </>
                     )}
