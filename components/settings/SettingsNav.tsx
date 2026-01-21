@@ -97,18 +97,16 @@ export const SettingsNav: React.FC<SettingsNavProps> = ({
         ))}
       </div>
 
-      {/* Sign Out */}
-      {onSignOut && (
-        <div className="p-3 border-t border-white/5">
-          <button
-            onClick={onSignOut}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/5 transition-all group"
-          >
-            <LogOut className="w-4.5 h-4.5 group-hover:translate-x-0.5 transition-transform" />
-            <span className="text-sm font-medium">Sign Out</span>
-          </button>
-        </div>
-      )}
+      {/* Sign Out - Always visible */}
+      <div className="p-3 border-t border-white/5">
+        <button
+          onClick={onSignOut}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/5 transition-all group"
+        >
+          <LogOut className="w-4.5 h-4.5 group-hover:translate-x-0.5 transition-transform" />
+          <span className="text-sm font-medium">Sign Out</span>
+        </button>
+      </div>
     </nav>
   );
 };

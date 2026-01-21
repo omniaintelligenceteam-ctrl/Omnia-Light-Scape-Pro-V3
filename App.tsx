@@ -2051,38 +2051,7 @@ Notes: ${invoice.notes || 'N/A'}
 
                         {/* Main eclipse/sun animation container */}
                         <div className="relative mb-10">
-                            {/* Initial spark at logo position - fires immediately */}
-                            <motion.div
-                                className="absolute pointer-events-none z-20"
-                                style={{
-                                    width: '60px',
-                                    height: '60px',
-                                    left: 'calc(50% - 280px)',
-                                    top: 'calc(50% - 320px)',
-                                    marginLeft: '-30px',
-                                    marginTop: '-30px',
-                                }}
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{
-                                    scale: [0, 1.5, 2, 0],
-                                    opacity: [0, 1, 0.8, 0]
-                                }}
-                                transition={{
-                                    duration: 0.8,
-                                    delay: 0.3,
-                                    ease: "easeOut"
-                                }}
-                            >
-                                <div
-                                    className="w-full h-full rounded-full"
-                                    style={{
-                                        background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(246,180,90,0.8) 30%, rgba(246,180,90,0.3) 60%, transparent 100%)',
-                                        boxShadow: '0 0 30px rgba(246,180,90,1), 0 0 60px rgba(246,180,90,0.6)'
-                                    }}
-                                />
-                            </motion.div>
-
-                            {/* Logo dropping from header - SPARKS FIRST then 11 second descent */}
+                            {/* Logo travels from header to middle, presses button, INSTANTLY disappears */}
                             <motion.div
                                 className="absolute pointer-events-none z-30"
                                 style={{
@@ -2094,20 +2063,20 @@ Notes: ${invoice.notes || 'N/A'}
                                     marginTop: '-24px',
                                 }}
                                 initial={{
-                                    y: -320, // Exact header position
-                                    x: -280, // Exact left corner position
-                                    scale: 0.5,
+                                    y: -305,
+                                    x: -225,
+                                    scale: 0,
                                     opacity: 0
                                 }}
                                 animate={{
-                                    y: [-320, -320, 0, 15, 0, -320], // Spark pause, very slow 11s drop, press, bounce, return
-                                    x: [-280, -280, 0, 0, 0, -280], // From left corner to center and back
-                                    scale: [0.5, 0.6, 1, 0.7, 1, 0.5],
-                                    opacity: [0, 1, 1, 1, 1, 0]
+                                    y: [-305, -305, 0, 5, 5], // Header position, wait, travel to center, push into button
+                                    x: [-225, -225, 0, 0, 0], // From header left to center
+                                    scale: [0, 0.6, 1, 0.8, 0], // Appears small, grows, shrinks as it pushes, GONE
+                                    opacity: [0, 1, 1, 1, 0] // Visible until it pushes then instantly gone
                                 }}
                                 transition={{
-                                    duration: 11, // 11 seconds total
-                                    times: [0, 0.08, 0.75, 0.82, 0.9, 1], // 0.08 = spark, then slow 11s descent (75% of time = ~8.25s)
+                                    duration: 11,
+                                    times: [0, 0.12, 0.75, 0.76, 0.77], // Appears at 12%, arrives 75%, pushes 76%, GONE by 77%
                                     ease: "easeInOut"
                                 }}
                             >
@@ -2148,164 +2117,107 @@ Notes: ${invoice.notes || 'N/A'}
                                 </svg>
                             </motion.div>
 
-                            {/* === EXPLOSION SEQUENCE - Logo hits at 8.25s (75% of 11s) === */}
+                            {/* === BIG EXPLOSION - Instant when logo presses button at 8.25s === */}
 
-                            {/* Main explosion flash - big initial burst */}
+                            {/* Main explosion - BIGGER bright white flash */}
                             <motion.div
-                                className="absolute -inset-12 rounded-full pointer-events-none"
-                                initial={{ scale: 0.1, opacity: 0 }}
-                                animate={{ scale: [0.1, 1.8, 2.5], opacity: [0, 1, 0] }}
-                                transition={{ duration: 0.5, ease: "easeOut", delay: 8.25 }}
+                                className="absolute -inset-24 rounded-full pointer-events-none"
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: [0, 3, 4.5], opacity: [0, 1, 0] }}
+                                transition={{ duration: 0.7, ease: "easeOut", delay: 8.25 }}
                                 style={{
-                                    background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(246,180,90,0.9) 30%, rgba(246,180,90,0.4) 60%, transparent 100%)'
+                                    background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 25%, rgba(246,180,90,1) 50%, rgba(246,180,90,0.4) 75%, transparent 100%)'
                                 }}
                             />
 
-                            {/* Smaller secondary pulse after explosion */}
+                            {/* Second explosion wave */}
                             <motion.div
-                                className="absolute -inset-6 rounded-full pointer-events-none"
-                                initial={{ scale: 0.3, opacity: 0 }}
-                                animate={{ scale: [0.3, 1.2, 1.5], opacity: [0, 0.9, 0] }}
-                                transition={{ duration: 0.4, ease: "easeOut", delay: 8.5 }}
+                                className="absolute -inset-32 rounded-full pointer-events-none"
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: [0, 2.5, 4], opacity: [0, 0.9, 0] }}
+                                transition={{ duration: 0.8, ease: "easeOut", delay: 8.3 }}
                                 style={{
-                                    background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(246,180,90,0.6) 50%, transparent 80%)'
+                                    background: 'radial-gradient(circle, rgba(246,180,90,0.8) 0%, rgba(246,180,90,0.4) 50%, transparent 100%)'
                                 }}
                             />
 
-                            {/* Third even smaller pulse - building up */}
+                            {/* Explosion ring */}
+                            <motion.div
+                                className="absolute -inset-28 rounded-full pointer-events-none"
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: [0, 2.5, 4], opacity: [0, 1, 0] }}
+                                transition={{ duration: 0.9, ease: "easeOut", delay: 8.35 }}
+                                style={{
+                                    border: '6px solid rgba(246,180,90,0.9)',
+                                    boxShadow: '0 0 60px rgba(246,180,90,0.8), 0 0 100px rgba(246,180,90,0.4)'
+                                }}
+                            />
+
+                            {/* === REPEATING PULSE === */}
+
+                            {/* Main pulsing glow */}
                             <motion.div
                                 className="absolute -inset-4 rounded-full pointer-events-none"
-                                initial={{ scale: 0.5, opacity: 0 }}
-                                animate={{ scale: [0.5, 1.1, 1.3], opacity: [0, 0.8, 0] }}
-                                transition={{ duration: 0.35, ease: "easeOut", delay: 8.7 }}
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{
+                                    scale: [1, 1.3, 1],
+                                    opacity: [0.6, 0.9, 0.6]
+                                }}
+                                transition={{
+                                    duration: 2,
+                                    delay: 9.0,
+                                    repeat: Infinity,
+                                    ease: "easeInOut"
+                                }}
                                 style={{
-                                    background: 'radial-gradient(circle, rgba(246,180,90,0.9) 0%, rgba(246,180,90,0.5) 60%, transparent 100%)'
+                                    background: 'radial-gradient(circle, rgba(246,180,90,0.4) 0%, rgba(246,180,90,0.2) 50%, transparent 100%)',
+                                    boxShadow: '0 0 30px rgba(246,180,90,0.5)'
                                 }}
                             />
 
-                            {/* === INTERIOR CIRCLE LIGHTS - Build up after pulses === */}
-
-                            {/* Inner ring glow that builds with progress */}
+                            {/* Pulsing ring */}
                             <motion.div
-                                className="absolute rounded-full pointer-events-none"
-                                style={{
-                                    inset: '8px',
-                                }}
+                                className="absolute -inset-8 rounded-full pointer-events-none"
                                 initial={{ opacity: 0 }}
                                 animate={{
-                                    opacity: [0, 0.6 + statusMessageIndex * 0.1],
-                                    boxShadow: [
-                                        'inset 0 0 0px rgba(246,180,90,0)',
-                                        `inset 0 0 ${20 + statusMessageIndex * 8}px rgba(246,180,90,${0.3 + statusMessageIndex * 0.1})`,
-                                    ]
+                                    scale: [1, 1.2, 1],
+                                    opacity: [0.4, 0.7, 0.4]
                                 }}
-                                transition={{ duration: 1, delay: 8.9, ease: "easeOut" }}
+                                transition={{
+                                    duration: 2,
+                                    delay: 9.0,
+                                    repeat: Infinity,
+                                    ease: "easeInOut"
+                                }}
+                                style={{
+                                    border: '2px solid rgba(246,180,90,0.5)',
+                                    boxShadow: '0 0 20px rgba(246,180,90,0.3), inset 0 0 20px rgba(246,180,90,0.1)'
+                                }}
                             />
 
-                            {/* Interior light dots around the inner edge - 8 lights */}
-                            {Array.from({ length: 8 }).map((_, i) => {
-                                const angle = i * 45;
-                                const delay = 9.0 + i * 0.1;
-                                return (
-                                    <motion.div
-                                        key={`interior-light-${i}`}
-                                        className="absolute rounded-full pointer-events-none"
-                                        style={{
-                                            width: `${4 + statusMessageIndex}px`,
-                                            height: `${4 + statusMessageIndex}px`,
-                                            left: '50%',
-                                            top: '50%',
-                                            marginLeft: `${Math.cos(angle * Math.PI / 180) * 40 - (2 + statusMessageIndex * 0.5)}px`,
-                                            marginTop: `${Math.sin(angle * Math.PI / 180) * 40 - (2 + statusMessageIndex * 0.5)}px`,
-                                            background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(246,180,90,1) 50%, transparent 100%)',
-                                        }}
-                                        initial={{ scale: 0, opacity: 0 }}
-                                        animate={{
-                                            scale: [0, 1.5, 1],
-                                            opacity: [0, 1, 0.8 + statusMessageIndex * 0.05],
-                                            boxShadow: [
-                                                '0 0 0px rgba(246,180,90,0)',
-                                                `0 0 ${8 + statusMessageIndex * 3}px rgba(246,180,90,1)`,
-                                                `0 0 ${6 + statusMessageIndex * 2}px rgba(246,180,90,0.8)`,
-                                            ]
-                                        }}
-                                        transition={{ duration: 0.4, delay, ease: "easeOut" }}
-                                    />
-                                );
-                            })}
-
-                            {/* Secondary interior ring - 8 more lights offset */}
-                            {Array.from({ length: 8 }).map((_, i) => {
-                                const angle = i * 45 + 22.5; // Offset by 22.5 degrees
-                                const delay = 9.5 + i * 0.08;
-                                return (
-                                    <motion.div
-                                        key={`interior-light-2-${i}`}
-                                        className="absolute rounded-full pointer-events-none"
-                                        style={{
-                                            width: `${3 + statusMessageIndex * 0.5}px`,
-                                            height: `${3 + statusMessageIndex * 0.5}px`,
-                                            left: '50%',
-                                            top: '50%',
-                                            marginLeft: `${Math.cos(angle * Math.PI / 180) * 32 - (1.5 + statusMessageIndex * 0.25)}px`,
-                                            marginTop: `${Math.sin(angle * Math.PI / 180) * 32 - (1.5 + statusMessageIndex * 0.25)}px`,
-                                            background: 'radial-gradient(circle, rgba(255,220,150,1) 0%, rgba(246,180,90,0.8) 60%, transparent 100%)',
-                                        }}
-                                        initial={{ scale: 0, opacity: 0 }}
-                                        animate={{
-                                            scale: [0, 1.3, 1],
-                                            opacity: [0, 0.9, 0.7 + statusMessageIndex * 0.05],
-                                            boxShadow: [
-                                                '0 0 0px rgba(246,180,90,0)',
-                                                `0 0 ${6 + statusMessageIndex * 2}px rgba(246,180,90,0.9)`,
-                                            ]
-                                        }}
-                                        transition={{ duration: 0.35, delay, ease: "easeOut" }}
-                                    />
-                                );
-                            })}
-
-                            {/* Center glow that pulses and builds */}
+                            {/* Inner core glow that pulses */}
                             <motion.div
                                 className="absolute rounded-full pointer-events-none"
                                 style={{
-                                    width: '20px',
-                                    height: '20px',
+                                    width: '40px',
+                                    height: '40px',
                                     left: '50%',
                                     top: '50%',
-                                    marginLeft: '-10px',
-                                    marginTop: '-10px',
-                                    background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(246,180,90,0.6) 50%, transparent 100%)',
+                                    marginLeft: '-20px',
+                                    marginTop: '-20px',
+                                    background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(246,180,90,0.7) 40%, transparent 100%)',
                                 }}
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{
-                                    scale: [0, 1.5, 1, 1.2, 1],
-                                    opacity: [0, 1, 0.8, 0.9, 0.8],
-                                    boxShadow: [
-                                        '0 0 0px rgba(246,180,90,0)',
-                                        `0 0 ${15 + statusMessageIndex * 5}px rgba(246,180,90,1)`,
-                                        `0 0 ${10 + statusMessageIndex * 3}px rgba(246,180,90,0.7)`,
-                                    ]
+                                    scale: [1, 1.4, 1],
+                                    opacity: [0.7, 1, 0.7]
                                 }}
-                                transition={{ duration: 1.5, delay: 10.0, ease: "easeInOut" }}
-                            />
-
-                            {/* Outer glow ring that builds with progress */}
-                            <motion.div
-                                className="absolute rounded-full pointer-events-none"
-                                style={{
-                                    inset: `-${5 + statusMessageIndex * 3}px`,
+                                transition={{
+                                    duration: 2,
+                                    delay: 8.8,
+                                    repeat: Infinity,
+                                    ease: "easeInOut"
                                 }}
-                                initial={{ opacity: 0 }}
-                                animate={{
-                                    opacity: [0, 0.5 + statusMessageIndex * 0.1, 0.4 + statusMessageIndex * 0.08],
-                                    boxShadow: [
-                                        '0 0 0px rgba(246,180,90,0)',
-                                        `0 0 ${25 + statusMessageIndex * 10}px rgba(246,180,90,${0.4 + statusMessageIndex * 0.1})`,
-                                        `0 0 ${20 + statusMessageIndex * 8}px rgba(246,180,90,${0.3 + statusMessageIndex * 0.08})`,
-                                    ]
-                                }}
-                                transition={{ duration: 2, delay: 9.0, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
                             />
 
                             {/* Growing intensity glow ring - expands with progress */}
