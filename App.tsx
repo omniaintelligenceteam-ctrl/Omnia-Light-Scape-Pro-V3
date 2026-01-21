@@ -221,6 +221,11 @@ const App: React.FC = () => {
   const [showMobileProjectsMenu, setShowMobileProjectsMenu] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [currentInvoice, setCurrentInvoice] = useState<InvoiceData | null>(null);
+  const [showInvoiceEmailModal, setShowInvoiceEmailModal] = useState(false);
+  const [isSendingInvoiceEmail, setIsSendingInvoiceEmail] = useState(false);
+  const [invoiceEmailSent, setInvoiceEmailSent] = useState(false);
+  const [invoiceEmailError, setInvoiceEmailError] = useState<string | null>(null);
+  const [invoiceEmailMessage, setInvoiceEmailMessage] = useState('');
 
   // Multi-Image Project State
   const [projectImageIndex, setProjectImageIndex] = useState<Record<string, number>>({});
@@ -1423,6 +1428,66 @@ Notes: ${invoice.notes || 'N/A'}
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
+      }
+  };
+
+  // Send invoice via email
+  const handleSendInvoiceEmail = async () => {
+      if (!currentInvoice || !currentInvoice.clientDetails.email) return;
+
+      setIsSendingInvoiceEmail(true);
+      setInvoiceEmailError(null);
+      setInvoiceEmailSent(false);
+
+      // Find the project to get the image URL
+      const project = projects.find(p => p.id === currentInvoice.projectId);
+      const projectImageUrl = project?.image || null;
+
+      try {
+          const response = await fetch('/api/send-invoice', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  clientEmail: currentInvoice.clientDetails.email,
+                  clientName: currentInvoice.clientDetails.name,
+                  projectName: currentInvoice.projectName,
+                  companyName: companyProfile.name,
+                  companyEmail: companyProfile.email,
+                  companyPhone: companyProfile.phone,
+                  companyAddress: companyProfile.address,
+                  invoiceNumber: currentInvoice.invoiceNumber,
+                  invoiceDate: currentInvoice.invoiceDate,
+                  dueDate: currentInvoice.dueDate,
+                  lineItems: currentInvoice.lineItems,
+                  subtotal: currentInvoice.subtotal,
+                  taxRate: currentInvoice.taxRate,
+                  taxAmount: currentInvoice.taxAmount,
+                  discount: currentInvoice.discount,
+                  total: currentInvoice.total,
+                  notes: currentInvoice.notes,
+                  projectImageUrl: projectImageUrl || undefined,
+                  customMessage: invoiceEmailMessage || undefined
+              })
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+              throw new Error(data.error || 'Failed to send email');
+          }
+
+          setInvoiceEmailSent(true);
+          showToast('success', 'Invoice email sent successfully!');
+          setTimeout(() => {
+              setShowInvoiceEmailModal(false);
+              setInvoiceEmailSent(false);
+              setInvoiceEmailMessage('');
+          }, 2000);
+      } catch (err: any) {
+          console.error('Error sending invoice email:', err);
+          setInvoiceEmailError(err.message || 'Failed to send email');
+      } finally {
+          setIsSendingInvoiceEmail(false);
       }
   };
 
@@ -3378,6 +3443,16 @@ Notes: ${invoice.notes || 'N/A'}
                                              <Download className="relative w-4 h-4" />
                                              <span className="relative">Download PDF</span>
                                          </motion.button>
+                                         {/* Send Email Button */}
+                                         <motion.button
+                                             whileHover={{ scale: 1.02 }}
+                                             whileTap={{ scale: 0.98 }}
+                                             onClick={() => setShowInvoiceEmailModal(true)}
+                                             className="flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+                                         >
+                                             <Mail className="w-4 h-4" />
+                                             <span>Email</span>
+                                         </motion.button>
                                      </div>
                                  </div>
                              </motion.div>
@@ -4344,6 +4419,131 @@ Notes: ${invoice.notes || 'N/A'}
                     'Add Image'
                   )}
                 </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Invoice Email Modal */}
+      <AnimatePresence>
+        {showInvoiceEmailModal && currentInvoice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowInvoiceEmailModal(false);
+              setInvoiceEmailMessage('');
+              setInvoiceEmailError(null);
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-md"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Send Invoice</h3>
+                    <p className="text-xs text-gray-500">{currentInvoice.invoiceNumber}</p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => {
+                    setShowInvoiceEmailModal(false);
+                    setInvoiceEmailMessage('');
+                    setInvoiceEmailError(null);
+                  }}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </motion.button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 space-y-4">
+                {/* Recipient Info */}
+                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <User className="w-4 h-4 text-blue-400" />
+                    <span className="font-bold text-white">{currentInvoice.clientDetails.name || 'No name set'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-400 text-sm">
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>{currentInvoice.clientDetails.email || 'No email set'}</span>
+                  </div>
+                </div>
+
+                {/* Invoice Summary */}
+                <div className="bg-gradient-to-br from-blue-500/10 to-transparent rounded-xl p-4 border border-blue-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Due</span>
+                    <span className="text-xl font-bold text-blue-400 font-mono">${currentInvoice.total.toFixed(2)}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Due: {currentInvoice.dueDate} • {currentInvoice.lineItems.length} items
+                  </div>
+                </div>
+
+                {/* Custom Message */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Personal Message (optional)</label>
+                  <textarea
+                    value={invoiceEmailMessage}
+                    onChange={(e) => setInvoiceEmailMessage(e.target.value)}
+                    placeholder="Add a personal note to your client..."
+                    className="w-full h-24 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-white/10">
+                <motion.button
+                  onClick={handleSendInvoiceEmail}
+                  disabled={!currentInvoice.clientDetails.email || isSendingInvoiceEmail || invoiceEmailSent}
+                  className={`w-full py-3 rounded-xl font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all ${
+                    invoiceEmailSent
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white'
+                      : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                  }`}
+                  whileHover={!isSendingInvoiceEmail && !invoiceEmailSent && currentInvoice.clientDetails.email ? { scale: 1.01 } : {}}
+                  whileTap={!isSendingInvoiceEmail && !invoiceEmailSent && currentInvoice.clientDetails.email ? { scale: 0.99 } : {}}
+                >
+                  {invoiceEmailSent ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Email Sent!
+                    </>
+                  ) : isSendingInvoiceEmail ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4" />
+                      Send Invoice Email
+                    </>
+                  )}
+                </motion.button>
+                {!currentInvoice.clientDetails.email && (
+                  <p className="text-xs text-red-400 text-center mt-3">Please add a client email address first</p>
+                )}
+                {invoiceEmailError && (
+                  <p className="text-xs text-red-400 text-center mt-3">{invoiceEmailError}</p>
+                )}
               </div>
             </motion.div>
           </motion.div>

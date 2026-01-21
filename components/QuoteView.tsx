@@ -40,6 +40,9 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendMethod, setSendMethod] = useState<'email' | 'sms'>('email');
   const [customMessage, setCustomMessage] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Client Details State (Controlled) - empty defaults
   const [clientName, setClientName] = useState(initialData?.clientDetails.name || "");
@@ -165,12 +168,60 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 - ${companyProfile.name}`;
   };
 
-  const handleSendEmail = () => {
-    const subject = encodeURIComponent(`Lighting Quote - ${clientName}`);
-    const body = encodeURIComponent(generateQuoteSummary());
-    const mailtoLink = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
-    window.open(mailtoLink, '_blank');
-    setShowSendModal(false);
+  const handleSendEmail = async () => {
+    if (!clientEmail) return;
+
+    setIsSendingEmail(true);
+    setEmailError(null);
+    setEmailSent(false);
+
+    try {
+      const response = await fetch('/api/send-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientEmail,
+          clientName,
+          projectName: projectAddress.split('\n')[0] || 'Lighting Project',
+          companyName: companyProfile.name,
+          companyEmail: companyProfile.email,
+          companyPhone: companyProfile.phone,
+          companyAddress: companyProfile.address,
+          lineItems: lineItems.filter(item => item.quantity > 0).map(item => ({
+            name: item.name,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.quantity * item.unitPrice
+          })),
+          subtotal,
+          taxRate,
+          taxAmount: tax,
+          discount,
+          total,
+          projectImageUrl: projectImage || undefined,
+          customMessage: customMessage || undefined
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send email');
+      }
+
+      setEmailSent(true);
+      setTimeout(() => {
+        setShowSendModal(false);
+        setEmailSent(false);
+        setCustomMessage('');
+      }, 2000);
+    } catch (err: any) {
+      console.error('Error sending email:', err);
+      setEmailError(err.message || 'Failed to send email');
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   const handleSendSMS = () => {
@@ -1000,25 +1051,48 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                 <div className="p-5 border-t border-white/10 bg-black/30">
                   <motion.button
                     onClick={sendMethod === 'email' ? handleSendEmail : handleSendSMS}
-                    disabled={sendMethod === 'email' ? !clientEmail : !clientPhone}
-                    className="relative w-full overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black py-4 rounded-xl font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#F6B45A]/20"
-                    whileHover={!(sendMethod === 'email' ? !clientEmail : !clientPhone) ? { scale: 1.01 } : {}}
-                    whileTap={!(sendMethod === 'email' ? !clientEmail : !clientPhone) ? { scale: 0.99 } : {}}
+                    disabled={(sendMethod === 'email' ? !clientEmail : !clientPhone) || isSendingEmail || emailSent}
+                    className={`relative w-full overflow-hidden py-4 rounded-xl font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed shadow-lg ${
+                      emailSent
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20'
+                        : 'bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black shadow-[#F6B45A]/20 disabled:opacity-50'
+                    }`}
+                    whileHover={!(sendMethod === 'email' ? !clientEmail : !clientPhone) && !isSendingEmail && !emailSent ? { scale: 1.01 } : {}}
+                    whileTap={!(sendMethod === 'email' ? !clientEmail : !clientPhone) && !isSendingEmail && !emailSent ? { scale: 0.99 } : {}}
                   >
-                    {sendMethod === 'email' ? <Mail className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
-                    Send via {sendMethod === 'email' ? 'Email' : 'SMS'}
-                    <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]"
-                        initial={{ x: '-100%' }}
-                        whileHover={{ x: '200%' }}
-                        transition={{ duration: 0.6 }}
-                    />
+                    {emailSent ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Email Sent!
+                      </>
+                    ) : isSendingEmail ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        {sendMethod === 'email' ? <Mail className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+                        Send via {sendMethod === 'email' ? 'Email' : 'SMS'}
+                      </>
+                    )}
+                    {!emailSent && !isSendingEmail && (
+                      <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]"
+                          initial={{ x: '-100%' }}
+                          whileHover={{ x: '200%' }}
+                          transition={{ duration: 0.6 }}
+                      />
+                    )}
                   </motion.button>
                   {sendMethod === 'email' && !clientEmail && (
                     <p className="text-xs text-red-400 text-center mt-3">Please add a client email address first</p>
                   )}
                   {sendMethod === 'sms' && !clientPhone && (
                     <p className="text-xs text-red-400 text-center mt-3">Please add a client phone number first</p>
+                  )}
+                  {emailError && (
+                    <p className="text-xs text-red-400 text-center mt-3">{emailError}</p>
                   )}
                 </div>
               </motion.div>
