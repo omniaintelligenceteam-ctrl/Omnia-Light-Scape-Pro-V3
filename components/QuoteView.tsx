@@ -28,15 +28,9 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   // Helper to find pricing by type
   const getPrice = (type: string) => defaultPricing.find(p => p.fixtureType === type) || DEFAULT_PRICING.find(p => p.fixtureType === type)!;
 
-  // Line Items State
-  const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || [
-    { ...getPrice('up'), quantity: 12 },
-    { ...getPrice('path'), quantity: 6 },
-    { ...getPrice('gutter'), quantity: 4 },
-    { ...getPrice('soffit'), quantity: 4 },
-    { ...getPrice('hardscape'), quantity: 8 },
-    { ...getPrice('transformer'), quantity: 1 },
-  ]);
+  // Line Items State - use initialData if provided, otherwise empty array (no defaults)
+  // This ensures only items selected in the editor appear on the quote
+  const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || []);
 
   const [taxRate, setTaxRate] = useState<number>(initialData?.taxRate ?? 0.07);
   const [discount, setDiscount] = useState<number>(initialData?.discount || 0);
@@ -47,11 +41,11 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [sendMethod, setSendMethod] = useState<'email' | 'sms'>('email');
   const [customMessage, setCustomMessage] = useState('');
 
-  // Client Details State (Controlled)
-  const [clientName, setClientName] = useState(initialData?.clientDetails.name || "John & Jane Smith");
-  const [clientEmail, setClientEmail] = useState(initialData?.clientDetails.email || "john.smith@example.com");
-  const [clientPhone, setClientPhone] = useState(initialData?.clientDetails.phone || "(555) 123-4567");
-  const [projectAddress, setProjectAddress] = useState(initialData?.clientDetails.address || "5500 Oak Hollow Drive\nBeverly Hills, CA 90210");
+  // Client Details State (Controlled) - empty defaults
+  const [clientName, setClientName] = useState(initialData?.clientDetails.name || "");
+  const [clientEmail, setClientEmail] = useState(initialData?.clientDetails.email || "");
+  const [clientPhone, setClientPhone] = useState(initialData?.clientDetails.phone || "");
+  const [projectAddress, setProjectAddress] = useState(initialData?.clientDetails.address || "");
 
   const handleUpdateItem = (index: number, field: keyof LineItem, value: any) => {
     const newItems = [...lineItems];

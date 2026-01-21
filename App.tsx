@@ -899,7 +899,8 @@ const App: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const handleGenerateQuote = () => {
+  // Helper function to generate quote data based on selected fixtures
+  const generateQuoteFromSelections = (): QuoteData => {
     // 1. Parse prompt (custom notes) for explicit quantities
     const parsedCounts = parsePromptForQuantities(prompt);
     const hasParsedCounts = Object.keys(parsedCounts).length > 0;
@@ -907,11 +908,15 @@ const App: React.FC = () => {
     // 2. Estimate counts based on selected sub-options (smarter estimation)
     const estimatedCounts = estimateCountsFromSubOptions(selectedFixtures, fixtureSubOptions);
 
-    // Generate Line Items using CURRENT pricing state
+    // Generate Line Items using CURRENT pricing state - ONLY for selected fixtures
     const lineItems = pricing.map(def => {
-         // RULE: Always add a transformer
+         // RULE: Only add transformer if at least one fixture is selected
          if (def.fixtureType === 'transformer') {
-             return { ...def, quantity: 1 };
+             // Only include transformer if there are other selected fixtures
+             if (selectedFixtures.length > 0) {
+                 return { ...def, quantity: 1 };
+             }
+             return { ...def, quantity: 0 };
          }
 
          // Priority 1: Use explicit counts from custom notes if provided
@@ -929,10 +934,11 @@ const App: React.FC = () => {
              return { ...def, quantity: 4 }; // Minimal default
          }
 
+         // Not selected - quantity 0 (will be filtered out)
          return { ...def, quantity: 0 };
     }).filter(item => item.quantity > 0);
 
-    const newQuote: QuoteData = {
+    return {
         lineItems: lineItems.map(i => ({
             id: i.id,
             name: i.name,
@@ -950,7 +956,10 @@ const App: React.FC = () => {
         },
         total: 0 // View will calculate
     };
-    
+  };
+
+  const handleGenerateQuote = () => {
+    const newQuote = generateQuoteFromSelections();
     setCurrentQuote(newQuote);
     setActiveTab('quotes');
   };
@@ -960,7 +969,9 @@ const App: React.FC = () => {
         return;
       }
       const projectName = `Night Scene ${projects.length + 1}`;
-      const result = await saveProject(projectName, generatedImage, null);
+      // Generate quote based on selected fixtures so it saves with the project
+      const quoteData = generateQuoteFromSelections();
+      const result = await saveProject(projectName, generatedImage, quoteData);
       if (result) {
         setActiveTab('projects');
         showToast('success', 'Project saved successfully!');
