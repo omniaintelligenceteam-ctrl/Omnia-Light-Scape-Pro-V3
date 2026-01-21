@@ -127,9 +127,13 @@ function generateQuoteHtml(data: QuoteEmailRequest): string {
 
       <!-- CTA -->
       <div style="text-align: center; margin: 32px 0;">
-        <p style="margin: 0 0 16px; color: #6b7280; font-size: 14px;">
-          Ready to move forward? Contact us to schedule your installation.
+        <p style="margin: 0 0 16px; color: #374151; font-size: 15px;">
+          Ready to move forward? Contact us to schedule your installation:
         </p>
+        <a href="mailto:${data.companyEmail}" style="display: inline-block; background: linear-gradient(135deg, #F6B45A 0%, #E09F45 100%); color: #000; font-weight: 600; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-size: 14px;">
+          Email ${data.companyName}
+        </a>
+        ${data.companyPhone ? `<p style="margin: 16px 0 0; color: #6b7280; font-size: 14px;">Or call: <a href="tel:${data.companyPhone}" style="color: #F6B45A; text-decoration: none;">${data.companyPhone}</a></p>` : ''}
       </div>
 
       <!-- Divider -->
@@ -146,8 +150,11 @@ function generateQuoteHtml(data: QuoteEmailRequest): string {
     </div>
 
     <!-- Footer -->
-    <div style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 12px;">
-      <p style="margin: 0;">This quote was generated using Omnia LightScape</p>
+    <div style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 11px;">
+      <p style="margin: 0 0 8px; padding: 12px; background: #f3f4f6; border-radius: 8px; color: #6b7280;">
+        <strong>Please do not reply to this email.</strong> To respond, contact ${data.companyName} directly at <a href="mailto:${data.companyEmail}" style="color: #F6B45A;">${data.companyEmail}</a>
+      </p>
+      <p style="margin: 0;">Quote generated with Omnia LightScape</p>
     </div>
 
   </div>
@@ -177,13 +184,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const html = generateQuoteHtml(data);
 
     // Use verified custom domain
-    const fromAddress = 'Omnia LightScape <quotes@omnialightscapepro.com>';
+    const fromAddress = 'Omnia LightScape <noreply@omnialightscapepro.com>';
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: fromAddress,
       to: data.clientEmail,
       replyTo: data.companyEmail,
-      subject: `Quote for ${data.projectName} - ${data.companyName}`,
+      subject: `${data.companyName} - Quote for ${data.projectName}`,
       html,
     });
 

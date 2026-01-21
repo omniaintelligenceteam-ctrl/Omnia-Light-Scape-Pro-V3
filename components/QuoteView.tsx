@@ -1087,37 +1087,10 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                     </div>
                   </div>
 
-                  {/* Send Method Toggle */}
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 block">Send via</label>
-                    <div className="flex gap-3">
-                      <motion.button
-                        onClick={() => setSendMethod('email')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
-                          sendMethod === 'email'
-                            ? 'bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black shadow-lg shadow-[#F6B45A]/20'
-                            : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10'
-                        }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Mail className="w-4 h-4" />
-                        Email
-                      </motion.button>
-                      <motion.button
-                        onClick={() => setSendMethod('sms')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${
-                          sendMethod === 'sms'
-                            ? 'bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black shadow-lg shadow-[#F6B45A]/20'
-                            : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10'
-                        }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        SMS
-                      </motion.button>
-                    </div>
+                  {/* Send Method - Email Only */}
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Mail className="w-4 h-4 text-[#F6B45A]" />
+                    <span>Quote will be sent via email</span>
                   </div>
 
                   {/* Custom Message */}
@@ -1146,15 +1119,15 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                 {/* Modal Footer */}
                 <div className="p-5 border-t border-white/10 bg-black/30">
                   <motion.button
-                    onClick={sendMethod === 'email' ? handleSendEmail : handleSendSMS}
-                    disabled={(sendMethod === 'email' ? !clientEmail : !clientPhone) || isSendingEmail || emailSent}
+                    onClick={handleSendEmail}
+                    disabled={!clientEmail || isSendingEmail || emailSent}
                     className={`relative w-full overflow-hidden py-4 rounded-xl font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed shadow-lg ${
                       emailSent
                         ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20'
                         : 'bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black shadow-[#F6B45A]/20 disabled:opacity-50'
                     }`}
-                    whileHover={!(sendMethod === 'email' ? !clientEmail : !clientPhone) && !isSendingEmail && !emailSent ? { scale: 1.01 } : {}}
-                    whileTap={!(sendMethod === 'email' ? !clientEmail : !clientPhone) && !isSendingEmail && !emailSent ? { scale: 0.99 } : {}}
+                    whileHover={!(!clientEmail || isSendingEmail || emailSent) ? { scale: 1.01 } : {}}
+                    whileTap={!(!clientEmail || isSendingEmail || emailSent) ? { scale: 0.99 } : {}}
                   >
                     {emailSent ? (
                       <>
@@ -1168,8 +1141,8 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                       </>
                     ) : (
                       <>
-                        {sendMethod === 'email' ? <Mail className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
-                        Send via {sendMethod === 'email' ? 'Email' : 'SMS'}
+                        <Mail className="w-4 h-4" />
+                        Send Quote
                       </>
                     )}
                     {!emailSent && !isSendingEmail && (
@@ -1181,11 +1154,8 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                       />
                     )}
                   </motion.button>
-                  {sendMethod === 'email' && !clientEmail && (
+                  {!clientEmail && (
                     <p className="text-xs text-red-400 text-center mt-3">Please add a client email address first</p>
-                  )}
-                  {sendMethod === 'sms' && !clientPhone && (
-                    <p className="text-xs text-red-400 text-center mt-3">Please add a client phone number first</p>
                   )}
                   {emailError && (
                     <p className="text-xs text-red-400 text-center mt-3">{emailError}</p>
