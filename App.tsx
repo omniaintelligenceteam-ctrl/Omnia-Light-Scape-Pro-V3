@@ -1954,15 +1954,24 @@ Notes: ${invoice.notes || 'N/A'}
                                                 </span>
 
                                                 {/* Sub-options indicator */}
-                                                {hasSubOpts && (
-                                                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-colors duration-200 ${
-                                                        isSelected
-                                                            ? 'bg-black/15 text-black/70'
-                                                            : 'bg-white/10 text-gray-500 group-hover:bg-[#F6B45A]/20 group-hover:text-[#F6B45A]'
-                                                    }`}>
-                                                        +{subOpts.length}
-                                                    </span>
-                                                )}
+                                                <AnimatePresence mode="wait">
+                                                    {hasSubOpts && (
+                                                        <motion.span
+                                                            key="subopts-badge"
+                                                            initial={{ opacity: 0, scale: 0.8, width: 0 }}
+                                                            animate={{ opacity: 1, scale: 1, width: 'auto' }}
+                                                            exit={{ opacity: 0, scale: 0.8, width: 0 }}
+                                                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                                                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-colors duration-200 ${
+                                                                isSelected
+                                                                    ? 'bg-black/15 text-black/70'
+                                                                    : 'bg-white/10 text-gray-500 group-hover:bg-[#F6B45A]/20 group-hover:text-[#F6B45A]'
+                                                            }`}
+                                                        >
+                                                            +{subOpts.length}
+                                                        </motion.span>
+                                                    )}
+                                                </AnimatePresence>
 
                                                 {/* Checkmark when selected */}
                                                 <AnimatePresence>
