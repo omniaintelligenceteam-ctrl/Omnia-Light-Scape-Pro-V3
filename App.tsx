@@ -9,6 +9,7 @@ import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/SettingsView';
 import AuthWrapper from './components/AuthWrapper';
 import { InventoryView } from './components/InventoryView';
+import { ScheduleView } from './components/ScheduleView';
 import { BOMView } from './components/BOMView';
 import { Pricing } from './components/Pricing';
 import { BillingSuccess } from './components/BillingSuccess';
@@ -23,7 +24,7 @@ import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ArrowUp, ArrowDown, Navigation, CircleDot, Triangle, Sun, Settings2, GalleryVerticalEnd } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -141,7 +142,7 @@ const App: React.FC = () => {
   const subscription = useSubscription();
 
   // Load/save projects from Supabase
-  const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProject, updateProjectStatus } = useProjects();
+  const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject } = useProjects();
 
   // Rate limiting for generate button (prevent double-clicks)
   const lastGenerateTime = useRef<number>(0);
@@ -218,6 +219,22 @@ const App: React.FC = () => {
   const [showMobileProjectsMenu, setShowMobileProjectsMenu] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [currentInvoice, setCurrentInvoice] = useState<InvoiceData | null>(null);
+
+  // Schedule Modal State
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleProjectId, setScheduleProjectId] = useState<string | null>(null);
+  const [scheduleDate, setScheduleDate] = useState<Date>(new Date());
+  const [scheduleTimeSlot, setScheduleTimeSlot] = useState<TimeSlot>('morning');
+  const [scheduleCustomTime, setScheduleCustomTime] = useState<string>('09:00');
+  const [scheduleDuration, setScheduleDuration] = useState<number>(2);
+  const [scheduleNotes, setScheduleNotes] = useState<string>('');
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
+
+  // Completion Modal State
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionProjectId, setCompletionProjectId] = useState<string | null>(null);
+  const [completionNotes, setCompletionNotes] = useState<string>('');
+  const [autoGenerateInvoice, setAutoGenerateInvoice] = useState(false);
 
   // Inventory Sub-Tab State
   const [inventorySubTab, setInventorySubTab] = useState<'bom' | 'inventory'>('bom');
@@ -2431,13 +2448,32 @@ Notes: ${invoice.notes || 'N/A'}
                                                 </div>
                                             </div>
 
+                                            {/* Scheduled Date Badge */}
+                                            {p.status === 'scheduled' && p.schedule && (
+                                                <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                                    <Calendar className="w-4 h-4 text-blue-400" />
+                                                    <span className="text-sm text-blue-400 font-medium">
+                                                        {new Date(p.schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                        {' · '}
+                                                        {p.schedule.timeSlot === 'morning' ? 'AM' : p.schedule.timeSlot === 'afternoon' ? 'Midday' : p.schedule.timeSlot === 'evening' ? 'PM' : p.schedule.customTime}
+                                                    </span>
+                                                </div>
+                                            )}
+
                                             {/* Status Change & Action Buttons */}
                                             <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                                                 {/* Status Progression */}
                                                 <div className="flex gap-2">
                                                     {p.status === 'approved' && (
                                                         <button
-                                                            onClick={() => handleStatusChange(p.id, 'scheduled')}
+                                                            onClick={() => {
+                                                                setScheduleProjectId(p.id);
+                                                                setScheduleDate(new Date());
+                                                                setScheduleTimeSlot('morning');
+                                                                setScheduleDuration(2);
+                                                                setScheduleNotes('');
+                                                                setShowScheduleModal(true);
+                                                            }}
                                                             className="flex-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-blue-500/30 hover:border-blue-500"
                                                         >
                                                             <Calendar className="w-3 h-3" />
@@ -2445,13 +2481,37 @@ Notes: ${invoice.notes || 'N/A'}
                                                         </button>
                                                     )}
                                                     {p.status === 'scheduled' && (
-                                                        <button
-                                                            onClick={() => handleStatusChange(p.id, 'completed')}
-                                                            className="flex-1 bg-[#F6B45A]/10 hover:bg-[#F6B45A] text-[#F6B45A] hover:text-black py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]"
-                                                        >
-                                                            <Check className="w-3 h-3" />
-                                                            Complete
-                                                        </button>
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setScheduleProjectId(p.id);
+                                                                    if (p.schedule) {
+                                                                        setScheduleDate(new Date(p.schedule.scheduledDate));
+                                                                        setScheduleTimeSlot(p.schedule.timeSlot);
+                                                                        setScheduleCustomTime(p.schedule.customTime || '09:00');
+                                                                        setScheduleDuration(p.schedule.estimatedDuration);
+                                                                        setScheduleNotes(p.schedule.installationNotes || '');
+                                                                    }
+                                                                    setShowScheduleModal(true);
+                                                                }}
+                                                                className="flex-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-blue-500/30 hover:border-blue-500"
+                                                            >
+                                                                <Calendar className="w-3 h-3" />
+                                                                Reschedule
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setCompletionProjectId(p.id);
+                                                                    setCompletionNotes('');
+                                                                    setAutoGenerateInvoice(false);
+                                                                    setShowCompletionModal(true);
+                                                                }}
+                                                                className="flex-1 bg-[#F6B45A]/10 hover:bg-[#F6B45A] text-[#F6B45A] hover:text-black py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]"
+                                                            >
+                                                                <Check className="w-3 h-3" />
+                                                                Complete
+                                                            </button>
+                                                        </>
                                                     )}
                                                     <button
                                                         onClick={() => handleUnapproveProject(p.id)}
@@ -2483,7 +2543,7 @@ Notes: ${invoice.notes || 'N/A'}
                  {projectsSubTab === 'invoicing' && (
                      <>
                          {currentInvoice ? (
-                             /* Invoice Editor View */
+                             /* Invoice Editor View - Matches QuoteView Layout with Blue Theme */
                              <motion.div
                                  initial={{ opacity: 0, y: 20 }}
                                  animate={{ opacity: 1, y: 0 }}
@@ -2661,7 +2721,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                  Line Items
                                                  <span className="ml-auto text-blue-500/50">{currentInvoice.lineItems.length} items</span>
                                              </label>
-                                             <div className="bg-gradient-to-b from-[#0a0a0a] to-[#080808] rounded-xl border border-white/10 overflow-hidden shadow-xl shadow-black/20">
+                                             <div className="hidden md:block bg-gradient-to-b from-[#0a0a0a] to-[#080808] rounded-xl border border-white/10 overflow-hidden shadow-xl shadow-black/20">
                                                  {/* Header */}
                                                  <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/10 text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-blue-500/5 to-transparent">
                                                      <div className="col-span-4 text-gray-400">Description</div>
@@ -2753,6 +2813,95 @@ Notes: ${invoice.notes || 'N/A'}
                                                      Add Line Item
                                                  </motion.button>
                                              </div>
+
+                                            {/* MOBILE CARDS - Hidden on desktop */}
+                                            <div className="md:hidden space-y-3">
+                                                {currentInvoice.lineItems.map((item, index) => (
+                                                    <motion.div
+                                                        key={item.id}
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: index * 0.03 }}
+                                                        className="bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border border-white/10 rounded-xl p-4 space-y-3"
+                                                    >
+                                                        {/* Description + Delete Row */}
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <input
+                                                                type="text"
+                                                                value={item.description}
+                                                                onChange={(e) => handleInvoiceLineItemChange(item.id, 'description', e.target.value)}
+                                                                placeholder="Item description..."
+                                                                className="flex-1 bg-transparent text-white text-sm font-medium focus:outline-none placeholder-gray-500"
+                                                            />
+                                                            <motion.button
+                                                                whileTap={{ scale: 0.9 }}
+                                                                onClick={() => handleRemoveInvoiceLineItem(item.id)}
+                                                                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </motion.button>
+                                                        </div>
+
+                                                        {/* Qty, Price, Total Row */}
+                                                        <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
+                                                            {/* Quantity */}
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-bold uppercase text-gray-500">Qty</span>
+                                                                <div className="flex items-center bg-[#0a0a0a] rounded-lg border border-white/10">
+                                                                    <motion.button
+                                                                        whileTap={{ scale: 0.9 }}
+                                                                        onClick={() => handleInvoiceLineItemChange(item.id, 'quantity', Math.max(1, item.quantity - 1))}
+                                                                        className="p-2 text-gray-400 hover:text-white"
+                                                                    >
+                                                                        <Minus className="w-3 h-3" />
+                                                                    </motion.button>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={item.quantity}
+                                                                        onChange={(e) => handleInvoiceLineItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                                                                        className="w-10 bg-transparent text-white text-sm text-center focus:outline-none font-bold"
+                                                                    />
+                                                                    <motion.button
+                                                                        whileTap={{ scale: 0.9 }}
+                                                                        onClick={() => handleInvoiceLineItemChange(item.id, 'quantity', item.quantity + 1)}
+                                                                        className="p-2 text-gray-400 hover:text-white"
+                                                                    >
+                                                                        <Plus className="w-3 h-3" />
+                                                                    </motion.button>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Unit Price */}
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-gray-500 text-sm">$</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.unitPrice}
+                                                                    onChange={(e) => handleInvoiceLineItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                                                    className="w-20 bg-[#0a0a0a] border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm text-right focus:outline-none focus:border-blue-500/30"
+                                                                />
+                                                            </div>
+
+                                                            {/* Total */}
+                                                            <div className="text-right">
+                                                                <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 font-mono">
+                                                                    ${item.total.toFixed(2)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
+
+                                                {/* Mobile Add Item Button */}
+                                                <motion.button
+                                                    whileTap={{ scale: 0.98 }}
+                                                    onClick={handleAddInvoiceLineItem}
+                                                    className="w-full p-4 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10 rounded-xl border border-dashed border-blue-500/30 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    Add Item
+                                                </motion.button>
+                                            </div>
                                          </motion.div>
 
                                          {/* Totals */}
@@ -2967,6 +3116,47 @@ Notes: ${invoice.notes || 'N/A'}
             </div>
           )}
 
+          {/* TAB: SCHEDULE */}
+          {activeTab === 'schedule' && (
+            <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
+              {/* Background Tech Mesh/Glow - Blue themed */}
+              <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)' }}></div>
+              <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+
+              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
+                <ScheduleView
+                  projects={projects}
+                  selectedDate={selectedCalendarDate}
+                  onDateSelect={setSelectedCalendarDate}
+                  onViewProject={(project) => {
+                    // Navigate to projects tab and select the project
+                    setActiveTab('projects');
+                    setProjectsSubTab('approved');
+                  }}
+                  onReschedule={(project) => {
+                    // Open schedule modal with existing data
+                    setScheduleProjectId(project.id);
+                    if (project.schedule) {
+                      setScheduleDate(new Date(project.schedule.scheduledDate));
+                      setScheduleTimeSlot(project.schedule.timeSlot);
+                      setScheduleCustomTime(project.schedule.customTime || '09:00');
+                      setScheduleDuration(project.schedule.estimatedDuration);
+                      setScheduleNotes(project.schedule.installationNotes || '');
+                    }
+                    setShowScheduleModal(true);
+                  }}
+                  onComplete={(project) => {
+                    // Open completion modal
+                    setCompletionProjectId(project.id);
+                    setCompletionNotes('');
+                    setAutoGenerateInvoice(false);
+                    setShowCompletionModal(true);
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
            {/* TAB: INVENTORY */}
            {activeTab === 'inventory' && (
             <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
@@ -3085,6 +3275,309 @@ Notes: ${invoice.notes || 'N/A'}
       </div>
 
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Schedule Modal */}
+      <AnimatePresence>
+        {showScheduleModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowScheduleModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Schedule Installation</h3>
+                </div>
+                <motion.button
+                  onClick={() => setShowScheduleModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </motion.button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 space-y-4">
+                {/* Project Info */}
+                {scheduleProjectId && (() => {
+                  const project = projects.find(p => p.id === scheduleProjectId);
+                  if (!project) return null;
+                  return (
+                    <div className="bg-white/5 rounded-xl p-3 space-y-1">
+                      <p className="font-medium text-white">{project.name}</p>
+                      {project.quote?.clientDetails && (
+                        <p className="text-sm text-gray-400">
+                          {project.quote.clientDetails.name} · {project.quote.clientDetails.address}
+                        </p>
+                      )}
+                      {project.quote?.total && (
+                        <p className="text-sm text-blue-400">Estimate: ${project.quote.total.toLocaleString()}</p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Date Picker */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Installation Date</label>
+                  <input
+                    type="date"
+                    value={scheduleDate.toISOString().split('T')[0]}
+                    onChange={(e) => setScheduleDate(new Date(e.target.value))}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                {/* Time Slot */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Time Slot</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {(['morning', 'afternoon', 'evening', 'custom'] as const).map(slot => (
+                      <motion.button
+                        key={slot}
+                        onClick={() => setScheduleTimeSlot(slot)}
+                        className={`p-3 rounded-xl border transition-all ${
+                          scheduleTimeSlot === slot
+                            ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="text-sm font-medium capitalize">{slot}</div>
+                        <div className="text-xs opacity-70">
+                          {slot === 'morning' && '8-12'}
+                          {slot === 'afternoon' && '12-5'}
+                          {slot === 'evening' && '5-8'}
+                          {slot === 'custom' && 'Set time'}
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                  {scheduleTimeSlot === 'custom' && (
+                    <input
+                      type="time"
+                      value={scheduleCustomTime}
+                      onChange={(e) => setScheduleCustomTime(e.target.value)}
+                      className="w-full mt-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                  )}
+                </div>
+
+                {/* Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Estimated Duration</label>
+                  <div className="flex items-center gap-3">
+                    <motion.button
+                      onClick={() => setScheduleDuration(Math.max(1, scheduleDuration - 1))}
+                      className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Minus className="w-4 h-4 text-gray-400" />
+                    </motion.button>
+                    <div className="flex-1 text-center">
+                      <span className="text-2xl font-bold text-white">{scheduleDuration}</span>
+                      <span className="text-gray-400 ml-1">hours</span>
+                    </div>
+                    <motion.button
+                      onClick={() => setScheduleDuration(Math.min(12, scheduleDuration + 1))}
+                      className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Plus className="w-4 h-4 text-gray-400" />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Installation Notes (optional)</label>
+                  <textarea
+                    value={scheduleNotes}
+                    onChange={(e) => setScheduleNotes(e.target.value)}
+                    placeholder="Gate codes, parking instructions, access notes..."
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
+                <motion.button
+                  onClick={() => setShowScheduleModal(false)}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={async () => {
+                    if (!scheduleProjectId) return;
+                    const scheduleData: ScheduleData = {
+                      scheduledDate: scheduleDate.toISOString().split('T')[0],
+                      timeSlot: scheduleTimeSlot,
+                      customTime: scheduleTimeSlot === 'custom' ? scheduleCustomTime : undefined,
+                      estimatedDuration: scheduleDuration,
+                      installationNotes: scheduleNotes || undefined,
+                    };
+                    const success = await scheduleProject(scheduleProjectId, scheduleData);
+                    if (success) {
+                      showToast('Job scheduled successfully!', 'success');
+                      setShowScheduleModal(false);
+                      setScheduleProjectId(null);
+                      setScheduleNotes('');
+                    } else {
+                      showToast('Failed to schedule job', 'error');
+                    }
+                  }}
+                  className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Schedule Job
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Completion Modal */}
+      <AnimatePresence>
+        {showCompletionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowCompletionModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-md"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Complete Installation</h3>
+                </div>
+                <motion.button
+                  onClick={() => setShowCompletionModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </motion.button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 space-y-4">
+                {completionProjectId && (() => {
+                  const project = projects.find(p => p.id === completionProjectId);
+                  if (!project) return null;
+                  return (
+                    <div className="bg-white/5 rounded-xl p-3 space-y-1">
+                      <p className="font-medium text-white">{project.name}</p>
+                      {project.schedule && (
+                        <p className="text-sm text-gray-400">
+                          Scheduled: {new Date(project.schedule.scheduledDate).toLocaleDateString()} ({project.schedule.timeSlot})
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Completion Notes (optional)</label>
+                  <textarea
+                    value={completionNotes}
+                    onChange={(e) => setCompletionNotes(e.target.value)}
+                    placeholder="Installation complete. Any notes about the job..."
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
+                  />
+                </div>
+
+                <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={autoGenerateInvoice}
+                    onChange={(e) => setAutoGenerateInvoice(e.target.checked)}
+                    className="w-5 h-5 rounded border-white/20 bg-white/5 text-emerald-500 focus:ring-emerald-500/50"
+                  />
+                  <span className="text-sm text-gray-300">Generate invoice automatically</span>
+                </label>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
+                <motion.button
+                  onClick={() => setShowCompletionModal(false)}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={async () => {
+                    if (!completionProjectId) return;
+                    const success = await completeProject(completionProjectId, completionNotes || undefined);
+                    if (success) {
+                      showToast('Job marked as complete!', 'success');
+                      setShowCompletionModal(false);
+                      setCompletionProjectId(null);
+                      setCompletionNotes('');
+
+                      // Auto-generate invoice if checked
+                      if (autoGenerateInvoice) {
+                        const project = projects.find(p => p.id === completionProjectId);
+                        if (project) {
+                          handleGenerateInvoice(project);
+                        }
+                      }
+                    } else {
+                      showToast('Failed to complete job', 'error');
+                    }
+                  }}
+                  className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-xl transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Mark Complete
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Pricing Modal */}
       <Pricing

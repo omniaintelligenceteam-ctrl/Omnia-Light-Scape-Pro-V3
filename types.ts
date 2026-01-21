@@ -57,6 +57,17 @@ export interface QuoteData {
 
 export type ProjectStatus = 'draft' | 'quoted' | 'approved' | 'scheduled' | 'completed';
 
+export type TimeSlot = 'morning' | 'afternoon' | 'evening' | 'custom';
+
+export interface ScheduleData {
+  scheduledDate: string;       // ISO date "2024-01-15"
+  timeSlot: TimeSlot;
+  customTime?: string;         // "09:00" if timeSlot is 'custom'
+  estimatedDuration: number;   // Hours (default: 2)
+  installationNotes?: string;  // Gate codes, parking, access info
+  completionNotes?: string;    // Notes added when marking complete
+}
+
 export interface SavedProject {
   id: string;
   name: string;
@@ -65,6 +76,7 @@ export interface SavedProject {
   quote: QuoteData | null;
   bom: BOMData | null;
   status: ProjectStatus;
+  schedule?: ScheduleData;
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';

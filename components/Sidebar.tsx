@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paintbrush, FolderOpen, FolderClosed, Settings, Package, PackageOpen, Sparkles } from 'lucide-react';
+import { Paintbrush, FolderOpen, FolderClosed, Settings, Package, PackageOpen, Sparkles, Calendar, CalendarCheck } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -11,6 +11,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const menuItems = [
     { id: 'editor', label: 'Editor', icon: Paintbrush },
     { id: 'projects', label: 'Projects', icon: FolderOpen },
+    { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -162,6 +163,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'inventory' ? (
                     <Package
+                      className="w-[18px] h-[18px] md:w-7 md:h-7 text-gray-500"
+                      strokeWidth={2}
+                    />
+                  ) : /* Schedule - Calendar check animation */
+                  item.id === 'schedule' && isActive ? (
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.08, 1],
+                      }}
+                      transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 1 }}
+                    >
+                      <CalendarCheck
+                        className="w-[18px] h-[18px] md:w-7 md:h-7 text-[#1a1a1a]"
+                        strokeWidth={2.5}
+                      />
+                    </motion.div>
+                  ) : item.id === 'schedule' ? (
+                    <Calendar
                       className="w-[18px] h-[18px] md:w-7 md:h-7 text-gray-500"
                       strokeWidth={2}
                     />

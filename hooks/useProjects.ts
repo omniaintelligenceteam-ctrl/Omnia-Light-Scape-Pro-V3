@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { uploadImage } from '../services/uploadService';
-import { SavedProject, QuoteData, BOMData, ProjectStatus } from '../types';
+import { SavedProject, QuoteData, BOMData, ProjectStatus, ScheduleData } from '../types';
 
 export function useProjects() {
   const { user } = useUser();
@@ -35,7 +35,8 @@ export function useProjects() {
             image: p.generated_image_url,
             quote: p.prompt_config?.quote || null,
             bom: p.prompt_config?.bom || null,
-            status: (p.prompt_config?.status as ProjectStatus) || 'draft'
+            status: (p.prompt_config?.status as ProjectStatus) || 'draft',
+            schedule: p.prompt_config?.schedule || undefined
           }));
           setProjects(loadedProjects);
         }
@@ -155,7 +156,7 @@ export function useProjects() {
   // Update a project
   const updateProject = useCallback(async (
     projectId: string,
-    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus }
+    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData }
   ): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
@@ -169,6 +170,7 @@ export function useProjects() {
       if (updates.quote) promptConfig.quote = updates.quote;
       if (updates.bom) promptConfig.bom = updates.bom;
       if (updates.status) promptConfig.status = updates.status;
+      if (updates.schedule) promptConfig.schedule = updates.schedule;
 
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'PATCH',
@@ -192,7 +194,8 @@ export function useProjects() {
             name: updates.name || p.name,
             quote: updates.quote || p.quote,
             bom: updates.bom || p.bom,
-            status: updates.status || p.status
+            status: updates.status || p.status,
+            schedule: updates.schedule || p.schedule
           };
         }
         return p;
@@ -214,6 +217,29 @@ export function useProjects() {
     return updateProject(projectId, { status });
   }, [updateProject]);
 
+  // Schedule a project
+  const scheduleProject = useCallback(async (
+    projectId: string,
+    schedule: ScheduleData
+  ): Promise<boolean> => {
+    return updateProject(projectId, { status: 'scheduled', schedule });
+  }, [updateProject]);
+
+  // Complete a project
+  const completeProject = useCallback(async (
+    projectId: string,
+    completionNotes?: string
+  ): Promise<boolean> => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project?.schedule) return false;
+
+    const updatedSchedule: ScheduleData = {
+      ...project.schedule,
+      completionNotes
+    };
+    return updateProject(projectId, { status: 'completed', schedule: updatedSchedule });
+  }, [updateProject, projects]);
+
   return {
     projects,
     isLoading,
@@ -222,6 +248,8 @@ export function useProjects() {
     deleteProject,
     updateProject,
     updateProjectStatus,
+    scheduleProject,
+    completeProject,
     setProjects
   };
 }
