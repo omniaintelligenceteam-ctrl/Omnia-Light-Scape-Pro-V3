@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, Check, Sun, Moon, Mail, MessageCircle, Sparkles,
-  Volume2, VolumeX, ExternalLink, Loader2, Save, Plus, Trash2, Phone
+  Volume2, VolumeX, ExternalLink, Loader2, Save, Plus, Trash2, Phone, LogOut
 } from 'lucide-react';
 import { SettingsNav, SettingsSection } from './SettingsNav';
 import { SettingsCard } from './ui/SettingsCard';
