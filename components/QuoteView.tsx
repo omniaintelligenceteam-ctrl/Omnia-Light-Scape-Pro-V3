@@ -589,13 +589,16 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                     </tr>
                 </thead>
                 <tbody className="text-sm">
+                  <AnimatePresence mode="popLayout">
                     {lineItems.map((item, index) => (
                         <motion.tr
-                            key={index}
+                            key={item.id || index}
+                            layout
                             className="border-t border-white/5 group hover:bg-white/[0.03] transition-colors print:border-gray-200"
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ delay: index * 0.03, type: "spring", stiffness: 400, damping: 30 }}
                         >
                             <td className="py-4 px-5 align-top">
                                 <input
@@ -648,20 +651,24 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                             </td>
                         </motion.tr>
                     ))}
+                  </AnimatePresence>
                 </tbody>
             </table>
           </div>
 
           {/* Line Items - MOBILE CARDS - Compact */}
           <div className="md:hidden space-y-2 mb-4">
-            {lineItems.map((item, index) => (
-                <motion.div
-                    key={index}
-                    className="relative bg-white/[0.03] border border-white/10 rounded-xl p-3 overflow-hidden print:bg-transparent print:border-gray-200"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.02 }}
-                >
+            <AnimatePresence mode="popLayout">
+              {lineItems.map((item, index) => (
+                  <motion.div
+                      key={item.id || index}
+                      layout
+                      className="relative bg-white/[0.03] border border-white/10 rounded-xl p-3 overflow-hidden print:bg-transparent print:border-gray-200"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ delay: index * 0.02, type: "spring", stiffness: 400, damping: 30 }}
+                  >
                     {/* Top row: Name + Delete */}
                     <div className="flex items-center justify-between gap-2 mb-2">
                         <input
@@ -709,7 +716,8 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         </div>
                     </div>
                 </motion.div>
-            ))}
+              ))}
+            </AnimatePresence>
           </div>
 
           {/* Line Items - MOBILE CARDS - Original (hidden, keeping for reference) */}
@@ -827,13 +835,21 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                              <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/50 print:hidden" />
                          </div>
                      ) : (
-                         <div className="flex h-full min-h-[280px] rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex-col items-center justify-center text-center p-6 print:hidden">
-                             <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                         <motion.div
+                             initial={{ opacity: 0 }}
+                             animate={{ opacity: 1 }}
+                             className="flex h-full min-h-[280px] rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex-col items-center justify-center text-center p-6 print:hidden"
+                         >
+                             <motion.div
+                                 animate={{ y: [0, -8, 0] }}
+                                 transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                                 className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 animate-empty-glow-pulse"
+                             >
                                  <Sparkles className="w-6 h-6 text-gray-600" />
-                             </div>
+                             </motion.div>
                              <p className="text-sm text-gray-500 font-medium mb-1">No Image Available</p>
                              <p className="text-xs text-gray-600">Generate a design in the Editor tab</p>
-                         </div>
+                         </motion.div>
                      )}
                  </div>
 

@@ -111,6 +111,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
     border: string;
     progressColor: string;
     title: string;
+    glowClass: string;
   }> = {
     success: {
       icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
@@ -118,6 +119,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       border: 'border-emerald-500/20',
       progressColor: 'bg-emerald-500',
       title: 'Success',
+      glowClass: 'toast-glow-success',
     },
     error: {
       icon: <XCircle className="w-4 h-4 text-red-400" />,
@@ -125,6 +127,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       border: 'border-red-500/20',
       progressColor: 'bg-red-500',
       title: 'Error',
+      glowClass: 'toast-glow-error',
     },
     warning: {
       icon: <AlertTriangle className="w-4 h-4 text-amber-400" />,
@@ -132,6 +135,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       border: 'border-amber-500/20',
       progressColor: 'bg-amber-500',
       title: 'Warning',
+      glowClass: 'toast-glow-warning',
     },
     info: {
       icon: <Info className="w-4 h-4 text-blue-400" />,
@@ -139,10 +143,11 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       border: 'border-blue-500/20',
       progressColor: 'bg-blue-500',
       title: 'Info',
+      glowClass: 'toast-glow-info',
     },
   };
 
-  const { icon, iconBg, border, progressColor, title } = config[toast.type];
+  const { icon, iconBg, border, progressColor, title, glowClass } = config[toast.type];
 
   return (
     <motion.div
@@ -151,7 +156,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, x: 100, transition: { duration: 0.2 } }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      className={`relative glass rounded-xl border overflow-hidden ${border}`}
+      className={`relative glass rounded-xl border overflow-hidden ${border} ${glowClass}`}
       role="alert"
     >
       <div className="flex items-start gap-3 p-4">

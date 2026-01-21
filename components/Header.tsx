@@ -247,9 +247,10 @@ interface HeaderProps {
       freeTrialLimit: number;
       isLoading: boolean;
     };
+    hideLogoForAnimation?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionStatus }) => {
+export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionStatus, hideLogoForAnimation }) => {
   const showTrialBadge = subscriptionStatus && !subscriptionStatus.isLoading && !subscriptionStatus.hasActiveSubscription;
   const showProBadge = subscriptionStatus?.hasActiveSubscription;
 
@@ -281,6 +282,7 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
             className="relative w-10 h-10 md:w-14 md:h-14 flex items-center justify-center"
             whileHover={{ scale: 1.1 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            style={{ opacity: hideLogoForAnimation ? 0 : 1 }}
           >
             <PenroseTriangle className="w-6 h-6 md:w-10 md:h-10" />
           </motion.div>

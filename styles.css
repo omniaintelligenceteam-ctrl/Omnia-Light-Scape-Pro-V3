@@ -384,3 +384,61 @@ body {
 .card-inner-glow:hover::before {
     opacity: 1;
 }
+
+/* Validation Shake Animation */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Toast Glow Effects by Type */
+.toast-glow-success {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.1);
+}
+
+.toast-glow-error {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.2);
+}
+
+.toast-glow-warning {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3), 0 0 40px rgba(245, 158, 11, 0.1);
+}
+
+.toast-glow-info {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+}
+
+/* Button Success/Error Glow Effects */
+.btn-glow-success {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2);
+}
+
+.btn-glow-error {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.2);
+}
+
+/* Empty State Glow Pulse */
+@keyframes empty-glow-pulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(246, 180, 90, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 35px rgba(246, 180, 90, 0.35);
+    }
+}
+
+.animate-empty-glow-pulse {
+    animation: empty-glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Input Focus Glow */
+.input-focus-glow:focus {
+    box-shadow: 0 0 0 1px rgba(246, 180, 90, 0.5), 0 0 20px rgba(246, 180, 90, 0.15);
+    border-color: rgba(246, 180, 90, 0.5);
+    outline: none;
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardList,
   Download,
@@ -176,15 +177,36 @@ export const BOMView: React.FC<BOMViewProps> = ({
     return (
       <div className="h-full overflow-y-auto bg-[#050505] relative">
         <div className="max-w-4xl mx-auto p-4 md:p-8">
-          <div className="flex flex-col items-center justify-center h-[60vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm">
-            <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className="flex flex-col items-center justify-center h-[60vh] border border-dashed border-white/10 rounded-3xl bg-[#111]/50 backdrop-blur-sm"
+          >
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+              className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.5)] animate-empty-glow-pulse"
+            >
               <ClipboardList className="w-8 h-8 text-gray-500" />
-            </div>
-            <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">No BOM Generated</p>
-            <p className="text-xs text-gray-400 font-mono uppercase tracking-widest text-center max-w-sm">
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="font-bold text-lg text-white font-serif tracking-wide mb-2"
+            >
+              No BOM Generated
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-xs text-gray-400 font-mono uppercase tracking-widest text-center max-w-sm"
+            >
               Generate a quote first, then click "Generate BOM" to create a Bill of Materials
-            </p>
-          </div>
+            </motion.p>
+          </motion.div>
         </div>
       </div>
     );
@@ -353,9 +375,14 @@ export const BOMView: React.FC<BOMViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {localBOM.fixtures.map((fixture, index) => (
-                    <tr
-                      key={index}
+                  <AnimatePresence mode="popLayout">
+                    {localBOM.fixtures.map((fixture, index) => (
+                      <motion.tr
+                      key={fixture.id || index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20, height: 0 }}
+                      transition={{ delay: index * 0.05, type: "spring", stiffness: 400, damping: 30 }}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors print:border-gray-100 group"
                     >
                       <td className="py-4 text-sm text-white font-medium print:text-black">
@@ -405,8 +432,9 @@ export const BOMView: React.FC<BOMViewProps> = ({
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
+                  </AnimatePresence>
                 </tbody>
               </table>
             </div>

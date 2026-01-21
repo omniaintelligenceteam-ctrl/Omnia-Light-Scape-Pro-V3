@@ -251,5 +251,121 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   />
 );
 
+// Empty State with floating icon animation
+interface EmptyStateProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  action?: { label: string; onClick: () => void };
+  className?: string;
+  iconColorClass?: string;
+}
+
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  icon,
+  title,
+  description,
+  action,
+  className = '',
+  iconColorClass = 'bg-[#F6B45A]/10',
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4 }}
+    className={`flex flex-col items-center justify-center py-16 ${className}`}
+  >
+    {/* Floating icon with glow */}
+    <motion.div
+      animate={{ y: [0, -8, 0] }}
+      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+      className={`w-16 h-16 rounded-full ${iconColorClass} flex items-center justify-center mb-4 animate-empty-glow-pulse`}
+    >
+      {icon}
+    </motion.div>
+
+    {/* Title */}
+    <motion.h3
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.1 }}
+      className="text-lg font-semibold text-gray-300 mb-2"
+    >
+      {title}
+    </motion.h3>
+
+    {/* Description */}
+    <motion.p
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.2 }}
+      className="text-sm text-gray-500 text-center max-w-xs"
+    >
+      {description}
+    </motion.p>
+
+    {/* Optional action button */}
+    {action && (
+      <motion.button
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={action.onClick}
+        className="mt-4 px-4 py-2 bg-[#F6B45A] text-black font-medium rounded-lg hover:bg-[#ffc67a] transition-colors"
+      >
+        {action.label}
+      </motion.button>
+    )}
+  </motion.div>
+);
+
+// Animated Table Row for staggered table animations
+interface AnimatedTableRowProps {
+  children: React.ReactNode;
+  index: number;
+  className?: string;
+}
+
+export const AnimatedTableRow: React.FC<AnimatedTableRowProps> = ({
+  children,
+  index,
+  className = '',
+}) => (
+  <motion.tr
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: 20 }}
+    transition={{ delay: index * 0.05, ...springConfig.snappy }}
+    className={className}
+  >
+    {children}
+  </motion.tr>
+);
+
+// Animated List Item for mobile views
+interface AnimatedListItemProps {
+  children: React.ReactNode;
+  index: number;
+  className?: string;
+}
+
+export const AnimatedListItem: React.FC<AnimatedListItemProps> = ({
+  children,
+  index,
+  className = '',
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    transition={{ delay: index * 0.05, ...springConfig.snappy }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+);
+
 // Export AnimatePresence for convenience
 export { AnimatePresence } from 'framer-motion';
