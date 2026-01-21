@@ -1,6 +1,88 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useSpring, useTransform, useMotionValue } from 'framer-motion';
 import { Package, AlertTriangle, RefreshCw, Plus, X, Trash2 } from 'lucide-react';
 import { getInventory, InventoryItem } from '../services/inventoryService';
+
+// Animated counter component for number animations
+const AnimatedCounter: React.FC<{ value: number; className?: string }> = ({ value, className }) => {
+    const [displayValue, setDisplayValue] = useState(0);
+    const previousValue = useRef(0);
+
+    useEffect(() => {
+        const startValue = previousValue.current;
+        const endValue = value;
+        const duration = 800;
+        const startTime = performance.now();
+
+        const animate = (currentTime: number) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing function for smooth animation
+            const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+            const currentValue = Math.round(startValue + (endValue - startValue) * easeOutQuart);
+
+            setDisplayValue(currentValue);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+
+        requestAnimationFrame(animate);
+        previousValue.current = value;
+    }, [value]);
+
+    return <span className={className}>{displayValue}</span>;
+};
+
+// Multi-layer hover card component
+const MultiLayerCard: React.FC<{
+    children: React.ReactNode;
+    className?: string;
+    isLocal?: boolean;
+}> = ({ children, className, isLocal }) => {
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
+
+    const rotateX = useTransform(y, [-100, 100], [8, -8]);
+    const rotateY = useTransform(x, [-100, 100], [-8, 8]);
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        x.set(e.clientX - centerX);
+        y.set(e.clientY - centerY);
+    };
+
+    const handleMouseLeave = () => {
+        x.set(0);
+        y.set(0);
+    };
+
+    return (
+        <motion.div
+            className={className}
+            style={{
+                rotateX,
+                rotateY,
+                transformStyle: 'preserve-3d',
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            whileHover={{
+                scale: 1.02,
+                boxShadow: isLocal
+                    ? '0 25px 50px -12px rgba(246, 180, 90, 0.25), 0 0 30px rgba(246, 180, 90, 0.1)'
+                    : '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 255, 255, 0.05)',
+            }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        >
+            {children}
+        </motion.div>
+    );
+};
 
 export const InventoryView: React.FC = () => {
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -72,7 +154,7 @@ export const InventoryView: React.FC = () => {
                         <Package className="w-5 h-5 text-[#F6B45A]" />
                     </div>
                     <h2 className="text-lg font-bold text-white tracking-wide font-serif">
-                        INVENTORY <span className="text-[#F6B45A]">DASHBOARD</span>
+                        INVENTORY <span className="gradient-text-animated">DASHBOARD</span>
                     </h2>
                 </div>
                 <div className="flex items-center gap-2">
@@ -102,64 +184,114 @@ export const InventoryView: React.FC = () => {
                 </div>
             )}
 
-            {/* Inventory Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {allInventory.map((item) => {
-                    const status = getStockStatus(item);
-                    const available = item.on_hand - item.reserved;
-                    const isLocal = isLocalItem(item.sku);
+            {/* Inventory Grid with Staggered Animations */}
+            <motion.div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                    hidden: { opacity: 0 },
+                    visible: {
+                        opacity: 1,
+                        transition: {
+                            staggerChildren: 0.08,
+                            delayChildren: 0.1,
+                        },
+                    },
+                }}
+            >
+                <AnimatePresence mode="popLayout">
+                    {allInventory.map((item, index) => {
+                        const status = getStockStatus(item);
+                        const available = item.on_hand - item.reserved;
+                        const isLocal = isLocalItem(item.sku);
 
-                    return (
-                        <div
-                            key={item.sku}
-                            className={`bg-[#111] border rounded-xl p-4 hover:border-[#F6B45A]/30 transition-colors group relative ${isLocal ? 'border-[#F6B45A]/20' : 'border-white/10'}`}
-                        >
-                            {/* Delete button for local items */}
-                            {isLocal && (
-                                <button
-                                    onClick={() => handleDeleteLocalProduct(item.sku)}
-                                    className="absolute top-2 right-2 p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                                    title="Remove product"
+                        return (
+                            <motion.div
+                                key={item.sku}
+                                layout
+                                variants={{
+                                    hidden: { opacity: 0, y: 30, scale: 0.95 },
+                                    visible: {
+                                        opacity: 1,
+                                        y: 0,
+                                        scale: 1,
+                                        transition: {
+                                            type: 'spring',
+                                            stiffness: 300,
+                                            damping: 24,
+                                        },
+                                    },
+                                }}
+                                initial="hidden"
+                                animate="visible"
+                                exit={{
+                                    opacity: 0,
+                                    scale: 0.8,
+                                    y: -20,
+                                    transition: { duration: 0.3, ease: 'easeOut' },
+                                }}
+                            >
+                                <MultiLayerCard
+                                    isLocal={isLocal}
+                                    className={`bg-[#111] border rounded-xl p-4 hover:border-[#F6B45A]/30 transition-colors group relative cursor-pointer ${isLocal ? 'border-[#F6B45A]/20' : 'border-white/10'}`}
                                 >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            )}
-
-                            {/* SKU & Status */}
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-mono text-gray-500">{item.sku}</span>
+                                    {/* Delete button for local items */}
                                     {isLocal && (
-                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#F6B45A]/20 text-[#F6B45A] font-bold uppercase">Local</span>
+                                        <motion.button
+                                            onClick={() => handleDeleteLocalProduct(item.sku)}
+                                            className="absolute top-2 right-2 p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-10"
+                                            title="Remove product"
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </motion.button>
                                     )}
-                                </div>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${status.bg} ${status.color}`}>
-                                    {status.label}
-                                </span>
-                            </div>
 
-                            {/* Name */}
-                            <h3 className="text-white font-semibold mb-4">{item.name}</h3>
+                                    {/* SKU & Status */}
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-mono text-gray-500">{item.sku}</span>
+                                            {isLocal && (
+                                                <motion.span
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="text-[8px] px-1.5 py-0.5 rounded bg-[#F6B45A]/20 text-[#F6B45A] font-bold uppercase"
+                                                >
+                                                    Local
+                                                </motion.span>
+                                            )}
+                                        </div>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${status.bg} ${status.color}`}>
+                                            {status.label}
+                                        </span>
+                                    </div>
 
-                            {/* Stock Numbers */}
-                            <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="bg-[#0a0a0a] rounded-lg p-2">
-                                    <div className="text-xs text-gray-500 mb-1">On Hand</div>
-                                    <div className="text-lg font-bold text-white">{item.on_hand}</div>
-                                </div>
-                                <div className="bg-[#0a0a0a] rounded-lg p-2">
-                                    <div className="text-xs text-gray-500 mb-1">Reserved</div>
-                                    <div className="text-lg font-bold text-amber-500">{item.reserved}</div>
-                                </div>
-                                <div className={`rounded-lg p-2 ${status.bg}`}>
-                                    <div className="text-xs text-gray-500 mb-1">Available</div>
-                                    <div className={`text-lg font-bold ${status.color}`}>{available}</div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+                                    {/* Name */}
+                                    <h3 className="text-white font-semibold mb-4">{item.name}</h3>
+
+                                    {/* Stock Numbers with Animated Counters */}
+                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                        <div className="bg-[#0a0a0a] rounded-lg p-2">
+                                            <div className="text-xs text-gray-500 mb-1">On Hand</div>
+                                            <AnimatedCounter value={item.on_hand} className="text-lg font-bold text-white" />
+                                        </div>
+                                        <div className="bg-[#0a0a0a] rounded-lg p-2">
+                                            <div className="text-xs text-gray-500 mb-1">Reserved</div>
+                                            <AnimatedCounter value={item.reserved} className="text-lg font-bold text-amber-500" />
+                                        </div>
+                                        <div className={`rounded-lg p-2 ${status.bg}`}>
+                                            <div className="text-xs text-gray-500 mb-1">Available</div>
+                                            <AnimatedCounter value={available} className={`text-lg font-bold ${status.color}`} />
+                                        </div>
+                                    </div>
+                                </MultiLayerCard>
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
+            </motion.div>
 
             {/* Empty State */}
             {!loading && inventory.length === 0 && !error && (

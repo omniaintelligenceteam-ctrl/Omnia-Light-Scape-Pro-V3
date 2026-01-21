@@ -150,7 +150,19 @@ const App: React.FC = () => {
   const GENERATE_COOLDOWN_MS = 3000; // 3 seconds between generations
 
   const [activeTab, setActiveTab] = useState<string>('editor');
-  
+  const [tabDirection, setTabDirection] = useState<number>(0); // -1 for left, 1 for right
+
+  // Tab order for determining swipe direction
+  const tabOrder = ['editor', 'projects', 'schedule', 'inventory', 'settings'];
+
+  // Custom tab change handler that tracks direction
+  const handleTabChange = (newTab: string) => {
+    const currentIndex = tabOrder.indexOf(activeTab);
+    const newIndex = tabOrder.indexOf(newTab);
+    setTabDirection(newIndex > currentIndex ? 1 : -1);
+    setActiveTab(newTab);
+  };
+
   // Editor State
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -178,6 +190,11 @@ const App: React.FC = () => {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [generationComplete, setGenerationComplete] = useState<boolean>(false);
+  const [showLoadingCelebration, setShowLoadingCelebration] = useState<boolean>(false);
+  const [showRipple, setShowRipple] = useState<boolean>(false);
+  const [statusMessageIndex, setStatusMessageIndex] = useState<number>(0);
+  const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
 
   // Generation History for Undo
   interface GenerationHistoryEntry {
@@ -354,6 +371,27 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('omnia_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Status messages for loading screen - cycle every 2.5s
+  const statusMessages = [
+    "Processing Image",
+    "Analyzing Geometry",
+    "Generating Design",
+    "Calculating Optimal Placement",
+    "Illuminating",
+    "Final Touches"
+  ];
+
+  useEffect(() => {
+    if (isLoading && !showLoadingCelebration) {
+      const interval = setInterval(() => {
+        setStatusMessageIndex(prev => (prev + 1) % statusMessages.length);
+      }, 2500);
+      return () => clearInterval(interval);
+    } else if (!isLoading) {
+      setStatusMessageIndex(0); // Reset when not loading
+    }
+  }, [isLoading, showLoadingCelebration, statusMessages.length]);
 
   // Load saved settings (company profile, pricing, catalog, lighting) on mount
   useEffect(() => {
@@ -846,6 +884,10 @@ const App: React.FC = () => {
       }
 
       setGeneratedImage(result);
+
+      // Trigger loading screen celebration FIRST (before hiding loading)
+      setShowLoadingCelebration(true);
+
       // Add to history
       setGenerationHistory(prev => [...prev, {
         id: Date.now().toString(),
@@ -854,6 +896,15 @@ const App: React.FC = () => {
       }]);
       // Increment usage count after successful generation
       await subscription.incrementUsage();
+
+      // Wait for the loading celebration to play, then transition
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setShowLoadingCelebration(false);
+      setIsLoading(false);
+
+      // Trigger button celebration effect after transitioning
+      setGenerationComplete(true);
+      setTimeout(() => setGenerationComplete(false), 2500);
       showToast('success', 'Night scene generated successfully!');
     } catch (err: any) {
       console.error(err);
@@ -867,7 +918,6 @@ const App: React.FC = () => {
         setError("Failed to generate night scene. Please try again.");
         showToast('error', 'Generation failed. Please try again.');
       }
-    } finally {
       setIsLoading(false);
     }
   };
@@ -903,6 +953,10 @@ const App: React.FC = () => {
         }
 
         setGeneratedImage(result);
+
+        // Trigger loading screen celebration FIRST (before hiding loading)
+        setShowLoadingCelebration(true);
+
         // Add to history
         setGenerationHistory(prev => [...prev, {
           id: Date.now().toString(),
@@ -911,9 +965,19 @@ const App: React.FC = () => {
         }]);
         // Increment usage count after successful generation
         await subscription.incrementUsage();
+
+        // Wait for the loading celebration to play, then transition
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setShowLoadingCelebration(false);
+        setIsLoading(false);
+
         setShowFeedback(false);
         setFeedbackText('');
         setIsLiked(false);
+
+        // Trigger button celebration effect after transitioning
+        setGenerationComplete(true);
+        setTimeout(() => setGenerationComplete(false), 2500);
         showToast('success', 'Scene regenerated with your feedback!');
     } catch (err: any) {
         console.error(err);
@@ -926,7 +990,6 @@ const App: React.FC = () => {
             setError("Failed to regenerate. Please try again.");
             showToast('error', 'Regeneration failed. Please try again.');
         }
-    } finally {
         setIsLoading(false);
     }
   };
@@ -1070,7 +1133,7 @@ const App: React.FC = () => {
   const handleGenerateQuote = () => {
     const newQuote = generateQuoteFromSelections();
     setCurrentQuote(newQuote);
-    setActiveTab('quotes');
+    handleTabChange('projects');
   };
 
   const handleSaveProjectFromEditor = async () => {
@@ -1085,7 +1148,7 @@ const App: React.FC = () => {
         // Track this project ID so subsequent quote saves update it instead of creating duplicates
         setCurrentProjectId(result.id);
         setCurrentQuote(quoteData);
-        setActiveTab('projects');
+        handleTabChange('projects');
         showToast('success', 'Project saved successfully!');
       } else {
         setError('Failed to save project. Please try again.');
@@ -1113,7 +1176,7 @@ const App: React.FC = () => {
         const result = await saveProject(projectName, generatedImage || '', quoteData);
         if (result) {
           setCurrentProjectId(result.id);
-          setActiveTab('projects');
+          handleTabChange('projects');
           showToast('success', 'Quote saved to project!');
         } else {
           setError('Failed to save project. Please try again.');
@@ -1130,7 +1193,7 @@ const App: React.FC = () => {
   const handleGenerateBOM = (quoteData: QuoteData) => {
       const bom = generateBOM(quoteData.lineItems, fixtureCatalog.length > 0 ? fixtureCatalog : undefined);
       setCurrentBOM(bom);
-      setActiveTab('bom');
+      handleTabChange('inventory');
   };
 
   const handleBOMChange = (bom: BOMData) => {
@@ -1141,7 +1204,7 @@ const App: React.FC = () => {
       const projectName = currentQuote?.clientDetails?.name || `BOM Project ${projects.length + 1}`;
       const result = await saveProject(projectName, generatedImage || '', currentQuote, bom);
       if (result) {
-        setActiveTab('projects');
+        handleTabChange('projects');
         showToast('success', 'BOM saved to project!');
       } else {
         setError('Failed to save project. Please try again.');
@@ -1763,11 +1826,17 @@ Notes: ${invoice.notes || 'N/A'}
       </AnimatePresence>
 
       <div className="flex-1 overflow-hidden relative flex flex-col">
-        <main className="flex-1 overflow-hidden">
-          
+        <main className="flex-1 overflow-hidden relative">
+          <AnimatePresence initial={false}>
           {/* TAB: EDITOR */}
           {activeTab === 'editor' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
+            <motion.div
+              key="editor"
+              initial={{ x: tabDirection * 100 + '%' }}
+              animate={{ x: 0 }}
+              exit={{ x: tabDirection * -100 + '%' }}
+              transition={{ type: 'spring', stiffness: 700, damping: 45 }}
+              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-20">
               {/* Background Ambient Glow */}
               <div className="absolute top-[-10%] left-[20%] w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
@@ -1936,17 +2005,520 @@ Notes: ${invoice.notes || 'N/A'}
                 </motion.div>
                 ) : (
                 // MODE 2: INPUT VIEW
-                isLoading ? (
-                    <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-500">
-                        <div className="w-24 h-24 border-4 border-[#F6B45A]/20 border-t-[#F6B45A] rounded-full animate-spin mb-8 shadow-[0_0_50px_rgba(246,180,90,0.2)]"></div>
-                        <h2 className="text-4xl font-bold text-white font-serif tracking-tight mb-4">Omnia AI</h2>
-                        <div className="flex flex-col items-center gap-2">
-                             <p className="text-[#F6B45A] font-bold text-sm uppercase tracking-[0.25em] animate-pulse">Processing Scene</p>
-                             <p className="text-gray-500 text-xs font-mono uppercase tracking-widest">Analyzing Geometry & Light Paths</p>
+                <AnimatePresence mode="wait">
+                {isLoading ? (
+                    <motion.div
+                        key="loading-screen"
+                        className="flex flex-col items-center justify-center min-h-[60vh] relative overflow-hidden"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, scale: 1.05, transition: { duration: 0.4 } }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        {/* Background ambient effects */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            {/* Enhanced radial gradient backdrop with warm center glow */}
+                            <div
+                                className="absolute inset-0"
+                                style={{
+                                    background: 'radial-gradient(ellipse at center, rgba(246,180,90,0.05) 0%, rgba(0,0,0,0.98) 50%, rgba(0,0,0,1) 100%)'
+                                }}
+                            />
+                            <motion.div
+                                className="absolute inset-0"
+                                style={{
+                                    background: 'radial-gradient(ellipse at center, rgba(246,180,90,0.12) 0%, rgba(246,180,90,0.04) 30%, transparent 60%)'
+                                }}
+                                animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+                                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                            />
+
+                            {/* Floating light particles in background */}
+                            {[...Array(20)].map((_, i) => (
+                                <motion.div
+                                    key={`bg-particle-${i}`}
+                                    className="absolute w-1 h-1 rounded-full bg-[#F6B45A]/30"
+                                    style={{
+                                        left: `${Math.random() * 100}%`,
+                                        top: `${Math.random() * 100}%`
+                                    }}
+                                    animate={{
+                                        y: [0, -100, 0],
+                                        opacity: [0, 0.6, 0],
+                                        scale: [0, 1, 0]
+                                    }}
+                                    transition={{
+                                        duration: 4 + Math.random() * 3,
+                                        repeat: Infinity,
+                                        delay: Math.random() * 3,
+                                        ease: "easeInOut"
+                                    }}
+                                />
+                            ))}
                         </div>
-                    </div>
+
+                        {/* Main eclipse/sun animation container */}
+                        <div className="relative mb-10">
+                            {/* Outer glow rings */}
+                            <motion.div
+                                className="absolute -inset-16 rounded-full"
+                                style={{
+                                    background: 'radial-gradient(circle, transparent 30%, rgba(246,180,90,0.05) 50%, transparent 70%)'
+                                }}
+                                animate={{ scale: [1, 1.3, 1], rotate: 360 }}
+                                transition={{
+                                    scale: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                                    rotate: { duration: 20, repeat: Infinity, ease: "linear" }
+                                }}
+                            />
+
+                            {/* Rotating light rays */}
+                            <motion.div
+                                className="absolute -inset-20 flex items-center justify-center"
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                            >
+                                {[...Array(12)].map((_, i) => (
+                                    <motion.div
+                                        key={`ray-${i}`}
+                                        className="absolute h-0.5 origin-left"
+                                        style={{
+                                            width: '80px',
+                                            left: '50%',
+                                            top: '50%',
+                                            rotate: `${i * 30}deg`,
+                                            background: 'linear-gradient(90deg, rgba(246,180,90,0.8), rgba(246,180,90,0.2), transparent)'
+                                        }}
+                                        animate={{
+                                            opacity: [0.3, 1, 0.3],
+                                            scaleX: [0.5, 1, 0.5]
+                                        }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            delay: i * 0.15,
+                                            ease: "easeInOut"
+                                        }}
+                                    />
+                                ))}
+                            </motion.div>
+
+                            {/* Eclipse ring - the main visual with enhanced animations */}
+                            <motion.div
+                                className="w-28 h-28 md:w-32 md:h-32 rounded-full relative"
+                                animate={{
+                                    scale: [1, 1.02, 1],
+                                    boxShadow: [
+                                        '0 0 60px rgba(246,180,90,0.3), inset 0 0 30px rgba(0,0,0,0.8)',
+                                        '0 0 80px rgba(246,180,90,0.5), inset 0 0 30px rgba(0,0,0,0.8)',
+                                        '0 0 60px rgba(246,180,90,0.3), inset 0 0 30px rgba(0,0,0,0.8)'
+                                    ]
+                                }}
+                                transition={{
+                                    scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                                    boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                                }}
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a0a 0%, #111 100%)',
+                                }}
+                            >
+                                {/* Golden corona effect */}
+                                <motion.div
+                                    className="absolute -inset-1 rounded-full"
+                                    style={{
+                                        background: 'conic-gradient(from 0deg, transparent, rgba(246,180,90,0.6), transparent, rgba(246,180,90,0.4), transparent)',
+                                    }}
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                                />
+
+                                {/* Inner shadow for depth */}
+                                <div
+                                    className="absolute inset-2 rounded-full"
+                                    style={{
+                                        background: 'radial-gradient(circle at 30% 30%, #1a1a1a, #050505)',
+                                        boxShadow: 'inset 0 0 40px rgba(0,0,0,0.9)'
+                                    }}
+                                />
+
+                                {/* Bright edge highlight */}
+                                <motion.div
+                                    className="absolute inset-0 rounded-full"
+                                    style={{
+                                        background: 'conic-gradient(from 200deg, transparent 0%, rgba(246,180,90,0.9) 10%, rgba(255,220,150,1) 15%, rgba(246,180,90,0.9) 20%, transparent 30%)',
+                                    }}
+                                    animate={{ rotate: [0, 360] }}
+                                    transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                                />
+
+                                {/* SVG Progress Ring - Enhanced with more color */}
+                                <motion.svg
+                                    className="absolute -inset-5 w-[calc(100%+40px)] h-[calc(100%+40px)]"
+                                    viewBox="0 0 140 140"
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                                    style={{ filter: 'drop-shadow(0 0 8px rgba(246,180,90,0.4))' }}
+                                >
+                                    {/* Background track - more visible */}
+                                    <circle
+                                        cx="70"
+                                        cy="70"
+                                        r="65"
+                                        fill="none"
+                                        stroke="rgba(246,180,90,0.25)"
+                                        strokeWidth="5"
+                                    />
+                                    {/* Animated progress arc - thicker and brighter */}
+                                    <motion.circle
+                                        cx="70"
+                                        cy="70"
+                                        r="65"
+                                        fill="none"
+                                        stroke="url(#progressGradient)"
+                                        strokeWidth="5"
+                                        strokeLinecap="round"
+                                        strokeDasharray="408.4"
+                                        initial={{ strokeDashoffset: 408.4 }}
+                                        animate={{
+                                            strokeDashoffset: showLoadingCelebration ? 0 : [408.4, 286, 204, 122, 61, 30]
+                                        }}
+                                        transition={{
+                                            duration: showLoadingCelebration ? 0.5 : 12,
+                                            ease: "easeOut"
+                                        }}
+                                        style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+                                    />
+                                    {/* Glowing accent dots - larger */}
+                                    <motion.circle
+                                        cx="70"
+                                        cy="5"
+                                        r="5"
+                                        fill="#ffcc70"
+                                        style={{ filter: 'drop-shadow(0 0 8px #F6B45A)' }}
+                                    />
+                                    <motion.circle
+                                        cx="70"
+                                        cy="135"
+                                        r="4"
+                                        fill="#F6B45A"
+                                        style={{ filter: 'drop-shadow(0 0 6px #F6B45A)' }}
+                                    />
+                                    <motion.circle
+                                        cx="5"
+                                        cy="70"
+                                        r="3.5"
+                                        fill="#ffd280"
+                                        style={{ filter: 'drop-shadow(0 0 6px #ffd280)' }}
+                                    />
+                                    <motion.circle
+                                        cx="135"
+                                        cy="70"
+                                        r="3.5"
+                                        fill="#F6B45A"
+                                        style={{ filter: 'drop-shadow(0 0 6px #F6B45A)' }}
+                                    />
+                                    <defs>
+                                        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stopColor="#ffe082" />
+                                            <stop offset="30%" stopColor="#ffcc50" />
+                                            <stop offset="70%" stopColor="#F6B45A" />
+                                            <stop offset="100%" stopColor="#e6a040" />
+                                        </linearGradient>
+                                    </defs>
+                                </motion.svg>
+
+                                {/* Completion flash effect - more dramatic */}
+                                <AnimatePresence>
+                                    {showLoadingCelebration && (
+                                        <>
+                                            {/* Gold scale-up burst */}
+                                            <motion.div
+                                                className="absolute -inset-4 rounded-full bg-gradient-radial from-[#F6B45A] via-[#F6B45A]/50 to-transparent"
+                                                initial={{ scale: 0.5, opacity: 0 }}
+                                                animate={{
+                                                    scale: [0.5, 1.5, 1.3],
+                                                    opacity: [0, 1, 0]
+                                                }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.8, ease: "easeOut" }}
+                                            />
+                                            {/* White flash overlay */}
+                                            <motion.div
+                                                className="absolute inset-0 rounded-full bg-white"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: [0, 1, 0] }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+                                            />
+                                            {/* Secondary glow ring */}
+                                            <motion.div
+                                                className="absolute -inset-8 rounded-full"
+                                                style={{
+                                                    background: 'radial-gradient(circle, rgba(246,180,90,0.4) 0%, transparent 70%)'
+                                                }}
+                                                initial={{ scale: 0.8, opacity: 0 }}
+                                                animate={{
+                                                    scale: [0.8, 1.2],
+                                                    opacity: [0, 0.8, 0]
+                                                }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 1, ease: "easeOut" }}
+                                            />
+                                        </>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+
+                            {/* Orbiting particles around the eclipse */}
+                            {[...Array(6)].map((_, i) => (
+                                <motion.div
+                                    key={`orbit-${i}`}
+                                    className="absolute w-2 h-2 rounded-full bg-[#F6B45A]"
+                                    style={{
+                                        left: '50%',
+                                        top: '50%',
+                                        boxShadow: '0 0 10px rgba(246,180,90,0.8)'
+                                    }}
+                                    animate={{
+                                        x: [0, Math.cos(i * 60 * Math.PI / 180) * 80, 0],
+                                        y: [0, Math.sin(i * 60 * Math.PI / 180) * 80, 0],
+                                        scale: [0.5, 1, 0.5],
+                                        opacity: [0.3, 1, 0.3]
+                                    }}
+                                    transition={{
+                                        duration: 3,
+                                        repeat: Infinity,
+                                        delay: i * 0.5,
+                                        ease: "easeInOut"
+                                    }}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Title with glow */}
+                        <motion.h2
+                            className="text-4xl md:text-5xl font-bold text-white font-serif tracking-tight mb-6 relative"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                        >
+                            <span className="relative z-10">Omnia AI</span>
+                            <motion.span
+                                className="absolute inset-0 blur-lg text-[#F6B45A] z-0"
+                                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                Omnia AI
+                            </motion.span>
+                        </motion.h2>
+
+                        {/* Status messages with typewriter effect feel */}
+                        <motion.div
+                            className="flex flex-col items-center gap-3"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                        >
+                            <motion.p
+                                className="text-[#F6B45A] font-bold text-sm uppercase tracking-[0.3em]"
+                                animate={{ opacity: [0.7, 1, 0.7] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            >
+                                Creating Magic
+                            </motion.p>
+
+                            {/* Animated status messages with fade/slide */}
+                            <div className="h-5 overflow-hidden relative">
+                                <AnimatePresence mode="wait">
+                                    <motion.p
+                                        key={statusMessageIndex}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{ duration: 0.3, ease: "easeOut" }}
+                                        className="text-gray-500 text-xs font-mono uppercase tracking-widest absolute inset-0 flex items-center justify-center"
+                                    >
+                                        {statusMessages[statusMessageIndex]}
+                                    </motion.p>
+                                </AnimatePresence>
+                            </div>
+                        </motion.div>
+
+                        {/* Progress bar */}
+                        <motion.div
+                            className="w-48 md:w-64 h-1 bg-white/10 rounded-full mt-8 overflow-hidden"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.6 }}
+                        >
+                            <motion.div
+                                className="h-full bg-gradient-to-r from-[#F6B45A] via-[#ffc67a] to-[#F6B45A] rounded-full"
+                                initial={{ width: '0%' }}
+                                animate={{ width: showLoadingCelebration ? '100%' : ['0%', '30%', '50%', '70%', '85%', '95%'] }}
+                                transition={{ duration: showLoadingCelebration ? 0.5 : 12, ease: "easeOut" }}
+                            />
+                        </motion.div>
+
+                        {/* === CELEBRATION OVERLAY - Shown when generation completes === */}
+                        <AnimatePresence>
+                            {showLoadingCelebration && (
+                                <>
+                                    {/* Massive golden light burst from center */}
+                                    <motion.div
+                                        className="absolute inset-0 pointer-events-none"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        {/* Radial burst wave 1 */}
+                                        <motion.div
+                                            className="absolute inset-0 flex items-center justify-center"
+                                            initial={{ scale: 0, opacity: 1 }}
+                                            animate={{ scale: 4, opacity: 0 }}
+                                            transition={{ duration: 1.5, ease: "easeOut" }}
+                                        >
+                                            <div className="w-40 h-40 rounded-full bg-gradient-radial from-white/80 via-[#F6B45A]/50 to-transparent" />
+                                        </motion.div>
+
+                                        {/* Radial burst wave 2 (delayed) */}
+                                        <motion.div
+                                            className="absolute inset-0 flex items-center justify-center"
+                                            initial={{ scale: 0, opacity: 1 }}
+                                            animate={{ scale: 3, opacity: 0 }}
+                                            transition={{ duration: 1.2, ease: "easeOut", delay: 0.15 }}
+                                        >
+                                            <div className="w-32 h-32 rounded-full bg-gradient-radial from-[#F6B45A]/90 via-[#ffc67a]/40 to-transparent" />
+                                        </motion.div>
+
+                                        {/* Inner glow that persists */}
+                                        <motion.div
+                                            className="absolute inset-0 flex items-center justify-center"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: [0, 0.8, 0.4] }}
+                                            transition={{ duration: 1, times: [0, 0.3, 1] }}
+                                        >
+                                            <div className="w-96 h-96 rounded-full bg-gradient-radial from-[#F6B45A]/30 via-[#F6B45A]/10 to-transparent" />
+                                        </motion.div>
+                                    </motion.div>
+
+                                    {/* Confetti-like particles that explode outward and settle */}
+                                    {[...Array(40)].map((_, i) => {
+                                        const angle = (i / 40) * Math.PI * 2;
+                                        const radius = 150 + Math.random() * 100;
+                                        const targetX = Math.cos(angle) * radius;
+                                        const targetY = Math.sin(angle) * radius;
+                                        const size = 2 + Math.random() * 4;
+                                        const colors = ['#fff', '#F6B45A', '#ffc67a', '#ffe4a0'];
+                                        const color = colors[Math.floor(Math.random() * colors.length)];
+
+                                        return (
+                                            <motion.div
+                                                key={`confetti-${i}`}
+                                                className="absolute rounded-full pointer-events-none"
+                                                style={{
+                                                    width: size,
+                                                    height: size,
+                                                    backgroundColor: color,
+                                                    left: '50%',
+                                                    top: '50%',
+                                                    marginLeft: -size / 2,
+                                                    marginTop: -size / 2,
+                                                    boxShadow: `0 0 ${size * 2}px ${color}`
+                                                }}
+                                                initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                                                animate={{
+                                                    x: [0, targetX, targetX + (Math.random() - 0.5) * 50],
+                                                    y: [0, targetY, targetY + 100 + Math.random() * 50],
+                                                    scale: [0, 1.5, 0.5],
+                                                    opacity: [1, 1, 0],
+                                                    rotate: [0, Math.random() * 360]
+                                                }}
+                                                transition={{
+                                                    duration: 1.8 + Math.random() * 0.4,
+                                                    ease: [0.25, 0.1, 0.25, 1],
+                                                    delay: i * 0.015
+                                                }}
+                                            />
+                                        );
+                                    })}
+
+                                    {/* Star/sparkle particles */}
+                                    {[...Array(12)].map((_, i) => {
+                                        const angle = (i / 12) * Math.PI * 2;
+                                        const radius = 80 + Math.random() * 60;
+
+                                        return (
+                                            <motion.div
+                                                key={`star-${i}`}
+                                                className="absolute pointer-events-none"
+                                                style={{
+                                                    left: '50%',
+                                                    top: '50%',
+                                                }}
+                                                initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                                                animate={{
+                                                    x: Math.cos(angle) * radius,
+                                                    y: Math.sin(angle) * radius,
+                                                    scale: [0, 1, 0],
+                                                    opacity: [1, 1, 0]
+                                                }}
+                                                transition={{
+                                                    duration: 1,
+                                                    ease: "easeOut",
+                                                    delay: 0.2 + i * 0.05
+                                                }}
+                                            >
+                                                <Sparkles className="w-5 h-5 text-[#F6B45A]" style={{ filter: 'drop-shadow(0 0 8px #F6B45A)' }} />
+                                            </motion.div>
+                                        );
+                                    })}
+
+                                    {/* "Complete!" text overlay */}
+                                    <motion.div
+                                        className="absolute inset-0 flex flex-col items-center justify-center z-50"
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.4, delay: 0.3 }}
+                                    >
+                                        <motion.div
+                                            className="flex items-center gap-3 bg-[#F6B45A] px-8 py-4 rounded-2xl shadow-2xl shadow-[#F6B45A]/40"
+                                            initial={{ y: 20 }}
+                                            animate={{ y: 0 }}
+                                            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                        >
+                                            <motion.div
+                                                initial={{ scale: 0, rotate: -180 }}
+                                                animate={{ scale: 1, rotate: 0 }}
+                                                transition={{ type: "spring", stiffness: 500, damping: 15, delay: 0.4 }}
+                                            >
+                                                <CheckCircle2 className="w-7 h-7 text-black" />
+                                            </motion.div>
+                                            <span className="text-black font-bold text-xl tracking-wide">Complete!</span>
+                                        </motion.div>
+
+                                        <motion.p
+                                            className="text-gray-400 text-sm mt-4"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.6 }}
+                                        >
+                                            Preparing your design...
+                                        </motion.p>
+                                    </motion.div>
+                                </>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
                 ) : (
-                <div className="flex flex-col gap-8 animate-in slide-in-from-bottom-4 fade-in duration-500 pb-20 md:pb-0">
+                <motion.div
+                    key="editor-input"
+                    className="flex flex-col gap-8 pb-20 md:pb-0"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.4 }}
+                >
                     
                     {/* Image Upload Area */}
                     <div className="relative">
@@ -1994,20 +2566,76 @@ Notes: ${invoice.notes || 'N/A'}
                                         <motion.button
                                             key={ft.id}
                                             onClick={() => toggleFixture(ft.id)}
-                                            className={`group relative overflow-hidden rounded-full transition-all duration-200 ${
+                                            className={`group relative overflow-visible rounded-full transition-all duration-300 ${
                                                 isSelected
-                                                    ? 'bg-[#F6B45A] shadow-[0_0_24px_rgba(246,180,90,0.4)]'
+                                                    ? 'bg-[#F6B45A]'
                                                     : 'bg-[#0d0d0d] hover:bg-[#F6B45A]/10 active:bg-[#F6B45A]'
                                             }`}
+                                            initial={false}
+                                            animate={{
+                                                y: isSelected ? -3 : 0,
+                                                boxShadow: isSelected
+                                                    ? '0 8px 32px rgba(246,180,90,0.5), 0 4px 12px rgba(246,180,90,0.3), 0 0 0 1px rgba(246,180,90,0.2)'
+                                                    : '0 0 0 rgba(246,180,90,0)'
+                                            }}
                                             whileHover={{ scale: 1.03 }}
                                             whileTap={{ scale: 0.97 }}
+                                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                         >
+                                            {/* Gold underglow effect when selected */}
+                                            <AnimatePresence>
+                                                {isSelected && (
+                                                    <motion.div
+                                                        className="absolute -bottom-2 left-1/2 w-3/4 h-4 rounded-full pointer-events-none"
+                                                        style={{
+                                                            background: 'radial-gradient(ellipse at center, rgba(246,180,90,0.6) 0%, transparent 70%)',
+                                                            filter: 'blur(8px)',
+                                                            transform: 'translateX(-50%)'
+                                                        }}
+                                                        initial={{ opacity: 0, scaleX: 0.5 }}
+                                                        animate={{ opacity: 1, scaleX: 1 }}
+                                                        exit={{ opacity: 0, scaleX: 0.5 }}
+                                                        transition={{ duration: 0.3 }}
+                                                    />
+                                                )}
+                                            </AnimatePresence>
+
                                             {/* Border with hover color change */}
                                             <div className={`absolute inset-0 rounded-full border transition-all duration-200 ${
                                                 isSelected
                                                     ? 'border-[#F6B45A]'
                                                     : 'border-white/10 group-hover:border-[#F6B45A]/50 group-active:border-[#F6B45A]'
                                             }`} />
+
+                                            {/* Sparkle/twinkle effect when selected */}
+                                            <AnimatePresence>
+                                                {isSelected && (
+                                                    <>
+                                                        {[...Array(4)].map((_, i) => (
+                                                            <motion.div
+                                                                key={`sparkle-${ft.id}-${i}`}
+                                                                className="absolute w-1 h-1 bg-white rounded-full pointer-events-none"
+                                                                style={{
+                                                                    left: `${20 + i * 20}%`,
+                                                                    top: '50%'
+                                                                }}
+                                                                initial={{ opacity: 0, scale: 0, y: 0 }}
+                                                                animate={{
+                                                                    opacity: [0, 1, 0],
+                                                                    scale: [0, 1.5, 0],
+                                                                    y: [0, -15 - i * 5, -25 - i * 5],
+                                                                    x: [(i - 1.5) * 5, (i - 1.5) * 10]
+                                                                }}
+                                                                transition={{
+                                                                    duration: 0.6,
+                                                                    delay: i * 0.08,
+                                                                    ease: "easeOut"
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </>
+                                                )}
+                                            </AnimatePresence>
 
                                             {/* Content */}
                                             <div className="relative z-10 flex items-center gap-2 py-2.5 px-5 md:py-3 md:px-6">
@@ -2040,14 +2668,14 @@ Notes: ${invoice.notes || 'N/A'}
                                                     )}
                                                 </AnimatePresence>
 
-                                                {/* Checkmark when selected */}
+                                                {/* Checkmark when selected - with sparkle */}
                                                 <AnimatePresence>
                                                     {isSelected && (
                                                         <motion.div
-                                                            initial={{ scale: 0, opacity: 0 }}
-                                                            animate={{ scale: 1, opacity: 1 }}
+                                                            initial={{ scale: 0, opacity: 0, rotate: -180 }}
+                                                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
                                                             exit={{ scale: 0, opacity: 0 }}
-                                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
                                                         >
                                                             <Check className="w-4 h-4 text-black" strokeWidth={2.5} />
                                                         </motion.div>
@@ -2119,62 +2747,280 @@ Notes: ${invoice.notes || 'N/A'}
                             )}
                         </AnimatePresence>
 
-                        {/* Premium Generate Button */}
+                        {/* ✨ HERO Generate Button - The Core Action */}
                         <motion.button
-                            onClick={handleGenerate}
+                            onClick={(e) => {
+                                // Capture click position for ripple effect
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                setRipplePosition({ x, y });
+                                setShowRipple(true);
+                                setTimeout(() => setShowRipple(false), 600);
+                                handleGenerate();
+                            }}
                             disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
                             className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2"
-                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.01, y: -3 } : {}}
-                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.98 } : {}}
+                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.02, y: -4 } : {}}
+                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.97 } : {}}
                         >
-                            {/* Background gradient */}
+                            {/* === IDLE STATE: Ambient Glow Pulse === */}
+                            <motion.div
+                                className="absolute -inset-2 rounded-3xl pointer-events-none"
+                                animate={!isLoading ? {
+                                    boxShadow: [
+                                        '0 0 20px rgba(246, 180, 90, 0.3), 0 0 40px rgba(246, 180, 90, 0.15), 0 0 60px rgba(246, 180, 90, 0.05)',
+                                        '0 0 30px rgba(246, 180, 90, 0.5), 0 0 60px rgba(246, 180, 90, 0.25), 0 0 90px rgba(246, 180, 90, 0.1)',
+                                        '0 0 20px rgba(246, 180, 90, 0.3), 0 0 40px rgba(246, 180, 90, 0.15), 0 0 60px rgba(246, 180, 90, 0.05)'
+                                    ]
+                                } : {}}
+                                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                            />
+
+                            {/* Background gradient - enhanced */}
                             <div className="absolute inset-0 bg-gradient-to-r from-[#F6B45A] via-[#ffc67a] to-[#F6B45A] bg-[length:200%_100%] group-hover:animate-gradient-x" />
 
-                            {/* Inner glow */}
+                            {/* Inner glow enhancement */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/30" />
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                            {/* Outer glow */}
-                            <div className="absolute -inset-1 bg-[#F6B45A]/20 group-hover:bg-[#F6B45A]/40 blur-xl transition-all duration-500 pointer-events-none" />
+                            {/* === PRESS STATE: Gold Ripple Effect === */}
+                            <AnimatePresence>
+                                {showRipple && (
+                                    <motion.div
+                                        className="absolute rounded-full bg-white/40 pointer-events-none"
+                                        style={{ left: `${ripplePosition.x}%`, top: `${ripplePosition.y}%` }}
+                                        initial={{ width: 0, height: 0, x: '-50%', y: '-50%', opacity: 0.8 }}
+                                        animate={{ width: 600, height: 600, x: '-50%', y: '-50%', opacity: 0 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.6, ease: "easeOut" }}
+                                    />
+                                )}
+                            </AnimatePresence>
 
-                            {/* Content */}
-                            <div className="relative z-10 flex items-center justify-center gap-3 py-5 md:py-6">
+                            {/* === LOADING STATE: Dramatic Light Show === */}
+                            <AnimatePresence>
+                                {isLoading && (
+                                    <motion.div
+                                        className="absolute inset-0 z-20 overflow-hidden rounded-2xl"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                    >
+                                        {/* Pulsing overlay */}
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10"
+                                            animate={{ opacity: [0.3, 0.6, 0.3] }}
+                                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                        />
+
+                                        {/* Central energy core */}
+                                        <motion.div
+                                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full"
+                                            style={{
+                                                background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 30%, transparent 70%)'
+                                            }}
+                                            animate={{
+                                                scale: [1, 1.5, 1],
+                                                opacity: [0.6, 1, 0.6]
+                                            }}
+                                            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                                        />
+
+                                        {/* Rotating light beams */}
+                                        <motion.div
+                                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                                        >
+                                            {[...Array(6)].map((_, i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    className="absolute h-0.5 origin-left"
+                                                    style={{
+                                                        width: '150px',
+                                                        rotate: `${i * 60}deg`,
+                                                        background: 'linear-gradient(90deg, rgba(255,255,255,0.9), rgba(17,17,17,0.3), transparent)'
+                                                    }}
+                                                    animate={{
+                                                        opacity: [0.4, 1, 0.4],
+                                                        scaleX: [0.5, 1, 0.5]
+                                                    }}
+                                                    transition={{
+                                                        duration: 1.5,
+                                                        repeat: Infinity,
+                                                        delay: i * 0.2,
+                                                        ease: "easeInOut"
+                                                    }}
+                                                />
+                                            ))}
+                                        </motion.div>
+
+                                        {/* Secondary counter-rotating beams */}
+                                        <motion.div
+                                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                                            animate={{ rotate: -360 }}
+                                            transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                                        >
+                                            {[...Array(4)].map((_, i) => (
+                                                <div
+                                                    key={`beam2-${i}`}
+                                                    className="absolute h-px origin-left"
+                                                    style={{
+                                                        width: '120px',
+                                                        rotate: `${i * 90 + 45}deg`,
+                                                        background: 'linear-gradient(90deg, rgba(17,17,17,0.6), rgba(17,17,17,0.2), transparent)'
+                                                    }}
+                                                />
+                                            ))}
+                                        </motion.div>
+
+                                        {/* Rising spark particles */}
+                                        {[...Array(16)].map((_, i) => (
+                                            <motion.div
+                                                key={`spark-${i}`}
+                                                className="absolute w-1 h-1 rounded-full"
+                                                style={{
+                                                    left: `${15 + (i * 5)}%`,
+                                                    background: i % 2 === 0 ? 'rgba(255,255,255,0.9)' : 'rgba(17,17,17,0.7)'
+                                                }}
+                                                initial={{ bottom: '40%', opacity: 0, scale: 0 }}
+                                                animate={{
+                                                    bottom: ['40%', '110%'],
+                                                    opacity: [0, 1, 1, 0],
+                                                    scale: [0, 1.2, 0.8, 0],
+                                                    x: [(i % 2 === 0 ? -20 : 20), (i % 2 === 0 ? 20 : -20)]
+                                                }}
+                                                transition={{
+                                                    duration: 2 + (i * 0.08),
+                                                    repeat: Infinity,
+                                                    delay: i * 0.1,
+                                                    ease: "easeOut"
+                                                }}
+                                            />
+                                        ))}
+
+                                        {/* Horizontal shimmer wave */}
+                                        <motion.div
+                                            className="absolute inset-y-0 w-32 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                                            animate={{ x: ['-100%', '400%'] }}
+                                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                        />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* === COMPLETE STATE: Golden Burst & Particles === */}
+                            <AnimatePresence>
+                                {generationComplete && (
+                                    <>
+                                        {/* Golden light burst */}
+                                        <motion.div
+                                            className="absolute inset-0 pointer-events-none"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: [0, 1, 0] }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.8 }}
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-radial from-white/60 via-[#F6B45A]/30 to-transparent" />
+                                        </motion.div>
+
+                                        {/* Celebration particles that settle */}
+                                        {[...Array(20)].map((_, i) => (
+                                            <motion.div
+                                                key={`celebrate-${i}`}
+                                                className="absolute w-1.5 h-1.5 rounded-full pointer-events-none"
+                                                style={{
+                                                    left: `${20 + Math.random() * 60}%`,
+                                                    background: i % 3 === 0 ? '#fff' : i % 3 === 1 ? '#F6B45A' : '#ffc67a'
+                                                }}
+                                                initial={{
+                                                    top: '50%',
+                                                    opacity: 1,
+                                                    scale: 1
+                                                }}
+                                                animate={{
+                                                    top: ['50%', `${-20 - Math.random() * 30}%`, `${100 + Math.random() * 20}%`],
+                                                    opacity: [1, 1, 0],
+                                                    scale: [1, 1.5, 0.5],
+                                                    x: [(Math.random() - 0.5) * 100]
+                                                }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{
+                                                    duration: 1.8 + Math.random() * 0.5,
+                                                    ease: [0.25, 0.46, 0.45, 0.94],
+                                                    delay: i * 0.03
+                                                }}
+                                            />
+                                        ))}
+                                    </>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Content - must be above loading effects */}
+                            <div className="relative z-30 flex items-center justify-center gap-3 py-5 md:py-6">
                                 <motion.div
-                                    animate={isLoading ? { rotate: 360 } : { rotate: 0 }}
-                                    transition={isLoading ? { repeat: Infinity, duration: 1, ease: "linear" } : {}}
+                                    animate={isLoading ? {
+                                        rotate: 360,
+                                        scale: [1, 1.1, 1]
+                                    } : generationComplete ? {
+                                        scale: [1, 1.3, 1],
+                                        rotate: [0, 15, -15, 0]
+                                    } : {}}
+                                    transition={isLoading ? {
+                                        rotate: { repeat: Infinity, duration: 1.2, ease: "linear" },
+                                        scale: { repeat: Infinity, duration: 0.8, ease: "easeInOut" }
+                                    } : generationComplete ? {
+                                        duration: 0.5
+                                    } : {}}
                                 >
                                     {isLoading ? (
-                                        <Loader2 className="w-5 h-5 md:w-6 md:h-6 text-[#111]" />
+                                        <Sun className="w-6 h-6 md:w-7 md:h-7 text-[#111]" />
+                                    ) : generationComplete ? (
+                                        <Sparkles className="w-6 h-6 md:w-7 md:h-7 text-[#111]" />
                                     ) : (
                                         <Wand2 className="w-5 h-5 md:w-6 md:h-6 text-[#111] group-hover:rotate-12 transition-transform duration-300" />
                                     )}
                                 </motion.div>
-                                <span className="text-[#111] font-bold text-sm md:text-base tracking-wide">
-                                    {isLoading ? 'Creating your vision...' : 'Generate Lighting Scene'}
-                                </span>
+                                <motion.span
+                                    className="text-[#111] font-bold text-sm md:text-base tracking-wide"
+                                    animate={generationComplete ? { scale: [1, 1.05, 1] } : {}}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    {isLoading ? 'Generating...' : generationComplete ? '✨ Complete!' : 'Generate Lighting Scene'}
+                                </motion.span>
                             </div>
 
-                            {/* Shine sweep effect */}
+                            {/* Shine sweep effect - enhanced */}
                             <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] pointer-events-none opacity-0 group-hover:opacity-100"
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg] pointer-events-none opacity-0 group-hover:opacity-100"
                                 initial={{ x: '-100%' }}
                                 whileHover={{ x: '200%' }}
-                                transition={{ duration: 0.7, ease: "easeInOut" }}
+                                transition={{ duration: 0.8, ease: "easeInOut" }}
                             />
 
                             {/* Border highlight */}
-                            <div className="absolute inset-0 rounded-2xl border border-white/30 pointer-events-none" />
+                            <div className="absolute inset-0 rounded-2xl border border-white/40 pointer-events-none" />
                         </motion.button>
                     </div>
-                </div>
-                )
+                </motion.div>
+                )}
+                </AnimatePresence>
                 )}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* TAB: PROJECTS */}
           {activeTab === 'projects' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
+            <motion.div
+              key="projects"
+              initial={{ x: tabDirection * 100 + '%' }}
+              animate={{ x: 0 }}
+              exit={{ x: tabDirection * -100 + '%' }}
+              transition={{ type: 'spring', stiffness: 700, damping: 45 }}
+              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-20"
+            >
               {/* Background Tech Mesh/Glow */}
               <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
               <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
@@ -2427,7 +3273,7 @@ Notes: ${invoice.notes || 'N/A'}
                                  <motion.button
                                    whileHover={{ scale: 1.02 }}
                                    whileTap={{ scale: 0.98 }}
-                                   onClick={() => setActiveTab('editor')}
+                                   onClick={() => handleTabChange('editor')}
                                    className="mt-6 px-5 py-2.5 bg-[#F6B45A]/10 border border-[#F6B45A]/30 rounded-xl text-[#F6B45A] text-sm font-bold hover:bg-[#F6B45A]/20 transition-colors relative z-10"
                                  >
                                    Open Editor
@@ -2440,7 +3286,7 @@ Notes: ${invoice.notes || 'N/A'}
                                 {filteredUnapprovedProjects.map((p, index) => (
                                     <motion.div key={p.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }} className="group bg-[#111] border border-white/5 rounded-xl overflow-hidden active:scale-[0.99] transition-transform">
                                         <div className="flex items-center gap-3 p-3">
-                                            <div onClick={() => { if (p.image) { setGeneratedImage(p.image); setActiveTab('editor'); }}} className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-black">
+                                            <div onClick={() => { if (p.image) { setGeneratedImage(p.image); handleTabChange('editor'); }}} className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-black">
                                                 {p.image ? <img src={p.image} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]"><Wand2 className="w-5 h-5 text-gray-600" /></div>}
                                                 <div className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ${STATUS_CONFIG[p.status].bgColor.replace('/10', '')} border border-black`}></div>
                                             </div>
@@ -2470,38 +3316,105 @@ Notes: ${invoice.notes || 'N/A'}
                                       initial={{ opacity: 0, y: 20 }}
                                       animate={{ opacity: 1, y: 0 }}
                                       transition={{ delay: index * 0.05 }}
-                                      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                                      className="group relative bg-gradient-to-b from-[#151515] to-[#111] border border-white/5 rounded-2xl overflow-hidden hover:border-[#F6B45A]/30 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex flex-col cursor-pointer">
+                                      whileHover={{ y: -6, transition: { duration: 0.25 } }}
+                                      className="group relative bg-gradient-to-b from-[#151515] to-[#111] border border-white/5 rounded-2xl overflow-visible hover:border-[#F6B45A]/40 transition-all duration-300 hover:shadow-[0_25px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(246,180,90,0.08)] flex flex-col cursor-pointer">
+                                        {/* Gold edge glow on hover */}
+                                        <div className="absolute -inset-[1px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(246,180,90,0.2) 0%, transparent 50%, rgba(246,180,90,0.1) 100%)' }} />
 
-                                        {/* Status Badge */}
-                                        <div className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${STATUS_CONFIG[p.status].bgColor} ${STATUS_CONFIG[p.status].color} border ${STATUS_CONFIG[p.status].borderColor}`}>
-                                            {p.status === 'draft' && <Clock className="w-3 h-3" />}
+                                        {/* Status Badge with contextual animations */}
+                                        <motion.div
+                                            className={`absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${STATUS_CONFIG[p.status].bgColor} ${STATUS_CONFIG[p.status].color} border ${STATUS_CONFIG[p.status].borderColor}`}
+                                            initial={{ opacity: 0, scale: 0.8, x: -10 }}
+                                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                                            transition={{ delay: index * 0.05 + 0.1, type: "spring", stiffness: 400 }}
+                                        >
+                                            {/* Draft - subtle pulse indicating "in progress" */}
+                                            {p.status === 'draft' && (
+                                                <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}>
+                                                    <Clock className="w-3 h-3" />
+                                                </motion.div>
+                                            )}
+                                            {/* Quoted - file icon */}
                                             {p.status === 'quoted' && <FileText className="w-3 h-3" />}
-                                            {p.status === 'approved' && <CheckCircle2 className="w-3 h-3" />}
-                                            {p.status === 'scheduled' && <Calendar className="w-3 h-3" />}
+                                            {/* Approved - sparkle/shine effect */}
+                                            {p.status === 'approved' && (
+                                                <motion.div
+                                                    animate={{ scale: [1, 1.2, 1] }}
+                                                    transition={{ duration: 0.6, delay: index * 0.05 + 0.3 }}
+                                                >
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                </motion.div>
+                                            )}
+                                            {/* Scheduled - subtle calendar tick */}
+                                            {p.status === 'scheduled' && (
+                                                <motion.div animate={{ y: [0, -1, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                                                    <Calendar className="w-3 h-3" />
+                                                </motion.div>
+                                            )}
+                                            {/* Completed - check with shine */}
                                             {p.status === 'completed' && <Check className="w-3 h-3" />}
                                             {STATUS_CONFIG[p.status].label}
-                                        </div>
+                                            {/* Sparkle for approved status */}
+                                            {p.status === 'approved' && (
+                                                <motion.div
+                                                    className="absolute -top-1 -right-1"
+                                                    initial={{ opacity: 0, scale: 0 }}
+                                                    animate={{ opacity: [0, 1, 0], scale: [0, 1, 0] }}
+                                                    transition={{ duration: 0.8, delay: index * 0.05 + 0.5 }}
+                                                >
+                                                    <Sparkles className="w-2.5 h-2.5 text-emerald-300" />
+                                                </motion.div>
+                                            )}
+                                        </motion.div>
 
-                                        {/* Image Section - Hero (Multi-Image Support) */}
+                                        {/* Image Section - Hero (Multi-Image Support) with Parallax */}
                                         {(() => {
                                             const images = getProjectImages(p);
                                             const currentIndex = projectImageIndex[p.id] || 0;
                                             const currentImage = images[currentIndex];
                                             return (
-                                                <div className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}>
+                                                <div
+                                                    className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}
+                                                    onMouseMove={(e) => {
+                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                        const x = (e.clientX - rect.left) / rect.width - 0.5;
+                                                        const y = (e.clientY - rect.top) / rect.height - 0.5;
+                                                        const img = e.currentTarget.querySelector('.parallax-image') as HTMLElement;
+                                                        if (img) {
+                                                            img.style.transform = `scale(1.08) translate(${x * -12}px, ${y * -12}px)`;
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        const img = e.currentTarget.querySelector('.parallax-image') as HTMLElement;
+                                                        if (img) {
+                                                            img.style.transform = 'scale(1) translate(0, 0)';
+                                                        }
+                                                    }}
+                                                >
                                                     {currentImage ? (
                                                         <>
+                                                            {/* Ambient glow from lit areas */}
+                                                            <div
+                                                                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                                                                style={{
+                                                                    background: 'radial-gradient(ellipse at 50% 60%, rgba(246,180,90,0.15) 0%, transparent 50%)',
+                                                                    filter: 'blur(20px)',
+                                                                }}
+                                                            />
                                                             <img
                                                                 src={currentImage.url}
                                                                 onClick={() => {
                                                                     setGeneratedImage(currentImage.url);
-                                                                    setActiveTab('editor');
+                                                                    handleTabChange('editor');
                                                                 }}
-                                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                                                                className="parallax-image w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500 ease-out"
+                                                                style={{ transformOrigin: 'center center' }}
                                                                 alt={currentImage.label || 'Scene'}
                                                             />
                                                             <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
+
+                                                            {/* Subtle gold edge glow on hover */}
+                                                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-t-2xl" style={{ boxShadow: 'inset 0 0 30px rgba(246,180,90,0.1)' }} />
 
                                                             {/* Tech Corners */}
                                                             <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
@@ -2765,7 +3678,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                                 src={currentImage.url}
                                                                 onClick={() => {
                                                                     setGeneratedImage(currentImage.url);
-                                                                    setActiveTab('editor');
+                                                                    handleTabChange('editor');
                                                                 }}
                                                                 className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
                                                                 alt={currentImage.label || 'Scene'}
@@ -3570,12 +4483,19 @@ Notes: ${invoice.notes || 'N/A'}
                      </>
                  )}
              </div>
-            </div>
+            </motion.div>
           )}
 
           {/* TAB: SCHEDULE */}
           {activeTab === 'schedule' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
+            <motion.div
+              key="schedule"
+              initial={{ x: tabDirection * 100 + '%' }}
+              animate={{ x: 0 }}
+              exit={{ x: tabDirection * -100 + '%' }}
+              transition={{ type: 'spring', stiffness: 700, damping: 45 }}
+              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-20"
+            >
               {/* Background Tech Mesh/Glow - Blue themed */}
               <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)' }}></div>
               <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
@@ -3587,7 +4507,7 @@ Notes: ${invoice.notes || 'N/A'}
                   onDateSelect={setSelectedCalendarDate}
                   onViewProject={(project) => {
                     // Navigate to projects tab and select the project
-                    setActiveTab('projects');
+                    handleTabChange('projects');
                     setProjectsSubTab('approved');
                   }}
                   onReschedule={(project) => {
@@ -3615,12 +4535,19 @@ Notes: ${invoice.notes || 'N/A'}
                   onDeleteEvent={handleDeleteEvent}
                 />
               </div>
-            </div>
+            </motion.div>
           )}
 
            {/* TAB: INVENTORY */}
            {activeTab === 'inventory' && (
-            <div className="h-full overflow-y-auto bg-[#050505] relative pb-20">
+            <motion.div
+              key="inventory"
+              initial={{ x: tabDirection * 100 + '%' }}
+              animate={{ x: 0 }}
+              exit={{ x: tabDirection * -100 + '%' }}
+              transition={{ type: 'spring', stiffness: 700, damping: 45 }}
+              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-20"
+            >
               {/* Background Tech Mesh/Glow */}
               <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
               <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
@@ -3680,11 +4607,19 @@ Notes: ${invoice.notes || 'N/A'}
                     <InventoryView />
                 )}
               </div>
-            </div>
+            </motion.div>
            )}
 
           {/* TAB: SETTINGS */}
            {activeTab === 'settings' && (
+             <motion.div
+               key="settings"
+               initial={{ x: tabDirection * 100 + '%' }}
+               animate={{ x: 0 }}
+               exit={{ x: tabDirection * -100 + '%' }}
+               transition={{ type: 'spring', stiffness: 700, damping: 45 }}
+               className="absolute inset-0"
+             >
              <SettingsView
                 profile={companyProfile}
                 onProfileChange={setCompanyProfile}
@@ -3729,15 +4664,16 @@ Notes: ${invoice.notes || 'N/A'}
                 onSaveSettings={handleSaveSettings}
                 isSaving={isSavingSettings}
              />
+             </motion.div>
           )}
-
+          </AnimatePresence>
         </main>
 
         {/* Footer */}
         <Footer variant="minimal" />
       </div>
 
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Schedule Modal */}
       <AnimatePresence>

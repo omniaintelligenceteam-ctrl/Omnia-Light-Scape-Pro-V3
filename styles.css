@@ -285,3 +285,102 @@ body {
 .pdf-mode textarea::placeholder {
     color: transparent !important;
 }
+
+/* Radial Gradient for Generate Button Celebration */
+.bg-gradient-radial {
+    background: radial-gradient(ellipse at center, var(--tw-gradient-from, transparent), var(--tw-gradient-via, transparent), var(--tw-gradient-to, transparent));
+}
+
+/* Hero Button Light Burst */
+@keyframes light-burst {
+    0% {
+        transform: scale(0.5);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
+}
+
+.animate-light-burst {
+    animation: light-burst 0.8s ease-out forwards;
+}
+
+/* Particle Float Animation */
+@keyframes particle-float {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-30px) scale(1.2);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-60px) scale(0.5);
+        opacity: 0;
+    }
+}
+
+.animate-particle-float {
+    animation: particle-float 1.5s ease-out forwards;
+}
+
+/* Gradient Text Animation */
+@keyframes gradient-text-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.gradient-text-animated {
+    background: linear-gradient(
+        90deg,
+        #F6B45A 0%,
+        #ffd89b 25%,
+        #F6B45A 50%,
+        #d4964a 75%,
+        #F6B45A 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-text-flow 3s ease infinite;
+}
+
+/* Multi-layer card perspective container */
+.perspective-container {
+    perspective: 1000px;
+}
+
+/* Card inner glow on hover */
+.card-inner-glow {
+    position: relative;
+}
+
+.card-inner-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    background: radial-gradient(
+        ellipse at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(246, 180, 90, 0.15) 0%,
+        transparent 70%
+    );
+    pointer-events: none;
+}
+
+.card-inner-glow:hover::before {
+    opacity: 1;
+}

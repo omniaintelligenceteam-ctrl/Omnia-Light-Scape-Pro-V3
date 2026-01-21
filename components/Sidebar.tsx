@@ -17,19 +17,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   ];
 
   return (
-    <nav className="w-full bg-gradient-to-t from-[#0a0a0a] via-[#0f0f0f] to-[#111] text-white shrink-0 z-50 fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]">
+    <nav className="w-full text-white shrink-0 z-50 fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]">
+      {/* Frosted glass background */}
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/98 via-[#0f0f0f]/95 to-[#111]/90"
+        style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+      />
+
       {/* Top gradient line */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/40 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-      {/* Secondary subtle line */}
-      <div className="absolute top-[1px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-
-      {/* Ambient glow behind navigation - hidden on mobile */}
-      <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-16 bg-[#F6B45A]/[0.03] blur-[50px] pointer-events-none" />
-
-      <div className="flex flex-col items-center px-3 md:px-8 lg:px-10 py-2 md:py-6 lg:py-8">
-        {/* Navigation Container - 4 separate buttons */}
-        <div className="flex items-center justify-center gap-1.5 md:gap-5 lg:gap-6 w-full max-w-lg lg:max-w-2xl">
+      <div className="flex flex-col items-center px-2 md:px-6 lg:px-8 py-2 md:py-4 lg:py-5">
+        {/* Navigation Container */}
+        <div className="flex items-center justify-center gap-2 md:gap-4 lg:gap-5 w-full max-w-xl lg:max-w-2xl">
           {menuItems.map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
@@ -38,80 +38,90 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               <motion.button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className="relative flex-1 flex flex-col items-center justify-center gap-1 md:gap-2.5 lg:gap-3 py-2.5 md:py-6 lg:py-7 rounded-xl md:rounded-2xl lg:rounded-3xl transition-all duration-300 overflow-hidden"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.95 }}
+                className="relative flex-1 flex flex-col items-center justify-center gap-1.5 md:gap-2 lg:gap-2.5 py-3 md:py-5 lg:py-6 rounded-2xl md:rounded-2xl lg:rounded-3xl transition-all duration-300"
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.95, y: 1 }}
+                style={{
+                  transformStyle: 'preserve-3d',
+                  perspective: '1000px',
+                }}
               >
-                {/* Button background - individual for each button */}
-                <motion.div
-                  className="absolute inset-0 rounded-xl md:rounded-2xl lg:rounded-3xl"
-                  initial={false}
-                  animate={{
-                    background: isActive
-                      ? 'linear-gradient(to bottom, #F6B45A, #f0a847, #e59a3a)'
-                      : 'linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(0,0,0,0.4))',
-                    borderColor: isActive ? 'rgba(246,180,90,0.5)' : 'rgba(255,255,255,0.08)',
-                  }}
-                  transition={{ duration: 0.3 }}
+                {/* Outer glow for active - extends further from button edges */}
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.div
+                      className="absolute -inset-4 md:-inset-5 lg:-inset-6 rounded-3xl md:rounded-[2rem] lg:rounded-[2.5rem] pointer-events-none"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.3 }}
+                      style={{
+                        background: 'radial-gradient(ellipse at center, rgba(246,180,90,0.6) 0%, rgba(246,180,90,0.3) 40%, rgba(246,180,90,0.1) 60%, transparent 80%)',
+                        filter: 'blur(12px)',
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+
+                {/* 3D Button base - bottom layer (shadow/depth) */}
+                <div
+                  className="absolute inset-0 rounded-2xl md:rounded-2xl lg:rounded-3xl"
                   style={{
-                    border: '1px solid',
+                    background: isActive
+                      ? 'linear-gradient(to bottom, #8a5a1a 0%, #6d4515 100%)'
+                      : 'linear-gradient(to bottom, #1a1a1a 0%, #0a0a0a 100%)',
+                    transform: 'translateY(3px)',
+                    boxShadow: isActive
+                      ? '0 4px 12px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.3)'
+                      : '0 4px 8px rgba(0,0,0,0.4)',
                   }}
                 />
 
-                {/* Inner glow for active state */}
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.div
-                      className="absolute inset-0 rounded-xl md:rounded-2xl lg:rounded-3xl bg-gradient-to-t from-transparent via-white/10 to-white/20"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  )}
-                </AnimatePresence>
+                {/* 3D Button main surface */}
+                <motion.div
+                  className="absolute inset-0 rounded-2xl md:rounded-2xl lg:rounded-3xl overflow-hidden"
+                  initial={false}
+                  animate={{
+                    y: isActive ? 1 : 0,
+                  }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  style={{
+                    background: isActive
+                      ? 'linear-gradient(160deg, #ffd080 0%, #F6B45A 30%, #e5a040 70%, #d4902a 100%)'
+                      : 'linear-gradient(160deg, rgba(45,45,45,1) 0%, rgba(35,35,35,1) 50%, rgba(25,25,25,1) 100%)',
+                    boxShadow: isActive
+                      ? 'inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.3)'
+                      : 'inset 0 1px 2px rgba(255,255,255,0.05), inset 0 -1px 2px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
+                    border: isActive
+                      ? '1px solid rgba(255,220,150,0.4)'
+                      : '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {/* Top highlight for 3D effect */}
+                  <div
+                    className="absolute inset-x-0 top-0 h-1/3 rounded-t-2xl md:rounded-t-2xl lg:rounded-t-3xl"
+                    style={{
+                      background: isActive
+                        ? 'linear-gradient(to bottom, rgba(255,255,255,0.25) 0%, transparent 100%)'
+                        : 'linear-gradient(to bottom, rgba(255,255,255,0.06) 0%, transparent 100%)',
+                    }}
+                  />
 
-                {/* Shine effect for active */}
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.div
-                      className="absolute inset-0 rounded-xl md:rounded-2xl lg:rounded-3xl overflow-hidden"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-20deg]"
-                        initial={{ x: '-100%' }}
-                        animate={{ x: '200%' }}
-                        transition={{
-                          repeat: Infinity,
-                          repeatDelay: 3,
-                          duration: 1,
-                          ease: "easeInOut"
-                        }}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  {/* Bottom shadow for 3D depth */}
+                  <div
+                    className="absolute inset-x-0 bottom-0 h-1/4 rounded-b-2xl md:rounded-b-2xl lg:rounded-b-3xl"
+                    style={{
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)',
+                    }}
+                  />
+                </motion.div>
 
-                {/* Outer glow for active */}
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.div
-                      className="absolute -inset-1 bg-[#F6B45A]/30 blur-xl -z-10 rounded-xl md:rounded-2xl lg:rounded-3xl"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    />
-                  )}
-                </AnimatePresence>
 
                 {/* Icon */}
                 <motion.div
                   className="relative z-10"
                   animate={{
-                    y: isActive ? -1 : 0,
+                    y: isActive ? 0 : 0,
                   }}
                   transition={{ duration: 0.2 }}
                 >
@@ -135,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                             transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 1.5 }}
                           >
                             <FolderOpen
-                              className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-[#1a1a1a]"
+                              className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
                               strokeWidth={2.5}
                             />
                           </motion.div>
@@ -144,7 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'projects' ? (
                     <FolderClosed
-                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-400"
+                      className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Inventory - Package open/close animation */
@@ -157,13 +167,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 1, repeat: Infinity, repeatDelay: 1.2 }}
                     >
                       <PackageOpen
-                        className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-[#1a1a1a]"
+                        className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : item.id === 'inventory' ? (
                     <Package
-                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-400"
+                      className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Schedule - Calendar check animation */
@@ -175,13 +185,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 1 }}
                     >
                       <CalendarCheck
-                        className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-[#1a1a1a]"
+                        className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : item.id === 'schedule' ? (
                     <Calendar
-                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-400"
+                      className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Settings - Gear rotation animation */
@@ -193,15 +203,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
                       <Settings
-                        className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-[#1a1a1a]"
+                        className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : (
                     <Icon
-                      className={`w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 transition-all duration-300 ${
+                      className={`w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-all duration-300 ${
                         isActive
-                          ? 'text-[#1a1a1a]'
+                          ? 'text-[#1a1a1a] drop-shadow-sm'
                           : 'text-gray-400'
                       }`}
                       strokeWidth={isActive ? 2.5 : 2}
@@ -255,15 +265,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
                 {/* Label */}
                 <motion.span
-                  className={`relative z-10 text-[9px] md:text-sm lg:text-base font-semibold uppercase tracking-[0.02em] md:tracking-[0.08em] lg:tracking-[0.1em] transition-all duration-300 whitespace-nowrap ${
+                  className={`relative z-10 text-[9px] md:text-xs lg:text-sm font-semibold uppercase tracking-wide md:tracking-wider transition-all duration-300 whitespace-nowrap ${
                     isActive
-                      ? 'text-[#1a1a1a] font-bold'
+                      ? 'text-[#1a1a1a] font-bold drop-shadow-sm'
                       : 'text-gray-400'
                   }`}
-                  animate={{
-                    y: isActive ? -1 : 0,
-                  }}
-                  transition={{ duration: 0.2 }}
                 >
                   {item.label}
                 </motion.span>

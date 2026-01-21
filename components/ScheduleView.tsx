@@ -102,16 +102,48 @@ const CalendarGrid: React.FC<{
         key={day}
         onClick={() => onDateSelect(date)}
         className={`relative h-10 md:h-12 rounded-lg flex flex-col items-center justify-center transition-all duration-200
-          ${isSelected ? 'bg-blue-500 text-white' : isPast ? 'text-gray-600' : 'text-white hover:bg-white/10'}
-          ${isToday && !isSelected ? 'ring-1 ring-blue-500/50' : ''}
+          ${isSelected ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : isPast ? 'text-gray-600' : 'text-white hover:bg-white/10'}
         `}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
+        initial={false}
+        animate={isSelected ? { scale: [1, 1.02, 1] } : {}}
+        transition={{ duration: 0.3 }}
       >
-        <span className={`text-sm md:text-base font-medium ${isSelected ? 'text-white' : ''}`}>{day}</span>
+        {/* Pulsing ring for today */}
+        {isToday && !isSelected && (
+          <>
+            <motion.div
+              className="absolute inset-0 rounded-lg border-2 border-blue-500/50"
+              animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-lg"
+              animate={{ boxShadow: ['0 0 0 0 rgba(59,130,246,0)', '0 0 8px 4px rgba(59,130,246,0.3)', '0 0 0 0 rgba(59,130,246,0)'] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </>
+        )}
+        {/* Today indicator dot */}
+        {isToday && (
+          <motion.div
+            className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full"
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+        )}
+        <span className={`text-sm md:text-base font-medium relative z-10 ${isSelected ? 'text-white' : ''}`}>{day}</span>
+        {/* Glowing event dots */}
         {hasJobs && (
           <div className={`absolute bottom-1 flex gap-0.5`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-400'}`} />
+            <motion.div
+              className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#F6B45A]'}`}
+              animate={!isSelected ? {
+                boxShadow: ['0 0 0 0 rgba(246,180,90,0.4)', '0 0 6px 2px rgba(246,180,90,0.6)', '0 0 0 0 rgba(246,180,90,0.4)']
+              } : {}}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
           </div>
         )}
       </motion.button>
@@ -119,27 +151,34 @@ const CalendarGrid: React.FC<{
   }
 
   return (
-    <div className="bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border border-white/10 rounded-2xl p-4 md:p-6">
+    <div className="bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border border-white/10 rounded-2xl p-4 md:p-6 overflow-hidden">
       {/* Month Navigation */}
       <div className="flex items-center justify-between mb-4">
         <motion.button
           onClick={() => onMonthChange(-1)}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          whileHover={{ scale: 1.1 }}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors group"
+          whileHover={{ scale: 1.1, x: -2 }}
           whileTap={{ scale: 0.9 }}
         >
-          <ChevronLeft className="w-5 h-5 text-gray-400" />
+          <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
         </motion.button>
-        <h3 className="text-lg md:text-xl font-semibold text-white">
+        <motion.h3
+          key={currentMonth.toISOString()}
+          className="text-lg md:text-xl font-semibold text-white"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          transition={{ duration: 0.2 }}
+        >
           {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-        </h3>
+        </motion.h3>
         <motion.button
           onClick={() => onMonthChange(1)}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          whileHover={{ scale: 1.1 }}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors group"
+          whileHover={{ scale: 1.1, x: 2 }}
           whileTap={{ scale: 0.9 }}
         >
-          <ChevronRight className="w-5 h-5 text-gray-400" />
+          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
         </motion.button>
       </div>
 
@@ -152,10 +191,19 @@ const CalendarGrid: React.FC<{
         ))}
       </div>
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {days}
-      </div>
+      {/* Calendar Grid with fade transition on month change */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentMonth.toISOString()}
+          className="grid grid-cols-7 gap-1"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          {days}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
