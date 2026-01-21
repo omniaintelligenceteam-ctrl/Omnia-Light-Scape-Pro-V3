@@ -199,7 +199,8 @@ ${customMessage ? `\n${customMessage}\n` : ''}
           taxAmount: tax,
           discount,
           total,
-          projectImageUrl: projectImage || undefined,
+          // Only include image if it's a valid HTTP(S) URL (not a base64 data URL)
+          projectImageUrl: projectImage && projectImage.startsWith('http') ? projectImage : undefined,
           customMessage: customMessage || undefined
         })
       });

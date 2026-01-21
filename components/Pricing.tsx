@@ -72,7 +72,8 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       generations: STRIPE_CONFIG.PLANS.STARTER_MONTHLY.generations,
       features: [
         '10 generations per month',
-        '4K exports',
+        '4K exports & PDF downloads',
+        'Quotes & proposals',
         'Basic support',
         'No watermark'
       ],
@@ -87,7 +88,10 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       generations: STRIPE_CONFIG.PLANS.PRO_MONTHLY.generations,
       features: [
         '125 generations per month',
-        '4K exports',
+        '4K exports & PDF downloads',
+        'Quotes & invoicing',
+        'Email quotes & invoices',
+        'Bill of Materials (BOM)',
         'Priority support',
         'No watermark',
         'Advanced lighting controls'
@@ -103,11 +107,16 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       generations: -1,
       features: [
         'Unlimited generations',
-        '4K exports',
+        '4K exports & PDF downloads',
+        'Quotes & invoicing',
+        'Email quotes & invoices',
+        'Bill of Materials (BOM)',
+        'Project scheduling & calendar',
+        'Inventory management',
+        'Multi-image projects',
+        'Custom branding',
         'Dedicated support',
         'No watermark',
-        'Advanced lighting controls',
-        'Custom branding',
         'API access'
       ],
       highlighted: false
