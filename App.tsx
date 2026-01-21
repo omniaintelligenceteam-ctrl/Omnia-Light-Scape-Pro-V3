@@ -6,7 +6,7 @@ import { Footer } from './components/Footer';
 import { Sidebar } from './components/Sidebar';
 import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
-import { SettingsView } from './components/SettingsView';
+import { SettingsView } from './components/settings';
 import AuthWrapper from './components/AuthWrapper';
 import { InventoryView } from './components/InventoryView';
 import { ScheduleView } from './components/ScheduleView';
@@ -18,13 +18,14 @@ import { generateBOM } from './utils/bomCalculator';
 import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
 import { useSubscription } from './hooks/useSubscription';
+import { useCalendarEvents } from './hooks/useCalendarEvents';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ArrowUp, ArrowDown, Navigation, CircleDot, Triangle, Sun, Settings2, GalleryVerticalEnd } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -172,7 +173,8 @@ const App: React.FC = () => {
 
   // Lifted Pricing State
   const [pricing, setPricing] = useState<FixturePricing[]>(DEFAULT_PRICING);
-  
+  const [customPricing, setCustomPricing] = useState<CustomPricingItem[]>([]);
+
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -236,8 +238,8 @@ const App: React.FC = () => {
   const [completionNotes, setCompletionNotes] = useState<string>('');
   const [autoGenerateInvoice, setAutoGenerateInvoice] = useState(false);
 
-  // Calendar Events State
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  // Calendar Events State (from Supabase)
+  const { events: calendarEvents, createEvent, updateEvent: updateCalendarEvent, deleteEvent } = useCalendarEvents();
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [eventTitle, setEventTitle] = useState('');
@@ -339,26 +341,6 @@ const App: React.FC = () => {
     localStorage.setItem('omnia_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
-  // Load calendar events from localStorage
-  useEffect(() => {
-    try {
-      const savedEvents = localStorage.getItem('omnia_calendar_events');
-      if (savedEvents) {
-        const events = JSON.parse(savedEvents);
-        if (Array.isArray(events)) {
-          setCalendarEvents(events);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load calendar events', e);
-    }
-  }, []);
-
-  // Persist calendar events
-  useEffect(() => {
-    localStorage.setItem('omnia_calendar_events', JSON.stringify(calendarEvents));
-  }, [calendarEvents]);
-
   // Load saved settings (company profile, pricing, catalog, lighting) on mount
   useEffect(() => {
     try {
@@ -367,6 +349,7 @@ const App: React.FC = () => {
         const settings = JSON.parse(savedSettings);
         if (settings.companyProfile) setCompanyProfile(settings.companyProfile);
         if (settings.pricing) setPricing(settings.pricing);
+        if (settings.customPricing) setCustomPricing(settings.customPricing);
         if (settings.fixtureCatalog) setFixtureCatalog(settings.fixtureCatalog);
         if (settings.colorTemp) setColorTemp(settings.colorTemp);
         if (settings.lightIntensity !== undefined) setLightIntensity(settings.lightIntensity);
@@ -384,6 +367,7 @@ const App: React.FC = () => {
       const settings = {
         companyProfile,
         pricing,
+        customPricing,
         fixtureCatalog,
         colorTemp,
         lightIntensity,
@@ -1194,14 +1178,13 @@ const App: React.FC = () => {
   };
 
   // Save event (create or update)
-  const handleSaveEvent = () => {
+  const handleSaveEvent = async () => {
     if (!eventTitle.trim()) {
       showToast('Please enter an event title', 'error');
       return;
     }
 
-    const eventData: CalendarEvent = {
-      id: editingEventId || `event-${Date.now()}`,
+    const eventData = {
       title: eventTitle.trim(),
       eventType: eventType,
       date: eventDate.toISOString().split('T')[0],
@@ -1212,19 +1195,24 @@ const App: React.FC = () => {
       notes: eventNotes.trim() || undefined,
       clientName: eventClientName.trim() || undefined,
       clientPhone: eventClientPhone.trim() || undefined,
-      createdAt: editingEventId
-        ? calendarEvents.find(e => e.id === editingEventId)?.createdAt || new Date().toISOString()
-        : new Date().toISOString(),
     };
 
     if (editingEventId) {
       // Update existing event
-      setCalendarEvents(prev => prev.map(e => e.id === editingEventId ? eventData : e));
-      showToast('Event updated!', 'success');
+      const success = await updateCalendarEvent(editingEventId, eventData);
+      if (success) {
+        showToast('Event updated!', 'success');
+      } else {
+        showToast('Failed to update event', 'error');
+      }
     } else {
       // Create new event
-      setCalendarEvents(prev => [...prev, eventData]);
-      showToast('Event created!', 'success');
+      const newEvent = await createEvent(eventData);
+      if (newEvent) {
+        showToast('Event created!', 'success');
+      } else {
+        showToast('Failed to create event', 'error');
+      }
     }
 
     setShowEventModal(false);
@@ -1232,9 +1220,13 @@ const App: React.FC = () => {
   };
 
   // Delete event
-  const handleDeleteEvent = (eventId: string) => {
-    setCalendarEvents(prev => prev.filter(e => e.id !== eventId));
-    showToast('Event deleted', 'success');
+  const handleDeleteEvent = async (eventId: string) => {
+    const success = await deleteEvent(eventId);
+    if (success) {
+      showToast('Event deleted', 'success');
+    } else {
+      showToast('Failed to delete event', 'error');
+    }
   };
 
   // Update invoice field
@@ -3389,6 +3381,8 @@ Notes: ${invoice.notes || 'N/A'}
                 onBeamAngleChange={setBeamAngle}
                 pricing={pricing}
                 onPricingChange={setPricing}
+                customPricing={customPricing}
+                onCustomPricingChange={setCustomPricing}
                 fixtureCatalog={fixtureCatalog}
                 onFixtureCatalogChange={setFixtureCatalog}
                 subscription={{

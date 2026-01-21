@@ -43,8 +43,16 @@ export interface ClientDetails {
 export interface CompanyProfile {
     name: string;
     email: string;
+    phone?: string;
     address: string;
     logo: string | null;
+}
+
+export interface CustomPricingItem {
+  id: string;
+  name: string;
+  unitPrice: number;
+  description?: string;
 }
 
 export interface QuoteData {

@@ -463,9 +463,12 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                     {companyProfile.logo && (
                         <img src={companyProfile.logo} alt="Logo" className="h-28 w-28 object-contain mb-4" />
                     )}
-                    {/* Address */}
+                    {/* Address & Phone */}
                     <div className="text-sm text-gray-400 space-y-0.5 whitespace-pre-line print:text-gray-600 mb-3">
                         {companyProfile.address}
+                        {companyProfile.phone && (
+                          <div className="mt-1">{companyProfile.phone}</div>
+                        )}
                     </div>
                     {/* Date */}
                     <div className="flex items-center gap-3">

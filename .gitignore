@@ -35,3 +35,4 @@ local-backup/
 *.sw?
 .vercel
 .env*.local
+nul
