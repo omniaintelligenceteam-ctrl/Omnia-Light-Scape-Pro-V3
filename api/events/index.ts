@@ -34,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('calendar_events')
         .select('*')
         .eq('user_id', supabaseUserId)
-        .order('date', { ascending: true });
+        .order('event_date', { ascending: true });
 
       if (error) throw error;
       return res.status(200).json({ success: true, data });
@@ -54,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           user_id: supabaseUserId,
           title,
           event_type: event_type || 'other',
-          date,
+          event_date: date,
           time_slot: time_slot || 'morning',
           custom_time,
           duration: duration || 1,

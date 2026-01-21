@@ -29,18 +29,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST: Save feedback
   if (req.method === 'POST') {
-    const { userId, projectId, rating, feedbackText, settingsSnapshot, generatedImageUrl } = req.body as FeedbackRequest;
+    const { userId: clerkUserId, projectId, rating, feedbackText, settingsSnapshot, generatedImageUrl } = req.body as FeedbackRequest;
 
-    if (!userId || !rating) {
+    if (!clerkUserId || !rating) {
       return res.status(400).json({ error: 'Missing required fields: userId, rating' });
     }
 
     try {
+      // Look up Supabase user ID from Clerk user ID
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('clerk_user_id', clerkUserId)
+        .single();
+
+      if (userError || !userData) {
+        // User not found - this is OK, just skip feedback storage
+        console.log('User not found for feedback, skipping:', clerkUserId);
+        return res.status(200).json({ success: true, skipped: true });
+      }
+
+      const supabaseUserId = userData.id;
+
       // Insert feedback record
       const { error: feedbackError } = await supabase
         .from('generation_feedback')
         .insert({
-          user_id: userId,
+          user_id: supabaseUserId,
           project_id: projectId || null,
           rating,
           feedback_text: feedbackText || null,
@@ -54,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Update aggregated preferences
-      await updateUserPreferences(supabase, userId, rating, settingsSnapshot, feedbackText);
+      await updateUserPreferences(supabase, supabaseUserId, rating, settingsSnapshot, feedbackText);
 
       return res.status(200).json({ success: true });
     } catch (error: any) {
@@ -65,17 +80,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GET: Fetch user preferences
   if (req.method === 'GET') {
-    const { userId } = req.query;
+    const { userId: clerkUserId } = req.query;
 
-    if (!userId || typeof userId !== 'string') {
+    if (!clerkUserId || typeof clerkUserId !== 'string') {
       return res.status(400).json({ error: 'Missing userId parameter' });
     }
 
     try {
+      // Look up Supabase user ID from Clerk user ID
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('clerk_user_id', clerkUserId)
+        .single();
+
+      if (userError || !userData) {
+        // User not found - return null preferences
+        return res.status(200).json({ preferences: null });
+      }
+
+      const supabaseUserId = userData.id;
+
       const { data, error } = await supabase
         .from('user_preferences')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', supabaseUserId)
         .single();
 
       // PGRST116 = no rows found (not an error, just means no preferences yet)

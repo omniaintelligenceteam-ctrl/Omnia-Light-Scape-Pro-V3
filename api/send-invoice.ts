@@ -158,8 +158,11 @@ function generateInvoiceHtml(data: InvoiceEmailRequest): string {
     </div>
 
     <!-- Footer -->
-    <div style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 12px;">
-      <p style="margin: 0;">This invoice was generated using Omnia LightScape</p>
+    <div style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 11px;">
+      <p style="margin: 0 0 8px; padding: 12px; background: #f3f4f6; border-radius: 8px; color: #6b7280;">
+        <strong>Please do not reply to this email.</strong> To respond, contact ${data.companyName} directly at <a href="mailto:${data.companyEmail}" style="color: #3B82F6;">${data.companyEmail}</a>
+      </p>
+      <p style="margin: 0;">Invoice generated with Omnia LightScape</p>
     </div>
 
   </div>
@@ -188,14 +191,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const html = generateInvoiceHtml(data);
 
-    // Determine from address - use Resend test domain or your verified domain
-    const fromAddress = process.env.RESEND_FROM_EMAIL || 'Omnia LightScape <onboarding@resend.dev>';
+    // Use verified custom domain
+    const fromAddress = 'Omnia LightScape <noreply@omnialightscapepro.com>';
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: fromAddress,
       to: data.clientEmail,
       replyTo: data.companyEmail,
-      subject: `Invoice ${data.invoiceNumber} - ${data.projectName} - ${data.companyName}`,
+      subject: `${data.companyName} - Invoice ${data.invoiceNumber} for ${data.projectName}`,
       html,
     });
 

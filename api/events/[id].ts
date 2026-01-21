@@ -47,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
       if (title !== undefined) updateData.title = title;
       if (event_type !== undefined) updateData.event_type = event_type;
-      if (date !== undefined) updateData.date = date;
+      if (date !== undefined) updateData.event_date = date;
       if (time_slot !== undefined) updateData.time_slot = time_slot;
       if (custom_time !== undefined) updateData.custom_time = custom_time;
       if (duration !== undefined) updateData.duration = duration;
