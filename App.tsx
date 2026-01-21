@@ -23,7 +23,7 @@ import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ArrowUp, ArrowDown, Navigation, CircleDot, Triangle, Sun, Settings2, GalleryVerticalEnd } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, Sun, Settings2 } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem } from './types';
 
@@ -1502,69 +1502,133 @@ Notes: ${invoice.notes || 'N/A'}
         </div>
       )}
 
-      {/* Fixture Configuration Modal (Bottom Sheet Style) */}
+      {/* Fixture Configuration Modal (Premium Bottom Sheet) */}
+      <AnimatePresence>
       {activeConfigFixture && (
-          <div className="fixed inset-0 z-[100] flex items-end justify-center pointer-events-none">
-              {/* Backdrop - clickable to close */}
-              <div 
-                className="absolute inset-0 bg-black/20 pointer-events-auto transition-opacity" 
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+              {/* Backdrop with blur */}
+              <motion.div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                 onClick={() => setActiveConfigFixture(null)}
-              ></div>
-              
-              {/* Modal / Bottom Sheet */}
-              <div className="pointer-events-auto w-full max-w-4xl bg-[#0a0a0a] border-t border-x border-white/10 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.7)] transform transition-all animate-in slide-in-from-bottom-10 fade-in duration-300 max-h-[50vh] flex flex-col pb-safe">
-                  {/* Header - Fixed */}
-                  <div className="p-6 pb-2 border-b border-white/5 shrink-0 flex justify-between items-start bg-[#0a0a0a] rounded-t-[32px]">
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+
+              {/* Modal */}
+              <motion.div
+                className="relative w-full sm:max-w-lg bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 sm:rounded-2xl rounded-t-3xl shadow-2xl shadow-black/50 max-h-[85vh] sm:max-h-[70vh] flex flex-col overflow-hidden"
+                initial={{ opacity: 0, y: 100, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 100, scale: 0.95 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              >
+                  {/* Decorative top line */}
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#F6B45A]/50 to-transparent" />
+
+                  {/* Header */}
+                  <div className="p-5 sm:p-6 shrink-0 flex justify-between items-start">
                       <div>
-                        <h3 className="text-xl font-bold text-white font-serif">
-                            Configure {getActiveFixtureTitle()}
+                        <h3 className="text-lg sm:text-xl font-semibold text-white tracking-tight">
+                            {getActiveFixtureTitle()}
                         </h3>
-                        <p className="text-xs text-gray-400 mt-1">Select specific placement targets.</p>
+                        <p className="text-xs text-gray-500 mt-1">Choose placement areas</p>
                       </div>
-                      <button 
-                        onClick={() => setActiveConfigFixture(null)} 
-                        className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                      <motion.button
+                        onClick={() => setActiveConfigFixture(null)}
+                        className="p-2 rounded-full text-gray-500 hover:text-white hover:bg-white/10 transition-all"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                       >
                           <X className="w-5 h-5" />
-                      </button>
+                      </motion.button>
                   </div>
-                  
+
                   {/* Scrollable Content */}
-                  <div className="p-6 pt-4 overflow-y-auto custom-scrollbar bg-[#0a0a0a]">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                          {getCurrentSubOptions().map(opt => {
+                  <div className="flex-1 px-5 sm:px-6 pb-4 overflow-y-auto">
+                      <div className="space-y-2">
+                          {getCurrentSubOptions().map((opt, index) => {
                               const isSelected = pendingOptions.includes(opt.id);
                               return (
-                                  <button
+                                  <motion.button
                                     key={opt.id}
                                     onClick={() => togglePendingOption(opt.id)}
-                                    className={`w-full flex items-start justify-between p-4 rounded-xl border-2 transition-all h-full ${isSelected ? 'bg-[#F6B45A]/15 border-[#F6B45A] text-white shadow-[0_0_15px_rgba(246,180,90,0.2)]' : 'bg-[#050505] border-white/5 text-gray-400 hover:bg-[#0a0a0a] hover:border-[#F6B45A]/30'}`}
+                                    className={`group w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
+                                        isSelected
+                                            ? 'bg-[#F6B45A] border-[#F6B45A] shadow-[0_0_20px_rgba(246,180,90,0.3)]'
+                                            : 'bg-[#0d0d0d] border-white/5 hover:border-[#F6B45A]/40 hover:bg-[#F6B45A]/5'
+                                    }`}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    whileTap={{ scale: 0.98 }}
                                   >
-                                      <div className="flex flex-col items-start text-left gap-1.5">
-                                          <span className={`text-sm font-bold ${isSelected ? 'text-[#F6B45A]' : 'text-gray-200'}`}>{opt.label}</span>
-                                          <span className="text-[10px] text-gray-500 leading-relaxed">{opt.description}</span>
+                                      <div className="flex flex-col items-start text-left">
+                                          <span className={`text-sm font-semibold transition-colors ${
+                                              isSelected ? 'text-black' : 'text-white group-hover:text-[#F6B45A]'
+                                          }`}>
+                                              {opt.label}
+                                          </span>
+                                          <span className={`text-xs mt-0.5 transition-colors ${
+                                              isSelected ? 'text-black/60' : 'text-gray-500'
+                                          }`}>
+                                              {opt.description}
+                                          </span>
                                       </div>
-                                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-3 transition-all ${isSelected ? 'bg-[#F6B45A]' : 'bg-white/5 border border-white/10'}`}>
-                                          {isSelected && <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />}
+                                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all ${
+                                          isSelected
+                                              ? 'bg-black/20'
+                                              : 'border border-white/20 group-hover:border-[#F6B45A]/50'
+                                      }`}>
+                                          <AnimatePresence>
+                                              {isSelected && (
+                                                  <motion.div
+                                                      initial={{ scale: 0 }}
+                                                      animate={{ scale: 1 }}
+                                                      exit={{ scale: 0 }}
+                                                  >
+                                                      <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />
+                                                  </motion.div>
+                                              )}
+                                          </AnimatePresence>
                                       </div>
-                                  </button>
+                                  </motion.button>
                               )
                           })}
                       </div>
                   </div>
 
-                  {/* Footer - Fixed */}
-                  <div className="p-6 pt-4 border-t border-white/5 shrink-0 bg-[#0a0a0a] pb-8 sm:pb-6">
-                      <button 
-                        onClick={confirmFixtureSelection}
-                        className="w-full bg-[#F6B45A] text-black font-bold uppercase tracking-widest py-4 rounded-xl hover:bg-[#ffc67a] transition-colors shadow-lg text-xs"
-                      >
-                          Confirm Selection
-                      </button>
+                  {/* Footer */}
+                  <div className="p-5 sm:p-6 pt-4 border-t border-white/5 shrink-0 bg-[#0a0a0a]/80 backdrop-blur-sm">
+                      <div className="flex items-center gap-3">
+                          <motion.button
+                            onClick={() => setActiveConfigFixture(null)}
+                            className="flex-1 py-3.5 rounded-xl border border-white/10 text-gray-400 font-medium text-sm hover:bg-white/5 hover:text-white transition-all"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                              Cancel
+                          </motion.button>
+                          <motion.button
+                            onClick={confirmFixtureSelection}
+                            className="flex-[2] bg-[#F6B45A] text-black font-semibold py-3.5 rounded-xl hover:bg-[#ffc67a] transition-all shadow-lg shadow-[#F6B45A]/20 text-sm flex items-center justify-center gap-2"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                              <Check className="w-4 h-4" />
+                              Confirm
+                          </motion.button>
+                      </div>
+                      {pendingOptions.length > 0 && (
+                          <p className="text-center text-xs text-gray-500 mt-3">
+                              {pendingOptions.length} option{pendingOptions.length !== 1 ? 's' : ''} selected
+                          </p>
+                      )}
                   </div>
-              </div>
+              </motion.div>
           </div>
       )}
+      </AnimatePresence>
 
       <div className="flex-1 overflow-hidden relative flex flex-col">
         <main className="flex-1 overflow-hidden">
@@ -1579,34 +1643,57 @@ Notes: ${invoice.notes || 'N/A'}
                 
                 {/* MODE 1: RESULT VIEW (Generated Image Only) */}
                 {generatedImage ? (
-                <div className="flex-1 flex flex-col relative bg-black rounded-[32px] overflow-hidden border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-500 min-h-[500px]">
-                    
+                <motion.div
+                    className="flex-1 flex flex-col relative bg-gradient-to-b from-[#0a0a0a] to-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 min-h-[500px]"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+
                     {/* Top Action Bar */}
-                    <div className="absolute top-6 left-0 right-0 z-40 flex justify-center gap-3 px-4">
-                        <button
+                    <div className="absolute top-5 left-0 right-0 z-40 flex justify-center gap-3 px-4">
+                        <motion.button
                             onClick={handleSaveProjectFromEditor}
-                            className="bg-[#F6B45A] text-[#111] px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-[10px] md:text-xs hover:bg-[#ffc67a] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(246,180,90,0.3)] flex items-center gap-2"
+                            className="bg-[#F6B45A] text-[#111] px-6 py-3 rounded-xl font-semibold text-xs hover:bg-[#ffc67a] transition-all shadow-xl shadow-[#F6B45A]/20 flex items-center gap-2"
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
                         >
                             <FolderPlus className="w-4 h-4" />
                             Save Project
-                        </button>
+                        </motion.button>
                     </div>
 
                     {/* Main Image */}
-                    <div className="flex-1 relative flex items-center justify-center bg-[#050505] overflow-hidden group">
-                        <img 
-                            src={generatedImage} 
-                            alt="Generated Result" 
-                            className="w-full h-full object-contain cursor-zoom-in transition-transform duration-300"
+                    <div className="flex-1 relative flex items-center justify-center bg-[#030303] overflow-hidden group">
+                        <img
+                            src={generatedImage}
+                            alt="Generated Result"
+                            className="w-full h-full object-contain cursor-zoom-in transition-transform duration-500 group-hover:scale-[1.02]"
                             onClick={() => setIsFullScreen(true)}
                         />
-                        
+
+                        {/* Subtle vignette */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+
+                        {/* Corner accents */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-[#F6B45A]/30 rounded-tl" />
+                            <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-[#F6B45A]/30 rounded-tr" />
+                            <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-[#F6B45A]/30 rounded-bl" />
+                            <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-[#F6B45A]/30 rounded-br" />
+                        </div>
+
                         {/* Feedback / Loading Overlay */}
                         {isLoading && (
-                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white">
-                                <Loader2 className="w-10 h-10 animate-spin mb-4 text-[#F6B45A]" />
-                                <p className="font-bold tracking-widest uppercase text-sm font-mono text-[#F6B45A]">Processing...</p>
-                            </div>
+                            <motion.div
+                                className="absolute inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col items-center justify-center text-white"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                            >
+                                <div className="w-16 h-16 border-3 border-[#F6B45A]/20 border-t-[#F6B45A] rounded-full animate-spin mb-6" />
+                                <p className="font-semibold text-sm text-[#F6B45A] tracking-wide">Creating your vision...</p>
+                                <p className="text-xs text-gray-500 mt-2">Analyzing lighting paths</p>
+                            </motion.div>
                         )}
                     </div>
 
@@ -1714,7 +1801,7 @@ Notes: ${invoice.notes || 'N/A'}
                             </div>
                         </div>
                     )}
-                </div>
+                </motion.div>
                 ) : (
                 // MODE 2: INPUT VIEW
                 isLoading ? (
@@ -1743,20 +1830,25 @@ Notes: ${invoice.notes || 'N/A'}
                     <div className="flex flex-col gap-6">
                         
                         {/* Premium Fixture Selection */}
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-5">
                             {/* Section Header */}
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#F6B45A]/20 to-[#F6B45A]/5 border border-[#F6B45A]/20">
-                                    <Sparkles className="w-4 h-4 text-[#F6B45A]" />
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#F6B45A]/15 to-[#F6B45A]/5 border border-[#F6B45A]/20 shadow-lg shadow-[#F6B45A]/5">
+                                        <Sparkles className="w-4 h-4 text-[#F6B45A]" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-white tracking-tight">Select Fixtures</h3>
+                                        <p className="text-xs text-gray-500">Choose lighting types to include</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-white">Active Fixtures</h3>
-                                    <p className="text-[10px] text-gray-500">Select lighting types to include</p>
-                                </div>
+                                <span className="text-[10px] font-medium text-gray-500 bg-white/5 px-2.5 py-1 rounded-full">
+                                    {selectedFixtures.length} selected
+                                </span>
                             </div>
 
-                            {/* Fixture Grid */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                            {/* Fixture Grid - Premium minimal buttons */}
+                            <div className="flex flex-wrap gap-2 md:gap-3">
                                 {FIXTURE_TYPES.map((ft) => {
                                     const isSelected = selectedFixtures.includes(ft.id);
                                     const subOpts = fixtureSubOptions[ft.id];
@@ -1766,127 +1858,61 @@ Notes: ${invoice.notes || 'N/A'}
                                         return ft.subOptions?.find(o => o.id === id)?.label || '';
                                     };
 
-                                    // Icon mapping for each fixture type
-                                    const getFixtureIcon = (id: string) => {
-                                        switch(id) {
-                                            case 'up': return ArrowUp;
-                                            case 'path': return Navigation;
-                                            case 'coredrill': return CircleDot;
-                                            case 'gutter': return Triangle;
-                                            case 'soffit': return ArrowDown;
-                                            case 'hardscape': return GalleryVerticalEnd;
-                                            default: return Sun;
-                                        }
-                                    };
-                                    const Icon = getFixtureIcon(ft.id);
-
                                     return (
                                         <motion.button
                                             key={ft.id}
                                             onClick={() => toggleFixture(ft.id)}
-                                            className={`relative overflow-hidden rounded-xl transition-all duration-300 ${
+                                            className={`group relative overflow-hidden rounded-full transition-all duration-200 ${
                                                 isSelected
-                                                    ? 'bg-gradient-to-b from-[#F6B45A] via-[#e5a040] to-[#cc8a30] shadow-[0_0_20px_rgba(246,180,90,0.3)]'
-                                                    : 'bg-[#0a0a0a] hover:bg-[#111]'
+                                                    ? 'bg-[#F6B45A] shadow-[0_0_24px_rgba(246,180,90,0.4)]'
+                                                    : 'bg-[#0d0d0d] hover:bg-[#F6B45A]/10 active:bg-[#F6B45A]'
                                             }`}
-                                            whileHover={{ scale: 1.03, y: -3 }}
+                                            whileHover={{ scale: 1.03 }}
                                             whileTap={{ scale: 0.97 }}
                                         >
-                                            {/* Border gradient overlay */}
-                                            <div className={`absolute inset-0 rounded-xl border-2 ${
+                                            {/* Border with hover color change */}
+                                            <div className={`absolute inset-0 rounded-full border transition-all duration-200 ${
                                                 isSelected
                                                     ? 'border-[#F6B45A]'
-                                                    : 'border-white/5 hover:border-[#F6B45A]/30'
+                                                    : 'border-white/10 group-hover:border-[#F6B45A]/50 group-active:border-[#F6B45A]'
                                             }`} />
 
-                                            {/* Inner glow when selected */}
-                                            {isSelected && (
-                                                <>
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20 pointer-events-none" />
-                                                    <motion.div
-                                                        className="absolute -inset-1 bg-[#F6B45A]/20 blur-xl pointer-events-none"
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                    />
-                                                </>
-                                            )}
-
                                             {/* Content */}
-                                            <div className="relative z-10 flex flex-col items-center justify-center py-4 px-3 md:py-5 md:px-4">
-                                                {/* Icon container */}
-                                                <div className={`relative mb-2 ${isSelected ? '' : ''}`}>
-                                                    <Icon
-                                                        className={`w-5 h-5 md:w-6 md:h-6 transition-all duration-300 ${
-                                                            isSelected
-                                                                ? 'text-[#1a1a1a]'
-                                                                : 'text-gray-400'
-                                                        }`}
-                                                        strokeWidth={isSelected ? 2.5 : 2}
-                                                    />
-                                                    {/* Icon glow ring when selected */}
-                                                    {isSelected && (
-                                                        <motion.div
-                                                            className="absolute inset-0 rounded-full bg-[#1a1a1a]/10 blur-sm scale-150"
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 1 }}
-                                                        />
-                                                    )}
-                                                </div>
-
-                                                {/* Label */}
-                                                <span className={`text-[10px] md:text-[11px] font-bold uppercase tracking-[0.1em] transition-colors duration-300 ${
+                                            <div className="relative z-10 flex items-center gap-2 py-2.5 px-5 md:py-3 md:px-6">
+                                                {/* Label with hover color change */}
+                                                <span className={`text-xs md:text-sm font-semibold tracking-wide transition-colors duration-200 whitespace-nowrap ${
                                                     isSelected
-                                                        ? 'text-[#1a1a1a]'
-                                                        : 'text-gray-300'
+                                                        ? 'text-black'
+                                                        : 'text-gray-400 group-hover:text-[#F6B45A] group-active:text-black'
                                                 }`}>
                                                     {ft.label}
                                                 </span>
 
-                                                {/* Sub-options badge */}
+                                                {/* Sub-options indicator */}
                                                 {hasSubOpts && (
-                                                    <motion.div
-                                                        className={`mt-1.5 px-2 py-0.5 rounded-full text-[8px] font-medium max-w-full truncate ${
-                                                            isSelected
-                                                                ? 'bg-[#1a1a1a]/15 text-[#1a1a1a]/80'
-                                                                : 'bg-white/5 text-gray-500'
-                                                        }`}
-                                                        initial={{ opacity: 0, y: -5 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                    >
-                                                        {subOpts.map(id => getSubLabel(id)).filter(Boolean).join(', ')}
-                                                    </motion.div>
+                                                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-colors duration-200 ${
+                                                        isSelected
+                                                            ? 'bg-black/15 text-black/70'
+                                                            : 'bg-white/10 text-gray-500 group-hover:bg-[#F6B45A]/20 group-hover:text-[#F6B45A]'
+                                                    }`}>
+                                                        +{subOpts.length}
+                                                    </span>
                                                 )}
 
-                                                {/* Checkmark indicator */}
+                                                {/* Checkmark when selected */}
                                                 <AnimatePresence>
                                                     {isSelected && (
                                                         <motion.div
-                                                            className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#1a1a1a]/20 flex items-center justify-center"
                                                             initial={{ scale: 0, opacity: 0 }}
                                                             animate={{ scale: 1, opacity: 1 }}
                                                             exit={{ scale: 0, opacity: 0 }}
                                                             transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                                         >
-                                                            <Check className="w-2.5 h-2.5 text-[#1a1a1a]" strokeWidth={3} />
+                                                            <Check className="w-4 h-4 text-black" strokeWidth={2.5} />
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
                                             </div>
-
-                                            {/* Shine effect when selected */}
-                                            {isSelected && (
-                                                <motion.div
-                                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg] pointer-events-none"
-                                                    initial={{ x: '-100%' }}
-                                                    animate={{ x: '200%' }}
-                                                    transition={{
-                                                        repeat: Infinity,
-                                                        repeatDelay: 4,
-                                                        duration: 0.8,
-                                                        ease: "easeInOut"
-                                                    }}
-                                                />
-                                            )}
                                         </motion.button>
                                     );
                                 })}
@@ -1894,38 +1920,39 @@ Notes: ${invoice.notes || 'N/A'}
                         </div>
 
                         {/* Premium Custom Notes Input */}
-                        <div className="relative mt-4">
+                        <div className="relative mt-2">
                             {/* Section Header */}
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-white/10 to-white/5 border border-white/10">
-                                    <Settings2 className="w-4 h-4 text-gray-400" />
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10">
+                                        <Settings2 className="w-4 h-4 text-gray-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-white tracking-tight">Additional Notes</h3>
+                                        <p className="text-xs text-gray-500">Add specific instructions</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-white">Custom Notes</h3>
-                                    <p className="text-[10px] text-gray-500">Add specific instructions (optional)</p>
-                                </div>
+                                <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wider">Optional</span>
                             </div>
 
                             {/* Textarea Container */}
                             <div className="relative group">
                                 {/* Gradient border effect on focus */}
-                                <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-[#F6B45A]/0 via-[#F6B45A]/0 to-[#F6B45A]/0 group-focus-within:from-[#F6B45A]/50 group-focus-within:via-[#F6B45A]/30 group-focus-within:to-[#F6B45A]/50 transition-all duration-500 blur-[1px]" />
+                                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-[#F6B45A]/0 via-[#F6B45A]/0 to-[#F6B45A]/0 group-focus-within:from-[#F6B45A]/40 group-focus-within:via-[#F6B45A]/20 group-focus-within:to-[#F6B45A]/40 transition-all duration-500 blur-[2px]" />
 
-                                <div className="relative bg-gradient-to-b from-white/[0.04] to-black/40 rounded-xl border border-white/10 group-focus-within:border-[#F6B45A]/30 transition-all duration-300 overflow-hidden">
+                                <div className="relative bg-gradient-to-b from-white/[0.03] to-black/30 rounded-2xl border border-white/10 group-focus-within:border-[#F6B45A]/30 transition-all duration-300 overflow-hidden shadow-lg shadow-black/20">
                                     <textarea
-                                        className="w-full h-20 bg-transparent p-4 text-sm text-gray-200 placeholder-gray-500 focus:outline-none resize-none"
-                                        placeholder="e.g., '10 Up lights on siding, 3 Gutter lights, 6 Path lights along walkway...'"
+                                        className="w-full h-24 md:h-28 bg-transparent p-4 md:p-5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none resize-none"
+                                        placeholder="Focus lighting on the oak tree...&#10;Highlight the pathway to the garage...&#10;Add accent lights to the water feature..."
                                         value={prompt}
                                         onChange={(e) => setPrompt(e.target.value)}
+                                        maxLength={500}
                                     />
 
                                     {/* Bottom bar with character count */}
-                                    <div className="flex items-center justify-between px-4 py-2 border-t border-white/5 bg-black/20">
-                                        <span className="text-[9px] text-gray-600 font-mono uppercase tracking-widest">
-                                            Optional Details
-                                        </span>
-                                        <span className={`text-[9px] font-mono transition-colors ${
-                                            prompt.length > 200 ? 'text-[#F6B45A]' : 'text-gray-600'
+                                    <div className="flex items-center justify-end px-4 py-2.5 border-t border-white/5 bg-black/20">
+                                        <span className={`text-[10px] font-medium transition-colors ${
+                                            prompt.length > 400 ? 'text-[#F6B45A]' : prompt.length > 0 ? 'text-gray-400' : 'text-gray-600'
                                         }`}>
                                             {prompt.length}/500
                                         </span>
@@ -1955,46 +1982,46 @@ Notes: ${invoice.notes || 'N/A'}
                         <motion.button
                             onClick={handleGenerate}
                             disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
-                            className="relative w-full overflow-hidden rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group"
-                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.01, y: -2 } : {}}
+                            className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2"
+                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.01, y: -3 } : {}}
                             whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.98 } : {}}
                         >
                             {/* Background gradient */}
                             <div className="absolute inset-0 bg-gradient-to-r from-[#F6B45A] via-[#ffc67a] to-[#F6B45A] bg-[length:200%_100%] group-hover:animate-gradient-x" />
 
                             {/* Inner glow */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/25" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/30" />
 
-                            {/* Outer glow on hover */}
-                            <div className="absolute -inset-1 bg-[#F6B45A]/0 group-hover:bg-[#F6B45A]/30 blur-xl transition-all duration-500 pointer-events-none" />
+                            {/* Outer glow */}
+                            <div className="absolute -inset-1 bg-[#F6B45A]/20 group-hover:bg-[#F6B45A]/40 blur-xl transition-all duration-500 pointer-events-none" />
 
                             {/* Content */}
-                            <div className="relative z-10 flex items-center justify-center gap-3 py-4 md:py-5">
+                            <div className="relative z-10 flex items-center justify-center gap-3 py-5 md:py-6">
                                 <motion.div
                                     animate={isLoading ? { rotate: 360 } : { rotate: 0 }}
                                     transition={isLoading ? { repeat: Infinity, duration: 1, ease: "linear" } : {}}
                                 >
                                     {isLoading ? (
-                                        <Loader2 className="w-5 h-5 text-[#111]" />
+                                        <Loader2 className="w-5 h-5 md:w-6 md:h-6 text-[#111]" />
                                     ) : (
-                                        <Wand2 className="w-5 h-5 text-[#111] group-hover:rotate-12 transition-transform duration-300" />
+                                        <Wand2 className="w-5 h-5 md:w-6 md:h-6 text-[#111] group-hover:rotate-12 transition-transform duration-300" />
                                     )}
                                 </motion.div>
-                                <span className="text-[#111] font-black text-sm uppercase tracking-[0.2em]">
-                                    {isLoading ? 'Generating...' : 'Generate Scene'}
+                                <span className="text-[#111] font-bold text-sm md:text-base tracking-wide">
+                                    {isLoading ? 'Creating your vision...' : 'Generate Lighting Scene'}
                                 </span>
                             </div>
 
                             {/* Shine sweep effect */}
                             <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] pointer-events-none opacity-0 group-hover:opacity-100"
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] pointer-events-none opacity-0 group-hover:opacity-100"
                                 initial={{ x: '-100%' }}
                                 whileHover={{ x: '200%' }}
-                                transition={{ duration: 0.6, ease: "easeInOut" }}
+                                transition={{ duration: 0.7, ease: "easeInOut" }}
                             />
 
                             {/* Border highlight */}
-                            <div className="absolute inset-0 rounded-xl border border-white/20 pointer-events-none" />
+                            <div className="absolute inset-0 rounded-2xl border border-white/30 pointer-events-none" />
                         </motion.button>
                     </div>
                 </div>
