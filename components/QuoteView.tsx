@@ -1,29 +1,36 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, DollarSign, Receipt, Building2, Hash } from 'lucide-react';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, DollarSign, Receipt, Building2, Hash, Pencil, Upload } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
+import { uploadImage } from '../services/uploadService';
 
 interface QuoteViewProps {
     onSave: (data: QuoteData) => void;
     onGenerateBOM?: (data: QuoteData) => void;
+    onClose?: () => void;
+    onEditDesign?: () => void;
     initialData?: QuoteData | null;
     companyProfile?: CompanyProfile;
     defaultPricing?: FixturePricing[];
     containerId?: string;
     hideToolbar?: boolean;
     projectImage?: string | null;
+    userId?: string;
 }
 
 export const QuoteView: React.FC<QuoteViewProps> = ({
     onSave,
     onGenerateBOM,
+    onClose,
+    onEditDesign,
     initialData,
     companyProfile = { name: 'Omnia Light Scape Pro', email: '', address: '123 Landscape Lane\nDesign District, CA 90210', logo: null },
     defaultPricing = DEFAULT_PRICING,
     containerId = "quote-content",
     hideToolbar = false,
-    projectImage = null
+    projectImage = null,
+    userId
 }) => {
   // Helper to find pricing by type
   const getPrice = (type: string) => defaultPricing.find(p => p.fixtureType === type) || DEFAULT_PRICING.find(p => p.fixtureType === type)!;
@@ -176,6 +183,26 @@ ${customMessage ? `\n${customMessage}\n` : ''}
     setEmailSent(false);
 
     try {
+      // Prepare image URL - upload if it's a base64 data URL
+      let imageUrl: string | undefined;
+
+      if (projectImage) {
+        if (projectImage.startsWith('http')) {
+          // Already a URL, use directly
+          imageUrl = projectImage;
+        } else if (projectImage.startsWith('data:') && userId) {
+          // It's a base64 data URL - upload it first so it can be included in the email
+          try {
+            console.log('Uploading image for email...');
+            imageUrl = await uploadImage(projectImage, userId);
+            console.log('Image uploaded for email:', imageUrl);
+          } catch (uploadErr) {
+            console.warn('Failed to upload image for email, sending without image:', uploadErr);
+            // Continue without image rather than failing the whole email
+          }
+        }
+      }
+
       const response = await fetch('/api/send-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,8 +226,7 @@ ${customMessage ? `\n${customMessage}\n` : ''}
           taxAmount: tax,
           discount,
           total,
-          // Only include image if it's a valid HTTP(S) URL (not a base64 data URL)
-          projectImageUrl: projectImage && projectImage.startsWith('http') ? projectImage : undefined,
+          projectImageUrl: imageUrl,
           customMessage: customMessage || undefined
         })
       });
@@ -290,6 +316,20 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                             />
                         </motion.button>
 
+                        {/* Edit Design Button */}
+                        {onEditDesign && (
+                            <motion.button
+                                onClick={onEditDesign}
+                                className="bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-white/10 hover:border-white/20 transition-all"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                title="Edit design in Editor"
+                            >
+                                <Pencil className="w-4 h-4" />
+                                Edit Design
+                            </motion.button>
+                        )}
+
                         {/* BOM Button */}
                         {onGenerateBOM && (
                             <motion.button
@@ -333,6 +373,22 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                             )}
                             {isGeneratingPdf ? 'Generating...' : 'PDF'}
                         </motion.button>
+
+                        {/* Close Button - Go back to drafts */}
+                        {onClose && (
+                            <>
+                                <div className="w-px h-8 bg-white/10 mx-1"></div>
+                                <motion.button
+                                    onClick={onClose}
+                                    className="text-gray-400 hover:text-white bg-white/5 hover:bg-red-500/20 p-2.5 rounded-xl transition-all border border-white/10 hover:border-red-500/30"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    title="Close and go back to drafts"
+                                >
+                                    <X className="w-5 h-5" />
+                                </motion.button>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -344,10 +400,21 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
                         whileTap={{ scale: 0.98 }}
                     >
-                        <FileText className="w-3.5 h-3.5" />
                         <Save className="w-3.5 h-3.5" />
                         Save
                     </motion.button>
+
+                    {/* Edit Design Button */}
+                    {onEditDesign && (
+                        <motion.button
+                            onClick={onEditDesign}
+                            className="bg-white/5 text-white px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10"
+                            whileTap={{ scale: 0.98 }}
+                            title="Edit Design"
+                        >
+                            <Pencil className="w-3.5 h-3.5" />
+                        </motion.button>
+                    )}
 
                     {/* BOM Button */}
                     {onGenerateBOM && (
@@ -383,6 +450,18 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                             <Download className="w-3.5 h-3.5" />
                         )}
                     </motion.button>
+
+                    {/* Close Button - Go back to drafts */}
+                    {onClose && (
+                        <motion.button
+                            onClick={onClose}
+                            className="text-gray-400 bg-white/5 p-2.5 rounded-xl border border-white/10 hover:bg-red-500/20 hover:border-red-500/30"
+                            whileTap={{ scale: 0.95 }}
+                            title="Close"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </motion.button>
+                    )}
                 </div>
             </motion.div>
         )}

@@ -24,7 +24,7 @@ import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, Sun, Settings2, Mail } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem, ProjectImage } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -212,6 +212,9 @@ const App: React.FC = () => {
   const [feedbackText, setFeedbackText] = useState<string>('');
   const [isLiked, setIsLiked] = useState<boolean>(false);
 
+  // AI Preference Learning State
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+
   // Project State (projects loaded from useProjects hook above)
   const [currentQuote, setCurrentQuote] = useState<QuoteData | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null); // Track which project is being edited
@@ -370,6 +373,71 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('omnia_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Fetch user preferences for AI personalization on mount
+  useEffect(() => {
+    const fetchUserPreferences = async () => {
+      if (!user?.id) return;
+      try {
+        const response = await fetch(`/api/feedback?userId=${user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.preferences) {
+            setUserPreferences(data.preferences);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch user preferences', e);
+      }
+    };
+    fetchUserPreferences();
+  }, [user?.id]);
+
+  // Helper function to save feedback to the API
+  const saveFeedback = async (
+    rating: 'liked' | 'disliked' | 'saved',
+    feedbackTextInput?: string,
+    projectId?: string
+  ) => {
+    if (!user?.id) return;
+
+    const settingsSnapshot: SettingsSnapshot = {
+      selectedFixtures,
+      fixtureSubOptions,
+      colorTemperature: colorTemp,
+      lightIntensity,
+      beamAngle,
+      userPrompt: prompt
+    };
+
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          projectId,
+          rating,
+          feedbackText: feedbackTextInput,
+          settingsSnapshot,
+          generatedImageUrl: generatedImage
+        })
+      });
+
+      if (response.ok) {
+        // Refresh preferences after feedback is saved
+        const prefsResponse = await fetch(`/api/feedback?userId=${user.id}`);
+        if (prefsResponse.ok) {
+          const data = await prefsResponse.json();
+          if (data.preferences) {
+            setUserPreferences(data.preferences);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to save feedback', e);
+    }
+  };
 
   // Status messages for loading screen - first 5 at 8s, last one at 30s
   const statusMessages = [
@@ -877,7 +945,7 @@ const App: React.FC = () => {
 
     try {
       const base64 = await fileToBase64(file);
-      let result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt);
+      let result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt, userPreferences);
 
       setGeneratedImage(result);
 
@@ -929,6 +997,9 @@ const App: React.FC = () => {
     }
     lastGenerateTime.current = now;
 
+    // Save negative feedback for AI learning (before regenerating)
+    saveFeedback('disliked', feedbackText);
+
     setIsLoading(true);
     setError(null);
 
@@ -941,7 +1012,7 @@ const App: React.FC = () => {
         // Construct a refinement prompt
         const refinementPrompt = `${lastUsedPrompt}\n\nCRITICAL MODIFICATION REQUEST: ${feedbackText}\n\nRe-generate the night scene keeping the original design but applying the modification request.`;
 
-        let result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt);
+        let result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt, userPreferences);
 
         setGeneratedImage(result);
 
@@ -1139,6 +1210,8 @@ const App: React.FC = () => {
         // Track this project ID so subsequent quote saves update it instead of creating duplicates
         setCurrentProjectId(result.id);
         setCurrentQuote(quoteData);
+        // Save positive feedback for AI learning (saved project = liked design)
+        saveFeedback('saved', undefined, result.id);
         handleTabChange('projects');
         showToast('success', 'Project saved successfully!');
       } else {
@@ -1927,10 +2000,14 @@ Notes: ${invoice.notes || 'N/A'}
 
                         <div className="flex items-center gap-3 bg-black/80 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-2xl">
                             
-                            <button 
+                            <button
                                 onClick={() => {
                                     setIsLiked(!isLiked);
-                                    if (!isLiked) handleDownload();
+                                    if (!isLiked) {
+                                        handleDownload();
+                                        // Save positive feedback for AI learning
+                                        saveFeedback('liked');
+                                    }
                                 }}
                                 className={`p-3 rounded-full transition-all duration-200 ${isLiked ? 'bg-[#F6B45A] text-[#111]' : 'hover:bg-white/10 text-white'}`}
                                 title="Like & Download"
@@ -3374,10 +3451,13 @@ Notes: ${invoice.notes || 'N/A'}
                      <QuoteView
                         onSave={handleSaveProjectFromQuote}
                         onGenerateBOM={handleGenerateBOM}
+                        onClose={() => setProjectsSubTab('projects')}
+                        onEditDesign={() => handleTabChange('editor')}
                         initialData={currentQuote}
                         companyProfile={companyProfile}
                         defaultPricing={pricing}
                         projectImage={generatedImage}
+                        userId={user?.id}
                      />
                  )}
 

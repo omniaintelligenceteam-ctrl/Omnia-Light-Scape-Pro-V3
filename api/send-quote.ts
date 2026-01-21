@@ -74,9 +74,17 @@ function generateQuoteHtml(data: QuoteEmailRequest): string {
       ` : ''}
 
       ${data.projectImageUrl ? `
-      <!-- Project Image -->
-      <div style="margin: 24px 0; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
-        <img src="${data.projectImageUrl}" alt="Lighting Design Preview" style="width: 100%; display: block;">
+      <!-- Project Image - Clickable to expand -->
+      <div style="margin: 24px 0;">
+        <p style="margin: 0 0 12px; color: #374151; font-size: 14px; font-weight: 600;">Your Lighting Design Preview:</p>
+        <a href="${data.projectImageUrl}" target="_blank" rel="noopener noreferrer" style="display: block; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: transform 0.2s;">
+          <img src="${data.projectImageUrl}" alt="Lighting Design Preview" style="width: 100%; display: block;">
+        </a>
+        <p style="margin: 8px 0 0; text-align: center;">
+          <a href="${data.projectImageUrl}" target="_blank" rel="noopener noreferrer" style="color: #F6B45A; font-size: 13px; text-decoration: none; font-weight: 500;">
+            🔍 Click image or here to view full size
+          </a>
+        </p>
       </div>
       ` : ''}
 
@@ -168,8 +176,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const html = generateQuoteHtml(data);
 
-    // Determine from address - use Resend test domain or your verified domain
-    const fromAddress = process.env.RESEND_FROM_EMAIL || 'Omnia LightScape <onboarding@resend.dev>';
+    // Use verified custom domain
+    const fromAddress = 'Omnia LightScape <quotes@omnialightscapepro.com>';
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: fromAddress,

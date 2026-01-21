@@ -199,3 +199,40 @@ export interface CalendarEvent {
   color?: string;            // Custom color for the event
   createdAt: string;
 }
+
+// === USER PREFERENCES TYPES (AI Learning) ===
+export interface UserPreferences {
+  id: string;
+  user_id: string;
+  preferred_fixture_ratio: Record<string, number>;
+  preferred_color_temp: string;
+  preferred_intensity_range: { min: number; max: number };
+  preferred_beam_angle_range: { min: number; max: number };
+  style_keywords: string[];
+  avoid_keywords: string[];
+  total_liked: number;
+  total_disliked: number;
+  total_saved: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SettingsSnapshot {
+  selectedFixtures?: string[];
+  fixtureSubOptions?: Record<string, string[]>;
+  colorTemperature?: string;
+  lightIntensity?: number;
+  beamAngle?: number;
+  userPrompt?: string;
+}
+
+export interface GenerationFeedback {
+  id: string;
+  user_id: string;
+  project_id?: string;
+  rating: 'liked' | 'disliked' | 'saved';
+  feedback_text?: string;
+  settings_snapshot: SettingsSnapshot;
+  generated_image_url?: string;
+  created_at: string;
+}

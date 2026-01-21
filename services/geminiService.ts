@@ -1,5 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
+import type { UserPreferences } from "../types";
 
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
 const MODEL_NAME = 'gemini-3-pro-image-preview';
@@ -19,6 +20,55 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): 
   ]);
 }
 
+/**
+ * Builds a preference context section for the AI prompt
+ * This helps the AI maintain consistency with the user's preferred style
+ * while still generating unique designs for each property
+ */
+function buildPreferenceContext(preferences: UserPreferences | null | undefined): string {
+  if (!preferences) return '';
+
+  const contextLines: string[] = [];
+
+  // Only include context if user has meaningful feedback history
+  const totalFeedback = (preferences.total_liked || 0) + (preferences.total_saved || 0);
+  if (totalFeedback < 2) return ''; // Need at least 2 positive signals before applying preferences
+
+  contextLines.push(`
+    # USER PREFERENCE CONTEXT
+    Apply these learned preferences while keeping each design UNIQUE to this specific property:`);
+
+  // Style preferences from liked/saved designs
+  if (preferences.style_keywords && preferences.style_keywords.length > 0) {
+    contextLines.push(`    - Design Style: ${preferences.style_keywords.join(', ')}`);
+  }
+
+  // Things to avoid from negative feedback
+  if (preferences.avoid_keywords && preferences.avoid_keywords.length > 0) {
+    contextLines.push(`    - AVOID: ${preferences.avoid_keywords.join(', ')}`);
+  }
+
+  // Color temperature preference
+  if (preferences.preferred_color_temp) {
+    contextLines.push(`    - Color Temperature Preference: ${preferences.preferred_color_temp}`);
+  }
+
+  // Intensity preference range
+  if (preferences.preferred_intensity_range) {
+    const range = preferences.preferred_intensity_range;
+    if (range.min !== undefined && range.max !== undefined) {
+      contextLines.push(`    - Intensity Preference: ${range.min}% - ${range.max}%`);
+    }
+  }
+
+  contextLines.push(`
+    IMPORTANT: Use these preferences as STYLE GUIDANCE only. Each property is unique -
+    the preferences inform your approach and aesthetic, NOT exact fixture placement.
+`);
+
+  return contextLines.join('\n');
+}
+
 export const generateNightScene = async (
   imageBase64: string,
   userInstructions: string,
@@ -26,7 +76,8 @@ export const generateNightScene = async (
   aspectRatio: string = '1:1',
   lightIntensity: number = 45,
   beamAngle: number = 30,
-  colorTemperaturePrompt: string = "Use Soft White (3000K) for all lights."
+  colorTemperaturePrompt: string = "Use Soft White (3000K) for all lights.",
+  userPreferences?: UserPreferences | null
 ): Promise<string> => {
   
   // Initialization: The API key is obtained from environment variable
@@ -46,10 +97,14 @@ export const generateNightScene = async (
     return "Beam Angle: 45 DEGREES (FLOOD). Standard spread.";
   };
 
+  // Build user preference context (if available)
+  const preferenceContext = buildPreferenceContext(userPreferences);
+
   // Simplified prompt structure to avoid adversarial trigger patterns while maintaining instruction density.
   const systemPrompt = `
     You are a professional Architectural Lighting Designer and Photo Retoucher.
     Task: Transform the provided daylight photograph into a realistic, high-end night-time landscape lighting scene.
+${preferenceContext}
 
     # STEP 0: FRAMING & COMPOSITION PRESERVATION (CRITICAL)
     - The output image must have the EXACT SAME framing and composition as the source image
