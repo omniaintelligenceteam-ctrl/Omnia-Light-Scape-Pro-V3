@@ -141,7 +141,7 @@ const App: React.FC = () => {
   const subscription = useSubscription();
 
   // Load/save projects from Supabase
-  const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProjectStatus } = useProjects();
+  const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProject, updateProjectStatus } = useProjects();
 
   // Rate limiting for generate button (prevent double-clicks)
   const lastGenerateTime = useRef<number>(0);
@@ -195,6 +195,7 @@ const App: React.FC = () => {
 
   // Project State (projects loaded from useProjects hook above)
   const [currentQuote, setCurrentQuote] = useState<QuoteData | null>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null); // Track which project is being edited
   const [searchTerm, setSearchTerm] = useState('');
 
   // PDF Generation State for Projects Tab
@@ -417,6 +418,8 @@ const App: React.FC = () => {
     setShowFeedback(false);
     setFeedbackText('');
     setIsLiked(false);
+    setCurrentProjectId(null); // Clear project ID for fresh start
+    setCurrentQuote(null);
     setIsFullScreen(false);
   };
 
@@ -973,6 +976,9 @@ const App: React.FC = () => {
       const quoteData = generateQuoteFromSelections();
       const result = await saveProject(projectName, generatedImage, quoteData);
       if (result) {
+        // Track this project ID so subsequent quote saves update it instead of creating duplicates
+        setCurrentProjectId(result.id);
+        setCurrentQuote(quoteData);
         setActiveTab('projects');
         showToast('success', 'Project saved successfully!');
       } else {
@@ -982,14 +988,31 @@ const App: React.FC = () => {
   };
 
   const handleSaveProjectFromQuote = async (quoteData: QuoteData) => {
-      const projectName = quoteData.clientDetails.name || `Quote ${projects.length + 1}`;
-      const result = await saveProject(projectName, generatedImage || '', quoteData);
-      if (result) {
-        setActiveTab('projects');
-        showToast('success', 'Quote saved to project!');
+      // If we have a current project ID, update that project instead of creating a new one
+      if (currentProjectId) {
+        const success = await updateProject(currentProjectId, {
+          quote: quoteData,
+          name: quoteData.clientDetails.name || undefined
+        });
+        if (success) {
+          setCurrentQuote(quoteData);
+          showToast('success', 'Quote updated!');
+        } else {
+          setError('Failed to update quote. Please try again.');
+          showToast('error', 'Failed to update quote');
+        }
       } else {
-        setError('Failed to save project. Please try again.');
-        showToast('error', 'Failed to save project');
+        // No existing project - create a new one (shouldn't happen in normal flow)
+        const projectName = quoteData.clientDetails.name || `Quote ${projects.length + 1}`;
+        const result = await saveProject(projectName, generatedImage || '', quoteData);
+        if (result) {
+          setCurrentProjectId(result.id);
+          setActiveTab('projects');
+          showToast('success', 'Quote saved to project!');
+        } else {
+          setError('Failed to save project. Please try again.');
+          showToast('error', 'Failed to save project');
+        }
       }
   };
 
@@ -2108,7 +2131,7 @@ Notes: ${invoice.notes || 'N/A'}
                                         </div>
                                         <div className="flex items-center border-t border-white/5 divide-x divide-white/5">
                                             <button onClick={() => handleDownloadImage(p)} disabled={!p.image} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-gray-400 active:text-white active:bg-white/5 flex items-center justify-center gap-1.5 disabled:opacity-30"><ImageIcon className="w-3.5 h-3.5" />Save</button>
-                                            <button onClick={() => { if (p.image) setGeneratedImage(p.image); if (p.quote) setCurrentQuote(p.quote); else setCurrentQuote(null); setProjectsSubTab('quotes'); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-purple-400 active:text-purple-300 active:bg-purple-500/10 flex items-center justify-center gap-1.5"><FileText className="w-3.5 h-3.5" />Quote</button>
+                                            <button onClick={() => { setCurrentProjectId(p.id); if (p.image) setGeneratedImage(p.image); if (p.quote) setCurrentQuote(p.quote); else setCurrentQuote(null); setProjectsSubTab('quotes'); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-purple-400 active:text-purple-300 active:bg-purple-500/10 flex items-center justify-center gap-1.5"><FileText className="w-3.5 h-3.5" />Quote</button>
                                             <button onClick={() => handleApproveProject(p.id)} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-emerald-500 active:text-emerald-400 active:bg-emerald-500/10 flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />Approve</button>
                                         </div>
                                     </motion.div>
@@ -2224,6 +2247,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                 <div
                                                     onClick={() => {
                                                         if (p.quote) {
+                                                            setCurrentProjectId(p.id);
                                                             setCurrentQuote(p.quote);
                                                             if (p.image) setGeneratedImage(p.image);
                                                             setProjectsSubTab('quotes');
@@ -2256,6 +2280,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                 {/* Add/Edit Quote Button */}
                                                 <button
                                                     onClick={() => {
+                                                        setCurrentProjectId(p.id);
                                                         if (p.image) setGeneratedImage(p.image);
                                                         if (p.quote) {
                                                             setCurrentQuote(p.quote);
