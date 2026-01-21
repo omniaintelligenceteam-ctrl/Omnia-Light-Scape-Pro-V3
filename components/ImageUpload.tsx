@@ -138,7 +138,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       </AnimatePresence>
 
       {/* Main drop zone */}
-      <div className={`relative aspect-[16/10] md:aspect-[16/9] rounded-2xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
+      <div className={`relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] rounded-2xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
         isDragging
           ? 'border-[#F6B45A] bg-[#F6B45A]/5'
           : 'border-white/10 hover:border-white/20 bg-gradient-to-b from-white/[0.02] to-black/20'
@@ -171,67 +171,67 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         />
 
         {/* Content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-6">
 
           {/* Icon */}
           <motion.div
-            className={`relative mb-6 transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
+            className={`relative mb-4 sm:mb-6 transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
             animate={isDragging ? { y: [0, -8, 0] } : {}}
             transition={{ repeat: isDragging ? Infinity : 0, duration: 1.5 }}
           >
-            <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+            <div className={`w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
               isDragging
                 ? 'bg-[#F6B45A]/20 border-[#F6B45A]/30'
                 : 'bg-white/[0.03] border-white/5'
             } border`}>
-              <ImageIcon className={`w-8 h-8 md:w-10 md:h-10 transition-colors duration-300 ${
-                isDragging ? 'text-[#F6B45A]' : 'text-gray-500'
+              <ImageIcon className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 transition-colors duration-300 ${
+                isDragging ? 'text-[#F6B45A]' : 'text-gray-400'
               }`} />
             </div>
 
-            {/* Decorative ring */}
-            <div className={`absolute -inset-2 rounded-3xl border transition-all duration-300 ${
+            {/* Decorative ring - hidden on small mobile */}
+            <div className={`hidden sm:block absolute -inset-2 rounded-3xl border transition-all duration-300 ${
               isDragging ? 'border-[#F6B45A]/30' : 'border-white/5'
             }`} />
           </motion.div>
 
           {/* Text */}
-          <div className="text-center mb-6">
-            <h3 className={`text-base md:text-lg font-semibold mb-1 transition-colors duration-300 ${
+          <div className="text-center mb-4 sm:mb-6">
+            <h3 className={`text-sm sm:text-base md:text-lg font-semibold mb-1 transition-colors duration-300 ${
               isDragging ? 'text-[#F6B45A]' : 'text-white'
             }`}>
               {isDragging ? 'Drop to upload' : 'Drop your photo here'}
             </h3>
-            <p className="text-xs md:text-sm text-gray-500">
+            <p className="text-[11px] sm:text-xs md:text-sm text-gray-400">
               or choose an option below
             </p>
           </div>
 
           {/* Buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-sm">
+          <div className="flex flex-row items-center gap-2 sm:gap-3 w-full max-w-xs sm:max-w-sm px-2 sm:px-0">
             <motion.button
               onClick={() => cameraInputRef.current?.click()}
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 bg-[#F6B45A] hover:bg-[#ffc67a] text-black rounded-xl font-semibold text-sm transition-all shadow-lg shadow-[#F6B45A]/20"
+              className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-3.5 bg-[#F6B45A] hover:bg-[#ffc67a] text-black rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-lg shadow-[#F6B45A]/20"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
             >
               <Camera className="w-4 h-4" />
-              Take Photo
+              <span className="whitespace-nowrap">Take Photo</span>
             </motion.button>
 
             <motion.button
               onClick={() => galleryInputRef.current?.click()}
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white rounded-xl font-semibold text-sm transition-all"
+              className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white rounded-xl font-semibold text-xs sm:text-sm transition-all"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
             >
               <Upload className="w-4 h-4" />
-              Browse Files
+              <span className="whitespace-nowrap">Browse Files</span>
             </motion.button>
           </div>
 
           {/* Helper text */}
-          <p className="mt-6 text-[10px] md:text-xs text-gray-600 text-center">
+          <p className="mt-4 sm:mt-6 text-[9px] sm:text-[10px] md:text-xs text-gray-400 text-center px-2">
             Supports JPG, PNG, HEIC  •  Max 10MB  •  Best at 1920×1080+
           </p>
         </div>

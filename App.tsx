@@ -23,9 +23,9 @@ import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { applyWatermark, shouldApplyWatermark } from './utils/watermark';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, Sun, Settings2 } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, Sun, Settings2 } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem, ProjectImage } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -143,7 +143,7 @@ const App: React.FC = () => {
   const subscription = useSubscription();
 
   // Load/save projects from Supabase
-  const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject } = useProjects();
+  const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject } = useProjects();
 
   // Rate limiting for generate button (prevent double-clicks)
   const lastGenerateTime = useRef<number>(0);
@@ -221,6 +221,15 @@ const App: React.FC = () => {
   const [showMobileProjectsMenu, setShowMobileProjectsMenu] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [currentInvoice, setCurrentInvoice] = useState<InvoiceData | null>(null);
+
+  // Multi-Image Project State
+  const [projectImageIndex, setProjectImageIndex] = useState<Record<string, number>>({});
+  const [showAddImageModal, setShowAddImageModal] = useState(false);
+  const [addImageProjectId, setAddImageProjectId] = useState<string | null>(null);
+  const [addImageFile, setAddImageFile] = useState<File | null>(null);
+  const [addImagePreview, setAddImagePreview] = useState<string | null>(null);
+  const [addImageLabel, setAddImageLabel] = useState('');
+  const [isAddingImage, setIsAddingImage] = useState(false);
 
   // Schedule Modal State
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -936,6 +945,62 @@ const App: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Helper: Get all images for a project (primary + additional images)
+  const getProjectImages = (project: SavedProject): { url: string; label: string }[] => {
+    const images: { url: string; label: string }[] = [];
+    if (project.image) {
+      images.push({ url: project.image, label: 'Primary' });
+    }
+    if (project.images && project.images.length > 0) {
+      project.images.forEach(img => {
+        if (img.url !== project.image) {
+          images.push({ url: img.url, label: img.label || 'View' });
+        }
+      });
+    }
+    return images;
+  };
+
+  // Handler: Open add image modal
+  const handleOpenAddImageModal = (projectId: string) => {
+    setAddImageProjectId(projectId);
+    setAddImageFile(null);
+    setAddImagePreview(null);
+    setAddImageLabel('');
+    setShowAddImageModal(true);
+  };
+
+  // Handler: Add image file selection
+  const handleAddImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAddImageFile(file);
+      const preview = await getPreviewUrl(file);
+      setAddImagePreview(preview);
+    }
+  };
+
+  // Handler: Submit new image to project
+  const handleSubmitAddImage = async () => {
+    if (!addImageProjectId || !addImageFile) return;
+    setIsAddingImage(true);
+    try {
+      const base64 = await fileToBase64(addImageFile);
+      const success = await addImageToProject(addImageProjectId, base64, addImageLabel || undefined);
+      if (success) {
+        showToast('Image added to project', 'success');
+        setShowAddImageModal(false);
+      } else {
+        showToast('Failed to add image', 'error');
+      }
+    } catch (err) {
+      console.error('Error adding image:', err);
+      showToast('Failed to add image', 'error');
+    } finally {
+      setIsAddingImage(false);
+    }
   };
 
   // Helper function to generate quote data based on selected fixtures
@@ -1942,8 +2007,8 @@ Notes: ${invoice.notes || 'N/A'}
 
                                 <div className="relative bg-gradient-to-b from-white/[0.03] to-black/30 rounded-2xl border border-white/10 group-focus-within:border-[#F6B45A]/30 transition-all duration-300 overflow-hidden shadow-lg shadow-black/20">
                                     <textarea
-                                        className="w-full h-24 md:h-28 bg-transparent p-4 md:p-5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none resize-none"
-                                        placeholder="Focus lighting on the oak tree...&#10;Highlight the pathway to the garage...&#10;Add accent lights to the water feature..."
+                                        className="w-full h-14 md:h-16 bg-transparent p-4 md:p-5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none resize-none"
+                                        placeholder="Focus lighting on the oak tree, highlight the pathway..."
                                         value={prompt}
                                         onChange={(e) => setPrompt(e.target.value)}
                                         maxLength={500}
@@ -2287,7 +2352,7 @@ Notes: ${invoice.notes || 'N/A'}
                                    whileHover={{ scale: 1.02 }}
                                    whileTap={{ scale: 0.98 }}
                                    onClick={() => setActiveTab('editor')}
-                                   className="mt-6 px-5 py-2.5 bg-[#F6B45A]/10 border border-[#F6B45A]/30 rounded-xl text-[#F6B45A] text-sm font-bold hover:bg-[#F6B45A]/20 transition-colors"
+                                   className="mt-6 px-5 py-2.5 bg-[#F6B45A]/10 border border-[#F6B45A]/30 rounded-xl text-[#F6B45A] text-sm font-bold hover:bg-[#F6B45A]/20 transition-colors relative z-10"
                                  >
                                    Open Editor
                                  </motion.button>
@@ -2342,41 +2407,101 @@ Notes: ${invoice.notes || 'N/A'}
                                             {STATUS_CONFIG[p.status].label}
                                         </div>
 
-                                        {/* Image Section - Hero */}
-                                        <div className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}>
-                                            {p.image ? (
-                                                <>
-                                                    <img
-                                                        src={p.image}
-                                                        onClick={() => {
-                                                            setGeneratedImage(p.image);
-                                                            setActiveTab('editor');
-                                                        }}
-                                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                                                        alt="Scene"
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
+                                        {/* Image Section - Hero (Multi-Image Support) */}
+                                        {(() => {
+                                            const images = getProjectImages(p);
+                                            const currentIndex = projectImageIndex[p.id] || 0;
+                                            const currentImage = images[currentIndex];
+                                            return (
+                                                <div className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}>
+                                                    {currentImage ? (
+                                                        <>
+                                                            <img
+                                                                src={currentImage.url}
+                                                                onClick={() => {
+                                                                    setGeneratedImage(currentImage.url);
+                                                                    setActiveTab('editor');
+                                                                }}
+                                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                                                                alt={currentImage.label || 'Scene'}
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
 
-                                                    {/* Tech Corners */}
-                                                    <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                                    <div className="absolute top-2 right-2 w-3 h-3 border-r border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                                    <div className="absolute bottom-2 left-2 w-3 h-3 border-l border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
-                                                    <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                            {/* Tech Corners */}
+                                                            <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                            <div className="absolute top-2 right-2 w-3 h-3 border-r border-t border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                            <div className="absolute bottom-2 left-2 w-3 h-3 border-l border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
+                                                            <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-white/30 group-hover:border-[#F6B45A] transition-colors"></div>
 
-                                                    {/* Hover Action */}
-                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                                                        <div className="bg-[#F6B45A] text-black px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
-                                                            Load Scene
+                                                            {/* Multi-Image Navigation */}
+                                                            {images.length > 1 && (
+                                                                <>
+                                                                    {/* Left Arrow */}
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setProjectImageIndex(prev => ({
+                                                                                ...prev,
+                                                                                [p.id]: currentIndex === 0 ? images.length - 1 : currentIndex - 1
+                                                                            }));
+                                                                        }}
+                                                                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                                                    >
+                                                                        <ChevronLeft className="w-4 h-4 text-white" />
+                                                                    </button>
+                                                                    {/* Right Arrow */}
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setProjectImageIndex(prev => ({
+                                                                                ...prev,
+                                                                                [p.id]: currentIndex === images.length - 1 ? 0 : currentIndex + 1
+                                                                            }));
+                                                                        }}
+                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                                                    >
+                                                                        <ChevronRight className="w-4 h-4 text-white" />
+                                                                    </button>
+                                                                    {/* Dots Indicator */}
+                                                                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                                                                        {images.map((_, idx) => (
+                                                                            <button
+                                                                                key={idx}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setProjectImageIndex(prev => ({ ...prev, [p.id]: idx }));
+                                                                                }}
+                                                                                className={`w-2 h-2 rounded-full transition-all ${
+                                                                                    idx === currentIndex
+                                                                                        ? 'bg-[#F6B45A] scale-110'
+                                                                                        : 'bg-white/40 hover:bg-white/60'
+                                                                                }`}
+                                                                            />
+                                                                        ))}
+                                                                    </div>
+                                                                    {/* Image Label */}
+                                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/60 rounded-full text-[9px] text-white/80">
+                                                                        {currentImage.label || `View ${currentIndex + 1}`}
+                                                                    </div>
+                                                                </>
+                                                            )}
+
+                                                            {/* Hover Action */}
+                                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                                                <div className="bg-[#F6B45A] text-black px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                                                                    Load Scene
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
+                                                            <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
+                                                            <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
                                                         </div>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
-                                                    <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
-                                                    <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
+                                            );
+                                        })()}
 
                                         {/* Info Section */}
                                         <div className="p-5 flex flex-col flex-1 border-t border-white/5 bg-[#0a0a0a]">
@@ -2461,6 +2586,16 @@ Notes: ${invoice.notes || 'N/A'}
                                                     Save Img
                                                 </button>
 
+                                                {/* Add Image Button */}
+                                                <button
+                                                    onClick={() => handleOpenAddImageModal(p.id)}
+                                                    className="flex-1 bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 text-[#F6B45A] py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]/50"
+                                                    title="Add Another Image"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                    Add Img
+                                                </button>
+
                                                 {/* Add/Edit Quote Button */}
                                                 <button
                                                     onClick={() => {
@@ -2523,7 +2658,7 @@ Notes: ${invoice.notes || 'N/A'}
                                    whileHover={{ scale: 1.02 }}
                                    whileTap={{ scale: 0.98 }}
                                    onClick={() => setProjectsSubTab('projects')}
-                                   className="mt-6 px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-sm font-bold hover:bg-emerald-500/20 transition-colors"
+                                   className="mt-6 px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-sm font-bold hover:bg-emerald-500/20 transition-colors relative z-10"
                                  >
                                    View Projects
                                  </motion.button>
@@ -2541,28 +2676,88 @@ Notes: ${invoice.notes || 'N/A'}
                                             {STATUS_CONFIG[p.status].label}
                                         </div>
 
-                                        {/* Image Section */}
-                                        <div className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}>
-                                            {p.image ? (
-                                                <>
-                                                    <img
-                                                        src={p.image}
-                                                        onClick={() => {
-                                                            setGeneratedImage(p.image);
-                                                            setActiveTab('editor');
-                                                        }}
-                                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                                                        alt="Scene"
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
-                                                </>
-                                            ) : (
-                                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
-                                                    <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
-                                                    <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
+                                        {/* Image Section (Multi-Image Support) */}
+                                        {(() => {
+                                            const images = getProjectImages(p);
+                                            const currentIndex = projectImageIndex[p.id] || 0;
+                                            const currentImage = images[currentIndex];
+                                            return (
+                                                <div className={`relative aspect-[4/3] w-full overflow-hidden cursor-pointer bg-black`}>
+                                                    {currentImage ? (
+                                                        <>
+                                                            <img
+                                                                src={currentImage.url}
+                                                                onClick={() => {
+                                                                    setGeneratedImage(currentImage.url);
+                                                                    setActiveTab('editor');
+                                                                }}
+                                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                                                                alt={currentImage.label || 'Scene'}
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent opacity-90 pointer-events-none"></div>
+
+                                                            {/* Multi-Image Navigation */}
+                                                            {images.length > 1 && (
+                                                                <>
+                                                                    {/* Left Arrow */}
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setProjectImageIndex(prev => ({
+                                                                                ...prev,
+                                                                                [p.id]: currentIndex === 0 ? images.length - 1 : currentIndex - 1
+                                                                            }));
+                                                                        }}
+                                                                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                                                    >
+                                                                        <ChevronLeft className="w-4 h-4 text-white" />
+                                                                    </button>
+                                                                    {/* Right Arrow */}
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setProjectImageIndex(prev => ({
+                                                                                ...prev,
+                                                                                [p.id]: currentIndex === images.length - 1 ? 0 : currentIndex + 1
+                                                                            }));
+                                                                        }}
+                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                                                    >
+                                                                        <ChevronRight className="w-4 h-4 text-white" />
+                                                                    </button>
+                                                                    {/* Dots Indicator */}
+                                                                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                                                                        {images.map((_, idx) => (
+                                                                            <button
+                                                                                key={idx}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setProjectImageIndex(prev => ({ ...prev, [p.id]: idx }));
+                                                                                }}
+                                                                                className={`w-2 h-2 rounded-full transition-all ${
+                                                                                    idx === currentIndex
+                                                                                        ? 'bg-emerald-400 scale-110'
+                                                                                        : 'bg-white/40 hover:bg-white/60'
+                                                                                }`}
+                                                                            />
+                                                                        ))}
+                                                                    </div>
+                                                                    {/* Image Label */}
+                                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/60 rounded-full text-[9px] text-white/80">
+                                                                        {currentImage.label || `View ${currentIndex + 1}`}
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-[#0a0a0a]">
+                                                            <Wand2 className="w-8 h-8 opacity-20 mb-2"/>
+                                                            <span className="text-[9px] uppercase font-bold opacity-40">No Visualization</span>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
+                                            );
+                                        })()}
 
                                         {/* Info Section */}
                                         <div className="p-5 flex flex-col flex-1 border-t border-emerald-500/10 bg-[#0a0a0a]">
@@ -2689,14 +2884,23 @@ Notes: ${invoice.notes || 'N/A'}
                                                     </button>
                                                 </div>
 
-                                                {/* Invoice Button */}
-                                                <button
-                                                    onClick={() => handleGenerateInvoice(p)}
-                                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20"
-                                                >
-                                                    <Receipt className="w-4 h-4" />
-                                                    Generate Invoice
-                                                </button>
+                                                {/* Invoice & Add Image Buttons */}
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleGenerateInvoice(p)}
+                                                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20"
+                                                    >
+                                                        <Receipt className="w-4 h-4" />
+                                                        Invoice
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleOpenAddImageModal(p.id)}
+                                                        className="flex-shrink-0 bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 text-[#F6B45A] p-3 rounded-lg text-xs font-bold transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]/50"
+                                                        title="Add Another Image"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -3192,7 +3396,7 @@ Notes: ${invoice.notes || 'N/A'}
                                            whileHover={{ scale: 1.02 }}
                                            whileTap={{ scale: 0.98 }}
                                            onClick={() => setProjectsSubTab('approved')}
-                                           className="mt-6 px-5 py-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-400 text-sm font-bold hover:bg-blue-500/20 transition-colors"
+                                           className="mt-6 px-5 py-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-400 text-sm font-bold hover:bg-blue-500/20 transition-colors relative z-10"
                                          >
                                            View Approved Projects
                                          </motion.button>
@@ -3987,6 +4191,149 @@ Notes: ${invoice.notes || 'N/A'}
                   whileTap={{ scale: 0.98 }}
                 >
                   {editingEventId ? 'Save Changes' : 'Create Event'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Image Modal */}
+      <AnimatePresence>
+        {showAddImageModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowAddImageModal(false);
+              setAddImageFile(null);
+              setAddImagePreview(null);
+              setAddImageLabel('');
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-md"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#F6B45A]/20 flex items-center justify-center">
+                    <ImageIcon className="w-5 h-5 text-[#F6B45A]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Add Image to Project</h3>
+                </div>
+                <motion.button
+                  onClick={() => {
+                    setShowAddImageModal(false);
+                    setAddImageFile(null);
+                    setAddImagePreview(null);
+                    setAddImageLabel('');
+                  }}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </motion.button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 space-y-4">
+                {/* Image Upload Area */}
+                {!addImagePreview ? (
+                  <label className="block cursor-pointer">
+                    <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-[#F6B45A]/30 hover:bg-[#F6B45A]/5 transition-all">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-white/5 flex items-center justify-center">
+                        <ImageIcon className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <p className="text-white font-medium mb-1">Click to upload image</p>
+                      <p className="text-sm text-gray-500">JPG, PNG, HEIC • Max 10MB</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAddImageFileChange}
+                    />
+                  </label>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="relative rounded-xl overflow-hidden">
+                      <img
+                        src={addImagePreview}
+                        alt="Preview"
+                        className="w-full h-48 object-cover"
+                      />
+                      <motion.button
+                        onClick={() => {
+                          setAddImageFile(null);
+                          setAddImagePreview(null);
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-black/60 rounded-lg hover:bg-black/80 transition-colors"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <X className="w-4 h-4 text-white" />
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Label Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Label (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={addImageLabel}
+                    onChange={(e) => setAddImageLabel(e.target.value)}
+                    placeholder="e.g., Front Yard, Backyard, Side View"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
+                <motion.button
+                  onClick={() => {
+                    setShowAddImageModal(false);
+                    setAddImageFile(null);
+                    setAddImagePreview(null);
+                    setAddImageLabel('');
+                  }}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={handleSubmitAddImage}
+                  disabled={!addImageFile || isAddingImage}
+                  className={`px-6 py-2 font-medium rounded-xl transition-colors flex items-center gap-2 ${
+                    addImageFile && !isAddingImage
+                      ? 'bg-[#F6B45A] hover:bg-[#e5a54a] text-black'
+                      : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                  }`}
+                  whileHover={addImageFile && !isAddingImage ? { scale: 1.02 } : {}}
+                  whileTap={addImageFile && !isAddingImage ? { scale: 0.98 } : {}}
+                >
+                  {isAddingImage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    'Add Image'
+                  )}
                 </motion.button>
               </div>
             </motion.div>

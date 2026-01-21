@@ -76,11 +76,19 @@ export interface ScheduleData {
   completionNotes?: string;    // Notes added when marking complete
 }
 
+export interface ProjectImage {
+  id: string;
+  url: string;
+  label?: string;        // e.g., "Front Yard", "Backyard", "Patio"
+  createdAt: string;
+}
+
 export interface SavedProject {
   id: string;
   name: string;
   date: string;
-  image: string | null;
+  image: string | null;           // Primary image (backwards compatible)
+  images?: ProjectImage[];        // Multiple images support
   quote: QuoteData | null;
   bom: BOMData | null;
   status: ProjectStatus;

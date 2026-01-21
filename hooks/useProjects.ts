@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { uploadImage } from '../services/uploadService';
-import { SavedProject, QuoteData, BOMData, ProjectStatus, ScheduleData } from '../types';
+import { SavedProject, QuoteData, BOMData, ProjectStatus, ScheduleData, ProjectImage } from '../types';
 
 export function useProjects() {
   const { user } = useUser();
@@ -33,6 +33,7 @@ export function useProjects() {
             name: p.name,
             date: new Date(p.created_at).toLocaleDateString(),
             image: p.generated_image_url,
+            images: p.prompt_config?.images || undefined,
             quote: p.prompt_config?.quote || null,
             bom: p.prompt_config?.bom || null,
             status: (p.prompt_config?.status as ProjectStatus) || 'draft',
@@ -111,6 +112,7 @@ export function useProjects() {
           name: data.data.name,
           date: new Date(data.data.created_at).toLocaleDateString(),
           image: data.data.generated_image_url,
+          images: data.data.prompt_config?.images || undefined,
           quote: data.data.prompt_config?.quote || null,
           bom: data.data.prompt_config?.bom || null,
           status: 'draft'
@@ -156,7 +158,7 @@ export function useProjects() {
   // Update a project
   const updateProject = useCallback(async (
     projectId: string,
-    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData }
+    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData; images?: ProjectImage[] }
   ): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
@@ -175,12 +177,14 @@ export function useProjects() {
       if (currentProject?.bom) promptConfig.bom = currentProject.bom;
       if (currentProject?.status) promptConfig.status = currentProject.status;
       if (currentProject?.schedule) promptConfig.schedule = currentProject.schedule;
+      if (currentProject?.images) promptConfig.images = currentProject.images;
 
       // Apply updates (overwrite specific fields)
       if (updates.quote !== undefined) promptConfig.quote = updates.quote;
       if (updates.bom !== undefined) promptConfig.bom = updates.bom;
       if (updates.status !== undefined) promptConfig.status = updates.status;
       if (updates.schedule !== undefined) promptConfig.schedule = updates.schedule;
+      if (updates.images !== undefined) promptConfig.images = updates.images;
 
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'PATCH',
@@ -207,7 +211,8 @@ export function useProjects() {
             quote: updates.quote !== undefined ? updates.quote : p.quote,
             bom: updates.bom !== undefined ? updates.bom : p.bom,
             status: updates.status !== undefined ? updates.status : p.status,
-            schedule: updates.schedule !== undefined ? updates.schedule : p.schedule
+            schedule: updates.schedule !== undefined ? updates.schedule : p.schedule,
+            images: updates.images !== undefined ? updates.images : p.images
           };
         }
         return p;
@@ -252,6 +257,72 @@ export function useProjects() {
     return updateProject(projectId, { status: 'completed', schedule: updatedSchedule });
   }, [updateProject, projects]);
 
+  // Add image to a project
+  const addImageToProject = useCallback(async (
+    projectId: string,
+    imageDataUrl: string,
+    label?: string
+  ): Promise<boolean> => {
+    if (!user) {
+      setError('User not logged in');
+      return false;
+    }
+
+    try {
+      const project = projects.find(p => p.id === projectId);
+      if (!project) return false;
+
+      // Upload the new image
+      let imageUrl = '';
+      if (imageDataUrl.startsWith('data:')) {
+        imageUrl = await uploadImage(imageDataUrl, user.id);
+      } else {
+        imageUrl = imageDataUrl;
+      }
+
+      // Create new image entry
+      const newImage: ProjectImage = {
+        id: `img_${Date.now()}`,
+        url: imageUrl,
+        label: label || `View ${(project.images?.length || 0) + 2}`,
+        createdAt: new Date().toISOString()
+      };
+
+      // Combine existing images with new one
+      const existingImages: ProjectImage[] = project.images || [];
+
+      // If project has primary image but no images array, create one
+      if (!project.images && project.image) {
+        existingImages.push({
+          id: `img_primary`,
+          url: project.image,
+          label: 'View 1',
+          createdAt: project.date
+        });
+      }
+
+      const updatedImages = [...existingImages, newImage];
+
+      return updateProject(projectId, { images: updatedImages });
+    } catch (err: any) {
+      console.error('Error adding image to project:', err);
+      setError(err.message);
+      return false;
+    }
+  }, [user, projects, updateProject]);
+
+  // Remove image from project
+  const removeImageFromProject = useCallback(async (
+    projectId: string,
+    imageId: string
+  ): Promise<boolean> => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project?.images) return false;
+
+    const updatedImages = project.images.filter(img => img.id !== imageId);
+    return updateProject(projectId, { images: updatedImages });
+  }, [projects, updateProject]);
+
   return {
     projects,
     isLoading,
@@ -262,6 +333,8 @@ export function useProjects() {
     updateProjectStatus,
     scheduleProject,
     completeProject,
+    addImageToProject,
+    removeImageFromProject,
     setProjects
   };
 }

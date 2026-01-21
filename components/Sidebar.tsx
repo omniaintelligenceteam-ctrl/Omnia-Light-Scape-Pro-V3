@@ -144,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'projects' ? (
                     <FolderClosed
-                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-500"
+                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Inventory - Package open/close animation */
@@ -163,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'inventory' ? (
                     <Package
-                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-500"
+                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Schedule - Calendar check animation */
@@ -181,7 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'schedule' ? (
                     <Calendar
-                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-500"
+                      className="w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Settings - Gear rotation animation */
@@ -202,7 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       className={`w-[18px] h-[18px] md:w-8 md:h-8 lg:w-9 lg:h-9 transition-all duration-300 ${
                         isActive
                           ? 'text-[#1a1a1a]'
-                          : 'text-gray-500'
+                          : 'text-gray-400'
                       }`}
                       strokeWidth={isActive ? 2.5 : 2}
                     />
@@ -258,7 +258,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                   className={`relative z-10 text-[9px] md:text-sm lg:text-base font-semibold uppercase tracking-[0.02em] md:tracking-[0.08em] lg:tracking-[0.1em] transition-all duration-300 whitespace-nowrap ${
                     isActive
                       ? 'text-[#1a1a1a] font-bold'
-                      : 'text-gray-500'
+                      : 'text-gray-400'
                   }`}
                   animate={{
                     y: isActive ? -1 : 0,
