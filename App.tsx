@@ -166,7 +166,7 @@ const App: React.FC = () => {
   // Lifted Setting State
   const [colorTemp, setColorTemp] = useState<string>('3000k');
   const [lightIntensity, setLightIntensity] = useState<number>(45);
-  // Darkness Level State removed - hardcoded in service
+  const [darknessLevel, setDarknessLevel] = useState<number>(85); // 0-100, higher = darker night sky
   const [beamAngle, setBeamAngle] = useState<number>(30);
 
   // Lifted Pricing State
@@ -3041,6 +3041,8 @@ Notes: ${invoice.notes || 'N/A'}
                 onColorTempChange={setColorTemp}
                 lightIntensity={lightIntensity}
                 onLightIntensityChange={setLightIntensity}
+                darknessLevel={darknessLevel}
+                onDarknessLevelChange={setDarknessLevel}
                 beamAngle={beamAngle}
                 onBeamAngleChange={setBeamAngle}
                 pricing={pricing}

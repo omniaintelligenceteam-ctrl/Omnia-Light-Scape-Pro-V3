@@ -22,6 +22,8 @@ interface SettingsViewProps {
   onColorTempChange?: (tempId: string) => void;
   lightIntensity?: number;
   onLightIntensityChange?: (val: number) => void;
+  darknessLevel?: number;
+  onDarknessLevelChange?: (val: number) => void;
   beamAngle?: number;
   onBeamAngleChange?: (angle: number) => void;
   pricing?: FixturePricing[];
@@ -315,6 +317,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onColorTempChange,
     lightIntensity = 50,
     onLightIntensityChange,
+    darknessLevel = 85,
+    onDarknessLevelChange,
     beamAngle = 45,
     onBeamAngleChange,
     pricing,
@@ -1169,13 +1173,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     key={temp.id}
                                     onClick={() => onColorTempChange?.(temp.id)}
                                     className={`relative p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${
-                                        colorTemp === temp.id 
-                                        ? 'bg-[#F6B45A]/10 border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.1)]' 
+                                        colorTemp === temp.id
+                                        ? 'bg-[#F6B45A]/10 border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.1)]'
                                         : 'bg-[#0a0a0a] border-white/5 hover:border-white/20'
                                     }`}
                                 >
-                                    <div 
-                                        className="w-6 h-6 rounded-full shadow-inner border border-white/10" 
+                                    <div
+                                        className="w-6 h-6 rounded-full shadow-inner border border-white/10"
                                         style={{ backgroundColor: temp.color }}
                                     ></div>
                                     <span className={`text-[10px] font-bold uppercase ${colorTemp === temp.id ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
@@ -1190,7 +1194,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             ))}
                         </div>
                      </div>
-                     
+
+                     {/* Holiday/Seasonal Colors */}
+                     <div>
+                        <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Holiday & Seasonal Colors</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            {COLOR_TEMPERATURES.slice(4).map((temp) => (
+                                <button
+                                    key={temp.id}
+                                    onClick={() => onColorTempChange?.(temp.id)}
+                                    className={`relative p-4 rounded-xl border flex items-center gap-4 transition-all ${
+                                        colorTemp === temp.id
+                                        ? temp.id === 'christmas'
+                                          ? 'bg-red-500/10 border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.2)]'
+                                          : 'bg-purple-500/10 border-purple-500 shadow-[0_0_20px_rgba(147,51,234,0.2)]'
+                                        : 'bg-[#0a0a0a] border-white/5 hover:border-white/20'
+                                    }`}
+                                >
+                                    {temp.id === 'christmas' ? (
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-5 h-5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(220,38,38,0.6)]"></div>
+                                            <div className="w-5 h-5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-5 h-5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>
+                                            <div className="w-5 h-5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(147,51,234,0.6)]"></div>
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col items-start">
+                                        <span className={`text-sm font-bold ${
+                                            colorTemp === temp.id
+                                            ? temp.id === 'christmas' ? 'text-red-400' : 'text-purple-400'
+                                            : 'text-white'
+                                        }`}>
+                                            {temp.description}
+                                        </span>
+                                        <span className="text-[9px] text-gray-400 uppercase tracking-wider">{temp.kelvin}</span>
+                                    </div>
+                                    {colorTemp === temp.id && (
+                                        <div className={`absolute top-2 right-2 ${temp.id === 'christmas' ? 'text-red-400' : 'text-purple-400'}`}>
+                                            <Check className="w-4 h-4" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                     </div>
+
                      {/* Beam Angle */}
                      <div>
                         <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Default Beam Spread Angle</label>
@@ -1200,8 +1251,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     key={angle.id}
                                     onClick={() => onBeamAngleChange?.(angle.id)}
                                     className={`relative p-3 rounded-xl border flex flex-col items-center gap-1 transition-all ${
-                                        beamAngle === angle.id 
-                                        ? 'bg-[#F6B45A]/10 border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.1)]' 
+                                        beamAngle === angle.id
+                                        ? 'bg-[#F6B45A]/10 border-[#F6B45A] shadow-[0_0_15px_rgba(246,180,90,0.1)]'
                                         : 'bg-[#0a0a0a] border-white/5 hover:border-white/20'
                                     }`}
                                 >
@@ -1209,7 +1260,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         {angle.label}
                                     </span>
                                     <span className="text-[9px] text-gray-400 font-mono uppercase tracking-wider">{angle.description}</span>
-                                    
+
                                     {beamAngle === angle.id && (
                                         <div className="absolute top-1 right-1 text-[#F6B45A]">
                                             <Check className="w-2 h-2" />
@@ -1220,16 +1271,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                      </div>
 
-                     {/* New Adjustment Sliders */}
+                     {/* Adjustment Sliders */}
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-white/5">
                         {onLightIntensityChange && lightIntensity !== undefined && (
-                            <RangeSlider 
-                                label="Lighting Intensity" 
-                                value={lightIntensity} 
+                            <RangeSlider
+                                label="Lighting Intensity"
+                                value={lightIntensity}
                                 onChange={onLightIntensityChange}
                             />
                         )}
-                        {/* Darkness Level Slider REMOVED */}
+                        {onDarknessLevelChange && darknessLevel !== undefined && (
+                            <RangeSlider
+                                label="Sky Darkness"
+                                value={darknessLevel}
+                                onChange={onDarknessLevelChange}
+                            />
+                        )}
                      </div>
                 </div>
             )}
