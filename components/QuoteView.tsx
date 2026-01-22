@@ -343,53 +343,29 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                 <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/40 to-transparent" />
 
                 {/* Desktop Layout */}
-                <div className="hidden md:flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <motion.div
-                            className="relative p-3 rounded-xl bg-gradient-to-br from-[#F6B45A]/20 to-[#F6B45A]/5 border border-[#F6B45A]/30"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            <FileText className="w-6 h-6 text-[#F6B45A]" />
-                            <div className="absolute -inset-1 bg-[#F6B45A]/20 blur-xl -z-10" />
-                        </motion.div>
-                        <div>
-                            <h2 className="text-lg font-bold text-white tracking-wide font-serif">
-                                QUOTE <span className="text-[#F6B45A]">GENERATOR</span>
-                            </h2>
-                            <p className="text-[10px] text-gray-500">Professional lighting estimates</p>
-                        </div>
-                    </div>
+                <div className="hidden md:flex items-center justify-between gap-3">
+                    {/* Save Button - Primary Action */}
+                    <motion.button
+                        onClick={handleSaveClick}
+                        className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                    >
+                        <Save className="w-4 h-4" />
+                        Save
+                    </motion.button>
 
-                    <div className="flex items-center gap-3">
-                        {/* Save Button */}
-                        <motion.button
-                            onClick={handleSaveClick}
-                            className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
-                            whileHover={{ scale: 1.02, y: -1 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <Save className="w-4 h-4" />
-                            Save Project
-                            <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]"
-                                initial={{ x: '-100%' }}
-                                whileHover={{ x: '200%' }}
-                                transition={{ duration: 0.6 }}
-                            />
-                        </motion.button>
-
+                    {/* Action Buttons Group */}
+                    <div className="flex items-center gap-1.5">
                         {/* Edit Design Button */}
                         {onEditDesign && (
                             <motion.button
                                 onClick={onEditDesign}
-                                className="bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-white/10 hover:border-white/20 transition-all"
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                title="Edit design in Editor"
+                                className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white p-2 rounded-lg transition-all border border-white/10 hover:border-white/20"
+                                whileTap={{ scale: 0.95 }}
+                                title="Edit Design"
                             >
                                 <Pencil className="w-4 h-4" />
-                                Edit Design
                             </motion.button>
                         )}
 
@@ -397,40 +373,33 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         {onGenerateBOM && (
                             <motion.button
                                 onClick={handleGenerateBOMClick}
-                                className="bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-white/10 hover:border-white/20 transition-all"
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                                className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white p-2 rounded-lg transition-all border border-white/10 hover:border-white/20"
+                                whileTap={{ scale: 0.95 }}
+                                title="Generate BOM"
                             >
                                 <ClipboardList className="w-4 h-4" />
-                                Generate BOM
                             </motion.button>
                         )}
-
-                        <div className="w-px h-8 bg-white/10 mx-1"></div>
 
                         {/* Send Quote Button */}
                         <motion.button
                             onClick={() => setShowSendModal(true)}
-                            className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white p-2 rounded-lg transition-all border border-white/10 hover:border-white/20"
+                            whileTap={{ scale: 0.95 }}
                             title="Send Quote"
                         >
                             <Send className="w-4 h-4" />
-                            Send
                         </motion.button>
 
                         {/* Share Portal Link Button */}
                         {projectId && (
                             <motion.button
                                 onClick={handleOpenShareModal}
-                                className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20"
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                title="Share Client Portal Link"
+                                className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white p-2 rounded-lg transition-all border border-white/10 hover:border-white/20"
+                                whileTap={{ scale: 0.95 }}
+                                title="Share Link"
                             >
                                 <Share2 className="w-4 h-4" />
-                                Share
                             </motion.button>
                         )}
 
@@ -438,9 +407,8 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         <motion.button
                             onClick={handleDownloadPdf}
                             disabled={isGeneratingPdf}
-                            className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                            whileHover={!isGeneratingPdf ? { scale: 1.02 } : {}}
-                            whileTap={!isGeneratingPdf ? { scale: 0.98 } : {}}
+                            className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white p-2 rounded-lg transition-all border border-white/10 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            whileTap={!isGeneratingPdf ? { scale: 0.95 } : {}}
                             title="Download PDF"
                         >
                             {isGeneratingPdf ? (
@@ -448,106 +416,91 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                             ) : (
                                 <Download className="w-4 h-4" />
                             )}
-                            {isGeneratingPdf ? 'Generating...' : 'PDF'}
                         </motion.button>
-
-                        {/* Close Button - Go back to drafts */}
-                        {onClose && (
-                            <>
-                                <div className="w-px h-8 bg-white/10 mx-1"></div>
-                                <motion.button
-                                    onClick={onClose}
-                                    className="text-gray-400 hover:text-white bg-white/5 hover:bg-red-500/20 p-2.5 rounded-xl transition-all border border-white/10 hover:border-red-500/30"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    title="Close and go back to drafts"
-                                >
-                                    <X className="w-5 h-5" />
-                                </motion.button>
-                            </>
-                        )}
                     </div>
-                </div>
 
-                {/* Mobile Layout - Compact row of buttons */}
-                <div className="flex md:hidden items-center justify-between gap-2">
-                    {/* Save Button with Icon */}
-                    <motion.button
-                        onClick={handleSaveClick}
-                        className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        <Save className="w-3.5 h-3.5" />
-                        Save
-                    </motion.button>
-
-                    {/* Edit Design Button */}
-                    {onEditDesign && (
-                        <motion.button
-                            onClick={onEditDesign}
-                            className="bg-white/5 text-white px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10"
-                            whileTap={{ scale: 0.98 }}
-                            title="Edit Design"
-                        >
-                            <Pencil className="w-3.5 h-3.5" />
-                        </motion.button>
-                    )}
-
-                    {/* BOM Button */}
-                    {onGenerateBOM && (
-                        <motion.button
-                            onClick={handleGenerateBOMClick}
-                            className="bg-white/5 text-white px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10"
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <ClipboardList className="w-3.5 h-3.5" />
-                            BOM
-                        </motion.button>
-                    )}
-
-                    {/* Send Button */}
-                    <motion.button
-                        onClick={() => setShowSendModal(true)}
-                        className="text-gray-300 bg-white/5 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10"
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        <Send className="w-3.5 h-3.5" />
-                    </motion.button>
-
-                    {/* Share Button - Mobile */}
-                    {projectId && (
-                        <motion.button
-                            onClick={handleOpenShareModal}
-                            className="text-gray-300 bg-white/5 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10"
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <Share2 className="w-3.5 h-3.5" />
-                        </motion.button>
-                    )}
-
-                    {/* PDF Button */}
-                    <motion.button
-                        onClick={handleDownloadPdf}
-                        disabled={isGeneratingPdf}
-                        className="text-gray-300 bg-white/5 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10 disabled:opacity-50"
-                        whileTap={!isGeneratingPdf ? { scale: 0.98 } : {}}
-                    >
-                        {isGeneratingPdf ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                            <Download className="w-3.5 h-3.5" />
-                        )}
-                    </motion.button>
-
-                    {/* Close Button - Go back to drafts */}
+                    {/* Close Button */}
                     {onClose && (
                         <motion.button
                             onClick={onClose}
-                            className="text-gray-400 bg-white/5 p-2.5 rounded-xl border border-white/10 hover:bg-red-500/20 hover:border-red-500/30"
+                            className="text-gray-400 hover:text-white bg-white/5 hover:bg-red-500/20 p-2 rounded-lg transition-all border border-white/10 hover:border-red-500/30"
                             whileTap={{ scale: 0.95 }}
                             title="Close"
                         >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-4 h-4" />
+                        </motion.button>
+                    )}
+                </div>
+
+                {/* Mobile Layout - Clean compact row */}
+                <div className="flex md:hidden items-center justify-between gap-1.5">
+                    {/* Save Button */}
+                    <motion.button
+                        onClick={handleSaveClick}
+                        className="bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] p-2 rounded-lg"
+                        whileTap={{ scale: 0.95 }}
+                        title="Save"
+                    >
+                        <Save className="w-4 h-4" />
+                    </motion.button>
+
+                    {/* Icon Buttons Group */}
+                    <div className="flex items-center gap-1">
+                        {onEditDesign && (
+                            <motion.button
+                                onClick={onEditDesign}
+                                className="bg-white/5 text-gray-300 p-2 rounded-lg border border-white/10"
+                                whileTap={{ scale: 0.95 }}
+                                title="Edit"
+                            >
+                                <Pencil className="w-4 h-4" />
+                            </motion.button>
+                        )}
+
+                        {onGenerateBOM && (
+                            <motion.button
+                                onClick={handleGenerateBOMClick}
+                                className="bg-white/5 text-gray-300 p-2 rounded-lg border border-white/10"
+                                whileTap={{ scale: 0.95 }}
+                                title="BOM"
+                            >
+                                <ClipboardList className="w-4 h-4" />
+                            </motion.button>
+                        )}
+
+                        <motion.button
+                            onClick={() => setShowSendModal(true)}
+                            className="bg-white/5 text-gray-300 p-2 rounded-lg border border-white/10"
+                            whileTap={{ scale: 0.95 }}
+                            title="Send"
+                        >
+                            <Send className="w-4 h-4" />
+                        </motion.button>
+
+                        <motion.button
+                            onClick={handleDownloadPdf}
+                            disabled={isGeneratingPdf}
+                            className="bg-white/5 text-gray-300 p-2 rounded-lg border border-white/10 disabled:opacity-50"
+                            whileTap={!isGeneratingPdf ? { scale: 0.95 } : {}}
+                            title="PDF"
+                        >
+                            {isGeneratingPdf ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Download className="w-4 h-4" />
+                            )}
+                        </motion.button>
+                    </div>
+
+                    {/* Close Button */}
+                    {onClose && (
+                        <motion.button
+                            onClick={onClose}
+                            className="text-gray-400 bg-white/5 p-2 rounded-lg border border-white/10"
+                            whileTap={{ scale: 0.95 }}
+                            title="Close"
+                        >
+                            <X className="w-4 h-4" />
                         </motion.button>
                     )}
                 </div>

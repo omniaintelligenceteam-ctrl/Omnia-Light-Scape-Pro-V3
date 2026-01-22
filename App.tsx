@@ -23,7 +23,7 @@ import { useClients, parseClientCSV, ParsedClientRow, ImportResult } from './hoo
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client } from './types';
 
@@ -280,9 +280,11 @@ const App: React.FC = () => {
   const [currentBOM, setCurrentBOM] = useState<BOMData | null>(null);
   const [fixtureCatalog, setFixtureCatalog] = useState<FixtureCatalogItem[]>([]);
 
-  // Projects Sub-Tab State
-  const [projectsSubTab, setProjectsSubTab] = useState<'projects' | 'quotes' | 'approved' | 'invoicing' | 'clients'>('projects');
-  const [showMobileProjectsMenu, setShowMobileProjectsMenu] = useState(false);
+  // Projects Sub-Tab State - Simplified to 2 main views
+  const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing'>('pipeline');
+  const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'active' | 'completed'>('all');
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [inlineEditQuote, setInlineEditQuote] = useState<{ [key: string]: { clientName: string; total: number; notes: string } }>({});
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [currentInvoice, setCurrentInvoice] = useState<InvoiceData | null>(null);
   const [showInvoiceEmailModal, setShowInvoiceEmailModal] = useState(false);
@@ -1479,7 +1481,8 @@ const App: React.FC = () => {
   // Approve a project
   const handleApproveProject = async (projectId: string) => {
       await updateProjectStatus(projectId, 'approved');
-      setProjectsSubTab('approved');
+      setProjectsSubTab('pipeline');
+      setPipelineStatusFilter('active');
       showToast('success', 'Project approved!');
   };
 
@@ -1948,6 +1951,29 @@ Notes: ${invoice.notes || 'N/A'}
           );
       }),
       [projects, searchTerm, statusFilter]
+  );
+
+  // Unified pipeline filter for the new simplified navigation
+  const filteredPipelineProjects = useMemo(() =>
+      projects.filter(p => {
+          // Apply pipeline status filter
+          if (pipelineStatusFilter !== 'all') {
+              if (pipelineStatusFilter === 'draft' && p.status !== 'draft') return false;
+              if (pipelineStatusFilter === 'quoted' && p.status !== 'quoted') return false;
+              if (pipelineStatusFilter === 'active' && p.status !== 'approved' && p.status !== 'scheduled') return false;
+              if (pipelineStatusFilter === 'completed' && p.status !== 'completed') return false;
+          }
+          // Apply search filter
+          const searchLower = searchTerm.toLowerCase();
+          return (
+              p.name.toLowerCase().includes(searchLower) ||
+              p.date.includes(searchTerm) ||
+              p.quote?.clientDetails?.name?.toLowerCase().includes(searchLower) ||
+              p.quote?.clientDetails?.email?.toLowerCase().includes(searchLower) ||
+              p.quote?.clientDetails?.phone?.includes(searchTerm)
+          );
+      }),
+      [projects, searchTerm, pipelineStatusFilter]
   );
 
   // Authentication is now handled by AuthWrapper
@@ -3706,9 +3732,9 @@ Notes: ${invoice.notes || 'N/A'}
                                  <React.Fragment key={status}>
                                      <motion.button
                                          onClick={() => {
-                                           if (status === 'draft') setProjectsSubTab('projects');
-                                           else if (status === 'quoted') setProjectsSubTab('quotes');
-                                           else if (status === 'approved' || status === 'scheduled' || status === 'completed') setProjectsSubTab('approved');
+                                           setProjectsSubTab('pipeline'); if (status === 'draft') setPipelineStatusFilter('draft');
+                                           else if (status === 'quoted') setPipelineStatusFilter('quoted');
+                                           else if (status === 'approved' || status === 'scheduled') setPipelineStatusFilter('active'); else if (status === 'completed') setPipelineStatusFilter('completed');
                                          }}
                                          className={`flex-1 flex flex-col items-center py-1.5 px-1 rounded-lg ${config.bgColor} border ${config.borderColor}`}
                                          whileTap={{ scale: 0.95 }}
@@ -3746,107 +3772,25 @@ Notes: ${invoice.notes || 'N/A'}
                      </div>
                  </div>
 
-                 {/* Sub-Tabs Navigation - Grid buttons on mobile, inline buttons on desktop */}
-                 {/* Mobile Buttons Grid */}
-                 <div className="md:hidden mb-6 grid grid-cols-2 gap-2">
+                 {/* Simplified Navigation: 2 Main Tabs */}
+                 <div className="flex items-center gap-2 mb-4">
                      <button
-                         onClick={() => setProjectsSubTab('projects')}
-                         className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                             projectsSubTab === 'projects'
+                         onClick={() => setProjectsSubTab('pipeline')}
+                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                             projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing'
                                  ? 'bg-[#F6B45A] text-black shadow-lg shadow-[#F6B45A]/30'
-                                 : 'bg-[#F6B45A] text-black opacity-60'
+                                 : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
                          }`}
                      >
                          <FolderPlus className="w-4 h-4" />
-                         Projects
-                     </button>
-                     <button
-                         onClick={() => setProjectsSubTab('quotes')}
-                         className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                             projectsSubTab === 'quotes'
-                                 ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
-                                 : 'bg-purple-500 text-white opacity-60'
-                         }`}
-                     >
-                         <FileText className="w-4 h-4" />
-                         Quotes
-                     </button>
-                     <button
-                         onClick={() => setProjectsSubTab('approved')}
-                         className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                             projectsSubTab === 'approved'
-                                 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                                 : 'bg-emerald-500 text-white opacity-60'
-                         }`}
-                     >
-                         <CheckCircle2 className="w-4 h-4" />
-                         Approved
-                     </button>
-                     <button
-                         onClick={() => setProjectsSubTab('invoicing')}
-                         className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                             projectsSubTab === 'invoicing'
-                                 ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                 : 'bg-blue-500 text-white opacity-60'
-                         }`}
-                     >
-                         <Receipt className="w-4 h-4" />
-                         Invoicing
-                     </button>
-                 </div>
-
-                 {/* Desktop Buttons */}
-                 <div className="hidden md:flex items-center gap-2 mb-8 bg-[#111] p-1.5 rounded-xl border border-white/5 w-fit">
-                     <button
-                         onClick={() => setProjectsSubTab('projects')}
-                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
-                             projectsSubTab === 'projects'
-                                 ? 'bg-[#F6B45A] text-black'
-                                 : 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30 hover:bg-[#F6B45A]/30'
-                         }`}
-                     >
-                         <FolderPlus className="w-4 h-4" />
-                         Projects
-                     </button>
-                     <button
-                         onClick={() => setProjectsSubTab('quotes')}
-                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
-                             projectsSubTab === 'quotes'
-                                 ? 'bg-purple-500 text-white'
-                                 : 'bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30'
-                         }`}
-                     >
-                         <FileText className="w-4 h-4" />
-                         Quotes
-                     </button>
-                     <button
-                         onClick={() => setProjectsSubTab('approved')}
-                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
-                             projectsSubTab === 'approved'
-                                 ? 'bg-emerald-500 text-white'
-                                 : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
-                         }`}
-                     >
-                         <CheckCircle2 className="w-4 h-4" />
-                         Approved
-                     </button>
-                     <button
-                         onClick={() => setProjectsSubTab('invoicing')}
-                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
-                             projectsSubTab === 'invoicing'
-                                 ? 'bg-blue-500 text-white'
-                                 : 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30'
-                         }`}
-                     >
-                         <Receipt className="w-4 h-4" />
-                         Invoicing
+                         Pipeline
                      </button>
                      <button
                          onClick={() => setProjectsSubTab('clients')}
-                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
+                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
                              projectsSubTab === 'clients'
-                                 ? 'bg-pink-500 text-white'
-                                 : 'bg-pink-500/20 text-pink-400 border border-pink-500/30 hover:bg-pink-500/30'
+                                 ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30'
+                                 : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
                          }`}
                      >
                          <Users className="w-4 h-4" />
@@ -3854,12 +3798,120 @@ Notes: ${invoice.notes || 'N/A'}
                      </button>
                  </div>
 
+                 {/* Pipeline Status Bar - Only show when on pipeline view */}
+                 {(projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
+                     <>
+                         {/* Pipeline Visual Bar */}
+                         <div className="mb-4 p-3 bg-[#0a0a0a] rounded-xl border border-white/5">
+                             <div className="flex items-center justify-between gap-1 overflow-x-auto">
+                                 {/* Draft */}
+                                 <button
+                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'draft' ? 'all' : 'draft')}
+                                     className={`flex-1 min-w-[60px] flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'draft' ? 'bg-gray-500/30 ring-2 ring-gray-400' : 'hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <span className="text-lg font-bold text-gray-400">{statusCounts.draft}</span>
+                                     <span className="text-[10px] uppercase tracking-wider text-gray-500">Draft</span>
+                                 </button>
+                                 <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
+                                 {/* Quoted */}
+                                 <button
+                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'quoted' ? 'all' : 'quoted')}
+                                     className={`flex-1 min-w-[60px] flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'quoted' ? 'bg-purple-500/30 ring-2 ring-purple-400' : 'hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <span className="text-lg font-bold text-purple-400">{statusCounts.quoted}</span>
+                                     <span className="text-[10px] uppercase tracking-wider text-purple-500">Quoted</span>
+                                 </button>
+                                 <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
+                                 {/* Active (Approved + Scheduled) */}
+                                 <button
+                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'active' ? 'all' : 'active')}
+                                     className={`flex-1 min-w-[60px] flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'active' ? 'bg-emerald-500/30 ring-2 ring-emerald-400' : 'hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <span className="text-lg font-bold text-emerald-400">{statusCounts.approved + statusCounts.scheduled}</span>
+                                     <span className="text-[10px] uppercase tracking-wider text-emerald-500">Active</span>
+                                 </button>
+                                 <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
+                                 {/* Completed */}
+                                 <button
+                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'completed' ? 'all' : 'completed')}
+                                     className={`flex-1 min-w-[60px] flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'completed' ? 'bg-[#F6B45A]/30 ring-2 ring-[#F6B45A]' : 'hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <span className="text-lg font-bold text-[#F6B45A]">{statusCounts.completed}</span>
+                                     <span className="text-[10px] uppercase tracking-wider text-[#F6B45A]/70">Done</span>
+                                 </button>
+                             </div>
+                         </div>
+
+                         {/* Status Filter Pills */}
+                         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+                             <button
+                                 onClick={() => setPipelineStatusFilter('all')}
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                     pipelineStatusFilter === 'all'
+                                         ? 'bg-white text-black'
+                                         : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                                 }`}
+                             >
+                                 All ({projects.length})
+                             </button>
+                             <button
+                                 onClick={() => setPipelineStatusFilter('draft')}
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                     pipelineStatusFilter === 'draft'
+                                         ? 'bg-gray-500 text-white'
+                                         : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
+                                 }`}
+                             >
+                                 Draft ({statusCounts.draft})
+                             </button>
+                             <button
+                                 onClick={() => setPipelineStatusFilter('quoted')}
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                     pipelineStatusFilter === 'quoted'
+                                         ? 'bg-purple-500 text-white'
+                                         : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                                 }`}
+                             >
+                                 Quoted ({statusCounts.quoted})
+                             </button>
+                             <button
+                                 onClick={() => setPipelineStatusFilter('active')}
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                     pipelineStatusFilter === 'active'
+                                         ? 'bg-emerald-500 text-white'
+                                         : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                                 }`}
+                             >
+                                 Active ({statusCounts.approved + statusCounts.scheduled})
+                             </button>
+                             <button
+                                 onClick={() => setPipelineStatusFilter('completed')}
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                     pipelineStatusFilter === 'completed'
+                                         ? 'bg-[#F6B45A] text-black'
+                                         : 'bg-[#F6B45A]/20 text-[#F6B45A] hover:bg-[#F6B45A]/30'
+                                 }`}
+                             >
+                                 Completed ({statusCounts.completed})
+                             </button>
+                         </div>
+                     </>
+                 )}
+
                  {/* SUB-TAB: QUOTES */}
                  {projectsSubTab === 'quotes' && (
                      <QuoteView
                         onSave={handleSaveProjectFromQuote}
                         onGenerateBOM={handleGenerateBOM}
-                        onClose={() => setProjectsSubTab('projects')}
+                        onClose={() => setProjectsSubTab('pipeline')}
                         onEditDesign={() => handleTabChange('editor')}
                         initialData={currentQuote}
                         companyProfile={companyProfile}
@@ -3870,10 +3922,10 @@ Notes: ${invoice.notes || 'N/A'}
                      />
                  )}
 
-                 {/* SUB-TAB: PROJECTS (Unapproved) */}
-                 {projectsSubTab === 'projects' && (
+                 {/* SUB-TAB: PIPELINE (All Projects) */}
+                 {projectsSubTab === 'pipeline' && (
                      <>
-                         {filteredUnapprovedProjects.length === 0 ? (
+                         {filteredPipelineProjects.length === 0 ? (
                              <motion.div
                                initial={{ opacity: 0, y: 20 }}
                                animate={{ opacity: 1, y: 0 }}
@@ -3902,10 +3954,14 @@ Notes: ${invoice.notes || 'N/A'}
                             <>
                             {/* Mobile Compact List View */}
                             <div className="md:hidden space-y-3">
-                                {filteredUnapprovedProjects.map((p, index) => (
-                                    <motion.div key={p.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }} className="group bg-[#111] border border-white/5 rounded-xl overflow-hidden active:scale-[0.99] transition-transform">
-                                        <div className="flex items-center gap-3 p-3">
-                                            <div onClick={() => { if (p.image) { setGeneratedImage(p.image); handleTabChange('editor'); }}} className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-black">
+                                {filteredPipelineProjects.map((p, index) => (
+                                    <motion.div key={p.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }} className="group bg-[#111] border border-white/5 rounded-xl overflow-hidden">
+                                        {/* Main Row - Tap to expand */}
+                                        <div
+                                            className="flex items-center gap-3 p-3 active:bg-white/5"
+                                            onClick={() => setExpandedCardId(expandedCardId === p.id ? null : p.id)}
+                                        >
+                                            <div onClick={(e) => { e.stopPropagation(); if (p.image) { setGeneratedImage(p.image); handleTabChange('editor'); }}} className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-black">
                                                 {p.image ? <img src={p.image} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]"><Wand2 className="w-5 h-5 text-gray-600" /></div>}
                                                 <div className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ${STATUS_CONFIG[p.status].bgColor.replace('/10', '')} border border-black`}></div>
                                             </div>
@@ -3915,21 +3971,103 @@ Notes: ${invoice.notes || 'N/A'}
                                                 {p.quote && <div className="text-xs font-bold text-[#F6B45A] mt-1">${p.quote.total.toFixed(0)}</div>}
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                {p.quote?.clientDetails?.phone && <a href={`tel:${p.quote.clientDetails.phone}`} className="p-2 text-gray-400 active:text-[#F6B45A] rounded-full"><Phone className="w-4 h-4" /></a>}
-                                                <button onClick={() => handleDeleteProject(p.id)} className="p-2 text-gray-500 active:text-red-500 rounded-full"><Trash2 className="w-4 h-4" /></button>
+                                                <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${expandedCardId === p.id ? 'rotate-180' : ''}`} />
                                             </div>
                                         </div>
+
+                                        {/* Expandable Quick Edit Section */}
+                                        <AnimatePresence>
+                                            {expandedCardId === p.id && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="overflow-hidden border-t border-white/5"
+                                                >
+                                                    <div className="p-3 space-y-3 bg-[#0a0a0a]">
+                                                        {/* Client & Total Quick Edit */}
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={inlineEditQuote[p.id]?.clientName ?? p.quote?.clientDetails?.name ?? ''}
+                                                                onChange={(e) => setInlineEditQuote(prev => ({
+                                                                    ...prev,
+                                                                    [p.id]: { ...prev[p.id], clientName: e.target.value, total: prev[p.id]?.total ?? p.quote?.total ?? 0, notes: prev[p.id]?.notes ?? '' }
+                                                                }))}
+                                                                placeholder="Client name"
+                                                                className="bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-[#F6B45A]/50 focus:outline-none"
+                                                            />
+                                                            <input
+                                                                type="number"
+                                                                value={inlineEditQuote[p.id]?.total ?? p.quote?.total ?? ''}
+                                                                onChange={(e) => setInlineEditQuote(prev => ({
+                                                                    ...prev,
+                                                                    [p.id]: { ...prev[p.id], clientName: prev[p.id]?.clientName ?? p.quote?.clientDetails?.name ?? '', total: parseFloat(e.target.value) || 0, notes: prev[p.id]?.notes ?? '' }
+                                                                }))}
+                                                                placeholder="$ Total"
+                                                                className="bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-[#F6B45A]/50 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                        {/* Save Button */}
+                                                        <button
+                                                            onClick={async () => {
+                                                                const edits = inlineEditQuote[p.id];
+                                                                if (edits || p.quote) {
+                                                                    const updatedQuote: QuoteData = {
+                                                                        clientDetails: {
+                                                                            name: edits?.clientName || p.quote?.clientDetails?.name || '',
+                                                                            email: p.quote?.clientDetails?.email || '',
+                                                                            phone: p.quote?.clientDetails?.phone || '',
+                                                                            address: p.quote?.clientDetails?.address || ''
+                                                                        },
+                                                                        total: edits?.total || p.quote?.total || 0,
+                                                                        lineItems: p.quote?.lineItems || [],
+                                                                        taxRate: p.quote?.taxRate || 0,
+                                                                        discount: p.quote?.discount || 0
+                                                                    };
+                                                                    const success = await updateProject(p.id, {
+                                                                        quote: updatedQuote,
+                                                                        name: updatedQuote.clientDetails.name || p.name,
+                                                                        status: p.status === 'draft' ? 'quoted' : p.status
+                                                                    });
+                                                                    if (success) {
+                                                                        setExpandedCardId(null);
+                                                                        setInlineEditQuote(prev => { const next = {...prev}; delete next[p.id]; return next; });
+                                                                        showToast('success', 'Quote updated!');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="w-full bg-[#F6B45A] hover:bg-[#ffc67a] text-black py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5"
+                                                        >
+                                                            <Save className="w-3.5 h-3.5" />
+                                                            Save Changes
+                                                        </button>
+                                                        {/* Quick Actions */}
+                                                        <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                                                            {p.quote?.clientDetails?.phone && <a href={`tel:${p.quote.clientDetails.phone}`} className="flex-1 py-2 text-[10px] uppercase font-bold text-gray-400 active:text-[#F6B45A] flex items-center justify-center gap-1.5 bg-white/5 rounded-lg"><Phone className="w-3.5 h-3.5" />Call</a>}
+                                                            {(p.status === 'approved' || p.status === 'scheduled' || p.status === 'completed') && (
+                                                                <button onClick={() => handleGenerateInvoice(p)} className="flex-1 py-2 text-[10px] uppercase font-bold text-blue-400 active:text-blue-300 flex items-center justify-center gap-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20"><Receipt className="w-3.5 h-3.5" />Invoice</button>
+                                                            )}
+                                                            <button onClick={() => handleDeleteProject(p.id)} className="py-2 px-3 text-[10px] uppercase font-bold text-gray-400 active:text-red-500 flex items-center justify-center gap-1.5 bg-white/5 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* Action Buttons - Always visible */}
                                         <div className="flex items-center border-t border-white/5 divide-x divide-white/5">
-                                            <button onClick={() => handleDownloadImage(p)} disabled={!p.image} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-gray-400 active:text-white active:bg-white/5 flex items-center justify-center gap-1.5 disabled:opacity-30"><ImageIcon className="w-3.5 h-3.5" />Save</button>
-                                            <button onClick={() => { setCurrentProjectId(p.id); if (p.image) setGeneratedImage(p.image); if (p.quote) setCurrentQuote(p.quote); else setCurrentQuote(null); setProjectsSubTab('quotes'); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-purple-400 active:text-purple-300 active:bg-purple-500/10 flex items-center justify-center gap-1.5"><FileText className="w-3.5 h-3.5" />Quote</button>
-                                            <button onClick={() => handleApproveProject(p.id)} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-emerald-500 active:text-emerald-400 active:bg-emerald-500/10 flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />Approve</button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleDownloadImage(p); }} disabled={!p.image} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-gray-400 active:text-white active:bg-white/5 flex items-center justify-center gap-1.5 disabled:opacity-30"><ImageIcon className="w-3.5 h-3.5" />Save</button>
+                                            <button onClick={(e) => { e.stopPropagation(); setCurrentProjectId(p.id); if (p.image) setGeneratedImage(p.image); if (p.quote) setCurrentQuote(p.quote); else setCurrentQuote(null); setProjectsSubTab('quotes'); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-purple-400 active:text-purple-300 active:bg-purple-500/10 flex items-center justify-center gap-1.5"><FileText className="w-3.5 h-3.5" />Quote</button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleApproveProject(p.id); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-emerald-500 active:text-emerald-400 active:bg-emerald-500/10 flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />Approve</button>
                                         </div>
                                     </motion.div>
                                 ))}
                             </div>
                             {/* Desktop Card Grid View */}
                             <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                                {filteredUnapprovedProjects.map((p, index) => (
+                                {filteredPipelineProjects.map((p, index) => (
                                     <motion.div
                                       key={p.id}
                                       initial={{ opacity: 0, y: 20 }}
@@ -4185,56 +4323,271 @@ Notes: ${invoice.notes || 'N/A'}
                                                 </div>
                                             </div>
 
-                                            {/* Action Buttons Row - Responsive Grid */}
-                                            <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-white/5">
-                                                <button
-                                                    onClick={() => handleDownloadImage(p)}
-                                                    className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all group/btn"
-                                                    title="Download Image"
-                                                    disabled={!p.image}
-                                                >
-                                                    <ImageIcon className="w-3.5 h-3.5 shrink-0 group-hover/btn:text-[#F6B45A]" />
-                                                    <span className="hidden sm:inline">Save</span>
-                                                </button>
+                                            {/* Expandable Quick Edit Section */}
+                                            <AnimatePresence>
+                                                {expandedCardId === p.id && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
+                                                            {/* Quick Quote Edit */}
+                                                            <div className="space-y-2">
+                                                                <label className="block text-[10px] uppercase font-bold text-gray-400">Client Name</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={inlineEditQuote[p.id]?.clientName ?? p.quote?.clientDetails?.name ?? ''}
+                                                                    onChange={(e) => setInlineEditQuote(prev => ({
+                                                                        ...prev,
+                                                                        [p.id]: { ...prev[p.id], clientName: e.target.value, total: prev[p.id]?.total ?? p.quote?.total ?? 0, notes: prev[p.id]?.notes ?? '' }
+                                                                    }))}
+                                                                    placeholder="Enter client name"
+                                                                    className="w-full bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-[#F6B45A]/50 focus:outline-none transition-colors"
+                                                                />
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-[10px] uppercase font-bold text-gray-400">Total ($)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={inlineEditQuote[p.id]?.total ?? p.quote?.total ?? ''}
+                                                                        onChange={(e) => setInlineEditQuote(prev => ({
+                                                                            ...prev,
+                                                                            [p.id]: { ...prev[p.id], clientName: prev[p.id]?.clientName ?? p.quote?.clientDetails?.name ?? '', total: parseFloat(e.target.value) || 0, notes: prev[p.id]?.notes ?? '' }
+                                                                        }))}
+                                                                        placeholder="0"
+                                                                        className="w-full bg-[#151515] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-[#F6B45A]/50 focus:outline-none transition-colors"
+                                                                    />
+                                                                </div>
+                                                                <div className="flex items-end gap-2">
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            // Save inline edits
+                                                                            const edits = inlineEditQuote[p.id];
+                                                                            if (edits || p.quote) {
+                                                                                const updatedQuote: QuoteData = {
+                                                                                    clientDetails: {
+                                                                                        name: edits?.clientName || p.quote?.clientDetails?.name || '',
+                                                                                        email: p.quote?.clientDetails?.email || '',
+                                                                                        phone: p.quote?.clientDetails?.phone || '',
+                                                                                        address: p.quote?.clientDetails?.address || ''
+                                                                                    },
+                                                                                    total: edits?.total || p.quote?.total || 0,
+                                                                                    lineItems: p.quote?.lineItems || [],
+                                                                                    taxRate: p.quote?.taxRate || 0,
+                                                                                    discount: p.quote?.discount || 0
+                                                                                };
+                                                                                const success = await updateProject(p.id, {
+                                                                                    quote: updatedQuote,
+                                                                                    name: updatedQuote.clientDetails.name || p.name,
+                                                                                    status: p.status === 'draft' ? 'quoted' : p.status
+                                                                                });
+                                                                                if (success) {
+                                                                                    setExpandedCardId(null);
+                                                                                    setInlineEditQuote(prev => { const next = {...prev}; delete next[p.id]; return next; });
+                                                                                    showToast('success', 'Quote updated!');
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        className="flex-1 bg-[#F6B45A] hover:bg-[#ffc67a] text-black py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all"
+                                                                    >
+                                                                        <Save className="w-3.5 h-3.5" />
+                                                                        Save
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setExpandedCardId(null);
+                                                                            setInlineEditQuote(prev => { const next = {...prev}; delete next[p.id]; return next; });
+                                                                        }}
+                                                                        className="bg-white/5 hover:bg-white/10 text-gray-400 p-2 rounded-lg transition-all"
+                                                                    >
+                                                                        <X className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {/* Quick Actions Row */}
+                                                            <div className="flex gap-2 pt-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setCurrentProjectId(p.id);
+                                                                        if (p.image) setGeneratedImage(p.image);
+                                                                        setCurrentQuote(p.quote || null);
+                                                                        setProjectsSubTab('quotes');
+                                                                    }}
+                                                                    className="flex-1 text-center text-[10px] text-purple-400 hover:text-purple-300 py-2 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg transition-colors border border-purple-500/20"
+                                                                >
+                                                                    Full Quote Editor
+                                                                </button>
+                                                                {(p.status === 'approved' || p.status === 'scheduled' || p.status === 'completed') && (
+                                                                    <button
+                                                                        onClick={() => handleGenerateInvoice(p)}
+                                                                        className="flex-1 text-center text-[10px] text-blue-400 hover:text-blue-300 py-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg transition-colors border border-blue-500/20 flex items-center justify-center gap-1.5"
+                                                                    >
+                                                                        <Receipt className="w-3 h-3" />
+                                                                        Generate Invoice
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
 
-                                                {/* Add Image Button */}
-                                                <button
-                                                    onClick={() => handleOpenAddImageModal(p.id)}
-                                                    className="bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 text-[#F6B45A] py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]/50"
-                                                    title="Add Another Image"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5 shrink-0" />
-                                                    <span className="hidden sm:inline">Add</span>
-                                                </button>
+                                            {/* Expand/Collapse Button */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setExpandedCardId(expandedCardId === p.id ? null : p.id);
+                                                }}
+                                                className="w-full mt-3 flex items-center justify-center gap-1 py-1.5 text-[10px] uppercase font-bold text-gray-500 hover:text-gray-300 transition-colors"
+                                            >
+                                                <span>{expandedCardId === p.id ? 'Collapse' : 'Quick Edit'}</span>
+                                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedCardId === p.id ? 'rotate-180' : ''}`} />
+                                            </button>
 
-                                                {/* Add/Edit Quote Button */}
-                                                <button
-                                                    onClick={() => {
-                                                        setCurrentProjectId(p.id);
-                                                        if (p.image) setGeneratedImage(p.image);
-                                                        if (p.quote) {
-                                                            setCurrentQuote(p.quote);
-                                                        } else {
-                                                            setCurrentQuote(null);
-                                                        }
-                                                        setProjectsSubTab('quotes');
-                                                    }}
-                                                    className="bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-purple-500/30 hover:border-purple-500 group/btn"
-                                                    title={p.quote ? "Edit Quote" : "Add Quote"}
-                                                >
-                                                    <FileText className="w-3.5 h-3.5 shrink-0" />
-                                                    <span className="hidden sm:inline">Quote</span>
-                                                </button>
+                                            {/* Action Buttons Row - Status-Aware */}
+                                            <div className="mt-2 pt-4 border-t border-white/5 space-y-2">
+                                                {/* Draft/Quoted Status: Show Quote + Approve */}
+                                                {(p.status === 'draft' || p.status === 'quoted') && (
+                                                    <div className="grid grid-cols-4 gap-2">
+                                                        <button
+                                                            onClick={() => handleDownloadImage(p)}
+                                                            className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all group/btn"
+                                                            title="Download Image"
+                                                            disabled={!p.image}
+                                                        >
+                                                            <ImageIcon className="w-3.5 h-3.5 shrink-0 group-hover/btn:text-[#F6B45A]" />
+                                                            <span className="hidden sm:inline">Save</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleOpenAddImageModal(p.id)}
+                                                            className="bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 text-[#F6B45A] py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]/50"
+                                                            title="Add Another Image"
+                                                        >
+                                                            <Plus className="w-3.5 h-3.5 shrink-0" />
+                                                            <span className="hidden sm:inline">Add</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setCurrentProjectId(p.id);
+                                                                if (p.image) setGeneratedImage(p.image);
+                                                                setCurrentQuote(p.quote || null);
+                                                                setProjectsSubTab('quotes');
+                                                            }}
+                                                            className="bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-purple-500/30 hover:border-purple-500 group/btn"
+                                                            title={p.quote ? "Edit Quote" : "Add Quote"}
+                                                        >
+                                                            <FileText className="w-3.5 h-3.5 shrink-0" />
+                                                            <span className="hidden sm:inline">Quote</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleApproveProject(p.id)}
+                                                            className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-emerald-500/30 hover:border-emerald-500"
+                                                            title="Approve Project"
+                                                        >
+                                                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                                            <span className="hidden sm:inline">OK</span>
+                                                        </button>
+                                                    </div>
+                                                )}
 
-                                                {/* Approve Button */}
-                                                <button
-                                                    onClick={() => handleApproveProject(p.id)}
-                                                    className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-emerald-500/30 hover:border-emerald-500"
-                                                    title="Approve Project"
-                                                >
-                                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                                                    <span className="hidden sm:inline">OK</span>
-                                                </button>
+                                                {/* Approved Status: Show Schedule */}
+                                                {p.status === 'approved' && (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                setScheduleProjectId(p.id);
+                                                                setScheduleDate(new Date());
+                                                                setScheduleTimeSlot('morning');
+                                                                setScheduleDuration(2);
+                                                                setScheduleNotes('');
+                                                                setShowScheduleModal(true);
+                                                            }}
+                                                            className="flex-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white py-2.5 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-blue-500/30 hover:border-blue-500"
+                                                        >
+                                                            <Calendar className="w-3.5 h-3.5" />
+                                                            Schedule
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleUnapproveProject(p.id)}
+                                                            className="bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 p-2.5 rounded-lg transition-all border border-white/5 hover:border-red-500/30"
+                                                            title="Revert to draft"
+                                                        >
+                                                            <Undo2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Scheduled Status: Show Reschedule + Complete */}
+                                                {p.status === 'scheduled' && (
+                                                    <>
+                                                        {p.schedule && (
+                                                            <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-2">
+                                                                <Calendar className="w-4 h-4 text-blue-400" />
+                                                                <span className="text-sm text-blue-400 font-medium">
+                                                                    {new Date(p.schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                                    {' · '}
+                                                                    {p.schedule.timeSlot === 'morning' ? 'AM' : p.schedule.timeSlot === 'afternoon' ? 'Midday' : p.schedule.timeSlot === 'evening' ? 'PM' : p.schedule.customTime}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setScheduleProjectId(p.id);
+                                                                    if (p.schedule) {
+                                                                        setScheduleDate(new Date(p.schedule.scheduledDate));
+                                                                        setScheduleTimeSlot(p.schedule.timeSlot);
+                                                                        setScheduleCustomTime(p.schedule.customTime || '09:00');
+                                                                        setScheduleDuration(p.schedule.estimatedDuration);
+                                                                        setScheduleNotes(p.schedule.installationNotes || '');
+                                                                    }
+                                                                    setShowScheduleModal(true);
+                                                                }}
+                                                                className="flex-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white py-2.5 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-blue-500/30 hover:border-blue-500"
+                                                            >
+                                                                <Calendar className="w-3.5 h-3.5" />
+                                                                Reschedule
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setCompletionProjectId(p.id);
+                                                                    setCompletionNotes('');
+                                                                    setAutoGenerateInvoice(false);
+                                                                    setShowCompletionModal(true);
+                                                                }}
+                                                                className="flex-1 bg-[#F6B45A]/10 hover:bg-[#F6B45A] text-[#F6B45A] hover:text-black py-2.5 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]"
+                                                            >
+                                                                <Check className="w-3.5 h-3.5" />
+                                                                Complete
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
+
+                                                {/* Completed Status: Show Invoice */}
+                                                {p.status === 'completed' && (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleGenerateInvoice(p)}
+                                                            className="flex-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white py-2.5 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-blue-500/30 hover:border-blue-500"
+                                                        >
+                                                            <Receipt className="w-3.5 h-3.5" />
+                                                            Invoice
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDownloadImage(p)}
+                                                            className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white p-2.5 rounded-lg transition-all"
+                                                            title="Download Image"
+                                                            disabled={!p.image}
+                                                        >
+                                                            <ImageIcon className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </motion.div>
@@ -4246,7 +4599,7 @@ Notes: ${invoice.notes || 'N/A'}
                  )}
 
                  {/* SUB-TAB: APPROVED */}
-                 {projectsSubTab === 'approved' && (
+                 {false /* 'approved' tab now part of pipeline */ && (
                      <>
                          {filteredApprovedProjects.length === 0 ? (
                              <motion.div
@@ -4268,7 +4621,7 @@ Notes: ${invoice.notes || 'N/A'}
                                  <motion.button
                                    whileHover={{ scale: 1.02 }}
                                    whileTap={{ scale: 0.98 }}
-                                   onClick={() => setProjectsSubTab('projects')}
+                                   onClick={() => { setProjectsSubTab('pipeline'); setPipelineStatusFilter('all'); }}
                                    className="mt-6 px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-sm font-bold hover:bg-emerald-500/20 transition-colors relative z-10"
                                  >
                                    View Projects
@@ -5096,7 +5449,7 @@ Notes: ${invoice.notes || 'N/A'}
                                          <motion.button
                                            whileHover={{ scale: 1.02 }}
                                            whileTap={{ scale: 0.98 }}
-                                           onClick={() => setProjectsSubTab('approved')}
+                                           onClick={() => { setProjectsSubTab('pipeline'); setPipelineStatusFilter('active'); }}
                                            className="mt-6 px-5 py-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-400 text-sm font-bold hover:bg-blue-500/20 transition-colors relative z-10"
                                          >
                                            View Approved Projects
@@ -5362,10 +5715,10 @@ Notes: ${invoice.notes || 'N/A'}
                   projects={projects}
                   selectedDate={selectedCalendarDate}
                   onDateSelect={setSelectedCalendarDate}
-                  onViewProject={(project) => {
+                  onViewProject={(_project) => {
                     // Navigate to projects tab and select the project
                     handleTabChange('projects');
-                    setProjectsSubTab('approved');
+                    setProjectsSubTab('pipeline'); setPipelineStatusFilter('active');
                   }}
                   onReschedule={(project) => {
                     // Open schedule modal with existing data
