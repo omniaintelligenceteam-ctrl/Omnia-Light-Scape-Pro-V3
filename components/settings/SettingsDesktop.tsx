@@ -19,6 +19,7 @@ import { TechniciansSection } from './TechniciansSection';
 import { TeamSection } from './TeamSection';
 import { GoalsSection } from './GoalsSection';
 import { useOrganization } from '../../hooks/useOrganization';
+import { InventoryView } from '../InventoryView';
 
 export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   profile,
@@ -562,6 +563,25 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                     );
                   })}
                 </div>
+              </motion.div>
+            )}
+
+            {/* Inventory Section */}
+            {activeSection === 'inventory' && (
+              <motion.div
+                key="inventory"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <p className="text-sm text-gray-400 mb-6">
+                  Manage your fixture inventory and stock levels.
+                </p>
+
+                <InventoryView />
               </motion.div>
             )}
 

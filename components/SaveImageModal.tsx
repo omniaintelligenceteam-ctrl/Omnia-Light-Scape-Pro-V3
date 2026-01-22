@@ -19,7 +19,7 @@ interface SaveImageModalProps {
   onSaveToNewClient: (clientData: Partial<Client>) => void;
   onSaveToExistingClient: (clientId: string, clientName: string) => void;
   clients: Client[];
-  searchClients: (query: string) => Promise<Client[]>;
+  searchClients: (query: string) => Client[];
   isSaving: boolean;
 }
 
@@ -71,11 +71,11 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
   useEffect(() => {
     if (view !== 'existing-client') return;
 
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       if (searchQuery.trim()) {
         setIsSearching(true);
         try {
-          const results = await searchClients(searchQuery);
+          const results = searchClients(searchQuery);
           setSearchResults(results);
         } catch (error) {
           console.error('Search failed:', error);

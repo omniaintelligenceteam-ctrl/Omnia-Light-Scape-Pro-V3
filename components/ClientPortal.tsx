@@ -10,9 +10,18 @@ import {
   DollarSign,
   Image as ImageIcon,
   ExternalLink,
-  LogOut
+  LogOut,
+  Home,
+  ImageIcon as GalleryIcon,
+  GitBranch,
+  MessageCircle,
+  Folder
 } from 'lucide-react';
 import { ClientPortalLogin } from './ClientPortalLogin';
+import { ProjectGallery, ProjectPhoto } from './portal/ProjectGallery';
+import { ProjectTimeline, ProjectData } from './portal/ProjectTimeline';
+import { ClientCommunicationHub, Message } from './portal/ClientCommunicationHub';
+import { DocumentLibrary, ClientDocument } from './portal/DocumentLibrary';
 
 interface PortalProject {
   id: string;
@@ -44,6 +53,10 @@ interface PortalSession {
 
 interface PortalData {
   projects: PortalProject[];
+  photos: ProjectPhoto[];
+  documents: ClientDocument[];
+  messages: Message[];
+  unreadMessageCount: number;
   summary: {
     totalProjects: number;
     pendingQuotes: number;
@@ -63,6 +76,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'quotes' | 'invoices'>('all');
+  const [portalView, setPortalView] = useState<'overview' | 'gallery' | 'timeline' | 'messages' | 'documents'>('overview');
 
   // Check for existing session or validate token
   useEffect(() => {
@@ -269,8 +283,77 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 relative z-10">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {/* Tab Navigation */}
+        <div className="mb-8">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <button
+              onClick={() => setPortalView('overview')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                portalView === 'overview'
+                  ? 'bg-[#F6B45A] text-black'
+                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              Overview
+            </button>
+            <button
+              onClick={() => setPortalView('gallery')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                portalView === 'gallery'
+                  ? 'bg-[#F6B45A] text-black'
+                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              <GalleryIcon className="w-4 h-4" />
+              Gallery
+            </button>
+            <button
+              onClick={() => setPortalView('timeline')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                portalView === 'timeline'
+                  ? 'bg-[#F6B45A] text-black'
+                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              <GitBranch className="w-4 h-4" />
+              Timeline
+            </button>
+            <button
+              onClick={() => setPortalView('messages')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap relative ${
+                portalView === 'messages'
+                  ? 'bg-[#F6B45A] text-black'
+                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              Messages
+              {(data?.unreadMessageCount || 0) > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                  {data.unreadMessageCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setPortalView('documents')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                portalView === 'documents'
+                  ? 'bg-[#F6B45A] text-black'
+                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              <Folder className="w-4 h-4" />
+              Documents
+            </button>
+          </div>
+        </div>
+
+        {/* Overview Tab */}
+        {portalView === 'overview' && (
+          <>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-[#111] rounded-xl border border-white/5 p-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-[#F6B45A]/20 flex items-center justify-center">
@@ -459,6 +542,100 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
                 </motion.div>
               ))}
             </AnimatePresence>
+          </div>
+          </>
+        )}
+
+        {/* Gallery Tab */}
+        {portalView === 'gallery' && data && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6">Project Gallery</h2>
+            {data.projects.length > 0 ? (
+              <div className="space-y-8">
+                {data.projects.map(project => (
+                  <div key={project.id} className="bg-[#111] rounded-2xl border border-white/5 p-6">
+                    <h3 className="text-lg font-bold text-white mb-4">{project.name}</h3>
+                    <ProjectGallery photos={data.photos} projectId={project.id} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-12">No projects yet</p>
+            )}
+          </div>
+        )}
+
+        {/* Timeline Tab */}
+        {portalView === 'timeline' && data && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6">Project Timeline</h2>
+            {data.projects.length > 0 ? (
+              <div className="space-y-6">
+                {data.projects.map(project => (
+                  <div key={project.id} className="bg-[#111] rounded-2xl border border-white/5 p-6">
+                    <h3 className="text-lg font-bold text-white mb-6">{project.name}</h3>
+                    <ProjectTimeline project={project as unknown as ProjectData} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-12">No projects yet</p>
+            )}
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {portalView === 'messages' && data && session && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6">Messages</h2>
+            <ClientCommunicationHub
+              messages={data.messages}
+              clientName={session.clientName}
+              token={session.token}
+              onSendMessage={async (messageText: string) => {
+                const response = await fetch('/api/client-portal/messages/send', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    token: session.token,
+                    messageText,
+                    senderName: session.clientName
+                  })
+                });
+                if (response.ok) {
+                  // Refresh data to show new message
+                  fetchPortalData();
+                }
+              }}
+              onMarkRead={(messageIds: string[]) => {
+                fetch('/api/client-portal/messages/mark-read', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    token: session.token,
+                    messageIds
+                  })
+                });
+              }}
+            />
+          </div>
+        )}
+
+        {/* Documents Tab */}
+        {portalView === 'documents' && data && session && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6">Documents</h2>
+            <DocumentLibrary
+              documents={data.documents}
+              onDownload={async (documentId: string) => {
+                const response = await fetch(`/api/client-portal/documents/download?token=${session.token}&documentId=${documentId}`);
+                if (response.ok) {
+                  const result = await response.json();
+                  // Open download URL in new tab
+                  window.open(result.data.url, '_blank');
+                }
+              }}
+            />
           </div>
         )}
       </main>

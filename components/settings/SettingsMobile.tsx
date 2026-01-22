@@ -18,6 +18,7 @@ import { LocationsSection } from './LocationsSection';
 import { TechniciansSection } from './TechniciansSection';
 import { TeamSection } from './TeamSection';
 import { useOrganization } from '../../hooks/useOrganization';
+import { InventoryView } from '../InventoryView';
 
 // Menu item button component
 const MenuButton: React.FC<{
@@ -235,6 +236,14 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           title="Fixture Catalog"
           description="Brands & SKUs"
           onClick={() => setActiveModal('catalog')}
+        />
+
+        {/* Inventory */}
+        <MenuButton
+          icon={Package}
+          title="Inventory"
+          description="Stock levels & materials"
+          onClick={() => setActiveModal('inventory')}
         />
 
         {/* Lighting Defaults */}
@@ -683,6 +692,20 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
               </div>
             );
           })}
+        </div>
+      </FullScreenModal>
+
+      {/* Inventory Modal */}
+      <FullScreenModal
+        isOpen={activeModal === 'inventory'}
+        onClose={() => setActiveModal(null)}
+        title="Inventory"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-400 mb-4">
+            Manage your fixture inventory and stock levels.
+          </p>
+          <InventoryView />
         </div>
       </FullScreenModal>
 

@@ -299,7 +299,7 @@ const App: React.FC = () => {
   const [tabDirection, setTabDirection] = useState<number>(0); // -1 for left, 1 for right
 
   // Tab order for determining swipe direction
-  const tabOrder = ['editor', 'projects', 'schedule', 'inventory', 'settings'];
+  const tabOrder = ['editor', 'projects', 'schedule', 'settings'];
 
   // Custom tab change handler that tracks direction
   const handleTabChange = (newTab: string) => {
@@ -483,9 +483,6 @@ const App: React.FC = () => {
   const [eventRecurrence, setEventRecurrence] = useState<RecurrencePattern>('none');
   const [eventRecurrenceEndDate, setEventRecurrenceEndDate] = useState<string>('');
   const [eventRecurrenceCount, setEventRecurrenceCount] = useState<number>(0);
-
-  // Inventory Sub-Tab State
-  const [inventorySubTab, setInventorySubTab] = useState<'bom' | 'inventory'>('bom');
 
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
@@ -1736,7 +1733,6 @@ const App: React.FC = () => {
   const handleGenerateBOM = (quoteData: QuoteData) => {
       const bom = generateBOM(quoteData.lineItems, fixtureCatalog.length > 0 ? fixtureCatalog : undefined);
       setCurrentBOM(bom);
-      handleTabChange('inventory');
   };
 
   const handleBOMChange = (bom: BOMData) => {
@@ -6377,78 +6373,6 @@ Notes: ${invoice.notes || 'N/A'}
               )}
             </motion.div>
           )}
-
-           {/* TAB: INVENTORY */}
-           {activeTab === 'inventory' && (
-            <motion.div
-              key="inventory"
-              initial={{ x: tabDirection * 100 + '%' }}
-              animate={{ x: 0 }}
-              exit={{ x: tabDirection * -100 + '%' }}
-              transition={{ type: 'spring', stiffness: 700, damping: 45 }}
-              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-20"
-            >
-              {/* Background Tech Mesh/Glow */}
-              <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
-              <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-
-              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
-
-                {/* High-End Header */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6 border-b border-white/5 pb-6">
-                    <div>
-                       <h2 className="text-3xl md:text-4xl font-bold text-white font-serif tracking-tight mb-2">Inventory & BOM</h2>
-                       <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-[#F6B45A] animate-pulse"></div>
-                            <span className="text-[10px] text-gray-300 font-mono uppercase tracking-widest">Materials Management</span>
-                       </div>
-                    </div>
-                </div>
-
-                {/* Sub-Tabs Navigation */}
-                <div className="flex items-center gap-2 mb-8 bg-[#111] p-1.5 rounded-xl border border-white/5 w-fit">
-                    <button
-                        onClick={() => setInventorySubTab('bom')}
-                        className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
-                            inventorySubTab === 'bom'
-                                ? 'bg-[#F6B45A] text-black'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
-                    >
-                        <ClipboardList className="w-4 h-4" />
-                        Bill of Materials
-                    </button>
-                    <button
-                        onClick={() => setInventorySubTab('inventory')}
-                        className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
-                            inventorySubTab === 'inventory'
-                                ? 'bg-emerald-500 text-white'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
-                    >
-                        <Package className="w-4 h-4" />
-                        Inventory
-                    </button>
-                </div>
-
-                {/* SUB-TAB: BOM */}
-                {inventorySubTab === 'bom' && (
-                    <BOMView
-                      bomData={currentBOM}
-                      onBOMChange={handleBOMChange}
-                      onSaveProject={handleSaveProjectFromBOM}
-                      currentQuote={currentQuote}
-                      generatedImage={generatedImage}
-                    />
-                )}
-
-                {/* SUB-TAB: INVENTORY */}
-                {inventorySubTab === 'inventory' && (
-                    <InventoryView />
-                )}
-              </div>
-            </motion.div>
-           )}
 
           {/* TAB: SETTINGS */}
            {activeTab === 'settings' && (

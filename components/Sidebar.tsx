@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paintbrush, FolderOpen, FolderClosed, Settings, Package, PackageOpen, Sparkles, Calendar, CalendarCheck, ClipboardList } from 'lucide-react';
+import { Paintbrush, FolderOpen, FolderClosed, Settings, Sparkles, Calendar, CalendarCheck, ClipboardList } from 'lucide-react';
 import { useOrganization } from '../hooks/useOrganization';
 import { OrganizationRole, RolePermissions } from '../types';
 
@@ -27,7 +27,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
     { id: 'editor', label: 'Editor', icon: Paintbrush, requiredPermission: 'canCreateProjects' },
     { id: 'projects', label: 'Projects', icon: FolderOpen }, // All roles can see (filtered view)
     { id: 'schedule', label: 'Schedule', icon: Calendar }, // All roles can see (filtered view)
-    { id: 'inventory', label: 'Inventory', icon: Package, requiredPermission: 'canViewPricing' },
     { id: 'settings', label: 'Settings', icon: Settings }, // All roles can see (role-filtered content)
   ];
 
@@ -220,25 +219,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'projects' ? (
                     <FolderClosed
-                      className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
-                      strokeWidth={2}
-                    />
-                  ) : /* Inventory - Package open/close animation */
-                  item.id === 'inventory' && isActive ? (
-                    <motion.div
-                      animate={{
-                        scale: [1, 1.05, 1],
-                        y: [0, -2, 0]
-                      }}
-                      transition={{ duration: 1, repeat: Infinity, repeatDelay: 1.2 }}
-                    >
-                      <PackageOpen
-                        className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
-                        strokeWidth={2.5}
-                      />
-                    </motion.div>
-                  ) : item.id === 'inventory' ? (
-                    <Package
                       className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
                       strokeWidth={2}
                     />

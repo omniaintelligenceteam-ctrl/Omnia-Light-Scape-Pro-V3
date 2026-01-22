@@ -105,6 +105,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
     });
 
+    // Fetch project photos
+    let photos: any[] = [];
+    if (projectIds.length > 0) {
+      const { data: photosData } = await supabase
+        .from('project_photos')
+        .select('*')
+        .in('project_id', projectIds)
+        .eq('is_visible_to_client', true)
+        .order('display_order', { ascending: true });
+
+      photos = photosData || [];
+    }
+
+    // Fetch client documents
+    const { data: documents } = await supabase
+      .from('client_documents')
+      .select('*')
+      .eq('client_id', clientId)
+      .eq('is_visible_to_client', true)
+      .order('uploaded_at', { ascending: false });
+
+    // Fetch messages (last 50)
+    const { data: messages } = await supabase
+      .from('client_messages')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    // Count unread messages (company messages not read by client)
+    const unreadMessages = (messages || []).filter(
+      m => m.sender_type === 'company' && !m.read_at
+    );
+
     // Categorize projects
     const pendingQuotes = projectsWithLinks.filter(p => p.quote.sentAt && !p.quote.approvedAt);
     const approvedProjects = projectsWithLinks.filter(p => p.quote.approvedAt);
@@ -115,6 +149,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success: true,
       data: {
         projects: projectsWithLinks,
+        photos: photos,
+        documents: documents || [],
+        messages: (messages || []).reverse(), // Oldest first for chat display
+        unreadMessageCount: unreadMessages.length,
         summary: {
           totalProjects: projectsWithLinks.length,
           pendingQuotes: pendingQuotes.length,
