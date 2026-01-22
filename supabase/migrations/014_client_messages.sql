@@ -1,4 +1,4 @@
--- Migration: 011_client_messages.sql
+-- Migration: 014_client_messages.sql
 -- Purpose: Create client_messages table for bidirectional messaging
 -- Enables communication between clients and company
 
@@ -22,3 +22,8 @@ CREATE INDEX IF NOT EXISTS idx_client_messages_created ON client_messages(create
 COMMENT ON TABLE client_messages IS 'Stores messages between clients and company';
 COMMENT ON COLUMN client_messages.sender_type IS 'Whether message is from client or company';
 COMMENT ON COLUMN client_messages.read_at IS 'Timestamp when message was read (null if unread)';
+
+-- Record migration execution
+INSERT INTO schema_migrations (version, description) VALUES
+  ('014', 'Client messaging system')
+ON CONFLICT (version) DO NOTHING;

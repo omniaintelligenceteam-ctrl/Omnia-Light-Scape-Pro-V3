@@ -1,4 +1,4 @@
--- Migration: 012_client_documents.sql
+-- Migration: 015_client_documents.sql
 -- Purpose: Create client_documents table for document management
 -- Stores contracts, warranties, manuals, and other client documents
 
@@ -26,3 +26,8 @@ COMMENT ON TABLE client_documents IS 'Stores documents for clients and projects'
 COMMENT ON COLUMN client_documents.document_type IS 'Type of document: contract, warranty, manual, schedule, photos, or other';
 COMMENT ON COLUMN client_documents.file_url IS 'URL to file in Supabase Storage or external storage';
 COMMENT ON COLUMN client_documents.is_visible_to_client IS 'Whether document should be shown in client portal';
+
+-- Record migration execution
+INSERT INTO schema_migrations (version, description) VALUES
+  ('015', 'Client document library')
+ON CONFLICT (version) DO NOTHING;

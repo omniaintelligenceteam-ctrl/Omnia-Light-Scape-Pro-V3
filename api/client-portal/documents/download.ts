@@ -50,19 +50,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'Document not found or access denied' });
     }
 
-    // If the file_url is a Supabase Storage path, generate a signed URL
-    // For now, just return the URL directly
-    // In production, you would generate a signed URL with expiry:
-    // const { data: signedUrlData } = await supabase.storage
-    //   .from('client-documents')
-    //   .createSignedUrl(document.file_url, 3600); // 1 hour expiry
+    // Generate signed URL with 1-hour expiry for secure document access
+    const { data: signedUrlData, error: signedError } = await supabase.storage
+      .from('client-documents')
+      .createSignedUrl(document.file_url, 3600); // 1 hour expiry
+
+    if (signedError || !signedUrlData) {
+      console.error('Signed URL generation error:', signedError);
+      return res.status(500).json({ error: 'Failed to generate download URL' });
+    }
 
     return res.status(200).json({
       success: true,
       data: {
         id: document.id,
         name: document.document_name,
-        url: document.file_url,
+        url: signedUrlData.signedUrl, // Use signed URL instead of direct URL
         type: document.document_type,
         size: document.file_size_bytes,
         mimeType: document.mime_type,

@@ -1,4 +1,4 @@
--- Migration: 010_project_gallery.sql
+-- Migration: 013_project_gallery.sql
 -- Purpose: Create project_photos table for photo gallery feature
 -- Allows multiple photos per project with categorization and ordering
 
@@ -25,3 +25,8 @@ COMMENT ON TABLE project_photos IS 'Stores multiple photos for each project with
 COMMENT ON COLUMN project_photos.photo_type IS 'Type of photo: before, after, progress, final, detail, or other';
 COMMENT ON COLUMN project_photos.display_order IS 'Order for displaying photos (0 = first)';
 COMMENT ON COLUMN project_photos.is_visible_to_client IS 'Whether photo should be shown in client portal';
+
+-- Record migration execution
+INSERT INTO schema_migrations (version, description) VALUES
+  ('013', 'Project photo gallery')
+ON CONFLICT (version) DO NOTHING;
