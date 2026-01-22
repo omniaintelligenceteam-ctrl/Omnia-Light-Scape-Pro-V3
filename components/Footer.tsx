@@ -10,8 +10,9 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
   const currentYear = new Date().getFullYear();
 
   if (variant === 'minimal') {
+    // Hide minimal footer on mobile since bottom nav (Sidebar) takes that space
     return (
-      <footer className="relative py-4 px-4 bg-[#050505] border-t border-white/5">
+      <footer className="hidden md:block relative py-4 px-4 bg-[#050505] border-t border-white/5">
         <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500">
           <Sun className="w-3 h-3 text-[#F6B45A]/50" />
           <span className="font-mono tracking-wider">
@@ -24,8 +25,9 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
     );
   }
 
+  // Hide full footer on mobile since bottom nav (Sidebar) takes that space
   return (
-    <footer className="relative bg-gradient-to-b from-[#0a0a0a] to-[#030303] border-t border-white/5 overflow-hidden">
+    <footer className="hidden md:block relative bg-gradient-to-b from-[#0a0a0a] to-[#030303] border-t border-white/5 overflow-hidden">
       {/* Ambient top glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-24 bg-[#F6B45A]/5 blur-[100px] pointer-events-none"></div>
 
