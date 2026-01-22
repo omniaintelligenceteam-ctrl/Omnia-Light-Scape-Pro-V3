@@ -149,7 +149,7 @@ ${preferenceContext}
     - **Zero Hallucination**: If user selects "Trees" only, House MUST remain DARK. If user selects "Path" only, House and Trees MUST remain DARK.
     - **Soffit/Eave Defaults**: DEFAULT OFF unless explicitly requested.
     - **Beam Hygiene**: Light sources must be realistic (cone shape, natural falloff).
-    - **Color Temperature**: ${colorTemperaturePrompt}
+    - **Color Temperature (MANDATORY)**: ${colorTemperaturePrompt} This is a HARD RULE - ALL lights MUST use this exact color temperature unless the user explicitly specifies a different temperature in the DESIGN REQUEST notes below.
     - **Intensity**: ${getIntensityPrompt(lightIntensity)}
     - **Beam**: ${getBeamAnglePrompt(beamAngle)}
 

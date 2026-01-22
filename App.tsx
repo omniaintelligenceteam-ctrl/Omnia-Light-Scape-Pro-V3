@@ -3787,26 +3787,26 @@ Notes: ${invoice.notes || 'N/A'}
                                                 </div>
                                             </div>
 
-                                            {/* Action Buttons Row */}
-                                            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                                            {/* Action Buttons Row - Responsive Grid */}
+                                            <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-white/5">
                                                 <button
                                                     onClick={() => handleDownloadImage(p)}
-                                                    className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all group/btn"
+                                                    className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all group/btn"
                                                     title="Download Image"
                                                     disabled={!p.image}
                                                 >
-                                                    <ImageIcon className="w-3 h-3 group-hover/btn:text-[#F6B45A]" />
-                                                    Save Img
+                                                    <ImageIcon className="w-3.5 h-3.5 shrink-0 group-hover/btn:text-[#F6B45A]" />
+                                                    <span className="hidden sm:inline">Save</span>
                                                 </button>
 
                                                 {/* Add Image Button */}
                                                 <button
                                                     onClick={() => handleOpenAddImageModal(p.id)}
-                                                    className="flex-1 bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 text-[#F6B45A] py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]/50"
+                                                    className="bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 text-[#F6B45A] py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-[#F6B45A]/30 hover:border-[#F6B45A]/50"
                                                     title="Add Another Image"
                                                 >
-                                                    <Plus className="w-3 h-3" />
-                                                    Add Img
+                                                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                                                    <span className="hidden sm:inline">Add</span>
                                                 </button>
 
                                                 {/* Add/Edit Quote Button */}
@@ -3821,21 +3821,21 @@ Notes: ${invoice.notes || 'N/A'}
                                                         }
                                                         setProjectsSubTab('quotes');
                                                     }}
-                                                    className="flex-1 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-purple-500/30 hover:border-purple-500 group/btn"
+                                                    className="bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-purple-500/30 hover:border-purple-500 group/btn"
                                                     title={p.quote ? "Edit Quote" : "Add Quote"}
                                                 >
-                                                    <FileText className="w-3 h-3" />
-                                                    {p.quote ? 'Edit Quote' : 'Add Quote'}
+                                                    <FileText className="w-3.5 h-3.5 shrink-0" />
+                                                    <span className="hidden sm:inline">Quote</span>
                                                 </button>
 
                                                 {/* Approve Button */}
                                                 <button
                                                     onClick={() => handleApproveProject(p.id)}
-                                                    className="flex-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white py-2 rounded-lg text-[10px] uppercase font-bold tracking-wider flex items-center justify-center gap-2 transition-all border border-emerald-500/30 hover:border-emerald-500"
+                                                    className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white py-2.5 px-2 rounded-lg text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-all border border-emerald-500/30 hover:border-emerald-500"
                                                     title="Approve Project"
                                                 >
-                                                    <CheckCircle2 className="w-3 h-3" />
-                                                    Approve
+                                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                                    <span className="hidden sm:inline">OK</span>
                                                 </button>
                                             </div>
                                         </div>
