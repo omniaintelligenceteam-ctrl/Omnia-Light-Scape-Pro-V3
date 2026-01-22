@@ -1120,14 +1120,14 @@ const App: React.FC = () => {
       const base64 = await fileToBase64(addImageFile);
       const success = await addImageToProject(addImageProjectId, base64, addImageLabel || undefined);
       if (success) {
-        showToast('Image added to project', 'success');
+        showToast('success', 'Image added to project');
         setShowAddImageModal(false);
       } else {
-        showToast('Failed to add image', 'error');
+        showToast('error', 'Failed to add image');
       }
     } catch (err) {
       console.error('Error adding image:', err);
-      showToast('Failed to add image', 'error');
+      showToast('error', 'Failed to add image');
     } finally {
       setIsAddingImage(false);
     }
@@ -1377,7 +1377,7 @@ const App: React.FC = () => {
   // Save event (create or update)
   const handleSaveEvent = async () => {
     if (!eventTitle.trim()) {
-      showToast('Please enter an event title', 'error');
+      showToast('error', 'Please enter an event title');
       return;
     }
 
@@ -1398,17 +1398,17 @@ const App: React.FC = () => {
       // Update existing event
       const success = await updateCalendarEvent(editingEventId, eventData);
       if (success) {
-        showToast('Event updated!', 'success');
+        showToast('success', 'Event updated!');
       } else {
-        showToast('Failed to update event', 'error');
+        showToast('error', 'Failed to update event');
       }
     } else {
       // Create new event
       const newEvent = await createEvent(eventData);
       if (newEvent) {
-        showToast('Event created!', 'success');
+        showToast('success', 'Event created!');
       } else {
-        showToast('Failed to create event', 'error');
+        showToast('error', 'Failed to create event');
       }
     }
 
@@ -1420,9 +1420,9 @@ const App: React.FC = () => {
   const handleDeleteEvent = async (eventId: string) => {
     const success = await deleteEvent(eventId);
     if (success) {
-      showToast('Event deleted', 'success');
+      showToast('success', 'Event deleted');
     } else {
-      showToast('Failed to delete event', 'error');
+      showToast('error', 'Failed to delete event');
     }
   };
 
@@ -5051,12 +5051,12 @@ Notes: ${invoice.notes || 'N/A'}
                     };
                     const success = await scheduleProject(scheduleProjectId, scheduleData);
                     if (success) {
-                      showToast('Job scheduled successfully!', 'success');
+                      showToast('success', 'Job scheduled successfully!');
                       setShowScheduleModal(false);
                       setScheduleProjectId(null);
                       setScheduleNotes('');
                     } else {
-                      showToast('Failed to schedule job', 'error');
+                      showToast('error', 'Failed to schedule job');
                     }
                   }}
                   className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition-colors"
@@ -5160,7 +5160,7 @@ Notes: ${invoice.notes || 'N/A'}
                     if (!completionProjectId) return;
                     const success = await completeProject(completionProjectId, completionNotes || undefined);
                     if (success) {
-                      showToast('Job marked as complete!', 'success');
+                      showToast('success', 'Job marked as complete!');
                       setShowCompletionModal(false);
                       setCompletionProjectId(null);
                       setCompletionNotes('');
@@ -5173,7 +5173,7 @@ Notes: ${invoice.notes || 'N/A'}
                         }
                       }
                     } else {
-                      showToast('Failed to complete job', 'error');
+                      showToast('error', 'Failed to complete job');
                     }
                   }}
                   className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-xl transition-colors"
