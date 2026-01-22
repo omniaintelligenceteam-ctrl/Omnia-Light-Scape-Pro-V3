@@ -384,6 +384,15 @@ export interface Location {
 
 export type TechnicianRole = 'lead' | 'technician' | 'apprentice';
 
+export interface TechnicianCertification {
+  id: string;
+  name: string;
+  issuedBy?: string;
+  issueDate: string;
+  expiryDate?: string;
+  documentUrl?: string;
+}
+
 export interface Technician {
   id: string;
   locationId?: string;
@@ -394,6 +403,11 @@ export interface Technician {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Phase 4: Skills and expertise tracking
+  skills?: string[];
+  certifications?: TechnicianCertification[];
+  notes?: string;
+  hourlyRate?: number;
 }
 
 export type LeadSource = 'google' | 'referral' | 'angi' | 'thumbtack' | 'website' | 'social' | 'yard_sign' | 'other';

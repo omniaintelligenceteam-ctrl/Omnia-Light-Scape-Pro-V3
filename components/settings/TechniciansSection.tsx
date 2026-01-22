@@ -2,9 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, Plus, Trash2, Edit2, Check, X, Mail, Phone, MapPin, Loader2, Award, Search,
-  TrendingUp, DollarSign, Briefcase, Clock, Target, ChevronDown, ChevronUp
+  TrendingUp, DollarSign, Briefcase, Clock, Target, ChevronDown, ChevronUp, Wrench,
+  BadgeCheck, FileText, Calendar
 } from 'lucide-react';
-import { Technician, TechnicianRole, Location, TechnicianMetrics } from '../../types';
+import { Technician, TechnicianRole, Location, TechnicianMetrics, TechnicianCertification } from '../../types';
 import { SettingsCard } from './ui/SettingsCard';
 import { CardInput } from './ui/PremiumInput';
 import { ToggleRow } from './ui/SettingsToggle';
@@ -32,6 +33,19 @@ const roleColors: Record<TechnicianRole, string> = {
   apprentice: 'bg-emerald-500/20 text-emerald-400'
 };
 
+const COMMON_SKILLS = [
+  'LED Installation',
+  'Path Lighting',
+  'Uplighting',
+  'Hardscape Lighting',
+  'Tree Lighting',
+  'Irrigation Systems',
+  'Low Voltage Wiring',
+  'Lighting Design',
+  'Troubleshooting',
+  'Maintenance'
+];
+
 export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
   technicians,
   technicianMetrics,
@@ -51,10 +65,29 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [roleFilter, setRoleFilter] = useState<'all' | TechnicianRole>('all');
   const [locationFilter, setLocationFilter] = useState<'all' | 'unassigned' | string>('all');
+  const [skillsFilter, setSkillsFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'role' | 'location' | 'date'>('name');
 
   // Metrics visibility state
   const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set());
+
+  // Skills input state
+  const [newSkill, setNewSkill] = useState('');
+
+  // Certification modal state
+  const [showCertModal, setShowCertModal] = useState(false);
+  const [newCert, setNewCert] = useState<Partial<TechnicianCertification>>({
+    name: '',
+    issuedBy: '',
+    issueDate: '',
+    expiryDate: ''
+  });
+
+  // Unique skills across all technicians for filter dropdown
+  const uniqueSkills = useMemo(() => {
+    const allSkills = technicians?.flatMap(t => t.skills || []) || [];
+    return Array.from(new Set(allSkills)).sort();
+  }, [technicians]);
 
   const toggleMetrics = (techId: string) => {
     setExpandedMetrics(prev => {
@@ -76,7 +109,10 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
       phone: '',
       locationId: locations[0]?.id,
       role: 'technician',
-      isActive: true
+      isActive: true,
+      skills: [],
+      certifications: [],
+      notes: ''
     });
   };
 
@@ -88,7 +124,10 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
       phone: technician.phone,
       locationId: technician.locationId,
       role: technician.role,
-      isActive: technician.isActive
+      isActive: technician.isActive,
+      skills: technician.skills || [],
+      certifications: technician.certifications || [],
+      notes: technician.notes
     });
   };
 
@@ -110,7 +149,10 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
           phone: formData.phone,
           locationId: formData.locationId,
           role: formData.role || 'technician',
-          isActive: formData.isActive ?? true
+          isActive: formData.isActive ?? true,
+          skills: formData.skills,
+          certifications: formData.certifications,
+          notes: formData.notes
         });
       } else if (editingId) {
         await onUpdateTechnician(editingId, formData);
@@ -128,16 +170,67 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
     await onDeleteTechnician(id);
   };
 
+  // Skills management
+  const addSkill = () => {
+    if (newSkill.trim() && formData) {
+      const skills = [...(formData.skills || [])];
+      if (!skills.includes(newSkill.trim())) {
+        skills.push(newSkill.trim());
+        setFormData({ ...formData, skills });
+      }
+      setNewSkill('');
+    }
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    if (formData) {
+      const skills = (formData.skills || []).filter(s => s !== skillToRemove);
+      setFormData({ ...formData, skills });
+    }
+  };
+
+  const quickAddSkill = (skill: string) => {
+    if (formData && !formData.skills?.includes(skill)) {
+      const skills = [...(formData.skills || []), skill];
+      setFormData({ ...formData, skills });
+    }
+  };
+
+  // Certifications management
+  const addCertification = () => {
+    if (newCert.name?.trim() && newCert.issueDate && formData) {
+      const cert: TechnicianCertification = {
+        id: crypto.randomUUID(),
+        name: newCert.name.trim(),
+        issuedBy: newCert.issuedBy?.trim(),
+        issueDate: newCert.issueDate,
+        expiryDate: newCert.expiryDate || undefined
+      };
+      const certifications = [...(formData.certifications || []), cert];
+      setFormData({ ...formData, certifications });
+      setNewCert({ name: '', issuedBy: '', issueDate: '', expiryDate: '' });
+      setShowCertModal(false);
+    }
+  };
+
+  const removeCertification = (certId: string) => {
+    if (formData) {
+      const certifications = (formData.certifications || []).filter(c => c.id !== certId);
+      setFormData({ ...formData, certifications });
+    }
+  };
+
   // Filtered and Sorted Technicians
   const filteredAndSortedTechnicians = useMemo(() => {
     let filtered = technicians || [];
 
-    // Search
+    // Search (now includes skills)
     if (searchQuery) {
       filtered = filtered.filter(tech =>
         tech.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tech.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tech.phone?.includes(searchQuery)
+        tech.phone?.includes(searchQuery) ||
+        tech.skills?.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -157,6 +250,11 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
       }
     }
 
+    // Skills filter
+    if (skillsFilter !== 'all') {
+      filtered = filtered.filter(t => t.skills?.includes(skillsFilter));
+    }
+
     // Sorting
     return filtered.sort((a, b) => {
       switch (sortBy) {
@@ -171,7 +269,7 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
         default: return 0;
       }
     });
-  }, [technicians, searchQuery, statusFilter, roleFilter, locationFilter, sortBy, locations]);
+  }, [technicians, searchQuery, statusFilter, roleFilter, locationFilter, skillsFilter, sortBy, locations]);
 
   // Group filtered technicians by location
   const techniciansByLocation = filteredAndSortedTechnicians.reduce((acc, tech) => {
@@ -279,7 +377,228 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
           checked={formData.isActive ?? true}
           onChange={(v) => setFormData({ ...formData, isActive: v })}
         />
+
+        {/* Skills Section */}
+        <div className="pt-4 border-t border-white/5">
+          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-3">
+            <Wrench className="w-3 h-3 inline-block mr-1" />
+            Skills & Expertise
+          </label>
+
+          {/* Current Skills */}
+          {(formData.skills?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {formData.skills?.map((skill) => (
+                <div
+                  key={skill}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-full"
+                >
+                  <span className="text-xs text-blue-400">{skill}</span>
+                  <button
+                    onClick={() => removeSkill(skill)}
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Skill Input */}
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Add a skill (e.g., LED Installation)"
+              value={newSkill}
+              onChange={(e) => setNewSkill(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+              className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/5 rounded-xl text-white text-sm
+                focus:border-[#F6B45A]/50 focus:outline-none"
+            />
+            <button
+              onClick={addSkill}
+              disabled={!newSkill.trim()}
+              className="px-3 py-2 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Quick Add Common Skills */}
+          <div className="space-y-1">
+            <p className="text-[10px] text-gray-600">Quick add:</p>
+            <div className="flex flex-wrap gap-1">
+              {COMMON_SKILLS.filter(s => !formData.skills?.includes(s)).slice(0, 6).map(skill => (
+                <button
+                  key={skill}
+                  onClick={() => quickAddSkill(skill)}
+                  className="text-[10px] px-2 py-1 bg-white/5 hover:bg-blue-500/10 rounded text-gray-400 hover:text-blue-400 transition-colors"
+                >
+                  + {skill}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Certifications Section */}
+        <div className="pt-4 border-t border-white/5">
+          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-3">
+            <BadgeCheck className="w-3 h-3 inline-block mr-1" />
+            Certifications & Licenses
+          </label>
+
+          {/* Existing Certifications */}
+          {(formData.certifications?.length ?? 0) > 0 && (
+            <div className="space-y-2 mb-3">
+              {formData.certifications?.map((cert) => (
+                <div
+                  key={cert.id}
+                  className="flex items-start justify-between p-3 bg-white/[0.02] border border-white/5 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white">{cert.name}</p>
+                    {cert.issuedBy && (
+                      <p className="text-xs text-gray-500">Issued by: {cert.issuedBy}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500">
+                      <Calendar className="w-3 h-3" />
+                      <span>
+                        {new Date(cert.issueDate).toLocaleDateString()}
+                        {cert.expiryDate && ` - Expires: ${new Date(cert.expiryDate).toLocaleDateString()}`}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeCertification(cert.id)}
+                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Certification Button */}
+          <button
+            onClick={() => setShowCertModal(true)}
+            className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] border border-dashed border-white/10 rounded-lg text-gray-400 hover:text-white hover:border-white/20 transition-all w-full justify-center"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">Add Certification</span>
+          </button>
+        </div>
+
+        {/* Notes Section */}
+        <div className="pt-4 border-t border-white/5">
+          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
+            <FileText className="w-3 h-3 inline-block mr-1" />
+            Internal Notes
+          </label>
+          <textarea
+            value={formData.notes || ''}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="Add internal notes about this technician..."
+            rows={3}
+            className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-white text-sm placeholder-gray-500
+              focus:border-[#F6B45A]/50 focus:outline-none resize-none"
+          />
+        </div>
       </div>
+
+      {/* Certification Modal */}
+      {showCertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="w-full max-w-md p-6 rounded-2xl bg-[#1a1a1a] border border-white/10">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white">Add Certification</h3>
+              <button
+                onClick={() => setShowCertModal(false)}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
+                  Certification Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Licensed Electrician, Landscape Lighting Certification, etc."
+                  value={newCert.name || ''}
+                  onChange={(e) => setNewCert({ ...newCert, name: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-white text-sm placeholder-gray-500
+                    focus:border-[#F6B45A]/50 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
+                  Issued By
+                </label>
+                <input
+                  type="text"
+                  placeholder="Issuing organization (optional)"
+                  value={newCert.issuedBy || ''}
+                  onChange={(e) => setNewCert({ ...newCert, issuedBy: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-white text-sm placeholder-gray-500
+                    focus:border-[#F6B45A]/50 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
+                    Issue Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={newCert.issueDate || ''}
+                    onChange={(e) => setNewCert({ ...newCert, issueDate: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-white text-sm
+                      focus:border-[#F6B45A]/50 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
+                    Expiry Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newCert.expiryDate || ''}
+                    onChange={(e) => setNewCert({ ...newCert, expiryDate: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-white text-sm
+                      focus:border-[#F6B45A]/50 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={addCertification}
+                  disabled={!newCert.name?.trim() || !newCert.issueDate}
+                  className="flex-1 py-3 rounded-xl bg-[#F6B45A] text-black font-medium
+                    hover:bg-[#f6c45a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add Certification
+                </button>
+                <button
+                  onClick={() => setShowCertModal(false)}
+                  className="px-6 py-3 rounded-xl bg-white/10 text-white font-medium
+                    hover:bg-white/20 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </SettingsCard>
   );
 
@@ -347,6 +666,18 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
             <option value="unassigned">Unassigned</option>
           </select>
 
+          {/* Skills Filter */}
+          {uniqueSkills.length > 0 && (
+            <select
+              value={skillsFilter}
+              onChange={(e) => setSkillsFilter(e.target.value)}
+              className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+            >
+              <option value="all">All Skills</option>
+              {uniqueSkills.map(skill => <option key={skill} value={skill}>{skill}</option>)}
+            </select>
+          )}
+
           {/* Sort */}
           <select
             value={sortBy}
@@ -362,7 +693,7 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
       </div>
 
       {/* Results count */}
-      {(searchQuery || statusFilter !== 'all' || roleFilter !== 'all' || locationFilter !== 'all') && (
+      {(searchQuery || statusFilter !== 'all' || roleFilter !== 'all' || locationFilter !== 'all' || skillsFilter !== 'all') && (
         <p className="text-sm text-gray-400 mb-3">
           Showing {filteredAndSortedTechnicians.length} of {technicians?.length || 0} technicians
         </p>
@@ -429,6 +760,31 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
                                       </span>
                                     )}
                                   </div>
+                                  {/* Skills Tags */}
+                                  {tech.skills && tech.skills.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {tech.skills.slice(0, 4).map((skill) => (
+                                        <span
+                                          key={skill}
+                                          className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full"
+                                        >
+                                          {skill}
+                                        </span>
+                                      ))}
+                                      {tech.skills.length > 4 && (
+                                        <span className="text-[10px] px-2 py-0.5 bg-white/5 text-gray-400 rounded-full">
+                                          +{tech.skills.length - 4} more
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {/* Certifications Badge */}
+                                  {tech.certifications && tech.certifications.length > 0 && (
+                                    <div className="flex items-center gap-1 mt-2 text-xs text-emerald-400">
+                                      <BadgeCheck className="w-3 h-3" />
+                                      <span>{tech.certifications.length} certification{tech.certifications.length !== 1 ? 's' : ''}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -578,6 +934,31 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
                                     </span>
                                   )}
                                 </div>
+                                {/* Skills Tags */}
+                                {tech.skills && tech.skills.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {tech.skills.slice(0, 4).map((skill) => (
+                                      <span
+                                        key={skill}
+                                        className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {tech.skills.length > 4 && (
+                                      <span className="text-[10px] px-2 py-0.5 bg-white/5 text-gray-400 rounded-full">
+                                        +{tech.skills.length - 4} more
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {/* Certifications Badge */}
+                                {tech.certifications && tech.certifications.length > 0 && (
+                                  <div className="flex items-center gap-1 mt-2 text-xs text-emerald-400">
+                                    <BadgeCheck className="w-3 h-3" />
+                                    <span>{tech.certifications.length} certification{tech.certifications.length !== 1 ? 's' : ''}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -729,6 +1110,7 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
               setStatusFilter('all');
               setRoleFilter('all');
               setLocationFilter('all');
+              setSkillsFilter('all');
             }}
             className="text-sm text-[#F6B45A] hover:underline"
           >
