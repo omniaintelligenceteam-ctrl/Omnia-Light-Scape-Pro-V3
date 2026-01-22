@@ -4248,17 +4248,6 @@ Notes: ${invoice.notes || 'N/A'}
                                      <span className="text-[10px] uppercase tracking-wider text-gray-500">Draft</span>
                                  </button>
                                  <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
-                                 {/* Quoted */}
-                                 <button
-                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'quoted' ? 'all' : 'quoted')}
-                                     className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
-                                         pipelineStatusFilter === 'quoted' ? 'bg-purple-500/20 ring-1 ring-purple-400/50' : 'hover:bg-white/5'
-                                     }`}
-                                 >
-                                     <span className="text-lg font-bold text-purple-400">{statusCounts.quoted}</span>
-                                     <span className="text-[10px] uppercase tracking-wider text-purple-500">Quoted</span>
-                                 </button>
-                                 <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
                                  {/* Active */}
                                  <button
                                      onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'active' ? 'all' : 'active')}
@@ -4305,26 +4294,6 @@ Notes: ${invoice.notes || 'N/A'}
                              >
                                  Draft ({statusCounts.draft})
                              </button>
-                             <button
-                                 onClick={() => setPipelineStatusFilter('quoted')}
-                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                     pipelineStatusFilter === 'quoted'
-                                         ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-400/50'
-                                         : 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20'
-                                 }`}
-                             >
-                                 Quoted ({statusCounts.quoted})
-                             </button>
-                             <button
-                                onClick={() => setPipelineStatusFilter('approved')}
-                                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                    pipelineStatusFilter === 'approved'
-                                        ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/50'
-                                        : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
-                                }`}
-                            >
-                                Approved ({statusCounts.approved})
-                            </button>
                              <button
                                  onClick={() => setPipelineStatusFilter('active')}
                                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
