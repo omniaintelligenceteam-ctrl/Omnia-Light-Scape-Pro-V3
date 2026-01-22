@@ -19,12 +19,13 @@ import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
 import { useSubscription } from './hooks/useSubscription';
 import { useCalendarEvents } from './hooks/useCalendarEvents';
+import { useClients } from './hooks/useClients';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, Sun, Settings2, Mail } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, Sun, Settings2, Mail, Users, Edit, Save } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -144,6 +145,17 @@ const App: React.FC = () => {
   // Load/save projects from Supabase
   const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject } = useProjects();
 
+  // Load/save clients from Supabase
+  const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients } = useClients();
+
+  // Client management UI state
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [clientFormData, setClientFormData] = useState({ name: '', email: '', phone: '', address: '', notes: '' });
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'all' | 'draft' | 'sent' | 'paid' | 'overdue'>('all');
+
   // Rate limiting for generate button (prevent double-clicks)
   const lastGenerateTime = useRef<number>(0);
   const GENERATE_COOLDOWN_MS = 3000; // 3 seconds between generations
@@ -171,7 +183,27 @@ const App: React.FC = () => {
   const [selectedFixtures, setSelectedFixtures] = useState<string[]>([]);
   // Sub-Options State
   const [fixtureSubOptions, setFixtureSubOptions] = useState<Record<string, string[]>>({});
-  
+
+  // Favorite Presets State
+  interface FixturePreset {
+    id: string;
+    name: string;
+    selectedFixtures: string[];
+    fixtureSubOptions: Record<string, string[]>;
+    colorTemp: string;
+    lightIntensity: number;
+    beamAngle: number;
+    createdAt: number;
+  }
+  const [fixturePresets, setFixturePresets] = useState<FixturePreset[]>(() => {
+    try {
+      const saved = localStorage.getItem('omnia_fixture_presets');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [showSavePresetModal, setShowSavePresetModal] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
+
   // Modal Configuration State
   const [activeConfigFixture, setActiveConfigFixture] = useState<string | null>(null); // 'up', 'path', 'coredrill', 'gutter', 'soffit', 'hardscape' or null
   const [pendingOptions, setPendingOptions] = useState<string[]>([]);
@@ -195,11 +227,19 @@ const App: React.FC = () => {
   const [statusMessageIndex, setStatusMessageIndex] = useState<number>(0);
   const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
 
-  // Generation History for Undo
+  // Generation History for Undo with Settings
   interface GenerationHistoryEntry {
     id: string;
     image: string;
     timestamp: number;
+    settings?: {
+      selectedFixtures: string[];
+      fixtureSubOptions: Record<string, string[]>;
+      colorTemp: string;
+      lightIntensity: number;
+      beamAngle: number;
+      prompt?: string;
+    };
   }
   const [generationHistory, setGenerationHistory] = useState<GenerationHistoryEntry[]>([]);
 
@@ -219,6 +259,7 @@ const App: React.FC = () => {
   const [currentQuote, setCurrentQuote] = useState<QuoteData | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null); // Track which project is being edited
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
 
   // PDF Generation State for Projects Tab
   const [pdfProject, setPdfProject] = useState<SavedProject | null>(null);
@@ -236,7 +277,7 @@ const App: React.FC = () => {
   const [fixtureCatalog, setFixtureCatalog] = useState<FixtureCatalogItem[]>([]);
 
   // Projects Sub-Tab State
-  const [projectsSubTab, setProjectsSubTab] = useState<'projects' | 'quotes' | 'approved' | 'invoicing'>('projects');
+  const [projectsSubTab, setProjectsSubTab] = useState<'projects' | 'quotes' | 'approved' | 'invoicing' | 'clients'>('projects');
   const [showMobileProjectsMenu, setShowMobileProjectsMenu] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [currentInvoice, setCurrentInvoice] = useState<InvoiceData | null>(null);
@@ -535,6 +576,138 @@ const App: React.FC = () => {
         return () => clearTimeout(timer);
     }
   }, [pdfProject]);
+
+  // Save presets to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('omnia_fixture_presets', JSON.stringify(fixturePresets));
+  }, [fixturePresets]);
+
+  // Preset handlers
+  const handleSavePreset = () => {
+    if (!newPresetName.trim()) return;
+    const newPreset: FixturePreset = {
+      id: `preset-${Date.now()}`,
+      name: newPresetName.trim(),
+      selectedFixtures: [...selectedFixtures],
+      fixtureSubOptions: { ...fixtureSubOptions },
+      colorTemp,
+      lightIntensity,
+      beamAngle,
+      createdAt: Date.now()
+    };
+    setFixturePresets(prev => [...prev, newPreset]);
+    setNewPresetName('');
+    setShowSavePresetModal(false);
+    showToast('success', `Preset "${newPreset.name}" saved!`);
+  };
+
+  const handleApplyPreset = (preset: FixturePreset) => {
+    setSelectedFixtures(preset.selectedFixtures);
+    setFixtureSubOptions(preset.fixtureSubOptions);
+    setColorTemp(preset.colorTemp);
+    setLightIntensity(preset.lightIntensity);
+    setBeamAngle(preset.beamAngle);
+    showToast('success', `Applied preset: ${preset.name}`);
+  };
+
+  const handleDeletePreset = (presetId: string) => {
+    setFixturePresets(prev => prev.filter(p => p.id !== presetId));
+    showToast('info', 'Preset deleted');
+  };
+
+  // Client management handlers
+  const handleOpenClientModal = (client?: Client) => {
+    if (client) {
+      setEditingClient(client);
+      setClientFormData({
+        name: client.name,
+        email: client.email || '',
+        phone: client.phone || '',
+        address: client.address || '',
+        notes: client.notes || ''
+      });
+    } else {
+      setEditingClient(null);
+      setClientFormData({ name: '', email: '', phone: '', address: '', notes: '' });
+    }
+    setShowClientModal(true);
+  };
+
+  const handleSaveClient = async () => {
+    if (!clientFormData.name.trim()) {
+      showToast('error', 'Client name is required');
+      return;
+    }
+
+    if (editingClient) {
+      const success = await updateClient(editingClient.id, clientFormData);
+      if (success) {
+        showToast('success', 'Client updated!');
+        setShowClientModal(false);
+      }
+    } else {
+      const newClient = await createClient(clientFormData);
+      if (newClient) {
+        showToast('success', 'Client created!');
+        setShowClientModal(false);
+      }
+    }
+  };
+
+  const handleDeleteClient = async (clientId: string) => {
+    if (window.confirm('Delete this client? This cannot be undone.')) {
+      const success = await deleteClient(clientId);
+      if (success) {
+        showToast('info', 'Client deleted');
+      }
+    }
+  };
+
+  const filteredClients = clientSearchTerm
+    ? searchClients(clientSearchTerm)
+    : clients;
+
+  // Helper to check if invoice is overdue
+  const isInvoiceOverdue = (invoice: InvoiceData): boolean => {
+    if (invoice.status === 'paid') return false;
+    const dueDate = new Date(invoice.dueDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return dueDate < today;
+  };
+
+  // Get effective status (including overdue detection)
+  const getInvoiceStatus = (invoice: InvoiceData): 'draft' | 'sent' | 'paid' | 'overdue' => {
+    if (invoice.status === 'paid') return 'paid';
+    if (isInvoiceOverdue(invoice)) return 'overdue';
+    return invoice.status;
+  };
+
+  // Filter invoices by search term and status
+  const filteredInvoices = invoices.filter(invoice => {
+    // Search filter
+    const searchMatch = !invoiceSearchTerm ||
+      invoice.projectName.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) ||
+      invoice.invoiceNumber.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) ||
+      invoice.clientDetails.name?.toLowerCase().includes(invoiceSearchTerm.toLowerCase());
+
+    // Status filter
+    const effectiveStatus = getInvoiceStatus(invoice);
+    const statusMatch = invoiceStatusFilter === 'all' || effectiveStatus === invoiceStatusFilter;
+
+    return searchMatch && statusMatch;
+  });
+
+  // Invoice summary stats
+  const invoiceStats = {
+    total: invoices.length,
+    draft: invoices.filter(i => i.status === 'draft' && !isInvoiceOverdue(i)).length,
+    sent: invoices.filter(i => i.status === 'sent' && !isInvoiceOverdue(i)).length,
+    paid: invoices.filter(i => i.status === 'paid').length,
+    overdue: invoices.filter(i => isInvoiceOverdue(i)).length,
+    totalUnpaid: invoices.filter(i => i.status !== 'paid').reduce((sum, i) => sum + i.total, 0),
+    totalOverdue: invoices.filter(i => isInvoiceOverdue(i)).reduce((sum, i) => sum + i.total, 0),
+  };
 
   const requestApiKey = async () => {
     // Only try to use the window shim if we don't have an env var
@@ -952,11 +1125,19 @@ const App: React.FC = () => {
       // Trigger loading screen celebration FIRST (before hiding loading)
       setShowLoadingCelebration(true);
 
-      // Add to history
+      // Add to history with settings
       setGenerationHistory(prev => [...prev, {
         id: Date.now().toString(),
         image: result,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        settings: {
+          selectedFixtures: selectedFixtures,
+          fixtureSubOptions: { ...fixtureSubOptions },
+          colorTemp: colorTemp,
+          lightIntensity: lightIntensity,
+          beamAngle: beamAngle,
+          prompt: prompt
+        }
       }]);
       // Increment usage count after successful generation
       await subscription.incrementUsage();
@@ -1019,11 +1200,19 @@ const App: React.FC = () => {
         // Trigger loading screen celebration FIRST (before hiding loading)
         setShowLoadingCelebration(true);
 
-        // Add to history
+        // Add to history with settings
         setGenerationHistory(prev => [...prev, {
           id: Date.now().toString(),
           image: result,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          settings: {
+            selectedFixtures: selectedFixtures,
+            fixtureSubOptions: { ...fixtureSubOptions },
+            colorTemp: colorTemp,
+            lightIntensity: lightIntensity,
+            beamAngle: beamAngle,
+            prompt: feedbackText
+          }
         }]);
         // Increment usage count after successful generation
         await subscription.incrementUsage();
@@ -1638,25 +1827,43 @@ Notes: ${invoice.notes || 'N/A'}
     return counts;
   }, [projects]);
 
-  // Memoized filtered project lists (includes search filtering)
+  // Memoized filtered project lists (includes search and status filtering)
   const filteredUnapprovedProjects = useMemo(() =>
-      projects.filter(p =>
-          (p.status === 'draft' || p.status === 'quoted') &&
-          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           p.date.includes(searchTerm) ||
-           p.quote?.clientDetails?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
-      ),
-      [projects, searchTerm]
+      projects.filter(p => {
+          // Status must be draft or quoted for this tab
+          if (p.status !== 'draft' && p.status !== 'quoted') return false;
+          // Apply status filter if not 'all'
+          if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+          // Apply search filter
+          const searchLower = searchTerm.toLowerCase();
+          return (
+              p.name.toLowerCase().includes(searchLower) ||
+              p.date.includes(searchTerm) ||
+              p.quote?.clientDetails?.name?.toLowerCase().includes(searchLower) ||
+              p.quote?.clientDetails?.email?.toLowerCase().includes(searchLower) ||
+              p.quote?.clientDetails?.phone?.includes(searchTerm)
+          );
+      }),
+      [projects, searchTerm, statusFilter]
   );
 
   const filteredApprovedProjects = useMemo(() =>
-      projects.filter(p =>
-          (p.status === 'approved' || p.status === 'scheduled' || p.status === 'completed') &&
-          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           p.date.includes(searchTerm) ||
-           p.quote?.clientDetails?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
-      ),
-      [projects, searchTerm]
+      projects.filter(p => {
+          // Status must be approved, scheduled, or completed for this tab
+          if (p.status !== 'approved' && p.status !== 'scheduled' && p.status !== 'completed') return false;
+          // Apply status filter if not 'all'
+          if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+          // Apply search filter
+          const searchLower = searchTerm.toLowerCase();
+          return (
+              p.name.toLowerCase().includes(searchLower) ||
+              p.date.includes(searchTerm) ||
+              p.quote?.clientDetails?.name?.toLowerCase().includes(searchLower) ||
+              p.quote?.clientDetails?.email?.toLowerCase().includes(searchLower) ||
+              p.quote?.clientDetails?.phone?.includes(searchTerm)
+          );
+      }),
+      [projects, searchTerm, statusFilter]
   );
 
   // Authentication is now handled by AuthWrapper
@@ -1963,32 +2170,75 @@ Notes: ${invoice.notes || 'N/A'}
                         )}
                     </div>
 
-                    {/* History Thumbnail Strip */}
+                    {/* History Thumbnail Strip with Settings Info */}
                     {generationHistory.length > 1 && (
                         <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 w-full px-4">
-                            <div className="flex items-center justify-center gap-2 overflow-x-auto py-2 px-3 bg-black/60 backdrop-blur-md rounded-full border border-white/10 mx-auto max-w-fit">
+                            <div className="flex items-center justify-center gap-2 overflow-x-auto py-2 px-3 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 mx-auto max-w-fit">
                                 {generationHistory.map((entry, index) => {
                                     const isCurrentImage = entry.image === generatedImage;
                                     return (
-                                        <button
-                                            key={entry.id}
-                                            onClick={() => setGeneratedImage(entry.image)}
-                                            className={`relative shrink-0 w-12 h-12 rounded-lg overflow-hidden transition-all duration-200 ${
-                                                isCurrentImage
-                                                    ? 'ring-2 ring-[#F6B45A] scale-110'
-                                                    : 'ring-1 ring-white/20 hover:ring-white/40 opacity-60 hover:opacity-100'
-                                            }`}
-                                            title={`Generation ${index + 1}`}
-                                        >
-                                            <img
-                                                src={entry.image}
-                                                alt={`Generation ${index + 1}`}
-                                                className="w-full h-full object-cover"
-                                            />
-                                            <span className="absolute bottom-0.5 right-0.5 text-[8px] font-bold bg-black/70 text-white px-1 rounded">
-                                                {index + 1}
-                                            </span>
-                                        </button>
+                                        <div key={entry.id} className="relative group">
+                                            <button
+                                                onClick={() => setGeneratedImage(entry.image)}
+                                                className={`relative shrink-0 w-12 h-12 rounded-lg overflow-hidden transition-all duration-200 ${
+                                                    isCurrentImage
+                                                        ? 'ring-2 ring-[#F6B45A] scale-110'
+                                                        : 'ring-1 ring-white/20 hover:ring-white/40 opacity-60 hover:opacity-100'
+                                                }`}
+                                                title={`Generation ${index + 1}`}
+                                            >
+                                                <img
+                                                    src={entry.image}
+                                                    alt={`Generation ${index + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <span className="absolute bottom-0.5 right-0.5 text-[8px] font-bold bg-black/70 text-white px-1 rounded">
+                                                    {index + 1}
+                                                </span>
+                                            </button>
+                                            {/* Settings Tooltip on Hover */}
+                                            {entry.settings && (
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto z-50">
+                                                    <div className="bg-[#111] border border-white/20 rounded-xl p-3 shadow-2xl min-w-[200px] text-left">
+                                                        <div className="text-[10px] font-bold text-[#F6B45A] uppercase tracking-wider mb-2">Settings Used</div>
+                                                        <div className="space-y-1 text-[10px]">
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-400">Color Temp:</span>
+                                                                <span className="text-white">{entry.settings.colorTemp}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-400">Intensity:</span>
+                                                                <span className="text-white">{entry.settings.lightIntensity}%</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-400">Beam Angle:</span>
+                                                                <span className="text-white">{entry.settings.beamAngle}°</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-400">Fixtures:</span>
+                                                                <span className="text-white">{entry.settings.selectedFixtures.length}</span>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                // Apply these settings
+                                                                setSelectedFixtures(entry.settings!.selectedFixtures);
+                                                                setFixtureSubOptions(entry.settings!.fixtureSubOptions);
+                                                                setColorTemp(entry.settings!.colorTemp);
+                                                                setLightIntensity(entry.settings!.lightIntensity);
+                                                                setBeamAngle(entry.settings!.beamAngle);
+                                                                if (entry.settings!.prompt) setPrompt(entry.settings!.prompt);
+                                                                showToast('success', 'Settings applied from history!');
+                                                            }}
+                                                            className="mt-2 w-full py-1.5 bg-[#F6B45A]/20 border border-[#F6B45A]/30 rounded-lg text-[#F6B45A] text-[10px] font-bold hover:bg-[#F6B45A]/30 transition-colors"
+                                                        >
+                                                            Apply These Settings
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     );
                                 })}
                             </div>
@@ -2756,20 +3006,55 @@ Notes: ${invoice.notes || 'N/A'}
                         
                         {/* Premium Fixture Selection */}
                         <div className="flex flex-col gap-5">
-                            {/* Section Header */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#F6B45A]/15 to-[#F6B45A]/5 border border-[#F6B45A]/20 shadow-lg shadow-[#F6B45A]/5">
-                                        <Sparkles className="w-4 h-4 text-[#F6B45A]" />
+                            {/* Section Header with Presets */}
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#F6B45A]/15 to-[#F6B45A]/5 border border-[#F6B45A]/20 shadow-lg shadow-[#F6B45A]/5">
+                                            <Sparkles className="w-4 h-4 text-[#F6B45A]" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-white tracking-tight">Select Fixtures</h3>
+                                            <p className="text-xs text-gray-500">Choose lighting types to include</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-sm font-semibold text-white tracking-tight">Select Fixtures</h3>
-                                        <p className="text-xs text-gray-500">Choose lighting types to include</p>
-                                    </div>
+                                    <span className="text-[10px] font-medium text-gray-500 bg-white/5 px-2.5 py-1 rounded-full">
+                                        {selectedFixtures.length} selected
+                                    </span>
                                 </div>
-                                <span className="text-[10px] font-medium text-gray-500 bg-white/5 px-2.5 py-1 rounded-full">
-                                    {selectedFixtures.length} selected
-                                </span>
+                                {/* Presets Row */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {fixturePresets.length > 0 && (
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                            <span className="text-[10px] text-gray-500 uppercase tracking-wider mr-1">Presets:</span>
+                                            {fixturePresets.map(preset => (
+                                                <div key={preset.id} className="relative group">
+                                                    <button
+                                                        onClick={() => handleApplyPreset(preset)}
+                                                        className="px-2.5 py-1 text-[10px] font-medium bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full hover:bg-purple-500/20 hover:border-purple-500/40 transition-all"
+                                                    >
+                                                        {preset.name}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeletePreset(preset.id)}
+                                                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="w-2.5 h-2.5 text-white" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {selectedFixtures.length > 0 && (
+                                        <button
+                                            onClick={() => setShowSavePresetModal(true)}
+                                            className="px-2.5 py-1 text-[10px] font-medium bg-[#F6B45A]/10 border border-[#F6B45A]/20 text-[#F6B45A] rounded-full hover:bg-[#F6B45A]/20 hover:border-[#F6B45A]/40 transition-all flex items-center gap-1"
+                                        >
+                                            <Save className="w-3 h-3" />
+                                            Save Preset
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Fixture Grid - Premium minimal buttons */}
@@ -3261,7 +3546,7 @@ Notes: ${invoice.notes || 'N/A'}
                         </div>
 
                         {/* Mobile Search Icon/Input */}
-                        <div className="md:hidden relative">
+                        <div className="md:hidden flex items-center gap-2">
                            <div className="relative group">
                               <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
                                   <Search className="h-4 w-4 text-gray-400 group-focus-within:text-[#F6B45A] transition-colors" />
@@ -3270,25 +3555,60 @@ Notes: ${invoice.notes || 'N/A'}
                                   type="text"
                                   value={searchTerm}
                                   onChange={(e) => setSearchTerm(e.target.value)}
-                                  className="block w-36 pl-8 pr-2 py-2 border border-white/10 rounded-lg leading-5 bg-[#111] text-gray-200 placeholder-gray-500 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 text-xs font-mono transition-all"
+                                  className="block w-28 pl-8 pr-2 py-2 border border-white/10 rounded-lg leading-5 bg-[#111] text-gray-200 placeholder-gray-500 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 text-xs font-mono transition-all"
                                   placeholder="Search..."
                               />
                            </div>
+                           <select
+                              value={statusFilter}
+                              onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'all')}
+                              className="py-2 px-2 border border-white/10 rounded-lg bg-[#111] text-gray-200 text-xs font-mono focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50"
+                           >
+                              <option value="all">All</option>
+                              <option value="draft">Draft</option>
+                              <option value="quoted">Quoted</option>
+                              <option value="approved">Approved</option>
+                              <option value="scheduled">Scheduled</option>
+                              <option value="completed">Completed</option>
+                           </select>
                         </div>
                      </div>
 
-                     {/* Desktop Search Bar */}
-                     <div className="hidden md:block w-96 relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400 group-focus-within:text-[#F6B45A] transition-colors" />
+                     {/* Desktop Search Bar and Filter */}
+                     <div className="hidden md:flex items-center gap-3">
+                        <div className="w-72 relative group">
+                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                               <Search className="h-4 w-4 text-gray-400 group-focus-within:text-[#F6B45A] transition-colors" />
+                           </div>
+                           <input
+                               type="text"
+                               value={searchTerm}
+                               onChange={(e) => setSearchTerm(e.target.value)}
+                               className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-[#111] text-gray-200 placeholder-gray-400 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 sm:text-sm font-mono transition-all"
+                               placeholder="Search by name or client..."
+                           />
                         </div>
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-[#111] text-gray-200 placeholder-gray-400 focus:outline-none focus:bg-black focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 sm:text-sm font-mono transition-all"
-                            placeholder="Search by name or client..."
-                        />
+                        <select
+                           value={statusFilter}
+                           onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'all')}
+                           className="py-3 px-4 border border-white/10 rounded-xl bg-[#111] text-gray-200 text-sm font-mono focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 cursor-pointer hover:border-[#F6B45A]/30 transition-colors"
+                        >
+                           <option value="all">All Statuses</option>
+                           <option value="draft">Draft</option>
+                           <option value="quoted">Quoted</option>
+                           <option value="approved">Approved</option>
+                           <option value="scheduled">Scheduled</option>
+                           <option value="completed">Completed</option>
+                        </select>
+                        {(searchTerm || statusFilter !== 'all') && (
+                           <button
+                              onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
+                              className="py-3 px-4 border border-white/10 rounded-xl bg-[#111] text-gray-400 text-sm font-mono hover:text-white hover:border-red-500/30 transition-colors flex items-center gap-2"
+                           >
+                              <X className="w-4 h-4" />
+                              Clear
+                           </button>
+                        )}
                      </div>
                  </div>
 
@@ -3457,6 +3777,17 @@ Notes: ${invoice.notes || 'N/A'}
                      >
                          <Receipt className="w-4 h-4" />
                          Invoicing
+                     </button>
+                     <button
+                         onClick={() => setProjectsSubTab('clients')}
+                         className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
+                             projectsSubTab === 'clients'
+                                 ? 'bg-[#F6B45A] text-black'
+                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                         }`}
+                     >
+                         <Users className="w-4 h-4" />
+                         Clients
                      </button>
                  </div>
 
@@ -3675,26 +4006,29 @@ Notes: ${invoice.notes || 'N/A'}
                                                                     >
                                                                         <ChevronRight className="w-4 h-4 text-white" />
                                                                     </button>
-                                                                    {/* Dots Indicator */}
-                                                                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                                                                        {images.map((_, idx) => (
+                                                                    {/* Image Counter & Label */}
+                                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-2 py-0.5 bg-black/60 rounded-full text-[9px] text-white/80">
+                                                                        <span>{currentIndex + 1}/{images.length}</span>
+                                                                        <span className="text-[#F6B45A]">{currentImage.label || 'View'}</span>
+                                                                    </div>
+                                                                    {/* Thumbnail Strip */}
+                                                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10 p-1 bg-black/40 rounded-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        {images.map((img, idx) => (
                                                                             <button
                                                                                 key={idx}
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
                                                                                     setProjectImageIndex(prev => ({ ...prev, [p.id]: idx }));
                                                                                 }}
-                                                                                className={`w-2 h-2 rounded-full transition-all ${
+                                                                                className={`relative w-8 h-6 rounded overflow-hidden transition-all ${
                                                                                     idx === currentIndex
-                                                                                        ? 'bg-[#F6B45A] scale-110'
-                                                                                        : 'bg-white/40 hover:bg-white/60'
+                                                                                        ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-black scale-110'
+                                                                                        : 'opacity-60 hover:opacity-100'
                                                                                 }`}
-                                                                            />
+                                                                            >
+                                                                                <img src={img.url} alt="" className="w-full h-full object-cover" />
+                                                                            </button>
                                                                         ))}
-                                                                    </div>
-                                                                    {/* Image Label */}
-                                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/60 rounded-full text-[9px] text-white/80">
-                                                                        {currentImage.label || `View ${currentIndex + 1}`}
                                                                     </div>
                                                                 </>
                                                             )}
@@ -3938,26 +4272,29 @@ Notes: ${invoice.notes || 'N/A'}
                                                                     >
                                                                         <ChevronRight className="w-4 h-4 text-white" />
                                                                     </button>
-                                                                    {/* Dots Indicator */}
-                                                                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                                                                        {images.map((_, idx) => (
+                                                                    {/* Image Counter & Label */}
+                                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-2 py-0.5 bg-black/60 rounded-full text-[9px] text-white/80">
+                                                                        <span>{currentIndex + 1}/{images.length}</span>
+                                                                        <span className="text-emerald-400">{currentImage.label || 'View'}</span>
+                                                                    </div>
+                                                                    {/* Thumbnail Strip */}
+                                                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10 p-1 bg-black/40 rounded-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        {images.map((img, idx) => (
                                                                             <button
                                                                                 key={idx}
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
                                                                                     setProjectImageIndex(prev => ({ ...prev, [p.id]: idx }));
                                                                                 }}
-                                                                                className={`w-2 h-2 rounded-full transition-all ${
+                                                                                className={`relative w-8 h-6 rounded overflow-hidden transition-all ${
                                                                                     idx === currentIndex
-                                                                                        ? 'bg-emerald-400 scale-110'
-                                                                                        : 'bg-white/40 hover:bg-white/60'
+                                                                                        ? 'ring-2 ring-emerald-400 ring-offset-1 ring-offset-black scale-110'
+                                                                                        : 'opacity-60 hover:opacity-100'
                                                                                 }`}
-                                                                            />
+                                                                            >
+                                                                                <img src={img.url} alt="" className="w-full h-full object-cover" />
+                                                                            </button>
                                                                         ))}
-                                                                    </div>
-                                                                    {/* Image Label */}
-                                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/60 rounded-full text-[9px] text-white/80">
-                                                                        {currentImage.label || `View ${currentIndex + 1}`}
                                                                     </div>
                                                                 </>
                                                             )}
@@ -4598,6 +4935,73 @@ Notes: ${invoice.notes || 'N/A'}
                          ) : (
                              /* Invoice List View */
                              <>
+                                 {/* Invoice Header with Stats & Filters */}
+                                 <div className="mb-6 space-y-4">
+                                     {/* Stats Row */}
+                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                         <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 rounded-xl p-4">
+                                             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Total Invoices</p>
+                                             <p className="text-2xl font-bold text-white">{invoiceStats.total}</p>
+                                         </div>
+                                         <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-emerald-500/20 rounded-xl p-4">
+                                             <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-1">Paid</p>
+                                             <p className="text-2xl font-bold text-emerald-400">{invoiceStats.paid}</p>
+                                         </div>
+                                         <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-blue-500/20 rounded-xl p-4">
+                                             <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1">Unpaid</p>
+                                             <p className="text-2xl font-bold text-blue-400">${invoiceStats.totalUnpaid.toFixed(0)}</p>
+                                         </div>
+                                         <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-red-500/20 rounded-xl p-4">
+                                             <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-1">Overdue</p>
+                                             <p className="text-2xl font-bold text-red-400">{invoiceStats.overdue > 0 ? `$${invoiceStats.totalOverdue.toFixed(0)}` : '0'}</p>
+                                         </div>
+                                     </div>
+
+                                     {/* Filter Row */}
+                                     <div className="flex flex-wrap items-center gap-3">
+                                         {/* Search */}
+                                         <div className="relative flex-1 min-w-[200px]">
+                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                             <input
+                                                 type="text"
+                                                 value={invoiceSearchTerm}
+                                                 onChange={(e) => setInvoiceSearchTerm(e.target.value)}
+                                                 placeholder="Search invoices..."
+                                                 className="w-full pl-10 pr-4 py-2.5 bg-[#111] border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+                                             />
+                                         </div>
+
+                                         {/* Status Filter */}
+                                         <div className="flex items-center gap-2">
+                                             {(['all', 'draft', 'sent', 'paid', 'overdue'] as const).map((status) => (
+                                                 <button
+                                                     key={status}
+                                                     onClick={() => setInvoiceStatusFilter(status)}
+                                                     className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                                                         invoiceStatusFilter === status
+                                                             ? status === 'all' ? 'bg-white/10 text-white' :
+                                                               status === 'draft' ? 'bg-gray-500/20 text-gray-300' :
+                                                               status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
+                                                               status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                                                               'bg-red-500/20 text-red-400'
+                                                             : 'text-gray-500 hover:bg-white/5'
+                                                     }`}
+                                                 >
+                                                     {status}
+                                                     {status !== 'all' && (
+                                                         <span className="ml-1.5 opacity-70">
+                                                             ({status === 'draft' ? invoiceStats.draft :
+                                                               status === 'sent' ? invoiceStats.sent :
+                                                               status === 'paid' ? invoiceStats.paid :
+                                                               invoiceStats.overdue})
+                                                         </span>
+                                                     )}
+                                                 </button>
+                                             ))}
+                                         </div>
+                                     </div>
+                                 </div>
+
                                  {invoices.length === 0 ? (
                                      <motion.div
                                        initial={{ opacity: 0, y: 20 }}
@@ -4624,13 +5028,28 @@ Notes: ${invoice.notes || 'N/A'}
                                            View Approved Projects
                                          </motion.button>
                                      </motion.div>
+                                 ) : filteredInvoices.length === 0 ? (
+                                     <motion.div
+                                       initial={{ opacity: 0, y: 20 }}
+                                       animate={{ opacity: 1, y: 0 }}
+                                       className="flex flex-col items-center justify-center h-[30vh] border border-dashed border-white/10 rounded-2xl"
+                                     >
+                                         <Search className="w-8 h-8 text-gray-500 mb-4" />
+                                         <p className="text-gray-400">No invoices match your filters</p>
+                                         <button
+                                             onClick={() => { setInvoiceSearchTerm(''); setInvoiceStatusFilter('all'); }}
+                                             className="mt-3 text-sm text-blue-400 hover:text-blue-300"
+                                         >
+                                             Clear filters
+                                         </button>
+                                     </motion.div>
                                  ) : (
                                      <motion.div
                                          initial={{ opacity: 0 }}
                                          animate={{ opacity: 1 }}
                                          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
                                      >
-                                         {invoices.map((invoice, index) => (
+                                         {filteredInvoices.map((invoice, index) => (
                                              <motion.div
                                                  key={invoice.id}
                                                  initial={{ opacity: 0, y: 20 }}
@@ -4672,17 +5091,19 @@ Notes: ${invoice.notes || 'N/A'}
                                                          </p>
                                                      </div>
                                                      <span className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                                                         invoice.status === 'draft' ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' :
-                                                         invoice.status === 'sent' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                                         'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                         getInvoiceStatus(invoice) === 'draft' ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' :
+                                                         getInvoiceStatus(invoice) === 'sent' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                                         getInvoiceStatus(invoice) === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                         'bg-red-500/10 text-red-400 border-red-500/20'
                                                      }`}>
                                                          <span className="flex items-center gap-1.5">
                                                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                                                 invoice.status === 'draft' ? 'bg-gray-400' :
-                                                                 invoice.status === 'sent' ? 'bg-blue-400 animate-pulse' :
-                                                                 'bg-emerald-400'
+                                                                 getInvoiceStatus(invoice) === 'draft' ? 'bg-gray-400' :
+                                                                 getInvoiceStatus(invoice) === 'sent' ? 'bg-blue-400 animate-pulse' :
+                                                                 getInvoiceStatus(invoice) === 'paid' ? 'bg-emerald-400' :
+                                                                 'bg-red-400 animate-pulse'
                                                              }`} />
-                                                             {invoice.status}
+                                                             {getInvoiceStatus(invoice)}
                                                          </span>
                                                      </span>
                                                  </div>
@@ -4703,6 +5124,130 @@ Notes: ${invoice.notes || 'N/A'}
                                      </motion.div>
                                  )}
                              </>
+                         )}
+                     </>
+                 )}
+
+                 {/* SUB-TAB: CLIENTS */}
+                 {projectsSubTab === 'clients' && (
+                     <>
+                         {/* Clients Header */}
+                         <div className="flex items-center justify-between mb-6">
+                             <div className="flex items-center gap-4">
+                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 flex items-center justify-center">
+                                     <Users className="w-6 h-6 text-purple-400" />
+                                 </div>
+                                 <div>
+                                     <h3 className="text-xl font-bold text-white font-serif">Client Directory</h3>
+                                     <p className="text-sm text-gray-400">{clients.length} clients</p>
+                                 </div>
+                             </div>
+                             <div className="flex items-center gap-3">
+                                 {/* Client Search */}
+                                 <div className="relative">
+                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                     <input
+                                         type="text"
+                                         value={clientSearchTerm}
+                                         onChange={(e) => setClientSearchTerm(e.target.value)}
+                                         placeholder="Search clients..."
+                                         className="w-48 pl-10 pr-4 py-2.5 bg-[#111] border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+                                     />
+                                 </div>
+                                 <motion.button
+                                     onClick={() => handleOpenClientModal()}
+                                     whileHover={{ scale: 1.02 }}
+                                     whileTap={{ scale: 0.98 }}
+                                     className="px-4 py-2.5 bg-purple-500 text-white rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-purple-600 transition-colors"
+                                 >
+                                     <Plus className="w-4 h-4" />
+                                     Add Client
+                                 </motion.button>
+                             </div>
+                         </div>
+
+                         {/* Clients Grid */}
+                         {filteredClients.length === 0 ? (
+                             <motion.div
+                                 initial={{ opacity: 0, y: 20 }}
+                                 animate={{ opacity: 1, y: 0 }}
+                                 className="flex flex-col items-center justify-center h-[50vh] border border-dashed border-purple-500/20 rounded-3xl bg-gradient-to-b from-purple-500/5 to-transparent"
+                             >
+                                 <div className="w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center mb-6 border border-purple-500/20">
+                                     <Users className="w-8 h-8 text-purple-400/60" />
+                                 </div>
+                                 <p className="font-bold text-lg text-white font-serif mb-2">No Clients Yet</p>
+                                 <p className="text-sm text-gray-400 mb-6">Add your first client to get started</p>
+                                 <button
+                                     onClick={() => handleOpenClientModal()}
+                                     className="px-5 py-2.5 bg-purple-500/10 border border-purple-500/30 rounded-xl text-purple-400 text-sm font-bold hover:bg-purple-500/20"
+                                 >
+                                     Add Client
+                                 </button>
+                             </motion.div>
+                         ) : (
+                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                 {filteredClients.map((client, index) => (
+                                     <motion.div
+                                         key={client.id}
+                                         initial={{ opacity: 0, y: 20 }}
+                                         animate={{ opacity: 1, y: 0 }}
+                                         transition={{ delay: index * 0.05 }}
+                                         className="group bg-gradient-to-b from-[#151515] to-[#111] border border-white/5 rounded-2xl p-5 hover:border-purple-500/30 transition-all"
+                                     >
+                                         <div className="flex items-start justify-between mb-4">
+                                             <div className="flex items-center gap-3">
+                                                 <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                                                     <User className="w-6 h-6 text-purple-400" />
+                                                 </div>
+                                                 <div>
+                                                     <h4 className="font-bold text-white">{client.name}</h4>
+                                                     {client.email && (
+                                                         <a href={`mailto:${client.email}`} className="text-xs text-purple-400 hover:underline">
+                                                             {client.email}
+                                                         </a>
+                                                     )}
+                                                 </div>
+                                             </div>
+                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                 <button
+                                                     onClick={() => handleOpenClientModal(client)}
+                                                     className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
+                                                 >
+                                                     <Edit className="w-4 h-4" />
+                                                 </button>
+                                                 <button
+                                                     onClick={() => handleDeleteClient(client.id)}
+                                                     className="p-2 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-400"
+                                                 >
+                                                     <Trash2 className="w-4 h-4" />
+                                                 </button>
+                                             </div>
+                                         </div>
+
+                                         <div className="space-y-2 text-sm">
+                                             {client.phone && (
+                                                 <div className="flex items-center gap-2 text-gray-400">
+                                                     <Phone className="w-4 h-4" />
+                                                     <a href={`tel:${client.phone}`} className="hover:text-white">{client.phone}</a>
+                                                 </div>
+                                             )}
+                                             {client.address && (
+                                                 <div className="flex items-start gap-2 text-gray-400">
+                                                     <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+                                                     <span className="line-clamp-2">{client.address}</span>
+                                                 </div>
+                                             )}
+                                         </div>
+
+                                         {client.notes && (
+                                             <div className="mt-4 pt-4 border-t border-white/5">
+                                                 <p className="text-xs text-gray-500 line-clamp-2">{client.notes}</p>
+                                             </div>
+                                         )}
+                                     </motion.div>
+                                 ))}
+                             </div>
                          )}
                      </>
                  )}
@@ -5587,6 +6132,116 @@ Notes: ${invoice.notes || 'N/A'}
         )}
       </AnimatePresence>
 
+      {/* Save Preset Modal */}
+      <AnimatePresence>
+        {showSavePresetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowSavePresetModal(false);
+              setNewPresetName('');
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-sm"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#F6B45A]/20 flex items-center justify-center">
+                    <Save className="w-5 h-5 text-[#F6B45A]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Save Preset</h3>
+                </div>
+                <motion.button
+                  onClick={() => {
+                    setShowSavePresetModal(false);
+                    setNewPresetName('');
+                  }}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </motion.button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 space-y-4">
+                {/* Preview of what's being saved */}
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">Will Save</div>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedFixtures.map(id => (
+                      <span key={id} className="px-2 py-0.5 bg-[#F6B45A]/10 text-[#F6B45A] text-[10px] rounded-full">
+                        {FIXTURE_TYPES.find(f => f.id === id)?.label || id}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                    <span>{colorTemp}</span>
+                    <span>•</span>
+                    <span>{lightIntensity}% intensity</span>
+                    <span>•</span>
+                    <span>{beamAngle}° beam</span>
+                  </div>
+                </div>
+
+                {/* Preset Name Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Preset Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newPresetName}
+                    onChange={(e) => setNewPresetName(e.target.value)}
+                    placeholder="e.g., Dramatic Uplighting, Warm Path..."
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newPresetName.trim()) {
+                        handleSavePreset();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-white/10 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowSavePresetModal(false);
+                    setNewPresetName('');
+                  }}
+                  className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-medium hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  onClick={handleSavePreset}
+                  disabled={!newPresetName.trim()}
+                  whileHover={{ scale: newPresetName.trim() ? 1.02 : 1 }}
+                  whileTap={{ scale: newPresetName.trim() ? 0.98 : 1 }}
+                  className="flex-1 px-4 py-3 bg-[#F6B45A] text-black font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Preset
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Invoice Email Modal */}
       <AnimatePresence>
         {showInvoiceEmailModal && currentInvoice && (
@@ -5706,6 +6361,155 @@ Notes: ${invoice.notes || 'N/A'}
                 {invoiceEmailError && (
                   <p className="text-xs text-red-400 text-center mt-3">{invoiceEmailError}</p>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Client Modal */}
+      <AnimatePresence>
+        {showClientModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowClientModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass rounded-2xl border border-white/10 w-full max-w-md overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-lg font-bold text-white">
+                  {editingClient ? 'Edit Client' : 'New Client'}
+                </h3>
+                <motion.button
+                  onClick={() => setShowClientModal(false)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </motion.button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={clientFormData.name}
+                    onChange={(e) => setClientFormData({ ...clientFormData, name: e.target.value })}
+                    placeholder="Client name"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={clientFormData.email}
+                    onChange={(e) => setClientFormData({ ...clientFormData, email: e.target.value })}
+                    placeholder="client@example.com"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={clientFormData.phone}
+                    onChange={(e) => setClientFormData({ ...clientFormData, phone: e.target.value })}
+                    placeholder="(555) 123-4567"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    value={clientFormData.address}
+                    onChange={(e) => setClientFormData({ ...clientFormData, address: e.target.value })}
+                    placeholder="123 Main St, City, State"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={clientFormData.notes}
+                    onChange={(e) => setClientFormData({ ...clientFormData, notes: e.target.value })}
+                    placeholder="Additional notes about this client..."
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center gap-3 p-4 border-t border-white/10">
+                {editingClient && (
+                  <motion.button
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to delete this client?')) {
+                        const success = await deleteClient(editingClient.id);
+                        if (success) {
+                          showToast('success', 'Client deleted');
+                          setShowClientModal(false);
+                        }
+                      }
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 font-medium hover:bg-red-500/20 transition-colors"
+                  >
+                    Delete
+                  </motion.button>
+                )}
+                <div className="flex-1" />
+                <button
+                  onClick={() => setShowClientModal(false)}
+                  className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-medium hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  onClick={handleSaveClient}
+                  disabled={!clientFormData.name.trim()}
+                  whileHover={{ scale: clientFormData.name.trim() ? 1.02 : 1 }}
+                  whileTap={{ scale: clientFormData.name.trim() ? 0.98 : 1 }}
+                  className="px-4 py-3 bg-purple-500 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {editingClient ? 'Update' : 'Create'}
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>

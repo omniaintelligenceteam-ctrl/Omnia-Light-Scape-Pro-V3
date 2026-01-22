@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail, Palette, Bell, Moon, Volume2, VolumeX } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail, Palette, Bell, Moon, Volume2, VolumeX, Download, FileJson } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES, ACCENT_COLORS } from '../constants';
 import { FixturePricing, CompanyProfile, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences } from '../types';
@@ -1473,6 +1473,128 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
           </motion.div>
         )}
+
+        {/* --- EXPORT/IMPORT SETTINGS SECTION --- */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="mt-6"
+        >
+          <div className="bg-[#111]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                  <FileJson className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">Backup & Restore</h3>
+                  <p className="text-xs text-gray-500">Export or import your settings</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  const exportData = {
+                    version: 1,
+                    exportDate: new Date().toISOString(),
+                    companyProfile: profile,
+                    pricing: pricing,
+                    fixtureCatalog: fixtureCatalog,
+                    colorTemperature: colorTemp,
+                    lightIntensity: lightIntensity,
+                    darknessLevel: darknessLevel,
+                    beamAngle: beamAngle,
+                    theme: theme,
+                    accentColor: accentColor,
+                    fontSize: fontSize,
+                    highContrast: highContrast,
+                    notifications: notifications,
+                  };
+                  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `omnia-settings-${new Date().toISOString().split('T')[0]}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-500/40 transition-all text-sm font-bold"
+              >
+                <Download className="w-4 h-4" />
+                Export Settings
+              </button>
+              <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400 hover:bg-purple-500/20 hover:border-purple-500/40 transition-all text-sm font-bold cursor-pointer">
+                <Upload className="w-4 h-4" />
+                Import Settings
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      try {
+                        const data = JSON.parse(event.target?.result as string);
+                        if (data.version !== 1) {
+                          alert('Invalid settings file version');
+                          return;
+                        }
+                        // Apply imported settings
+                        if (data.companyProfile && onProfileChange) {
+                          onProfileChange(data.companyProfile);
+                        }
+                        if (data.pricing && onPricingChange) {
+                          onPricingChange(data.pricing);
+                        }
+                        if (data.fixtureCatalog && onFixtureCatalogChange) {
+                          onFixtureCatalogChange(data.fixtureCatalog);
+                        }
+                        if (data.colorTemperature && onColorTempChange) {
+                          onColorTempChange(data.colorTemperature);
+                        }
+                        if (data.lightIntensity !== undefined && onLightIntensityChange) {
+                          onLightIntensityChange(data.lightIntensity);
+                        }
+                        if (data.darknessLevel !== undefined && onDarknessLevelChange) {
+                          onDarknessLevelChange(data.darknessLevel);
+                        }
+                        if (data.beamAngle !== undefined && onBeamAngleChange) {
+                          onBeamAngleChange(data.beamAngle);
+                        }
+                        if (data.theme && onThemeChange) {
+                          onThemeChange(data.theme);
+                        }
+                        if (data.accentColor && onAccentColorChange) {
+                          onAccentColorChange(data.accentColor);
+                        }
+                        if (data.fontSize && onFontSizeChange) {
+                          onFontSizeChange(data.fontSize);
+                        }
+                        if (data.highContrast !== undefined && onHighContrastChange) {
+                          onHighContrastChange(data.highContrast);
+                        }
+                        if (data.notifications && onNotificationsChange) {
+                          onNotificationsChange(data.notifications);
+                        }
+                        alert('Settings imported successfully!');
+                      } catch (err) {
+                        alert('Failed to parse settings file. Please check the file format.');
+                      }
+                    };
+                    reader.readAsText(file);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        </motion.div>
 
         {/* --- SIGN OUT SECTION --- */}
         {onSignOut && (

@@ -1,8 +1,37 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+// Subtle notification sounds (very short, quiet tones) - Base64 encoded tiny WAV files
+const NOTIFICATION_SOUNDS: Record<ToastType, string> = {
+  // Soft success chime - pleasant high tone
+  success: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZeWj4F0ZmJneIOQl5aOgXRlYmZ4g5CXlo+BdGViZniDkJeWj4F0ZWJmeIORl5aPgXRlYmZ4g5GXlo+BdGViZniDkZeWj4F0',
+  // Low soft tone for errors
+  error: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBdGJmeIOJj5KRjIN4bmZlbHWAiI2PjYiAdGtmZ2x1fIOIioiFfnVua2hsdXyChomIhX52bmtobnV8goaJiIV+dnBra253fIKGiYiFfnZwa2tud3yCh4mIhX52',
+  // Mid-range alert tone
+  warning: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhIN+eHZ4foSIioqHg352c3R4fYOHioqIhH93dHV4fYOHioqIhH93dHV4fYOHioqIhH93dHV5fYOHioqIhH93dHV5fYOHioqIhH93dHV5fYOHioqIhH93',
+  // Neutral info tone
+  info: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBg4F+fHt9gIOFhoaCfnt5eXt+gYSGhoSBfnt5en1/goWGhoSBfnt5en1/goWGhoSBfnt5en1/goWGhoSBfnt5en1/goWGhoSBfnt5en1/goWGhoSBfnt5',
+};
+
+// Play notification sound if enabled in settings
+const playNotificationSound = (type: ToastType) => {
+  try {
+    const savedNotifications = localStorage.getItem('omnia_notifications');
+    if (savedNotifications) {
+      const notifications = JSON.parse(savedNotifications);
+      if (notifications.soundEffects) {
+        const audio = new Audio(NOTIFICATION_SOUNDS[type]);
+        audio.volume = 0.15; // Keep it quiet
+        audio.play().catch(() => {}); // Ignore errors (e.g., autoplay restrictions)
+      }
+    }
+  } catch {
+    // Silently fail if localStorage or audio fails
+  }
+};
 
 interface Toast {
   id: string;
@@ -42,6 +71,9 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const showToast = useCallback((type: ToastType, message: string, duration = 4000, title?: string) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newToast: Toast = { id, type, message, duration, title };
+
+    // Play notification sound if enabled
+    playNotificationSound(type);
 
     setToasts((prev) => [...prev, newToast]);
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, Check, Moon, Mail, MessageCircle, Sparkles,
-  Volume2, VolumeX, ExternalLink, Loader2, Save, Plus, Trash2, Phone, LogOut
+  Volume2, VolumeX, ExternalLink, Loader2, Save, Plus, Trash2, Phone, LogOut, Download, FileJson
 } from 'lucide-react';
 import { SettingsNav, SettingsSection } from './SettingsNav';
 import { SettingsCard } from './ui/SettingsCard';
@@ -823,6 +823,96 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                         Send Email
                       </a>
                     </div>
+                  </div>
+                </SettingsCard>
+
+                {/* Backup & Restore */}
+                <SettingsCard className="p-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                      <FileJson className="w-6 h-6 text-cyan-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-white">Backup & Restore</h3>
+                      <p className="text-sm text-gray-400">Export or import your settings</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        const exportData = {
+                          version: 1,
+                          exportDate: new Date().toISOString(),
+                          companyProfile: profile,
+                          pricing: pricing,
+                          customPricing: customPricing,
+                          fixtureCatalog: fixtureCatalog,
+                          colorTemperature: colorTemp,
+                          lightIntensity: lightIntensity,
+                          darknessLevel: darknessLevel,
+                          beamAngle: beamAngle,
+                          theme: theme,
+                          accentColor: accentColor,
+                          fontSize: fontSize,
+                          highContrast: highContrast,
+                          notifications: notifications,
+                        };
+                        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `omnia-settings-${new Date().toISOString().split('T')[0]}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-500/40 transition-all text-sm font-semibold"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export Settings
+                    </button>
+                    <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400 hover:bg-purple-500/20 hover:border-purple-500/40 transition-all text-sm font-semibold cursor-pointer">
+                      <Upload className="w-4 h-4" />
+                      Import Settings
+                      <input
+                        type="file"
+                        accept=".json"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const data = JSON.parse(event.target?.result as string);
+                              if (data.version !== 1) {
+                                alert('Invalid settings file version');
+                                return;
+                              }
+                              if (data.companyProfile && onProfileChange) onProfileChange(data.companyProfile);
+                              if (data.pricing && onPricingChange) onPricingChange(data.pricing);
+                              if (data.customPricing && onCustomPricingChange) onCustomPricingChange(data.customPricing);
+                              if (data.fixtureCatalog && onFixtureCatalogChange) onFixtureCatalogChange(data.fixtureCatalog);
+                              if (data.colorTemperature && onColorTempChange) onColorTempChange(data.colorTemperature);
+                              if (data.lightIntensity !== undefined && onLightIntensityChange) onLightIntensityChange(data.lightIntensity);
+                              if (data.darknessLevel !== undefined && onDarknessLevelChange) onDarknessLevelChange(data.darknessLevel);
+                              if (data.beamAngle !== undefined && onBeamAngleChange) onBeamAngleChange(data.beamAngle);
+                              if (data.theme && onThemeChange) onThemeChange(data.theme);
+                              if (data.accentColor && onAccentColorChange) onAccentColorChange(data.accentColor);
+                              if (data.fontSize && onFontSizeChange) onFontSizeChange(data.fontSize);
+                              if (data.highContrast !== undefined && onHighContrastChange) onHighContrastChange(data.highContrast);
+                              if (data.notifications && onNotificationsChange) onNotificationsChange(data.notifications);
+                              alert('Settings imported successfully!');
+                            } catch {
+                              alert('Failed to parse settings file. Please check the file format.');
+                            }
+                          };
+                          reader.readAsText(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
                   </div>
                 </SettingsCard>
               </motion.div>

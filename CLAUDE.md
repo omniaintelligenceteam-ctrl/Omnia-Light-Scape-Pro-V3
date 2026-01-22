@@ -18,3 +18,11 @@ Vite, React, TypeScript, Tailwind, Supabase, Clerk, Stripe, Gemini API
 - Tailwind for styling
 - Always typecheck before commit
 - STRICTLY only update what the user explicitly asks - do not make additional changes beyond the request
+
+## Error Handling
+- Read full error traces before attempting fixes
+- If using paid APIs, ask before retrying failed calls
+
+## Before Creating New Code
+- Check existing components/hooks/utils for similar patterns
+- Prefer extending existing code over creating new files

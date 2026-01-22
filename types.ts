@@ -157,7 +157,8 @@ export interface InvoiceData {
   discount: number;
   total: number;
   notes: string;
-  status: 'draft' | 'sent' | 'paid';
+  status: 'draft' | 'sent' | 'paid' | 'overdue';
+  paidDate?: string;
 }
 
 // === THEME TYPES ===
@@ -235,4 +236,37 @@ export interface GenerationFeedback {
   settings_snapshot: SettingsSnapshot;
   generated_image_url?: string;
   created_at: string;
+}
+
+// === CLIENT MANAGEMENT TYPES ===
+export interface Client {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  projectCount?: number;
+  totalRevenue?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// === INVOICE TRACKING TYPES ===
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+
+export interface InvoiceTracking {
+  id: string;
+  projectId: string;
+  projectName: string;
+  clientId?: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  amount: number;
+  status: InvoiceStatus;
+  paidDate?: string;
+  sentAt?: string;
+  clientDetails: ClientDetails;
+  createdAt: string;
 }

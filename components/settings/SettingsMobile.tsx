@@ -4,7 +4,7 @@ import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
   HelpCircle, LogOut, Save, Loader2, Upload, Check, Moon,
   Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2, Phone,
-  X, ChevronRight
+  X, ChevronRight, Download, FileJson
 } from 'lucide-react';
 import { ToggleRow } from './ui/SettingsToggle';
 import { SettingsSlider } from './ui/SettingsSlider';
@@ -849,6 +849,96 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
             </div>
             <ChevronRight className="w-5 h-5 text-gray-600" />
           </a>
+
+          {/* Backup & Restore */}
+          <div className="w-full p-5 bg-white/[0.03] rounded-2xl border border-white/10">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                <FileJson className="w-7 h-7 text-cyan-400" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="text-base font-bold text-white">Backup & Restore</p>
+                <p className="text-sm text-gray-400">Export or import your settings</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const exportData = {
+                    version: 1,
+                    exportDate: new Date().toISOString(),
+                    companyProfile: profile,
+                    pricing: pricing,
+                    customPricing: customPricing,
+                    fixtureCatalog: fixtureCatalog,
+                    colorTemperature: colorTemp,
+                    lightIntensity: lightIntensity,
+                    darknessLevel: darknessLevel,
+                    beamAngle: beamAngle,
+                    theme: theme,
+                    accentColor: accentColor,
+                    fontSize: fontSize,
+                    highContrast: highContrast,
+                    notifications: notifications,
+                  };
+                  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `omnia-settings-${new Date().toISOString().split('T')[0]}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 active:bg-cyan-500/20 text-sm font-semibold"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+              <label className="flex-1 flex items-center justify-center gap-2 py-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400 active:bg-purple-500/20 text-sm font-semibold cursor-pointer">
+                <Upload className="w-4 h-4" />
+                Import
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      try {
+                        const data = JSON.parse(event.target?.result as string);
+                        if (data.version !== 1) {
+                          alert('Invalid settings file version');
+                          return;
+                        }
+                        if (data.companyProfile && onProfileChange) onProfileChange(data.companyProfile);
+                        if (data.pricing && onPricingChange) onPricingChange(data.pricing);
+                        if (data.customPricing && onCustomPricingChange) onCustomPricingChange(data.customPricing);
+                        if (data.fixtureCatalog && onFixtureCatalogChange) onFixtureCatalogChange(data.fixtureCatalog);
+                        if (data.colorTemperature && onColorTempChange) onColorTempChange(data.colorTemperature);
+                        if (data.lightIntensity !== undefined && onLightIntensityChange) onLightIntensityChange(data.lightIntensity);
+                        if (data.darknessLevel !== undefined && onDarknessLevelChange) onDarknessLevelChange(data.darknessLevel);
+                        if (data.beamAngle !== undefined && onBeamAngleChange) onBeamAngleChange(data.beamAngle);
+                        if (data.theme && onThemeChange) onThemeChange(data.theme);
+                        if (data.accentColor && onAccentColorChange) onAccentColorChange(data.accentColor);
+                        if (data.fontSize && onFontSizeChange) onFontSizeChange(data.fontSize);
+                        if (data.highContrast !== undefined && onHighContrastChange) onHighContrastChange(data.highContrast);
+                        if (data.notifications && onNotificationsChange) onNotificationsChange(data.notifications);
+                        alert('Settings imported successfully!');
+                      } catch {
+                        alert('Failed to parse settings file.');
+                      }
+                    };
+                    reader.readAsText(file);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
+          </div>
         </div>
       </FullScreenModal>
 
