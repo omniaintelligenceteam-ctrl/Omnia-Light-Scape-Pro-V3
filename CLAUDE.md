@@ -17,7 +17,8 @@ Vite, React, TypeScript, Tailwind, Supabase, Clerk, Stripe, Gemini API
 - TypeScript strict
 - Tailwind for styling
 - Always typecheck before commit
-- STRICTLY only update what the user explicitly asks - do not make additional changes beyond the request
+- STRICTLY only update what the user explicitly asks - do not make additional changes beyond the request.
+- Make sure it fits perfectly for the mobile version and computer/tablot version
 
 ## Error Handling
 - Read full error traces before attempting fixes

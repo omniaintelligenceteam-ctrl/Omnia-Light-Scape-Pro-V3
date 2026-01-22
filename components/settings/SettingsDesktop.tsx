@@ -20,6 +20,10 @@ import { TeamSection } from './TeamSection';
 import { GoalsSection } from './GoalsSection';
 import { useOrganization } from '../../hooks/useOrganization';
 import { InventoryView } from '../InventoryView';
+import { ExecutiveDashboard } from '../analytics/ExecutiveDashboard';
+import { AnalyticsDashboard } from '../analytics/AnalyticsDashboard';
+import { LeadSourceROIDashboard } from '../analytics/LeadSourceROIDashboard';
+import { CashFlowDashboard } from '../analytics/CashFlowDashboard';
 
 export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   profile,
@@ -77,7 +81,19 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   currentQuarterClients = 0,
   currentYearRevenue = 0,
   currentYearProjects = 0,
-  currentYearClients = 0
+  currentYearClients = 0,
+  // Analytics props
+  analyticsMetrics,
+  leadSourceROI,
+  cashFlowForecast,
+  locationMetrics,
+  technicianMetrics,
+  companyMetrics,
+  analyticsDateRange,
+  onAnalyticsDateRangeChange,
+  analyticsComparisonView,
+  onAnalyticsComparisonViewChange,
+  onExportAnalytics
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [showAIChat, setShowAIChat] = useState(false);
@@ -1083,6 +1099,61 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 transition={{ duration: 0.2 }}
               >
                 <TeamSection isOwner={isOwner} />
+              </motion.div>
+            )}
+
+            {/* Analytics Section */}
+            {activeSection === 'analytics' && (
+              <motion.div
+                key="analytics"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <p className="text-sm text-gray-400 mb-6">
+                  View comprehensive analytics, metrics, and insights for your business.
+                </p>
+
+                {/* Dashboard Selection: Executive vs Standard */}
+                {locationMetrics && locationMetrics.locations?.length > 1 ? (
+                  <ExecutiveDashboard
+                    locations={locationMetrics.locations}
+                    technicians={technicians}
+                    locationMetrics={locationMetrics}
+                    technicianMetrics={technicianMetrics}
+                    companyMetrics={companyMetrics}
+                    isLoading={false}
+                  />
+                ) : (
+                  analyticsMetrics && (
+                    <AnalyticsDashboard
+                      todayMetrics={analyticsMetrics.todayMetrics}
+                      thisWeekMetrics={analyticsMetrics.thisWeekMetrics}
+                      thisMonthMetrics={analyticsMetrics.thisMonthMetrics}
+                      thisYearMetrics={analyticsMetrics.thisYearMetrics}
+                      currentGoalsProgress={analyticsMetrics.currentGoalsProgress}
+                      pendingRevenue={analyticsMetrics.pendingRevenue}
+                      overdueCount={analyticsMetrics.overdueCount}
+                    />
+                  )
+                )}
+
+                {/* Lead Source ROI Dashboard */}
+                {leadSourceROI && (
+                  <div className="mt-6">
+                    <LeadSourceROIDashboard metrics={leadSourceROI} />
+                  </div>
+                )}
+
+                {/* Cash Flow Dashboard */}
+                {cashFlowForecast && (
+                  <div className="mt-6">
+                    <CashFlowDashboard forecast={cashFlowForecast} />
+                  </div>
+                )}
               </motion.div>
             )}
 

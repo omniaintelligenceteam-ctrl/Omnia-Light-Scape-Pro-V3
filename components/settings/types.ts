@@ -89,4 +89,18 @@ export interface SettingsViewProps {
   currentYearRevenue?: number;
   currentYearProjects?: number;
   currentYearClients?: number;
+  // Analytics data
+  analyticsMetrics?: any;
+  leadSourceROI?: any;
+  cashFlowForecast?: any;
+  locationMetrics?: any;
+  technicianMetrics?: any;
+  companyMetrics?: any;
+  // Analytics state
+  analyticsDateRange?: { start: Date | null; end: Date | null };
+  onAnalyticsDateRangeChange?: (range: { start: Date | null; end: Date | null }) => void;
+  analyticsComparisonView?: boolean;
+  onAnalyticsComparisonViewChange?: (enabled: boolean) => void;
+  // Analytics actions
+  onExportAnalytics?: (format: 'pdf' | 'csv') => void;
 }

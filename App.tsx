@@ -4214,157 +4214,51 @@ Notes: ${invoice.notes || 'N/A'}
                          <Users className="w-4 h-4" />
                          Clients
                      </button>
-                     <button
-                         onClick={() => setProjectsSubTab('analytics')}
-                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                             projectsSubTab === 'analytics'
-                                 ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
-                                 : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
-                         }`}
-                     >
-                         <BarChart3 className="w-4 h-4" />
-                         Analytics
-                     </button>
-                 </div>
 
-                 {/* Analytics Dashboard - Full view when Analytics tab is selected */}
-                 {projectsSubTab === 'analytics' && (
-                     <div className="mb-4 space-y-6">
-                         {/* Executive Dashboard - Shows when locations exist */}
-                         {locations.length > 0 && (
-                             <ExecutiveDashboard
-                                 locations={locations}
-                                 technicians={technicians}
-                                 locationMetrics={locationMetrics}
-                                 technicianMetrics={technicianMetrics}
-                                 companyMetrics={companyMetrics}
-                                 isLoading={locationsLoading || techniciansLoading}
-                                 dateRange={dashboardDateRange}
-                                 onDateRangeChange={setDashboardDateRange}
-                             />
-                         )}
-
-                         {/* Advanced Analytics Tools */}
-                         <div className="bg-white/[0.02] rounded-2xl border border-white/10 p-4">
-                             <div className="flex items-center justify-between mb-4">
-                                 <h3 className="text-lg font-bold text-white">Analytics Tools</h3>
-                                 <ExportMenu
-                                     projects={projects}
-                                     clients={clients}
-                                     goals={businessGoals}
-                                     companyProfile={companyProfile}
-                                     dateRange={analyticsDateRange}
-                                 />
-                             </div>
-
-                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                                 <DateRangePickerAdvanced
-                                     value={analyticsDateRange}
-                                     onChange={setAnalyticsDateRange}
-                                 />
-
-                                 {showComparison && (() => {
-                                     const now = new Date();
-                                     const currentMonth = now.getMonth();
-                                     const currentYear = now.getFullYear();
-                                     const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-                                     const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-                                     const comparisonData: ComparisonData = analytics.compareMonths(
-                                         currentMonth,
-                                         currentYear,
-                                         previousMonth,
-                                         previousYear
-                                     );
-
-                                     return (
-                                         <div className="lg:col-span-2">
-                                             <ComparisonView data={comparisonData} />
-                                         </div>
-                                     );
-                                 })()}
-                             </div>
-                         </div>
-
-                         {/* Basic Analytics Dashboard - Always shows */}
-                         <AnalyticsDashboard
-                             todayMetrics={analytics.todayMetrics}
-                             thisWeekMetrics={analytics.thisWeekMetrics}
-                             thisMonthMetrics={analytics.thisMonthMetrics}
-                             thisYearMetrics={analytics.thisYearMetrics}
-                             currentGoalsProgress={analytics.currentGoalsProgress}
-                             pendingRevenue={analytics.pendingRevenue}
-                             overdueCount={analytics.overdueCount}
-                         />
-
-                         {/* Lead Source ROI Dashboard */}
-                         <div className="mt-6">
-                             <LeadSourceROIDashboard metrics={leadSourceMetrics} />
-                         </div>
-
-                         {/* Cash Flow Forecasting Dashboard */}
-                         <div className="mt-6">
-                             <CashFlowDashboard forecast={cashFlowForecast} />
-                         </div>
-                     </div>
-                 )}
-
+                </div>
                  {/* Pipeline Analytics Dashboard - Only show when on pipeline view */}
                  {(projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
-                     <div className="mb-4 p-4 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-2xl border border-white/5">
-                         {/* Analytics Header */}
-                         <div className="flex items-center justify-between mb-4">
-                             <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider">Pipeline Analytics</h3>
-                             {pipelineAnalytics.overdueProjects.length > 0 && (
-                                 <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold">
-                                     <AlertCircle className="w-3 h-3" />
-                                     {pipelineAnalytics.overdueProjects.length} Overdue
-                                 </span>
-                             )}
-                         </div>
-
+                     <div className="mb-4">
                          {/* Stats Grid */}
-                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                              {/* Revenue This Month */}
-                             <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                                 <p className="text-[10px] uppercase tracking-wider text-emerald-500 mb-1">Paid This Month</p>
+                             <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+                                 <p className="text-[10px] uppercase tracking-wider text-emerald-500/70 mb-1">Paid This Month</p>
                                  <p className="text-xl font-bold text-emerald-400">${pipelineAnalytics.revenueThisMonth.toLocaleString()}</p>
                              </div>
 
                              {/* Pending Revenue */}
-                             <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                                 <p className="text-[10px] uppercase tracking-wider text-blue-500 mb-1">Pending</p>
+                             <div className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                                 <p className="text-[10px] uppercase tracking-wider text-blue-500/70 mb-1">Pending</p>
                                  <p className="text-xl font-bold text-blue-400">${pipelineAnalytics.pendingRevenue.toLocaleString()}</p>
                              </div>
 
                              {/* Overdue */}
-                             <div className={`p-3 rounded-xl border ${pipelineAnalytics.overdueRevenue > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
-                                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-500' : 'text-gray-500'}`}>Overdue</p>
-                                 <p className={`text-xl font-bold ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-400' : 'text-gray-500'}`}>${pipelineAnalytics.overdueRevenue.toLocaleString()}</p>
+                             <div className={`p-3 rounded-xl border ${pipelineAnalytics.overdueRevenue > 0 ? 'bg-red-500/5 border-red-500/10' : 'bg-white/[0.02] border-white/5'}`}>
+                                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-500/70' : 'text-gray-500'}`}>Overdue</p>
+                                 <p className={`text-xl font-bold ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-400' : 'text-gray-600'}`}>${pipelineAnalytics.overdueRevenue.toLocaleString()}</p>
                              </div>
 
                              {/* Avg Quote Value */}
-                             <div className="p-3 bg-[#F6B45A]/10 rounded-xl border border-[#F6B45A]/20">
+                             <div className="p-3 bg-[#F6B45A]/5 rounded-xl border border-[#F6B45A]/10">
                                  <p className="text-[10px] uppercase tracking-wider text-[#F6B45A]/70 mb-1">Avg Quote</p>
                                  <p className="text-xl font-bold text-[#F6B45A]">${pipelineAnalytics.avgQuoteValue.toLocaleString()}</p>
                              </div>
                          </div>
 
-                         {/* Conversion Funnel - Desktop Only */}
-                         <div className="hidden md:flex items-center gap-3 mt-4 pt-4 border-t border-white/5">
-                             <span className="text-[10px] uppercase tracking-wider text-gray-500">Conversion:</span>
-                             <div className="flex items-center gap-2">
-                                 <span className="text-xs text-gray-400">Draft</span>
-                                 <span className="text-sm font-bold text-purple-400">{pipelineAnalytics.draftToQuotedRate}%</span>
-                                 <ChevronRight className="w-3 h-3 text-gray-600" />
-                                 <span className="text-xs text-gray-400">Quoted</span>
-                                 <span className="text-sm font-bold text-emerald-400">{pipelineAnalytics.quotedToApprovedRate}%</span>
-                                 <ChevronRight className="w-3 h-3 text-gray-600" />
-                                 <span className="text-xs text-gray-400">Approved</span>
-                                 <span className="text-sm font-bold text-[#F6B45A]">{pipelineAnalytics.approvedToCompletedRate}%</span>
-                                 <ChevronRight className="w-3 h-3 text-gray-600" />
-                                 <span className="text-xs text-gray-400">Done</span>
-                             </div>
+                         {/* Conversion Funnel */}
+                         <div className="flex items-center justify-center gap-2 p-3 bg-white/[0.02] rounded-xl border border-white/5 mb-4">
+                             <span className="text-[10px] uppercase tracking-wider text-gray-500 mr-2">Conversion:</span>
+                             <span className="text-xs text-gray-400">Draft</span>
+                             <span className="text-sm font-bold text-purple-400">{pipelineAnalytics.draftToQuotedRate}%</span>
+                             <ChevronRight className="w-3 h-3 text-gray-600" />
+                             <span className="text-xs text-gray-400">Quoted</span>
+                             <span className="text-sm font-bold text-emerald-400">{pipelineAnalytics.quotedToApprovedRate}%</span>
+                             <ChevronRight className="w-3 h-3 text-gray-600" />
+                             <span className="text-xs text-gray-400">Approved</span>
+                             <span className="text-sm font-bold text-[#F6B45A]">{pipelineAnalytics.approvedToCompletedRate}%</span>
+                             <ChevronRight className="w-3 h-3 text-gray-600" />
+                             <span className="text-xs text-gray-400">Done</span>
                          </div>
                      </div>
                  )}
@@ -4373,46 +4267,46 @@ Notes: ${invoice.notes || 'N/A'}
                  {(projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
                      <>
                          {/* Pipeline Visual Bar */}
-                         <div className="mb-4 p-3 bg-[#0a0a0a] rounded-xl border border-white/5">
-                             <div className="flex items-center justify-between gap-1 overflow-x-auto">
+                         <div className="mb-4 p-2 bg-white/[0.02] rounded-xl border border-white/5">
+                             <div className="flex items-center justify-between gap-1">
                                  {/* Draft */}
                                  <button
                                      onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'draft' ? 'all' : 'draft')}
-                                     className={`flex-1 min-w-[60px] flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
-                                         pipelineStatusFilter === 'draft' ? 'bg-gray-500/30 ring-2 ring-gray-400' : 'hover:bg-white/5'
+                                     className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'draft' ? 'bg-gray-500/20 ring-1 ring-gray-400/50' : 'hover:bg-white/5'
                                      }`}
                                  >
                                      <span className="text-lg font-bold text-gray-400">{statusCounts.draft}</span>
                                      <span className="text-[10px] uppercase tracking-wider text-gray-500">Draft</span>
                                  </button>
-                                 <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
+                                 <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
                                  {/* Quoted */}
                                  <button
                                      onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'quoted' ? 'all' : 'quoted')}
-                                     className={`flex-1 min-w-[60px] flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
-                                         pipelineStatusFilter === 'quoted' ? 'bg-purple-500/30 ring-2 ring-purple-400' : 'hover:bg-white/5'
+                                     className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'quoted' ? 'bg-purple-500/20 ring-1 ring-purple-400/50' : 'hover:bg-white/5'
                                      }`}
                                  >
                                      <span className="text-lg font-bold text-purple-400">{statusCounts.quoted}</span>
                                      <span className="text-[10px] uppercase tracking-wider text-purple-500">Quoted</span>
                                  </button>
-                                 <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
-                                 {/* Active (Approved + Scheduled) */}
+                                 <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
+                                 {/* Active */}
                                  <button
                                      onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'active' ? 'all' : 'active')}
-                                     className={`flex-1 min-w-[60px] flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
-                                         pipelineStatusFilter === 'active' ? 'bg-emerald-500/30 ring-2 ring-emerald-400' : 'hover:bg-white/5'
+                                     className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'active' ? 'bg-emerald-500/20 ring-1 ring-emerald-400/50' : 'hover:bg-white/5'
                                      }`}
                                  >
                                      <span className="text-lg font-bold text-emerald-400">{statusCounts.approved + statusCounts.scheduled}</span>
                                      <span className="text-[10px] uppercase tracking-wider text-emerald-500">Active</span>
                                  </button>
-                                 <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
-                                 {/* Completed */}
+                                 <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
+                                 {/* Done */}
                                  <button
                                      onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'completed' ? 'all' : 'completed')}
-                                     className={`flex-1 min-w-[60px] flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
-                                         pipelineStatusFilter === 'completed' ? 'bg-[#F6B45A]/30 ring-2 ring-[#F6B45A]' : 'hover:bg-white/5'
+                                     className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'completed' ? 'bg-[#F6B45A]/20 ring-1 ring-[#F6B45A]/50' : 'hover:bg-white/5'
                                      }`}
                                  >
                                      <span className="text-lg font-bold text-[#F6B45A]">{statusCounts.completed}</span>
@@ -4422,53 +4316,53 @@ Notes: ${invoice.notes || 'N/A'}
                          </div>
 
                          {/* Status Filter Pills */}
-                         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+                         <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
                              <button
                                  onClick={() => setPipelineStatusFilter('all')}
-                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                      pipelineStatusFilter === 'all'
-                                         ? 'bg-white text-black'
-                                         : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                                         ? 'bg-white/10 text-white ring-1 ring-white/20'
+                                         : 'bg-white/5 text-gray-400 hover:bg-white/10'
                                  }`}
                              >
                                  All ({projects.length})
                              </button>
                              <button
                                  onClick={() => setPipelineStatusFilter('draft')}
-                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                      pipelineStatusFilter === 'draft'
-                                         ? 'bg-gray-500 text-white'
-                                         : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
+                                         ? 'bg-gray-500/20 text-gray-300 ring-1 ring-gray-400/50'
+                                         : 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20'
                                  }`}
                              >
                                  Draft ({statusCounts.draft})
                              </button>
                              <button
                                  onClick={() => setPipelineStatusFilter('quoted')}
-                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                      pipelineStatusFilter === 'quoted'
-                                         ? 'bg-purple-500 text-white'
-                                         : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                                         ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-400/50'
+                                         : 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20'
                                  }`}
                              >
                                  Quoted ({statusCounts.quoted})
                              </button>
                              <button
                                  onClick={() => setPipelineStatusFilter('active')}
-                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                      pipelineStatusFilter === 'active'
-                                         ? 'bg-emerald-500 text-white'
-                                         : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                                         ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/50'
+                                         : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
                                  }`}
                              >
                                  Active ({statusCounts.approved + statusCounts.scheduled})
                              </button>
                              <button
                                  onClick={() => setPipelineStatusFilter('completed')}
-                                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                      pipelineStatusFilter === 'completed'
-                                         ? 'bg-[#F6B45A] text-black'
-                                         : 'bg-[#F6B45A]/20 text-[#F6B45A] hover:bg-[#F6B45A]/30'
+                                         ? 'bg-[#F6B45A]/20 text-[#F6B45A] ring-1 ring-[#F6B45A]/50'
+                                         : 'bg-[#F6B45A]/10 text-[#F6B45A]/70 hover:bg-[#F6B45A]/20'
                                  }`}
                              >
                                  Completed ({statusCounts.completed})
@@ -6475,6 +6369,27 @@ Notes: ${invoice.notes || 'N/A'}
                 currentYearRevenue={currentYearRevenue}
                 currentYearProjects={currentYearProjects}
                 currentYearClients={currentYearClients}
+                // Analytics data
+                analyticsMetrics={analytics}
+                leadSourceROI={leadSourceMetrics}
+                cashFlowForecast={cashFlowForecast}
+                locationMetrics={locationMetrics}
+                technicianMetrics={technicianMetrics}
+                companyMetrics={companyMetrics}
+                // Analytics state
+                analyticsDateRange={{ start: analyticsDateRange.startDate, end: analyticsDateRange.endDate }}
+                onAnalyticsDateRangeChange={(range) => {
+                  if (range.start && range.end) {
+                    setAnalyticsDateRange({ startDate: range.start, endDate: range.end, label: 'Custom' });
+                  }
+                }}
+                analyticsComparisonView={showComparison}
+                onAnalyticsComparisonViewChange={setShowComparison}
+                // Analytics actions
+                onExportAnalytics={(format) => {
+                  // Export logic can be implemented here
+                  console.log(`Exporting analytics as ${format}`);
+                }}
              />
              </motion.div>
           )}
