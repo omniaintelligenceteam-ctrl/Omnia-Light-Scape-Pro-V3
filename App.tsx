@@ -16,6 +16,7 @@ import { BillingSuccess } from './components/BillingSuccess';
 import { BillingCanceled } from './components/BillingCanceled';
 import { ClientPortal } from './components/ClientPortal';
 import { generateBOM } from './utils/bomCalculator';
+import { detectConflicts, ConflictResult, formatTimeSlot } from './utils/scheduleConflictDetection';
 import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
 import { useSubscription } from './hooks/useSubscription';
@@ -44,7 +45,7 @@ import { SaveImageModal } from './components/SaveImageModal';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink, BarChart3 } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink, BarChart3 } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client } from './types';
 
@@ -458,6 +459,7 @@ const App: React.FC = () => {
   const [scheduleDuration, setScheduleDuration] = useState<number>(2);
   const [scheduleNotes, setScheduleNotes] = useState<string>('');
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
+  const [scheduleConflicts, setScheduleConflicts] = useState<ConflictResult>({ hasConflict: false, conflicts: [], warnings: [] });
 
   // Completion Modal State
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -568,6 +570,26 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('omnia_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Check for schedule conflicts when modal is open and parameters change
+  useEffect(() => {
+    if (!showScheduleModal || !scheduleProjectId) {
+      setScheduleConflicts({ hasConflict: false, conflicts: [], warnings: [] });
+      return;
+    }
+
+    const dateString = scheduleDate.toISOString().split('T')[0];
+    const result = detectConflicts(
+      dateString,
+      scheduleTimeSlot,
+      scheduleTimeSlot === 'custom' ? scheduleCustomTime : undefined,
+      scheduleDuration,
+      projects,
+      calendarEvents,
+      scheduleProjectId // Exclude the current project being rescheduled
+    );
+    setScheduleConflicts(result);
+  }, [showScheduleModal, scheduleProjectId, scheduleDate, scheduleTimeSlot, scheduleCustomTime, scheduleDuration, projects, calendarEvents]);
 
   // Fetch user preferences for AI personalization on mount
   useEffect(() => {
@@ -6607,6 +6629,36 @@ Notes: ${invoice.notes || 'N/A'}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
                   />
                 </div>
+
+                {/* Conflict Warning */}
+                {scheduleConflicts.hasConflict && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-amber-400">Scheduling Conflict Detected</p>
+                        <p className="text-xs text-amber-400/80">
+                          This time slot overlaps with {scheduleConflicts.conflicts.length} existing {scheduleConflicts.conflicts.length === 1 ? 'item' : 'items'}:
+                        </p>
+                        <ul className="space-y-1">
+                          {scheduleConflicts.conflicts.map((conflict) => (
+                            <li key={conflict.id} className="text-xs text-amber-300/70 flex items-center gap-2">
+                              <span className={`w-1.5 h-1.5 rounded-full ${conflict.type === 'project' ? 'bg-blue-400' : 'bg-purple-400'}`} />
+                              <span className="font-medium">{conflict.name}</span>
+                              <span className="text-amber-400/50">·</span>
+                              <span>{formatTimeSlot(conflict.timeSlot, conflict.customTime)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-amber-400/60 italic">You can still proceed, but consider adjusting the time.</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               {/* Modal Footer */}
