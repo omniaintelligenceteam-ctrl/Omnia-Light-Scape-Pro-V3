@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Users, Plus, Trash2, Edit2, Check, X, Mail, Phone, MapPin, Loader2, Award
+  Users, Plus, Trash2, Edit2, Check, X, Mail, Phone, MapPin, Loader2, Award, Search
 } from 'lucide-react';
 import { Technician, TechnicianRole, Location } from '../../types';
 import { SettingsCard } from './ui/SettingsCard';
@@ -42,6 +42,13 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<Technician>>({});
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | TechnicianRole>('all');
+  const [locationFilter, setLocationFilter] = useState<'all' | 'unassigned' | string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'role' | 'location' | 'date'>('name');
 
   const handleStartCreate = () => {
     setIsCreating(true);
@@ -103,8 +110,53 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
     await onDeleteTechnician(id);
   };
 
-  // Group technicians by location
-  const techniciansByLocation = technicians.reduce((acc, tech) => {
+  // Filtered and Sorted Technicians
+  const filteredAndSortedTechnicians = useMemo(() => {
+    let filtered = technicians || [];
+
+    // Search
+    if (searchQuery) {
+      filtered = filtered.filter(tech =>
+        tech.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tech.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tech.phone?.includes(searchQuery)
+      );
+    }
+
+    // Status filter
+    if (statusFilter === 'active') filtered = filtered.filter(t => t.isActive);
+    if (statusFilter === 'inactive') filtered = filtered.filter(t => !t.isActive);
+
+    // Role filter
+    if (roleFilter !== 'all') filtered = filtered.filter(t => t.role === roleFilter);
+
+    // Location filter
+    if (locationFilter !== 'all') {
+      if (locationFilter === 'unassigned') {
+        filtered = filtered.filter(t => !t.locationId);
+      } else {
+        filtered = filtered.filter(t => t.locationId === locationFilter);
+      }
+    }
+
+    // Sorting
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name': return a.name.localeCompare(b.name);
+        case 'role': return a.role.localeCompare(b.role);
+        case 'location': {
+          const locA = locations?.find(l => l.id === a.locationId)?.name || 'Unassigned';
+          const locB = locations?.find(l => l.id === b.locationId)?.name || 'Unassigned';
+          return locA.localeCompare(locB);
+        }
+        case 'date': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        default: return 0;
+      }
+    });
+  }, [technicians, searchQuery, statusFilter, roleFilter, locationFilter, sortBy, locations]);
+
+  // Group filtered technicians by location
+  const techniciansByLocation = filteredAndSortedTechnicians.reduce((acc, tech) => {
     const locId = tech.locationId || 'unassigned';
     if (!acc[locId]) acc[locId] = [];
     acc[locId].push(tech);
@@ -218,6 +270,85 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
       <p className="text-sm text-gray-400 mb-6">
         Manage your technicians and crews. Assign them to locations and track their performance.
       </p>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col gap-3 mb-4">
+        {/* Search */}
+        <div className="flex-1 relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search technicians..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          {/* Role Filter */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as any)}
+            className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          >
+            <option value="all">All Roles</option>
+            <option value="lead">Lead Technician</option>
+            <option value="technician">Technician</option>
+            <option value="apprentice">Apprentice</option>
+          </select>
+
+          {/* Location Filter */}
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          >
+            <option value="all">All Locations</option>
+            {locations?.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+            <option value="unassigned">Unassigned</option>
+          </select>
+
+          {/* Sort */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          >
+            <option value="name">Name</option>
+            <option value="role">Role</option>
+            <option value="location">Location</option>
+            <option value="date">Date Added</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Results count */}
+      {(searchQuery || statusFilter !== 'all' || roleFilter !== 'all' || locationFilter !== 'all') && (
+        <p className="text-sm text-gray-400 mb-3">
+          Showing {filteredAndSortedTechnicians.length} of {technicians?.length || 0} technicians
+        </p>
+      )}
 
       {/* Technician List */}
       <div className="space-y-6">
@@ -423,6 +554,28 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
           <p className="text-sm text-amber-400">
             <strong>Tip:</strong> Add locations first to organize your technicians by site.
           </p>
+        </div>
+      )}
+
+      {/* No Results State */}
+      {technicians.length > 0 && filteredAndSortedTechnicians.length === 0 && !isCreating && (
+        <div className="text-center py-8">
+          <Search className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-white mb-1">No Technicians Found</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Try adjusting your search or filter criteria.
+          </p>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setStatusFilter('all');
+              setRoleFilter('all');
+              setLocationFilter('all');
+            }}
+            className="text-sm text-[#F6B45A] hover:underline"
+          >
+            Clear filters
+          </button>
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MapPin, Plus, Trash2, Edit2, Check, X, Building2, Mail, User, Loader2
+  MapPin, Plus, Trash2, Edit2, Check, X, Building2, Mail, User, Loader2, Search
 } from 'lucide-react';
 import { Location } from '../../types';
 import { SettingsCard } from './ui/SettingsCard';
@@ -27,6 +27,11 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<Location>>({});
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'date-desc' | 'date-asc'>('name-asc');
 
   const handleStartCreate = () => {
     setIsCreating(true);
@@ -85,6 +90,35 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
     await onDeleteLocation(id);
   };
 
+  // Filtered and Sorted Locations
+  const filteredAndSortedLocations = useMemo(() => {
+    let filtered = locations || [];
+
+    // Apply search
+    if (searchQuery) {
+      filtered = filtered.filter(loc =>
+        loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.managerName?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter === 'active') filtered = filtered.filter(loc => loc.isActive);
+    if (statusFilter === 'inactive') filtered = filtered.filter(loc => !loc.isActive);
+
+    // Apply sorting
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc': return a.name.localeCompare(b.name);
+        case 'name-desc': return b.name.localeCompare(a.name);
+        case 'date-desc': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'date-asc': return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        default: return 0;
+      }
+    });
+  }, [locations, searchQuery, statusFilter, sortBy]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -99,10 +133,63 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
         Manage your business locations. Each location can have its own manager and track metrics separately.
       </p>
 
+      {/* Search and Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
+        {/* Search Input */}
+        <div className="flex-1 relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search locations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Status Filter */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+        >
+          <option value="all">All Locations</option>
+          <option value="active">Active Only</option>
+          <option value="inactive">Inactive Only</option>
+        </select>
+
+        {/* Sort Dropdown */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as any)}
+          className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+        >
+          <option value="name-asc">Name (A-Z)</option>
+          <option value="name-desc">Name (Z-A)</option>
+          <option value="date-desc">Newest First</option>
+          <option value="date-asc">Oldest First</option>
+        </select>
+      </div>
+
+      {/* Results Count */}
+      {(searchQuery || statusFilter !== 'all') && (
+        <p className="text-sm text-gray-400 mb-3">
+          Showing {filteredAndSortedLocations.length} of {locations?.length || 0} locations
+        </p>
+      )}
+
       {/* Location List */}
       <div className="space-y-4">
         <AnimatePresence mode="popLayout">
-          {locations.map((location) => (
+          {filteredAndSortedLocations.map((location) => (
             <motion.div
               key={location.id}
               initial={{ opacity: 0, y: -10 }}
@@ -301,6 +388,26 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
           <p className="text-sm text-gray-500 mb-4">
             Add your business locations to track performance across multiple sites.
           </p>
+        </div>
+      )}
+
+      {/* No Results State */}
+      {locations.length > 0 && filteredAndSortedLocations.length === 0 && !isCreating && (
+        <div className="text-center py-8">
+          <Search className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-white mb-1">No Locations Found</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Try adjusting your search or filter criteria.
+          </p>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setStatusFilter('all');
+            }}
+            className="text-sm text-[#F6B45A] hover:underline"
+          >
+            Clear filters
+          </button>
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   UserPlus,
@@ -11,7 +11,8 @@ import {
   Clock,
   AlertCircle,
   ChevronDown,
-  X
+  X,
+  Search
 } from 'lucide-react';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { useLocations } from '../../hooks/useLocations';
@@ -57,6 +58,12 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | OrganizationRole>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending'>('all');
+  const [locationFilter, setLocationFilter] = useState<'all' | 'all-access' | string>('all');
 
   const handleSendInvite = async () => {
     if (!inviteEmail.trim()) return;
@@ -131,6 +138,49 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
   const editableMembers = members.filter(m => m.role !== 'owner');
   const ownerMember = members.find(m => m.role === 'owner');
 
+  // Filtered Members
+  const filteredMembers = useMemo(() => {
+    let filtered = editableMembers || [];
+
+    if (searchQuery) {
+      filtered = filtered.filter(m =>
+        m.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.userEmail?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (roleFilter !== 'all') filtered = filtered.filter(m => m.role === roleFilter);
+
+    if (locationFilter === 'all-access') {
+      filtered = filtered.filter(m => !m.locationId);
+    } else if (locationFilter !== 'all') {
+      filtered = filtered.filter(m => m.locationId === locationFilter);
+    }
+
+    return filtered.sort((a, b) => a.userName?.localeCompare(b.userName || '') || 0);
+  }, [editableMembers, searchQuery, roleFilter, locationFilter]);
+
+  // Filtered Invites
+  const filteredInvites = useMemo(() => {
+    let filtered = invites || [];
+
+    if (searchQuery) {
+      filtered = filtered.filter(inv =>
+        inv.email.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (roleFilter !== 'all') filtered = filtered.filter(inv => inv.role === roleFilter);
+
+    if (locationFilter === 'all-access') {
+      filtered = filtered.filter(inv => !inv.locationId);
+    } else if (locationFilter !== 'all') {
+      filtered = filtered.filter(inv => inv.locationId === locationFilter);
+    }
+
+    return filtered;
+  }, [invites, searchQuery, roleFilter, locationFilter]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -157,6 +207,74 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
         )}
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex flex-col gap-3">
+        {/* Search */}
+        <div className="flex-1 relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search team members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active Members</option>
+            <option value="pending">Pending Invites</option>
+          </select>
+
+          {/* Role Filter */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as any)}
+            className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          >
+            <option value="all">All Roles</option>
+            <option value="admin">Office Manager</option>
+            <option value="salesperson">Salesperson</option>
+            <option value="lead_technician">Lead Technician</option>
+            <option value="technician">Technician</option>
+          </select>
+
+          {/* Location Filter */}
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+          >
+            <option value="all">All Locations</option>
+            <option value="all-access">All Locations Access</option>
+            {locations?.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Results count */}
+      {(searchQuery || roleFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all') && (
+        <p className="text-sm text-gray-400">
+          Showing {statusFilter === 'pending' ? filteredInvites.length : filteredMembers.length} of {statusFilter === 'pending' ? invites.length : editableMembers.length} {statusFilter === 'pending' ? 'invites' : 'members'}
+        </p>
+      )}
+
       {/* Owner Card */}
       {ownerMember && (
         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
@@ -178,10 +296,10 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
       )}
 
       {/* Team Members List */}
-      {editableMembers.length > 0 && (
+      {statusFilter !== 'pending' && filteredMembers.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Team</h4>
-          {editableMembers.map((member) => (
+          {filteredMembers.map((member) => (
             <MemberCard
               key={member.id}
               member={member}
@@ -195,10 +313,10 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
       )}
 
       {/* Pending Invites */}
-      {invites.length > 0 && (
+      {statusFilter !== 'active' && filteredInvites.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Pending Invites</h4>
-          {invites.map((invite) => (
+          {filteredInvites.map((invite) => (
             <InviteCard
               key={invite.id}
               invite={invite}
@@ -217,6 +335,29 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
           {isOwner && (
             <p className="text-sm text-gray-500 mt-1">Invite your first team member to get started</p>
           )}
+        </div>
+      )}
+
+      {/* No Results State */}
+      {(editableMembers.length > 0 || invites.length > 0) &&
+       filteredMembers.length === 0 && filteredInvites.length === 0 && (
+        <div className="text-center py-8">
+          <Search className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-white mb-1">No Results Found</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Try adjusting your search or filter criteria.
+          </p>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setRoleFilter('all');
+              setStatusFilter('all');
+              setLocationFilter('all');
+            }}
+            className="text-sm text-[#F6B45A] hover:underline"
+          >
+            Clear filters
+          </button>
         </div>
       )}
 
