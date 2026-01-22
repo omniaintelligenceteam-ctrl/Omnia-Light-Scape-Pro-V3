@@ -9,6 +9,7 @@ import inventoryRoutes from './routes/inventory.routes.js';
 import stripeRoutes from './routes/stripe.routes.js';
 import usageRoutes from './routes/usage.routes.js';
 import projectsRoutes from './routes/projects.routes.js';
+import clientPortalRoutes from './routes/client-portal.routes.js';
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/projects', projectsRoutes);
+app.use('/api/client-portal', clientPortalRoutes);
 
 // Start
 app.listen(PORT, () => {

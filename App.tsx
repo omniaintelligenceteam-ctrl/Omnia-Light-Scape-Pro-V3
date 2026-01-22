@@ -184,10 +184,13 @@ const App: React.FC = () => {
     deleteTechnician
   } = useTechnicians();
 
+  // Date range for Executive Dashboard
+  const [dashboardDateRange, setDashboardDateRange] = useState<'today' | 'this_week' | 'this_month' | 'this_quarter' | 'this_year'>('this_month');
+
   // Calculate real metrics for Executive Dashboard
-  const locationMetrics = useLocationMetrics(projects, locations, 'this_month');
-  const technicianMetrics = useTechnicianMetrics(projects, technicians, locations, 'this_month');
-  const companyMetrics = useCompanyMetrics(locationMetrics, technicianMetrics, projects, 'this_month');
+  const locationMetrics = useLocationMetrics(projects, locations, dashboardDateRange);
+  const technicianMetrics = useTechnicianMetrics(projects, technicians, locations, dashboardDateRange);
+  const companyMetrics = useCompanyMetrics(locationMetrics, technicianMetrics, projects, dashboardDateRange);
 
   // Calculate current metrics for goal tracking in Settings
   const currentDate = new Date();
@@ -4085,6 +4088,8 @@ Notes: ${invoice.notes || 'N/A'}
                                  technicianMetrics={technicianMetrics}
                                  companyMetrics={companyMetrics}
                                  isLoading={locationsLoading || techniciansLoading}
+                                 dateRange={dashboardDateRange}
+                                 onDateRangeChange={setDashboardDateRange}
                              />
                          )}
 

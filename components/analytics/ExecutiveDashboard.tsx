@@ -28,6 +28,8 @@ interface ExecutiveDashboardProps {
   technicianMetrics?: TechnicianMetrics[];
   companyMetrics?: CompanyMetrics;
   isLoading?: boolean;
+  dateRange?: DateRange;
+  onDateRangeChange?: (range: DateRange) => void;
   onRefresh?: () => void;
   onLocationClick?: (locationId: string) => void;
   onTechnicianClick?: (technicianId: string) => void;
@@ -115,12 +117,17 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   technicianMetrics: propTechnicianMetrics,
   companyMetrics: propCompanyMetrics,
   isLoading = false,
+  dateRange: propDateRange = 'this_month',
+  onDateRangeChange,
   onRefresh,
   onLocationClick,
   onTechnicianClick
 }) => {
-  const [dateRange, setDateRange] = useState<DateRange>('this_month');
+  const [internalDateRange, setInternalDateRange] = useState<DateRange>(propDateRange);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+
+  // Use controlled dateRange if provided, otherwise use internal state
+  const dateRange = onDateRangeChange ? propDateRange : internalDateRange;
 
   // Use provided metrics or generate mock data
   const locationMetrics = useMemo(() => {
@@ -190,7 +197,14 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
           <div className="relative">
             <select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as DateRange)}
+              onChange={(e) => {
+                const newRange = e.target.value as DateRange;
+                if (onDateRangeChange) {
+                  onDateRangeChange(newRange);
+                } else {
+                  setInternalDateRange(newRange);
+                }
+              }}
               className="appearance-none pl-9 pr-8 py-2 text-sm text-white bg-white/5 border border-white/10
                 rounded-xl focus:outline-none focus:border-[#F6B45A]/50 cursor-pointer"
             >
