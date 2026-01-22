@@ -4,7 +4,7 @@ import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
   HelpCircle, LogOut, Save, Loader2, Upload, Check, Moon,
   Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2, Phone,
-  X, ChevronRight, Download, FileJson, Clock, Target, MapPin, Users
+  X, ChevronRight, Download, FileJson, Clock, Target, MapPin, Users, UserPlus
 } from 'lucide-react';
 import { ToggleRow } from './ui/SettingsToggle';
 import { SettingsSlider } from './ui/SettingsSlider';
@@ -16,6 +16,8 @@ import { SettingsViewProps } from './types';
 import { AIAssistant } from './AIAssistant';
 import { LocationsSection } from './LocationsSection';
 import { TechniciansSection } from './TechniciansSection';
+import { TeamSection } from './TeamSection';
+import { useOrganization } from '../../hooks/useOrganization';
 
 // Menu item button component
 const MenuButton: React.FC<{
@@ -149,6 +151,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
 }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [showAIChat, setShowAIChat] = useState(false);
+  const { isOwner } = useOrganization();
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onProfileChange && profile) {
@@ -273,6 +276,16 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           description={`${technicians.length} technician${technicians.length !== 1 ? 's' : ''}`}
           onClick={() => setActiveModal('technicians')}
         />
+
+        {/* Team (Owner only) */}
+        {isOwner && (
+          <MenuButton
+            icon={UserPlus}
+            title="Team"
+            description="Manage team members & invites"
+            onClick={() => setActiveModal('team')}
+          />
+        )}
 
         {/* Subscription */}
         {subscription && (
@@ -1091,6 +1104,17 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
             onUpdateTechnician={onUpdateTechnician}
             onDeleteTechnician={onDeleteTechnician}
           />
+        </FullScreenModal>
+      )}
+
+      {/* Team Modal (Owner only) */}
+      {isOwner && (
+        <FullScreenModal
+          isOpen={activeModal === 'team'}
+          onClose={() => setActiveModal(null)}
+          title="Team"
+        >
+          <TeamSection isOwner={isOwner} />
         </FullScreenModal>
       )}
 

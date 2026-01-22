@@ -10,7 +10,7 @@ interface ColorOption {
 }
 
 interface ColorPickerProps {
-  colors: ColorOption[];
+  colors: readonly ColorOption[];
   value: string;
   onChange: (colorId: string) => void;
 }

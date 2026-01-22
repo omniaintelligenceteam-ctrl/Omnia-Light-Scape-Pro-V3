@@ -16,6 +16,8 @@ import { SettingsViewProps } from './types';
 import { AIAssistant } from './AIAssistant';
 import { LocationsSection } from './LocationsSection';
 import { TechniciansSection } from './TechniciansSection';
+import { TeamSection } from './TeamSection';
+import { useOrganization } from '../../hooks/useOrganization';
 
 export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   profile,
@@ -68,6 +70,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [showAIChat, setShowAIChat] = useState(false);
+  const { isOwner } = useOrganization();
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onProfileChange && profile) {
@@ -1113,6 +1116,20 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                   onUpdateTechnician={onUpdateTechnician}
                   onDeleteTechnician={onDeleteTechnician}
                 />
+              </motion.div>
+            )}
+
+            {/* Team Section */}
+            {activeSection === 'team' && (
+              <motion.div
+                key="team"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+              >
+                <TeamSection isOwner={isOwner} />
               </motion.div>
             )}
 

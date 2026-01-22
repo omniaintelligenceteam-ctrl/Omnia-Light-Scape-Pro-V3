@@ -94,6 +94,8 @@ export interface SavedProject {
   status: ProjectStatus;
   schedule?: ScheduleData;
   invoicePaidAt?: string;         // ISO date when invoice was paid via Stripe
+  assignedTo?: string[];          // Array of user IDs assigned to this project
+  assignedTechnicianId?: string;  // ID of technician assigned to this project
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';
@@ -455,3 +457,219 @@ export interface SmartAlert {
   createdAt: string;
   isRead: boolean;
 }
+
+// ============================================
+// MULTI-USER ORGANIZATION & ROLE TYPES
+// ============================================
+
+export type OrganizationRole = 'owner' | 'admin' | 'salesperson' | 'technician' | 'lead_technician';
+
+export interface Organization {
+  id: string;
+  name: string;
+  ownerUserId: string;
+  stripeCustomerId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  organizationId: string;
+  userId: string;
+  role: OrganizationRole;
+  locationId?: string;        // NULL = all locations access
+  invitedBy?: string;
+  invitedAt: string;
+  acceptedAt?: string;
+  isActive: boolean;
+  createdAt: string;
+  // Joined fields (from user)
+  userName?: string;
+  userEmail?: string;
+}
+
+export interface OrganizationInvite {
+  id: string;
+  organizationId: string;
+  email: string;
+  role: Exclude<OrganizationRole, 'owner'>; // Can't invite as owner
+  locationId?: string;
+  invitedBy: string;
+  token: string;
+  expiresAt: string;
+  acceptedAt?: string;
+  createdAt: string;
+  // Joined fields
+  invitedByName?: string;
+  organizationName?: string;
+}
+
+export type ProjectAssignmentRole = 'owner' | 'salesperson' | 'technician';
+
+export interface ProjectAssignment {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: ProjectAssignmentRole;
+  assignedBy?: string;
+  assignedAt: string;
+  // Joined fields
+  userName?: string;
+  userEmail?: string;
+}
+
+export interface ClientAssignment {
+  id: string;
+  clientId: string;
+  userId: string;
+  isPrimary: boolean;
+  assignedAt: string;
+  // Joined fields
+  userName?: string;
+  userEmail?: string;
+}
+
+// Role-based permission helpers
+export interface RolePermissions {
+  canViewAllProjects: boolean;
+  canViewAllClients: boolean;
+  canCreateProjects: boolean;
+  canEditProjects: boolean;
+  canDeleteProjects: boolean;
+  canViewPricing: boolean;
+  canCreateQuotes: boolean;
+  canEditQuotes: boolean;
+  canViewInvoices: boolean;
+  canCreateInvoices: boolean;
+  canViewAnalytics: boolean;
+  canViewExecutiveDashboard: boolean;
+  canManageTeam: boolean;
+  canManageBilling: boolean;
+  canManageSettings: boolean;
+  canManageLocations: boolean;
+  canManageTechnicians: boolean;
+  canAssignProjects: boolean;
+  canAssignClients: boolean;
+  canMarkJobsComplete: boolean;
+  canViewOwnScheduleOnly: boolean;
+}
+
+// Define permissions per role
+export const ROLE_PERMISSIONS: Record<OrganizationRole, RolePermissions> = {
+  owner: {
+    canViewAllProjects: true,
+    canViewAllClients: true,
+    canCreateProjects: true,
+    canEditProjects: true,
+    canDeleteProjects: true,
+    canViewPricing: true,
+    canCreateQuotes: true,
+    canEditQuotes: true,
+    canViewInvoices: true,
+    canCreateInvoices: true,
+    canViewAnalytics: true,
+    canViewExecutiveDashboard: true,
+    canManageTeam: true,
+    canManageBilling: true,
+    canManageSettings: true,
+    canManageLocations: true,
+    canManageTechnicians: true,
+    canAssignProjects: true,
+    canAssignClients: true,
+    canMarkJobsComplete: true,
+    canViewOwnScheduleOnly: false,
+  },
+  admin: {
+    canViewAllProjects: true,
+    canViewAllClients: true,
+    canCreateProjects: true,
+    canEditProjects: true,
+    canDeleteProjects: false,
+    canViewPricing: true,
+    canCreateQuotes: true,
+    canEditQuotes: true,
+    canViewInvoices: true,
+    canCreateInvoices: true,
+    canViewAnalytics: true,
+    canViewExecutiveDashboard: false,
+    canManageTeam: false,
+    canManageBilling: false,
+    canManageSettings: false,
+    canManageLocations: false,
+    canManageTechnicians: true,
+    canAssignProjects: true,
+    canAssignClients: true,
+    canMarkJobsComplete: true,
+    canViewOwnScheduleOnly: false,
+  },
+  salesperson: {
+    canViewAllProjects: false,
+    canViewAllClients: false,
+    canCreateProjects: true,
+    canEditProjects: true,  // Only their own
+    canDeleteProjects: false,
+    canViewPricing: true,
+    canCreateQuotes: true,
+    canEditQuotes: true,    // Only their own
+    canViewInvoices: false, // View-only for their projects
+    canCreateInvoices: false,
+    canViewAnalytics: false,
+    canViewExecutiveDashboard: false,
+    canManageTeam: false,
+    canManageBilling: false,
+    canManageSettings: false,
+    canManageLocations: false,
+    canManageTechnicians: false,
+    canAssignProjects: false,
+    canAssignClients: false,
+    canMarkJobsComplete: false,
+    canViewOwnScheduleOnly: true,
+  },
+  lead_technician: {
+    canViewAllProjects: false,
+    canViewAllClients: false,
+    canCreateProjects: false,
+    canEditProjects: false,
+    canDeleteProjects: false,
+    canViewPricing: false,
+    canCreateQuotes: false,
+    canEditQuotes: false,
+    canViewInvoices: false,
+    canCreateInvoices: false,
+    canViewAnalytics: false,  // Location-level only
+    canViewExecutiveDashboard: false,
+    canManageTeam: false,
+    canManageBilling: false,
+    canManageSettings: false,
+    canManageLocations: false,
+    canManageTechnicians: false,  // View only
+    canAssignProjects: true,      // Can assign to their crew
+    canAssignClients: false,
+    canMarkJobsComplete: true,
+    canViewOwnScheduleOnly: false, // Can see crew schedule
+  },
+  technician: {
+    canViewAllProjects: false,
+    canViewAllClients: false,
+    canCreateProjects: false,
+    canEditProjects: false,
+    canDeleteProjects: false,
+    canViewPricing: false,
+    canCreateQuotes: false,
+    canEditQuotes: false,
+    canViewInvoices: false,
+    canCreateInvoices: false,
+    canViewAnalytics: false,
+    canViewExecutiveDashboard: false,
+    canManageTeam: false,
+    canManageBilling: false,
+    canManageSettings: false,
+    canManageLocations: false,
+    canManageTechnicians: false,
+    canAssignProjects: false,
+    canAssignClients: false,
+    canMarkJobsComplete: true,
+    canViewOwnScheduleOnly: true,
+  },
+};

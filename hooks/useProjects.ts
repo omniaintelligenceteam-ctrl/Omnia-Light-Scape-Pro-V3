@@ -159,7 +159,7 @@ export function useProjects() {
   // Update a project
   const updateProject = useCallback(async (
     projectId: string,
-    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData; images?: ProjectImage[] }
+    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData; images?: ProjectImage[]; assignedTo?: string[]; assignedTechnicianId?: string }
   ): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
@@ -179,6 +179,8 @@ export function useProjects() {
       if (currentProject?.status) promptConfig.status = currentProject.status;
       if (currentProject?.schedule) promptConfig.schedule = currentProject.schedule;
       if (currentProject?.images) promptConfig.images = currentProject.images;
+      if (currentProject?.assignedTo) promptConfig.assignedTo = currentProject.assignedTo;
+      if (currentProject?.assignedTechnicianId) promptConfig.assignedTechnicianId = currentProject.assignedTechnicianId;
 
       // Apply updates (overwrite specific fields)
       if (updates.quote !== undefined) promptConfig.quote = updates.quote;
@@ -186,6 +188,8 @@ export function useProjects() {
       if (updates.status !== undefined) promptConfig.status = updates.status;
       if (updates.schedule !== undefined) promptConfig.schedule = updates.schedule;
       if (updates.images !== undefined) promptConfig.images = updates.images;
+      if (updates.assignedTo !== undefined) promptConfig.assignedTo = updates.assignedTo;
+      if (updates.assignedTechnicianId !== undefined) promptConfig.assignedTechnicianId = updates.assignedTechnicianId;
 
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'PATCH',

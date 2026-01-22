@@ -25,6 +25,10 @@ import { useAnalytics } from './hooks/useAnalytics';
 import { AnalyticsDashboard, ExecutiveDashboard } from './components/analytics';
 import { useLocations } from './hooks/useLocations';
 import { useTechnicians } from './hooks/useTechnicians';
+import { useOrganization } from './hooks/useOrganization';
+import { useTeamMembers } from './hooks/useTeamMembers';
+import { TechnicianDashboard } from './components/TechnicianDashboard';
+import { AssignmentDropdown } from './components/AssignmentDropdown';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
@@ -175,6 +179,12 @@ const App: React.FC = () => {
     updateTechnician,
     deleteTechnician
   } = useTechnicians();
+
+  // Organization and role management
+  const { role, hasPermission } = useOrganization();
+
+  // Team members for assignment dropdown
+  const { members: teamMembers } = useTeamMembers();
 
   // Client management UI state
   const [showClientModal, setShowClientModal] = useState(false);
@@ -2084,8 +2094,25 @@ Notes: ${invoice.notes || 'N/A'}
   );
 
   // Unified pipeline filter for the new simplified navigation
+  // Includes role-based filtering: salespeople only see their assigned projects
   const filteredPipelineProjects = useMemo(() =>
       projects.filter(p => {
+          // Role-based filtering: salespeople only see their assigned projects
+          if (role === 'salesperson' && user?.id) {
+              // If project has assignments, check if current user is assigned
+              if (p.assignedTo && p.assignedTo.length > 0) {
+                  if (!p.assignedTo.includes(user.id)) return false;
+              }
+              // If no assignments yet, show all (legacy projects)
+          }
+
+          // Technicians only see their assigned projects (scheduled/approved)
+          if (role === 'technician' && user?.id) {
+              if (p.assignedTechnicianId && p.assignedTechnicianId !== user.id) return false;
+              // Only show scheduled or approved projects for technicians
+              if (p.status !== 'scheduled' && p.status !== 'approved') return false;
+          }
+
           // Apply pipeline status filter
           if (pipelineStatusFilter !== 'all') {
               if (pipelineStatusFilter === 'draft' && p.status !== 'draft') return false;
@@ -2103,7 +2130,7 @@ Notes: ${invoice.notes || 'N/A'}
               p.quote?.clientDetails?.phone?.includes(searchTerm)
           );
       }),
-      [projects, searchTerm, pipelineStatusFilter]
+      [projects, searchTerm, pipelineStatusFilter, role, user?.id]
   );
 
   // Authentication is now handled by AuthWrapper
@@ -4548,6 +4575,26 @@ Notes: ${invoice.notes || 'N/A'}
                                                 </div>
                                             )}
 
+                                            {/* Assignment Dropdown - only for admins/owners */}
+                                            {hasPermission('canAssignProjects') && (
+                                                <div className="mb-3">
+                                                    <AssignmentDropdown
+                                                        assignedUserId={p.assignedTo?.[0]}
+                                                        assignedUserName={teamMembers.find(m => m.userId === p.assignedTo?.[0])?.userName}
+                                                        roleFilter={['salesperson', 'admin']}
+                                                        onAssign={async (userId: string, _userName: string) => {
+                                                            await updateProject(p.id, { assignedTo: [userId] });
+                                                        }}
+                                                        onUnassign={async () => {
+                                                            await updateProject(p.id, { assignedTo: [] });
+                                                        }}
+                                                        label="Assigned To"
+                                                        placeholder="Unassigned"
+                                                        compact
+                                                    />
+                                                </div>
+                                            )}
+
                                             {/* Stats Grid */}
                                             <div className="grid grid-cols-2 gap-3 mt-auto">
                                                 <div className="bg-[#151515] p-2 rounded-lg border border-white/5">
@@ -5962,41 +6009,60 @@ Notes: ${invoice.notes || 'N/A'}
               <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)' }}></div>
               <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
-                <ScheduleView
+              {/* Show TechnicianDashboard for technicians, ScheduleView for everyone else */}
+              {role === 'technician' ? (
+                <TechnicianDashboard
                   projects={projects}
-                  selectedDate={selectedCalendarDate}
-                  onDateSelect={setSelectedCalendarDate}
-                  onViewProject={(_project) => {
-                    // Navigate to projects tab and select the project
-                    handleTabChange('projects');
-                    setProjectsSubTab('pipeline'); setPipelineStatusFilter('active');
-                  }}
-                  onReschedule={(project) => {
-                    // Open schedule modal with existing data
-                    setScheduleProjectId(project.id);
-                    if (project.schedule) {
-                      setScheduleDate(new Date(project.schedule.scheduledDate));
-                      setScheduleTimeSlot(project.schedule.timeSlot);
-                      setScheduleCustomTime(project.schedule.customTime || '09:00');
-                      setScheduleDuration(project.schedule.estimatedDuration);
-                      setScheduleNotes(project.schedule.installationNotes || '');
-                    }
-                    setShowScheduleModal(true);
-                  }}
-                  onComplete={(project) => {
+                  onMarkComplete={(projectId) => {
                     // Open completion modal
-                    setCompletionProjectId(project.id);
+                    setCompletionProjectId(projectId);
                     setCompletionNotes('');
                     setAutoGenerateInvoice(false);
                     setShowCompletionModal(true);
                   }}
-                  events={calendarEvents}
-                  onCreateEvent={handleCreateEvent}
-                  onEditEvent={handleEditEvent}
-                  onDeleteEvent={handleDeleteEvent}
+                  onViewDetails={(projectId) => {
+                    // Navigate to projects tab to view details
+                    handleTabChange('projects');
+                    setProjectsSubTab('pipeline');
+                  }}
                 />
-              </div>
+              ) : (
+                <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
+                  <ScheduleView
+                    projects={projects}
+                    selectedDate={selectedCalendarDate}
+                    onDateSelect={setSelectedCalendarDate}
+                    onViewProject={(_project) => {
+                      // Navigate to projects tab and select the project
+                      handleTabChange('projects');
+                      setProjectsSubTab('pipeline'); setPipelineStatusFilter('active');
+                    }}
+                    onReschedule={(project) => {
+                      // Open schedule modal with existing data
+                      setScheduleProjectId(project.id);
+                      if (project.schedule) {
+                        setScheduleDate(new Date(project.schedule.scheduledDate));
+                        setScheduleTimeSlot(project.schedule.timeSlot);
+                        setScheduleCustomTime(project.schedule.customTime || '09:00');
+                        setScheduleDuration(project.schedule.estimatedDuration);
+                        setScheduleNotes(project.schedule.installationNotes || '');
+                      }
+                      setShowScheduleModal(true);
+                    }}
+                    onComplete={(project) => {
+                      // Open completion modal
+                      setCompletionProjectId(project.id);
+                      setCompletionNotes('');
+                      setAutoGenerateInvoice(false);
+                      setShowCompletionModal(true);
+                    }}
+                    events={calendarEvents}
+                    onCreateEvent={handleCreateEvent}
+                    onEditEvent={handleEditEvent}
+                    onDeleteEvent={handleDeleteEvent}
+                  />
+                </div>
+              )}
             </motion.div>
           )}
 

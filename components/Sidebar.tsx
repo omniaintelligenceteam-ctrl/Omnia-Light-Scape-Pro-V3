@@ -1,6 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paintbrush, FolderOpen, FolderClosed, Settings, Package, PackageOpen, Sparkles, Calendar, CalendarCheck } from 'lucide-react';
+import { Paintbrush, FolderOpen, FolderClosed, Settings, Package, PackageOpen, Sparkles, Calendar, CalendarCheck, ClipboardList } from 'lucide-react';
+import { useOrganization } from '../hooks/useOrganization';
+import { OrganizationRole, RolePermissions } from '../types';
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  /** Roles that can see this menu item (if empty, all roles can see) */
+  allowedRoles?: OrganizationRole[];
+  /** Permission required to see this item */
+  requiredPermission?: keyof RolePermissions;
+}
 
 interface SidebarProps {
   activeTab: string;
@@ -8,13 +20,67 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
-  const menuItems = [
-    { id: 'editor', label: 'Editor', icon: Paintbrush },
-    { id: 'projects', label: 'Projects', icon: FolderOpen },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'inventory', label: 'Inventory', icon: Package },
+  const { role, hasPermission } = useOrganization();
+
+  // Define all menu items with their access requirements
+  const allMenuItems: MenuItem[] = [
+    { id: 'editor', label: 'Editor', icon: Paintbrush, requiredPermission: 'canCreateProjects' },
+    { id: 'projects', label: 'Projects', icon: FolderOpen }, // All roles can see (filtered view)
+    { id: 'schedule', label: 'Schedule', icon: Calendar }, // All roles can see (filtered view)
+    { id: 'inventory', label: 'Inventory', icon: Package, requiredPermission: 'canViewPricing' },
+    { id: 'settings', label: 'Settings', icon: Settings }, // All roles can see (role-filtered content)
+  ];
+
+  // Technician-specific menu (simplified view)
+  const technicianMenuItems: MenuItem[] = [
+    { id: 'schedule', label: 'My Jobs', icon: ClipboardList },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+
+  // Filter menu items based on role
+  const menuItems = useMemo(() => {
+    // If no role yet (not in org), show default items
+    if (!role) {
+      return allMenuItems;
+    }
+
+    // Technicians get simplified menu
+    if (role === 'technician') {
+      return technicianMenuItems;
+    }
+
+    // Lead technicians see schedule + limited settings
+    if (role === 'lead_technician') {
+      return [
+        { id: 'schedule', label: 'Schedule', icon: Calendar },
+        { id: 'settings', label: 'Settings', icon: Settings },
+      ];
+    }
+
+    // For other roles, filter by permissions
+    return allMenuItems.filter(item => {
+      // If no permission required, show to everyone
+      if (!item.requiredPermission && !item.allowedRoles) {
+        return true;
+      }
+
+      // Check allowed roles
+      if (item.allowedRoles && item.allowedRoles.length > 0) {
+        if (!item.allowedRoles.includes(role)) {
+          return false;
+        }
+      }
+
+      // Check permission
+      if (item.requiredPermission) {
+        if (!hasPermission(item.requiredPermission)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [role, hasPermission]);
 
   return (
     <nav className="w-full text-white shrink-0 z-50 fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]">

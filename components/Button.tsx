@@ -34,6 +34,13 @@ export const Button: React.FC<ButtonProps> = ({
   successDuration = 2000,
   errorDuration = 2000,
   onClick,
+  // Exclude event handlers that conflict with framer-motion
+  onAnimationStart: _onAnimationStart,
+  onAnimationEnd: _onAnimationEnd,
+  onAnimationIteration: _onAnimationIteration,
+  onDragStart: _onDragStart,
+  onDragEnd: _onDragEnd,
+  onDrag: _onDrag,
   ...props
 }) => {
   const [isHovered, setIsHovered] = useState(false);
