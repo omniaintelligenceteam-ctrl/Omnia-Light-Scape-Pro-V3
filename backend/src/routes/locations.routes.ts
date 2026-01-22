@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getSupabase } from '../lib/supabase.js';
+import { supabase } from '../lib/supabase.js';
 
 const router = Router();
 
@@ -11,8 +11,11 @@ router.get('/', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
 
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
   try {
-    const supabase = getSupabase();
 
     // Look up Supabase user ID from Clerk user ID
     const { data: userData, error: userError } = await supabase
@@ -53,8 +56,11 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Location name is required' });
   }
 
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
   try {
-    const supabase = getSupabase();
 
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -98,8 +104,11 @@ router.patch('/:id', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
 
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
   try {
-    const supabase = getSupabase();
 
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -145,8 +154,11 @@ router.delete('/:id', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
 
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
   try {
-    const supabase = getSupabase();
 
     const { data: userData, error: userError } = await supabase
       .from('users')
