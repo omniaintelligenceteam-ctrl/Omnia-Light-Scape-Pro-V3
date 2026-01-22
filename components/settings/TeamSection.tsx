@@ -196,12 +196,14 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
   }
 
   // Filter out owner from editable members
-  const editableMembers = members.filter(m => m.role !== 'owner');
-  const ownerMember = members.find(m => m.role === 'owner');
+  const editableMembers = (members || []).filter(m => m.role !== 'owner');
+  const ownerMember = (members || []).find(m => m.role === 'owner');
 
   // Team capacity calculations
   const teamStats = useMemo(() => {
-    const activeMembers = members.filter(m => m.isActive);
+    const membersList = members || [];
+    const invitesList = invites || [];
+    const activeMembers = membersList.filter(m => m.isActive);
     const roleBreakdown = {
       admin: activeMembers.filter(m => m.role === 'admin').length,
       salesperson: activeMembers.filter(m => m.role === 'salesperson').length,
@@ -215,7 +217,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
 
     return {
       totalActive: activeMembers.length,
-      pendingInvites: invites.length,
+      pendingInvites: invitesList.length,
       locationsWithMembers,
       totalLocations: locations?.length || 0,
       roleBreakdown
@@ -275,7 +277,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
           </div>
           <div>
             <h3 className="text-lg font-bold text-white">Team Members</h3>
-            <p className="text-sm text-gray-500">{members.length} member{members.length !== 1 ? 's' : ''}</p>
+            <p className="text-sm text-gray-500">{(members || []).length} member{(members || []).length !== 1 ? 's' : ''}</p>
           </div>
         </div>
 
@@ -365,7 +367,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
       {/* Results count */}
       {(searchQuery || roleFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all') && (
         <p className="text-sm text-gray-400">
-          Showing {statusFilter === 'pending' ? filteredInvites.length : filteredMembers.length} of {statusFilter === 'pending' ? invites.length : editableMembers.length} {statusFilter === 'pending' ? 'invites' : 'members'}
+          Showing {statusFilter === 'pending' ? filteredInvites.length : filteredMembers.length} of {statusFilter === 'pending' ? (invites || []).length : editableMembers.length} {statusFilter === 'pending' ? 'invites' : 'members'}
         </p>
       )}
 
@@ -577,7 +579,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
       )}
 
       {/* Empty State */}
-      {editableMembers.length === 0 && invites.length === 0 && (
+      {editableMembers.length === 0 && (invites || []).length === 0 && (
         <div className="text-center py-8">
           <Users className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <p className="text-gray-400">No team members yet</p>
@@ -588,7 +590,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
       )}
 
       {/* No Results State */}
-      {(editableMembers.length > 0 || invites.length > 0) &&
+      {(editableMembers.length > 0 || (invites || []).length > 0) &&
        filteredMembers.length === 0 && filteredInvites.length === 0 && (
         <div className="text-center py-8">
           <Search className="w-12 h-12 text-gray-600 mx-auto mb-3" />

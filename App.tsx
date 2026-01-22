@@ -26,7 +26,11 @@ import { useBusinessGoals } from './hooks/useBusinessGoals';
 import { useAnalytics } from './hooks/useAnalytics';
 import { useLeadSourceROI } from './hooks/useLeadSourceROI';
 import { useCashFlowForecast } from './hooks/useCashFlowForecast';
-import { AnalyticsDashboard, ExecutiveDashboard } from './components/analytics';
+import { useBusinessHealthScore } from './hooks/useBusinessHealthScore';
+import { usePipelineForecast } from './hooks/usePipelineForecast';
+import { useTeamPerformance } from './hooks/useTeamPerformance';
+import { useCapacityPlanning } from './hooks/useCapacityPlanning';
+import { AnalyticsDashboard, ExecutiveDashboard, BusinessHealthScore, PipelineForecast, TeamPerformanceMatrix, CapacityDashboard } from './components/analytics';
 import { LeadSourceROIDashboard } from './components/analytics/LeadSourceROIDashboard';
 import { CashFlowDashboard } from './components/analytics/CashFlowDashboard';
 import { ExportMenu } from './components/reports/ExportMenu';
@@ -206,6 +210,12 @@ const App: React.FC = () => {
   const locationMetrics = useLocationMetrics(projects, locations, dashboardDateRange);
   const technicianMetrics = useTechnicianMetrics(projects, technicians, locations, dashboardDateRange);
   const companyMetrics = useCompanyMetrics(locationMetrics, technicianMetrics, projects, dashboardDateRange);
+
+  // New Advanced Analytics Hooks
+  const businessHealthData = useBusinessHealthScore({ projects, goals: businessGoals });
+  const pipelineForecastData = usePipelineForecast({ projects });
+  const teamPerformanceData = useTeamPerformance({ projects, technicians });
+  const capacityPlanningData = useCapacityPlanning({ projects, technicians });
 
   // Calculate current metrics for goal tracking in Settings
   const currentDate = new Date();
@@ -4232,6 +4242,35 @@ Notes: ${invoice.notes || 'N/A'}
                              <span className="text-sm font-bold text-[#F6B45A]">{pipelineAnalytics.approvedToCompletedRate}%</span>
                              <ChevronRight className="w-3 h-3 text-gray-600" />
                              <span className="text-xs text-gray-400">Done</span>
+                         </div>
+
+                         {/* Advanced Analytics Grid - For Owners & Lead Technicians */}
+                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                             {/* Business Health Score */}
+                             <BusinessHealthScore healthData={businessHealthData} />
+
+                             {/* Sales Pipeline Forecast */}
+                             <PipelineForecast
+                                 data={pipelineForecastData}
+                                 onViewProject={(projectId) => {
+                                     setViewProjectId(projectId);
+                                     setShowProjectDetailModal(true);
+                                 }}
+                             />
+                         </div>
+
+                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                             {/* Team Performance Matrix */}
+                             <TeamPerformanceMatrix data={teamPerformanceData} />
+
+                             {/* Capacity Dashboard */}
+                             <CapacityDashboard
+                                 data={capacityPlanningData}
+                                 onViewJob={(jobId) => {
+                                     setViewProjectId(jobId);
+                                     setShowProjectDetailModal(true);
+                                 }}
+                             />
                          </div>
                      </div>
                  )}

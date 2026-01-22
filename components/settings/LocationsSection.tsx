@@ -488,7 +488,7 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
       )}
 
       {/* Empty State */}
-      {locations.length === 0 && !isCreating && (
+      {(locations || []).length === 0 && !isCreating && (
         <div className="text-center py-8">
           <Building2 className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-white mb-1">No Locations Yet</h3>
@@ -499,7 +499,7 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
       )}
 
       {/* No Results State */}
-      {locations.length > 0 && filteredAndSortedLocations.length === 0 && !isCreating && (
+      {(locations || []).length > 0 && filteredAndSortedLocations.length === 0 && !isCreating && (
         <div className="text-center py-8">
           <Search className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-white mb-1">No Locations Found</h3>

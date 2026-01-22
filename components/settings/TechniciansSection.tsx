@@ -1077,7 +1077,7 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
       )}
 
       {/* Empty State */}
-      {technicians.length === 0 && !isCreating && (
+      {(technicians || []).length === 0 && !isCreating && (
         <div className="text-center py-8">
           <Award className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-white mb-1">No Technicians Yet</h3>
@@ -1088,7 +1088,7 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
       )}
 
       {/* Tip */}
-      {locations.length === 0 && technicians.length === 0 && (
+      {(locations || []).length === 0 && (technicians || []).length === 0 && (
         <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
           <p className="text-sm text-amber-400">
             <strong>Tip:</strong> Add locations first to organize your technicians by site.
@@ -1097,7 +1097,7 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
       )}
 
       {/* No Results State */}
-      {technicians.length > 0 && filteredAndSortedTechnicians.length === 0 && !isCreating && (
+      {(technicians || []).length > 0 && filteredAndSortedTechnicians.length === 0 && !isCreating && (
         <div className="text-center py-8">
           <Search className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-white mb-1">No Technicians Found</h3>

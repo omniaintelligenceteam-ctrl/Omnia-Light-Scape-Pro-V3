@@ -7,3 +7,7 @@ export { CompanyTotals } from './CompanyTotals';
 export { LocationLeaderboard } from './LocationLeaderboard';
 export { TechnicianLeaderboard } from './TechnicianLeaderboard';
 export { SmartAlertsBanner, generateSmartAlerts } from './SmartAlertsBanner';
+export { BusinessHealthScore } from './BusinessHealthScore';
+export { PipelineForecast } from './PipelineForecast';
+export { TeamPerformanceMatrix } from './TeamPerformanceMatrix';
+export { CapacityDashboard } from './CapacityDashboard';
