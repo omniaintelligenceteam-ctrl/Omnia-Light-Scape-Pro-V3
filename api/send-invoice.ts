@@ -201,8 +201,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const html = generateInvoiceHtml(data);
 
-    // Use verified custom domain
-    const fromAddress = 'Omnia LightScape <noreply@omnialightscapepro.com>';
+    // Use verified custom domain with company name
+    const fromAddress = `${data.companyName} <noreply@omnialightscapepro.com>`;
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: fromAddress,

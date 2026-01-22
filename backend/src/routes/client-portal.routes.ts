@@ -153,7 +153,7 @@ router.post('/send-invite', async (req: Request, res: Response) => {
         });
 
         await resend.emails.send({
-          from: 'Omnia LightScape <noreply@omnialightscapepro.com>',
+          from: `${companyName} <noreply@omnialightscapepro.com>`,
           to: client.email,
           subject: `${companyName} - Access Your Project Portal`,
           html
