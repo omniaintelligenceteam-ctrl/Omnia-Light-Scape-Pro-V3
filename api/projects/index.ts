@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'POST') {
       // Create new project
-      const { name, original_image_url, generated_image_url, prompt_config } = req.body;
+      const { name, original_image_url, generated_image_url, prompt_config, client_id } = req.body;
 
       if (!generated_image_url) {
         return res.status(400).json({ error: 'Missing generated_image_url' });
@@ -64,7 +64,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name: name || 'Untitled Project',
           original_image_url: original_image_url || null,
           generated_image_url,
-          prompt_config: prompt_config || {}
+          prompt_config: prompt_config || {},
+          client_id: client_id || null
         })
         .select()
         .single();

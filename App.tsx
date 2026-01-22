@@ -23,7 +23,14 @@ import { useCalendarEvents } from './hooks/useCalendarEvents';
 import { useClients, parseClientCSV, ParsedClientRow, ImportResult } from './hooks/useClients';
 import { useBusinessGoals } from './hooks/useBusinessGoals';
 import { useAnalytics } from './hooks/useAnalytics';
+import { useLeadSourceROI } from './hooks/useLeadSourceROI';
+import { useCashFlowForecast } from './hooks/useCashFlowForecast';
 import { AnalyticsDashboard, ExecutiveDashboard } from './components/analytics';
+import { LeadSourceROIDashboard } from './components/analytics/LeadSourceROIDashboard';
+import { CashFlowDashboard } from './components/analytics/CashFlowDashboard';
+import { ExportMenu } from './components/reports/ExportMenu';
+import { DateRangePickerAdvanced, DateRangeValue } from './components/reports/DateRangePickerAdvanced';
+import { ComparisonView, ComparisonData } from './components/reports/ComparisonView';
 import { useLocations } from './hooks/useLocations';
 import { useTechnicians } from './hooks/useTechnicians';
 import { useLocationMetrics } from './hooks/useLocationMetrics';
@@ -33,6 +40,7 @@ import { useOrganization } from './hooks/useOrganization';
 import { useTeamMembers } from './hooks/useTeamMembers';
 import { TechnicianDashboard } from './components/TechnicianDashboard';
 import { AssignmentDropdown } from './components/AssignmentDropdown';
+import { SaveImageModal } from './components/SaveImageModal';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
@@ -167,6 +175,12 @@ const App: React.FC = () => {
   // Analytics calculated from projects, clients, and goals
   const analytics = useAnalytics({ projects, clients, goals: businessGoals });
 
+  // Lead Source ROI metrics
+  const leadSourceMetrics = useLeadSourceROI({ clients, projects });
+
+  // Cash Flow forecasting metrics
+  const cashFlowForecast = useCashFlowForecast({ projects });
+
   // Multi-location and technician management for executive dashboard
   const {
     locations,
@@ -258,6 +272,8 @@ const App: React.FC = () => {
   // Client management UI state
   const [showClientModal, setShowClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [showSaveImageModal, setShowSaveImageModal] = useState(false);
+  const [isSavingImage, setIsSavingImage] = useState(false);
   const [clientFormData, setClientFormData] = useState({
     name: '',
     email: '',
@@ -398,6 +414,15 @@ const App: React.FC = () => {
   // Projects Sub-Tab State - Simplified to 2 main views + Analytics
   const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing' | 'analytics'>('pipeline');
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'active' | 'completed'>('all');
+
+  // Advanced Analytics State
+  const [analyticsDateRange, setAnalyticsDateRange] = useState({
+    startDate: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
+    endDate: new Date(),
+    label: 'Last 30 Days'
+  });
+  const [showComparison, setShowComparison] = useState(true);
+
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [inlineEditQuote, setInlineEditQuote] = useState<{ [key: string]: { clientName: string; total: number; notes: string } }>({});
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
@@ -1585,6 +1610,95 @@ const App: React.FC = () => {
       }
   };
 
+  // Save to drafts (no client assignment)
+  const handleSaveToDrafts = async () => {
+    if (!generatedImage) return;
+
+    setIsSavingImage(true);
+    try {
+      const projectName = `Draft ${projects.length + 1}`;
+      const quoteData = generateQuoteFromSelections();
+      const result = await saveProject(projectName, generatedImage, quoteData);
+      if (result) {
+        setCurrentProjectId(result.id);
+        setCurrentQuote(quoteData);
+        saveFeedback('saved', undefined, result.id);
+        setShowSaveImageModal(false);
+        handleTabChange('projects');
+        showToast('success', 'Saved to drafts!');
+      } else {
+        showToast('error', 'Failed to save');
+      }
+    } finally {
+      setIsSavingImage(false);
+    }
+  };
+
+  // Save to a new client
+  const handleSaveToNewClient = async (clientData: Partial<Client>) => {
+    if (!generatedImage || !clientData.name) return;
+
+    setIsSavingImage(true);
+    try {
+      // First create the client
+      const newClient = await createClient({
+        name: clientData.name,
+        email: clientData.email || '',
+        phone: clientData.phone || '',
+        address: clientData.address || '',
+        notes: clientData.notes || ''
+      });
+
+      if (!newClient) {
+        showToast('error', 'Failed to create client');
+        return;
+      }
+
+      // Now save the project with the client ID
+      const projectName = clientData.name;
+      const quoteData = generateQuoteFromSelections();
+      const result = await saveProject(projectName, generatedImage, quoteData, null, newClient.id, newClient.name);
+
+      if (result) {
+        setCurrentProjectId(result.id);
+        setCurrentQuote(quoteData);
+        saveFeedback('saved', undefined, result.id);
+        setShowSaveImageModal(false);
+        handleTabChange('projects');
+        showToast('success', `Saved to ${newClient.name}!`);
+      } else {
+        showToast('error', 'Failed to save project');
+      }
+    } finally {
+      setIsSavingImage(false);
+    }
+  };
+
+  // Save to an existing client
+  const handleSaveToExistingClient = async (clientId: string, clientName: string) => {
+    if (!generatedImage) return;
+
+    setIsSavingImage(true);
+    try {
+      const projectName = clientName;
+      const quoteData = generateQuoteFromSelections();
+      const result = await saveProject(projectName, generatedImage, quoteData, null, clientId, clientName);
+
+      if (result) {
+        setCurrentProjectId(result.id);
+        setCurrentQuote(quoteData);
+        saveFeedback('saved', undefined, result.id);
+        setShowSaveImageModal(false);
+        handleTabChange('projects');
+        showToast('success', `Saved to ${clientName}!`);
+      } else {
+        showToast('error', 'Failed to save project');
+      }
+    } finally {
+      setIsSavingImage(false);
+    }
+  };
+
   const handleSaveProjectFromQuote = async (quoteData: QuoteData) => {
       // If we have a current project ID, update that project instead of creating a new one
       if (currentProjectId) {
@@ -2522,13 +2636,13 @@ Notes: ${invoice.notes || 'N/A'}
                     {/* Top Action Bar */}
                     <div className="absolute top-5 left-0 right-0 z-40 flex justify-center gap-3 px-4">
                         <motion.button
-                            onClick={handleSaveProjectFromEditor}
+                            onClick={() => setShowSaveImageModal(true)}
                             className="bg-[#F6B45A] text-[#111] px-6 py-3 rounded-xl font-semibold text-xs hover:bg-[#ffc67a] transition-all shadow-xl shadow-[#F6B45A]/20 flex items-center gap-2"
                             whileHover={{ scale: 1.05, y: -2 }}
                             whileTap={{ scale: 0.98 }}
                         >
                             <FolderPlus className="w-4 h-4" />
-                            Save Project
+                            Save
                         </motion.button>
                     </div>
 
@@ -4112,6 +4226,48 @@ Notes: ${invoice.notes || 'N/A'}
                              />
                          )}
 
+                         {/* Advanced Analytics Tools */}
+                         <div className="bg-white/[0.02] rounded-2xl border border-white/10 p-4">
+                             <div className="flex items-center justify-between mb-4">
+                                 <h3 className="text-lg font-bold text-white">Analytics Tools</h3>
+                                 <ExportMenu
+                                     projects={projects}
+                                     clients={clients}
+                                     goals={businessGoals}
+                                     companyProfile={companyProfile}
+                                     dateRange={analyticsDateRange}
+                                 />
+                             </div>
+
+                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                 <DateRangePickerAdvanced
+                                     value={analyticsDateRange}
+                                     onChange={setAnalyticsDateRange}
+                                 />
+
+                                 {showComparison && (() => {
+                                     const now = new Date();
+                                     const currentMonth = now.getMonth();
+                                     const currentYear = now.getFullYear();
+                                     const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+                                     const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+                                     const comparisonData: ComparisonData = analytics.compareMonths(
+                                         currentMonth,
+                                         currentYear,
+                                         previousMonth,
+                                         previousYear
+                                     );
+
+                                     return (
+                                         <div className="lg:col-span-2">
+                                             <ComparisonView data={comparisonData} />
+                                         </div>
+                                     );
+                                 })()}
+                             </div>
+                         </div>
+
                          {/* Basic Analytics Dashboard - Always shows */}
                          <AnalyticsDashboard
                              todayMetrics={analytics.todayMetrics}
@@ -4122,6 +4278,16 @@ Notes: ${invoice.notes || 'N/A'}
                              pendingRevenue={analytics.pendingRevenue}
                              overdueCount={analytics.overdueCount}
                          />
+
+                         {/* Lead Source ROI Dashboard */}
+                         <div className="mt-6">
+                             <LeadSourceROIDashboard metrics={leadSourceMetrics} />
+                         </div>
+
+                         {/* Cash Flow Forecasting Dashboard */}
+                         <div className="mt-6">
+                             <CashFlowDashboard forecast={cashFlowForecast} />
+                         </div>
                      </div>
                  )}
 
@@ -7524,6 +7690,18 @@ Notes: ${invoice.notes || 'N/A'}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Save Image Modal */}
+      <SaveImageModal
+        isOpen={showSaveImageModal}
+        onClose={() => setShowSaveImageModal(false)}
+        onSaveToDrafts={handleSaveToDrafts}
+        onSaveToNewClient={handleSaveToNewClient}
+        onSaveToExistingClient={handleSaveToExistingClient}
+        clients={clients}
+        searchClients={searchClients}
+        isSaving={isSavingImage}
+      />
 
       {/* Client Modal */}
       <AnimatePresence>

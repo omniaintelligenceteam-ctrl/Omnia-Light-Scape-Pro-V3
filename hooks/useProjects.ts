@@ -38,7 +38,9 @@ export function useProjects() {
             bom: p.prompt_config?.bom || null,
             status: (p.prompt_config?.status as ProjectStatus) || 'draft',
             schedule: p.prompt_config?.schedule || undefined,
-            invoicePaidAt: p.invoice_paid_at || undefined
+            invoicePaidAt: p.invoice_paid_at || undefined,
+            clientId: p.client_id || undefined,
+            clientName: p.prompt_config?.clientName || undefined
           }));
           setProjects(loadedProjects);
         }
@@ -58,7 +60,9 @@ export function useProjects() {
     name: string,
     generatedImage: string,
     quote: QuoteData | null = null,
-    bom: BOMData | null = null
+    bom: BOMData | null = null,
+    clientId?: string,
+    clientName?: string
   ): Promise<SavedProject | null> => {
     if (!user) {
       setError('User not logged in');
@@ -83,6 +87,7 @@ export function useProjects() {
       const promptConfig: Record<string, any> = { savedFromEditor: true };
       if (quote) promptConfig.quote = quote;
       if (bom) promptConfig.bom = bom;
+      if (clientName) promptConfig.clientName = clientName;
 
       const response = await fetch(`/api/projects?userId=${user.id}`, {
         method: 'POST',
@@ -92,7 +97,8 @@ export function useProjects() {
         body: JSON.stringify({
           name,
           generated_image_url: imageUrl,
-          prompt_config: promptConfig
+          prompt_config: promptConfig,
+          client_id: clientId || null
         }),
       });
 
@@ -116,7 +122,9 @@ export function useProjects() {
           images: data.data.prompt_config?.images || undefined,
           quote: data.data.prompt_config?.quote || null,
           bom: data.data.prompt_config?.bom || null,
-          status: 'draft'
+          status: 'draft',
+          clientId: data.data.client_id || undefined,
+          clientName: data.data.prompt_config?.clientName || undefined
         };
 
         setProjects(prev => [newProject, ...prev]);

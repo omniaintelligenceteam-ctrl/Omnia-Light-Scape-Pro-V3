@@ -523,6 +523,90 @@ export function useAnalytics({ projects, clients, goals }: UseAnalyticsProps): A
   const conversionRate = thisMonthMetrics.conversionRate;
   const avgProjectValue = thisMonthMetrics.avgProjectValue;
 
+  // Date range metrics calculator
+  const getMetricsForDateRange = useMemo(() => {
+    return (startDate: Date, endDate: Date) => {
+      const rangeProjects = projects.filter(p => {
+        if (!p.invoicePaidAt) return false;
+        const paidDate = new Date(p.invoicePaidAt);
+        return paidDate >= startDate && paidDate <= endDate;
+      });
+
+      const rangeClients = clients.filter(c => {
+        const createdDate = new Date(c.createdAt);
+        return createdDate >= startDate && createdDate <= endDate;
+      });
+
+      const totalRevenue = rangeProjects.reduce((sum, p) => sum + (p.quote?.total || 0), 0);
+      const totalProjects = rangeProjects.length;
+
+      return {
+        revenue: totalRevenue,
+        projects: totalProjects,
+        clients: rangeClients.length,
+        averageTicket: totalProjects > 0 ? totalRevenue / totalProjects : 0
+      };
+    };
+  }, [projects, clients]);
+
+  // Compare two time periods
+  const compareMonths = useMemo(() => {
+    return (month1: number, year1: number, month2: number, year2: number) => {
+      const month1Metrics = getMonthlyMetrics(month1, year1);
+      const month2Metrics = getMonthlyMetrics(month2, year2);
+
+      return {
+        current: {
+          revenue: month1Metrics.revenue,
+          projects: month1Metrics.completedJobs,
+          clients: clients.filter(c => {
+            const d = new Date(c.createdAt);
+            return isInMonth(d, month1, year1);
+          }).length,
+          label: new Date(year1, month1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        },
+        previous: {
+          revenue: month2Metrics.revenue,
+          projects: month2Metrics.completedJobs,
+          clients: clients.filter(c => {
+            const d = new Date(c.createdAt);
+            return isInMonth(d, month2, year2);
+          }).length,
+          label: new Date(year2, month2).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        }
+      };
+    };
+  }, [getMonthlyMetrics, clients]);
+
+  // Compare two years
+  const compareYears = useMemo(() => {
+    return (year1: number, year2: number) => {
+      const year1Metrics = getYearlyMetrics(year1);
+      const year2Metrics = getYearlyMetrics(year2);
+
+      return {
+        current: {
+          revenue: year1Metrics.revenue,
+          projects: year1Metrics.completedJobs,
+          clients: clients.filter(c => {
+            const d = new Date(c.createdAt);
+            return d.getFullYear() === year1;
+          }).length,
+          label: year1.toString()
+        },
+        previous: {
+          revenue: year2Metrics.revenue,
+          projects: year2Metrics.completedJobs,
+          clients: clients.filter(c => {
+            const d = new Date(c.createdAt);
+            return d.getFullYear() === year2;
+          }).length,
+          label: year2.toString()
+        }
+      };
+    };
+  }, [getYearlyMetrics, clients]);
+
   return {
     getDailyMetrics,
     todayMetrics,
@@ -539,6 +623,9 @@ export function useAnalytics({ projects, clients, goals }: UseAnalyticsProps): A
     pendingRevenue,
     overdueCount,
     conversionRate,
-    avgProjectValue
+    avgProjectValue,
+    getMetricsForDateRange,
+    compareMonths,
+    compareYears
   };
 }

@@ -99,6 +99,8 @@ export interface SavedProject {
   location_id?: string;           // ID of location this project belongs to
   invoice_sent_at?: string;       // ISO date when invoice was sent
   actual_hours?: number;          // Actual hours spent on project (for technician tracking)
+  clientId?: string;              // ID of client this project belongs to
+  clientName?: string;            // Client name (denormalized for display)
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';
