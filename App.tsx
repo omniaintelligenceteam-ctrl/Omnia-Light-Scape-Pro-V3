@@ -19,11 +19,11 @@ import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
 import { useSubscription } from './hooks/useSubscription';
 import { useCalendarEvents } from './hooks/useCalendarEvents';
-import { useClients } from './hooks/useClients';
+import { useClients, parseClientCSV, ParsedClientRow, ImportResult } from './hooks/useClients';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, Sun, Settings2, Mail, Users, Edit, Save } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client } from './types';
 
@@ -146,13 +146,17 @@ const App: React.FC = () => {
   const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject } = useProjects();
 
   // Load/save clients from Supabase
-  const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients } = useClients();
+  const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients } = useClients();
 
   // Client management UI state
   const [showClientModal, setShowClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [clientFormData, setClientFormData] = useState({ name: '', email: '', phone: '', address: '', notes: '' });
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [showClientImportModal, setShowClientImportModal] = useState(false);
+  const [clientImportData, setClientImportData] = useState<{ valid: ParsedClientRow[]; invalid: ParsedClientRow[] } | null>(null);
+  const [clientImportProgress, setClientImportProgress] = useState<{ current: number; total: number } | null>(null);
+  const [clientImportResult, setClientImportResult] = useState<ImportResult | null>(null);
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'all' | 'draft' | 'sent' | 'paid' | 'overdue'>('all');
 
@@ -286,6 +290,13 @@ const App: React.FC = () => {
   const [invoiceEmailSent, setInvoiceEmailSent] = useState(false);
   const [invoiceEmailError, setInvoiceEmailError] = useState<string | null>(null);
   const [invoiceEmailMessage, setInvoiceEmailMessage] = useState('');
+
+  // Invoice Share Modal State
+  const [showInvoiceShareModal, setShowInvoiceShareModal] = useState(false);
+  const [invoiceShareUrl, setInvoiceShareUrl] = useState<string | null>(null);
+  const [isGeneratingInvoiceLink, setIsGeneratingInvoiceLink] = useState(false);
+  const [invoiceLinkCopied, setInvoiceLinkCopied] = useState(false);
+  const [invoiceShareError, setInvoiceShareError] = useState<string | null>(null);
 
   // Multi-Image Project State
   const [projectImageIndex, setProjectImageIndex] = useState<Record<string, number>>({});
@@ -1745,6 +1756,79 @@ Notes: ${invoice.notes || 'N/A'}
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
       }
+  };
+
+  // Generate shareable invoice portal link
+  const handleGenerateInvoiceShareLink = async () => {
+    if (!currentInvoice?.projectId || !user?.id) {
+      setInvoiceShareError('Unable to generate link. Invoice must be saved first.');
+      return;
+    }
+
+    setIsGeneratingInvoiceLink(true);
+    setInvoiceShareError(null);
+
+    try {
+      // Include invoice data so it can be stored with the project
+      const invoiceData = {
+        invoiceNumber: currentInvoice.invoiceNumber,
+        invoiceDate: currentInvoice.invoiceDate,
+        dueDate: currentInvoice.dueDate,
+        lineItems: currentInvoice.lineItems,
+        subtotal: currentInvoice.subtotal,
+        taxRate: currentInvoice.taxRate,
+        taxAmount: currentInvoice.taxAmount,
+        discount: currentInvoice.discount,
+        total: currentInvoice.total,
+        notes: currentInvoice.notes,
+        clientDetails: currentInvoice.clientDetails
+      };
+
+      const response = await fetch(`/api/projects/${currentInvoice.projectId}/share?userId=${user.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'invoice',
+          expiresInDays: 30,
+          invoiceData
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate share link');
+      }
+
+      setInvoiceShareUrl(data.data.shareUrl);
+    } catch (err: any) {
+      console.error('Error generating invoice share link:', err);
+      setInvoiceShareError(err.message || 'Failed to generate share link');
+    } finally {
+      setIsGeneratingInvoiceLink(false);
+    }
+  };
+
+  const handleCopyInvoiceLink = async () => {
+    if (!invoiceShareUrl) return;
+    try {
+      await navigator.clipboard.writeText(invoiceShareUrl);
+      setInvoiceLinkCopied(true);
+      setTimeout(() => setInvoiceLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy invoice link:', err);
+    }
+  };
+
+  const handleOpenInvoiceShareModal = () => {
+    setShowInvoiceShareModal(true);
+    setInvoiceShareUrl(null);
+    setInvoiceShareError(null);
+    setInvoiceLinkCopied(false);
+    // Auto-generate link when modal opens
+    if (currentInvoice?.projectId && user?.id) {
+      handleGenerateInvoiceShareLink();
+    }
   };
 
   // Send invoice via email
@@ -3662,74 +3746,53 @@ Notes: ${invoice.notes || 'N/A'}
                      </div>
                  </div>
 
-                 {/* Sub-Tabs Navigation - Dropdown on mobile, buttons on desktop */}
-                 {/* Mobile Dropdown */}
-                 <div className="md:hidden mb-6 relative">
+                 {/* Sub-Tabs Navigation - Grid buttons on mobile, inline buttons on desktop */}
+                 {/* Mobile Buttons Grid */}
+                 <div className="md:hidden mb-6 grid grid-cols-2 gap-2">
                      <button
-                         onClick={() => setShowMobileProjectsMenu(!showMobileProjectsMenu)}
-                         className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all border ${
-                             projectsSubTab === 'projects' ? 'bg-[#F6B45A] text-black border-[#F6B45A]' :
-                             projectsSubTab === 'quotes' ? 'bg-purple-500 text-white border-purple-500' :
-                             projectsSubTab === 'approved' ? 'bg-emerald-500 text-white border-emerald-500' :
-                             'bg-[#F6B45A] text-black border-[#F6B45A]'
+                         onClick={() => setProjectsSubTab('projects')}
+                         className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                             projectsSubTab === 'projects'
+                                 ? 'bg-[#F6B45A] text-black shadow-lg shadow-[#F6B45A]/30'
+                                 : 'bg-[#F6B45A] text-black opacity-60'
                          }`}
                      >
-                         <div className="flex items-center gap-2">
-                             {projectsSubTab === 'projects' && <FolderPlus className="w-4 h-4" />}
-                             {projectsSubTab === 'quotes' && <FileText className="w-4 h-4" />}
-                             {projectsSubTab === 'approved' && <CheckCircle2 className="w-4 h-4" />}
-                             {projectsSubTab === 'invoicing' && <Receipt className="w-4 h-4" />}
-                             {projectsSubTab === 'projects' ? 'Projects' : projectsSubTab === 'quotes' ? 'Quotes' : projectsSubTab === 'approved' ? 'Approved' : 'Invoicing'}
-                         </div>
-                         <ChevronRight className={`w-4 h-4 transition-transform ${showMobileProjectsMenu ? 'rotate-90' : ''}`} />
+                         <FolderPlus className="w-4 h-4" />
+                         Projects
                      </button>
-                     <AnimatePresence>
-                         {showMobileProjectsMenu && (
-                             <motion.div
-                                 initial={{ opacity: 0, y: -10 }}
-                                 animate={{ opacity: 1, y: 0 }}
-                                 exit={{ opacity: 0, y: -10 }}
-                                 className="absolute top-full left-0 right-0 mt-2 bg-[#111] border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl"
-                             >
-                                 <button
-                                     onClick={() => { setProjectsSubTab('projects'); setShowMobileProjectsMenu(false); }}
-                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${
-                                         projectsSubTab === 'projects' ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:bg-white/5'
-                                     }`}
-                                 >
-                                     <FolderPlus className="w-4 h-4" />
-                                     Projects
-                                 </button>
-                                 <button
-                                     onClick={() => { setProjectsSubTab('quotes'); setShowMobileProjectsMenu(false); }}
-                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${
-                                         projectsSubTab === 'quotes' ? 'bg-purple-500 text-white' : 'text-gray-400 hover:bg-white/5'
-                                     }`}
-                                 >
-                                     <FileText className="w-4 h-4" />
-                                     Quotes
-                                 </button>
-                                 <button
-                                     onClick={() => { setProjectsSubTab('approved'); setShowMobileProjectsMenu(false); }}
-                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${
-                                         projectsSubTab === 'approved' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:bg-white/5'
-                                     }`}
-                                 >
-                                     <CheckCircle2 className="w-4 h-4" />
-                                     Approved
-                                 </button>
-                                 <button
-                                     onClick={() => { setProjectsSubTab('invoicing'); setShowMobileProjectsMenu(false); }}
-                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${
-                                         projectsSubTab === 'invoicing' ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:bg-white/5'
-                                     }`}
-                                 >
-                                     <Receipt className="w-4 h-4" />
-                                     Invoicing
-                                 </button>
-                             </motion.div>
-                         )}
-                     </AnimatePresence>
+                     <button
+                         onClick={() => setProjectsSubTab('quotes')}
+                         className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                             projectsSubTab === 'quotes'
+                                 ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
+                                 : 'bg-purple-500 text-white opacity-60'
+                         }`}
+                     >
+                         <FileText className="w-4 h-4" />
+                         Quotes
+                     </button>
+                     <button
+                         onClick={() => setProjectsSubTab('approved')}
+                         className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                             projectsSubTab === 'approved'
+                                 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                                 : 'bg-emerald-500 text-white opacity-60'
+                         }`}
+                     >
+                         <CheckCircle2 className="w-4 h-4" />
+                         Approved
+                     </button>
+                     <button
+                         onClick={() => setProjectsSubTab('invoicing')}
+                         className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                             projectsSubTab === 'invoicing'
+                                 ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                 : 'bg-blue-500 text-white opacity-60'
+                         }`}
+                     >
+                         <Receipt className="w-4 h-4" />
+                         Invoicing
+                     </button>
                  </div>
 
                  {/* Desktop Buttons */}
@@ -3739,7 +3802,7 @@ Notes: ${invoice.notes || 'N/A'}
                          className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'projects'
                                  ? 'bg-[#F6B45A] text-black'
-                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                 : 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30 hover:bg-[#F6B45A]/30'
                          }`}
                      >
                          <FolderPlus className="w-4 h-4" />
@@ -3750,7 +3813,7 @@ Notes: ${invoice.notes || 'N/A'}
                          className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'quotes'
                                  ? 'bg-purple-500 text-white'
-                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                 : 'bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30'
                          }`}
                      >
                          <FileText className="w-4 h-4" />
@@ -3761,7 +3824,7 @@ Notes: ${invoice.notes || 'N/A'}
                          className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'approved'
                                  ? 'bg-emerald-500 text-white'
-                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                 : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
                          }`}
                      >
                          <CheckCircle2 className="w-4 h-4" />
@@ -3771,8 +3834,8 @@ Notes: ${invoice.notes || 'N/A'}
                          onClick={() => setProjectsSubTab('invoicing')}
                          className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'invoicing'
-                                 ? 'bg-[#F6B45A] text-black'
-                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                 ? 'bg-blue-500 text-white'
+                                 : 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30'
                          }`}
                      >
                          <Receipt className="w-4 h-4" />
@@ -3782,8 +3845,8 @@ Notes: ${invoice.notes || 'N/A'}
                          onClick={() => setProjectsSubTab('clients')}
                          className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 ${
                              projectsSubTab === 'clients'
-                                 ? 'bg-[#F6B45A] text-black'
-                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                 ? 'bg-pink-500 text-white'
+                                 : 'bg-pink-500/20 text-pink-400 border border-pink-500/30 hover:bg-pink-500/30'
                          }`}
                      >
                          <Users className="w-4 h-4" />
@@ -3803,6 +3866,7 @@ Notes: ${invoice.notes || 'N/A'}
                         defaultPricing={pricing}
                         projectImage={generatedImage}
                         userId={user?.id}
+                        projectId={currentProjectId || undefined}
                      />
                  )}
 
@@ -4929,6 +4993,16 @@ Notes: ${invoice.notes || 'N/A'}
                                              <Mail className="w-4 h-4" />
                                              <span>Email</span>
                                          </motion.button>
+                                         {/* Share Portal Link Button */}
+                                         <motion.button
+                                             whileHover={{ scale: 1.02 }}
+                                             whileTap={{ scale: 0.98 }}
+                                             onClick={handleOpenInvoiceShareModal}
+                                             className="flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+                                         >
+                                             <Share2 className="w-4 h-4" />
+                                             <span>Share</span>
+                                         </motion.button>
                                      </div>
                                  </div>
                              </motion.div>
@@ -5154,6 +5228,20 @@ Notes: ${invoice.notes || 'N/A'}
                                          className="w-48 pl-10 pr-4 py-2.5 bg-[#111] border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
                                      />
                                  </div>
+                                 <motion.button
+                                     onClick={() => {
+                                         setClientImportData(null);
+                                         setClientImportProgress(null);
+                                         setClientImportResult(null);
+                                         setShowClientImportModal(true);
+                                     }}
+                                     whileHover={{ scale: 1.02 }}
+                                     whileTap={{ scale: 0.98 }}
+                                     className="px-4 py-2.5 bg-white/5 border border-white/10 text-gray-300 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-white/10 transition-colors"
+                                 >
+                                     <Upload className="w-4 h-4" />
+                                     Import CSV
+                                 </motion.button>
                                  <motion.button
                                      onClick={() => handleOpenClientModal()}
                                      whileHover={{ scale: 1.02 }}
@@ -6367,6 +6455,137 @@ Notes: ${invoice.notes || 'N/A'}
         )}
       </AnimatePresence>
 
+      {/* Invoice Share Portal Modal */}
+      <AnimatePresence>
+        {showInvoiceShareModal && currentInvoice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowInvoiceShareModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#151515] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-md shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="relative flex items-center justify-between p-5 border-b border-white/10">
+                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                    <Share2 className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-white font-serif">Client Portal</h3>
+                    <p className="text-[10px] text-gray-500">Share invoice with client</p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => setShowInvoiceShareModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5" />
+                </motion.button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 space-y-5">
+                {/* Info */}
+                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <ExternalLink className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white text-sm mb-1">Client Payment Portal</p>
+                      <p className="text-xs text-gray-400 leading-relaxed">
+                        Share this link with your client. They can view the invoice and pay directly with a credit card.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Link Display */}
+                {isGeneratingInvoiceLink ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                    <span className="ml-3 text-gray-400">Generating link...</span>
+                  </div>
+                ) : invoiceShareError ? (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
+                    <p className="text-red-400 text-sm">{invoiceShareError}</p>
+                    <button
+                      onClick={handleGenerateInvoiceShareLink}
+                      className="mt-3 text-xs text-blue-400 hover:underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : invoiceShareUrl ? (
+                  <div className="space-y-3">
+                    <div className="bg-[#0a0a0a] border border-white/10 rounded-xl p-4 flex items-center gap-3">
+                      <Link2 className="w-5 h-5 text-gray-500 shrink-0" />
+                      <input
+                        type="text"
+                        value={invoiceShareUrl}
+                        readOnly
+                        className="flex-1 bg-transparent text-white text-sm focus:outline-none truncate"
+                      />
+                    </div>
+                    <motion.button
+                      onClick={handleCopyInvoiceLink}
+                      className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                        invoiceLinkCopied
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20'
+                      }`}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {invoiceLinkCopied ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Copied to Clipboard!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Copy Link
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                ) : null}
+
+                {/* Valid Period Info */}
+                {invoiceShareUrl && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500 justify-center">
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Link valid for 30 days</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-5 border-t border-white/10 bg-black/30">
+                <motion.button
+                  onClick={() => setShowInvoiceShareModal(false)}
+                  className="w-full py-3 rounded-xl font-bold text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Close
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Client Modal */}
       <AnimatePresence>
         {showClientModal && (
@@ -6510,6 +6729,241 @@ Notes: ${invoice.notes || 'N/A'}
                   <Save className="w-4 h-4" />
                   {editingClient ? 'Update' : 'Create'}
                 </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Client Import Modal */}
+      <AnimatePresence>
+        {showClientImportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => !clientImportProgress && setShowClientImportModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass rounded-2xl border border-white/10 w-full max-w-2xl overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                    <Upload className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Import Clients</h3>
+                    <p className="text-xs text-gray-400">Upload a CSV file with client data</p>
+                  </div>
+                </div>
+                {!clientImportProgress && (
+                  <motion.button
+                    onClick={() => setShowClientImportModal(false)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                )}
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                {/* Result Summary */}
+                {clientImportResult && (
+                  <div className={`p-4 rounded-xl border ${clientImportResult.failed === 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      {clientImportResult.failed === 0 ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-amber-400" />
+                      )}
+                      <span className="font-semibold text-white">Import Complete</span>
+                    </div>
+                    <p className="text-sm text-gray-300">
+                      Successfully imported <span className="text-emerald-400 font-bold">{clientImportResult.imported}</span> clients
+                      {clientImportResult.failed > 0 && (
+                        <>, <span className="text-red-400 font-bold">{clientImportResult.failed}</span> failed</>
+                      )}
+                    </p>
+                    {clientImportResult.errors.length > 0 && (
+                      <div className="mt-2 text-xs text-red-400 max-h-20 overflow-y-auto">
+                        {clientImportResult.errors.slice(0, 5).map((err, i) => (
+                          <div key={i}>{err}</div>
+                        ))}
+                        {clientImportResult.errors.length > 5 && (
+                          <div>...and {clientImportResult.errors.length - 5} more errors</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Progress Bar */}
+                {clientImportProgress && !clientImportResult && (
+                  <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-300">Importing clients...</span>
+                      <span className="text-sm text-purple-400 font-mono">
+                        {clientImportProgress.current}/{clientImportProgress.total}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-purple-500"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(clientImportProgress.current / clientImportProgress.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* File Upload */}
+                {!clientImportData && !clientImportProgress && !clientImportResult && (
+                  <div className="space-y-4">
+                    <label className="block">
+                      <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center cursor-pointer hover:border-purple-500/50 hover:bg-purple-500/5 transition-all">
+                        <Upload className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+                        <p className="text-gray-300 mb-1">Click to upload CSV file</p>
+                        <p className="text-xs text-gray-500">or drag and drop</p>
+                      </div>
+                      <input
+                        type="file"
+                        accept=".csv,text/csv"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const text = event.target?.result as string;
+                              const result = parseClientCSV(text);
+                              setClientImportData(result);
+                            };
+                            reader.readAsText(file);
+                          }
+                        }}
+                      />
+                    </label>
+
+                    {/* CSV Format Help */}
+                    <div className="p-3 bg-white/5 rounded-xl">
+                      <p className="text-xs text-gray-400 mb-2">Expected CSV format:</p>
+                      <code className="text-xs text-purple-400 block bg-black/30 p-2 rounded-lg overflow-x-auto">
+                        name,email,phone,address,notes<br />
+                        John Doe,john@email.com,555-1234,123 Main St,Notes here
+                      </code>
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview Table */}
+                {clientImportData && !clientImportProgress && !clientImportResult && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-300">
+                        <span className="text-emerald-400 font-bold">{clientImportData.valid.length}</span> valid rows,{' '}
+                        <span className="text-red-400 font-bold">{clientImportData.invalid.length}</span> invalid
+                      </p>
+                      <button
+                        onClick={() => setClientImportData(null)}
+                        className="text-xs text-gray-400 hover:text-white"
+                      >
+                        Choose different file
+                      </button>
+                    </div>
+
+                    {/* Preview of valid rows */}
+                    {clientImportData.valid.length > 0 && (
+                      <div className="border border-white/10 rounded-xl overflow-hidden">
+                        <div className="bg-white/5 px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                          Preview ({Math.min(5, clientImportData.valid.length)} of {clientImportData.valid.length})
+                        </div>
+                        <div className="divide-y divide-white/5">
+                          {clientImportData.valid.slice(0, 5).map((row, i) => (
+                            <div key={i} className="px-4 py-2 text-sm">
+                              <div className="font-medium text-white">{row.name}</div>
+                              <div className="text-xs text-gray-400 flex flex-wrap gap-3">
+                                {row.email && <span>{row.email}</span>}
+                                {row.phone && <span>{row.phone}</span>}
+                                {row.address && <span className="truncate max-w-[200px]">{row.address}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Invalid rows warning */}
+                    {clientImportData.invalid.length > 0 && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <p className="text-xs text-red-400 mb-1 font-semibold">Rows with errors (will be skipped):</p>
+                        <div className="text-xs text-gray-400 space-y-1">
+                          {clientImportData.invalid.slice(0, 3).map((row, i) => (
+                            <div key={i}>Row {row.rowNumber}: {row.error}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
+                {clientImportResult ? (
+                  <motion.button
+                    onClick={() => setShowClientImportModal(false)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="px-6 py-3 bg-purple-500 text-white font-semibold rounded-xl"
+                  >
+                    Done
+                  </motion.button>
+                ) : clientImportData && clientImportData.valid.length > 0 && !clientImportProgress ? (
+                  <>
+                    <button
+                      onClick={() => setShowClientImportModal(false)}
+                      className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-medium hover:bg-white/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <motion.button
+                      onClick={async () => {
+                        setClientImportProgress({ current: 0, total: clientImportData.valid.length });
+                        const result = await importClients(clientImportData.valid, (current, total) => {
+                          setClientImportProgress({ current, total });
+                        });
+                        setClientImportProgress(null);
+                        setClientImportResult(result);
+                        if (result.imported > 0) {
+                          showToast('success', `Imported ${result.imported} clients`);
+                        }
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-6 py-3 bg-purple-500 text-white font-semibold rounded-xl flex items-center gap-2"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Import {clientImportData.valid.length} Clients
+                    </motion.button>
+                  </>
+                ) : !clientImportProgress && (
+                  <button
+                    onClick={() => setShowClientImportModal(false)}
+                    className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-medium hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>

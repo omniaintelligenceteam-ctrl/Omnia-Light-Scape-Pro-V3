@@ -2,6 +2,90 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Client } from '../types';
 
+// CSV parsing utility
+export interface ParsedClientRow {
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  rowNumber: number;
+  error?: string;
+}
+
+export interface CSVParseResult {
+  valid: ParsedClientRow[];
+  invalid: ParsedClientRow[];
+  headers: string[];
+}
+
+export function parseClientCSV(csvText: string): CSVParseResult {
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) {
+    return { valid: [], invalid: [], headers: [] };
+  }
+
+  // Parse headers (first row)
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+  // Find column indices
+  const nameIdx = headers.findIndex(h => h === 'name' || h === 'client name' || h === 'client');
+  const emailIdx = headers.findIndex(h => h === 'email' || h === 'e-mail');
+  const phoneIdx = headers.findIndex(h => h === 'phone' || h === 'telephone' || h === 'tel');
+  const addressIdx = headers.findIndex(h => h === 'address' || h === 'location');
+  const notesIdx = headers.findIndex(h => h === 'notes' || h === 'comments' || h === 'note');
+
+  const valid: ParsedClientRow[] = [];
+  const invalid: ParsedClientRow[] = [];
+
+  // Parse data rows
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    // Handle quoted CSV values
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (const char of line) {
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current.trim());
+
+    const row: ParsedClientRow = {
+      name: nameIdx >= 0 ? values[nameIdx] || '' : values[0] || '',
+      email: emailIdx >= 0 ? values[emailIdx] : undefined,
+      phone: phoneIdx >= 0 ? values[phoneIdx] : undefined,
+      address: addressIdx >= 0 ? values[addressIdx] : undefined,
+      notes: notesIdx >= 0 ? values[notesIdx] : undefined,
+      rowNumber: i + 1,
+    };
+
+    // Validate - name is required
+    if (!row.name) {
+      row.error = 'Missing name';
+      invalid.push(row);
+    } else {
+      valid.push(row);
+    }
+  }
+
+  return { valid, invalid, headers };
+}
+
+export interface ImportResult {
+  imported: number;
+  failed: number;
+  errors: string[];
+}
+
 export function useClients() {
   const { user } = useUser();
   const [clients, setClients] = useState<Client[]>([]);
@@ -175,6 +259,71 @@ export function useClients() {
     );
   }, [clients]);
 
+  // Bulk import clients from CSV data
+  const importClients = useCallback(async (
+    rows: ParsedClientRow[],
+    onProgress?: (current: number, total: number) => void
+  ): Promise<ImportResult> => {
+    if (!user) {
+      return { imported: 0, failed: rows.length, errors: ['User not logged in'] };
+    }
+
+    const result: ImportResult = { imported: 0, failed: 0, errors: [] };
+    const newClients: Client[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      onProgress?.(i + 1, rows.length);
+
+      try {
+        const response = await fetch(`/api/clients?userId=${user.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: row.name,
+            email: row.email || undefined,
+            phone: row.phone || undefined,
+            address: row.address || undefined,
+            notes: row.notes || undefined,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to import row ${row.rowNumber}`);
+        }
+
+        const data = await response.json();
+        if (data.success && data.data) {
+          const newClient: Client = {
+            id: data.data.id,
+            name: data.data.name,
+            email: data.data.email || undefined,
+            phone: data.data.phone || undefined,
+            address: data.data.address || undefined,
+            notes: data.data.notes || undefined,
+            createdAt: data.data.created_at,
+            updatedAt: data.data.updated_at
+          };
+          newClients.push(newClient);
+          result.imported++;
+        } else {
+          result.failed++;
+          result.errors.push(`Row ${row.rowNumber}: Failed to save`);
+        }
+      } catch (err: any) {
+        result.failed++;
+        result.errors.push(`Row ${row.rowNumber} (${row.name}): ${err.message}`);
+      }
+    }
+
+    // Update local state with all new clients
+    if (newClients.length > 0) {
+      setClients(prev => [...newClients, ...prev]);
+    }
+
+    return result;
+  }, [user]);
+
   return {
     clients,
     isLoading,
@@ -182,6 +331,7 @@ export function useClients() {
     createClient,
     updateClient,
     deleteClient,
-    searchClients
+    searchClients,
+    importClients
   };
 }

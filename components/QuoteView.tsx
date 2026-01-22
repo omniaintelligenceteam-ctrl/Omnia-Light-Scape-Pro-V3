@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, DollarSign, Receipt, Building2, Hash, Pencil, Upload } from 'lucide-react';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, DollarSign, Receipt, Building2, Hash, Pencil, Upload, Share2, Link2, Copy, ExternalLink } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 import { uploadImage } from '../services/uploadService';
@@ -17,6 +17,7 @@ interface QuoteViewProps {
     hideToolbar?: boolean;
     projectImage?: string | null;
     userId?: string;
+    projectId?: string;
 }
 
 export const QuoteView: React.FC<QuoteViewProps> = ({
@@ -30,7 +31,8 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     containerId = "quote-content",
     hideToolbar = false,
     projectImage = null,
-    userId
+    userId,
+    projectId
 }) => {
   // Helper to find pricing by type
   const getPrice = (type: string) => defaultPricing.find(p => p.fixtureType === type) || DEFAULT_PRICING.find(p => p.fixtureType === type)!;
@@ -50,6 +52,13 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+
+  // Share Portal Modal State
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   // Client Details State (Controlled) - empty defaults
   const [clientName, setClientName] = useState(initialData?.clientDetails.name || "");
@@ -261,6 +270,60 @@ ${customMessage ? `\n${customMessage}\n` : ''}
     setShowSendModal(false);
   };
 
+  // Generate shareable client portal link
+  const handleGenerateShareLink = async () => {
+    if (!projectId || !userId) {
+      setShareError('Unable to generate link. Project must be saved first.');
+      return;
+    }
+
+    setIsGeneratingLink(true);
+    setShareError(null);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/share?userId=${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'quote', expiresInDays: 30 })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate share link');
+      }
+
+      setShareUrl(data.data.shareUrl);
+    } catch (err: any) {
+      console.error('Error generating share link:', err);
+      setShareError(err.message || 'Failed to generate share link');
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
+
+  const handleOpenShareModal = () => {
+    setShowShareModal(true);
+    setShareUrl(null);
+    setShareError(null);
+    setLinkCopied(false);
+    // Auto-generate link when modal opens
+    if (projectId && userId) {
+      handleGenerateShareLink();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#050505] px-3 py-4 md:p-8 overflow-y-auto overflow-x-hidden relative scroll-smooth [-webkit-overflow-scrolling:touch]">
       {/* Background Ambient Glow - hidden on mobile for performance */}
@@ -357,6 +420,20 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                             Send
                         </motion.button>
 
+                        {/* Share Portal Link Button */}
+                        {projectId && (
+                            <motion.button
+                                onClick={handleOpenShareModal}
+                                className="text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-white/10 hover:border-white/20"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                title="Share Client Portal Link"
+                            >
+                                <Share2 className="w-4 h-4" />
+                                Share
+                            </motion.button>
+                        )}
+
                         {/* Download PDF Button */}
                         <motion.button
                             onClick={handleDownloadPdf}
@@ -436,6 +513,17 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                     >
                         <Send className="w-3.5 h-3.5" />
                     </motion.button>
+
+                    {/* Share Button - Mobile */}
+                    {projectId && (
+                        <motion.button
+                            onClick={handleOpenShareModal}
+                            className="text-gray-300 bg-white/5 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border border-white/10"
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <Share2 className="w-3.5 h-3.5" />
+                        </motion.button>
+                    )}
 
                     {/* PDF Button */}
                     <motion.button
@@ -1160,6 +1248,135 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                   {emailError && (
                     <p className="text-xs text-red-400 text-center mt-3">{emailError}</p>
                   )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+      </AnimatePresence>
+
+      {/* Share Portal Modal */}
+      <AnimatePresence>
+          {showShareModal && (
+            <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+            >
+              <motion.div
+                  className="w-full max-w-md bg-gradient-to-b from-[#151515] to-[#0a0a0a] rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden"
+                  initial={{ scale: 0.9, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.9, y: 20 }}
+              >
+                {/* Modal Header */}
+                <div className="relative flex items-center justify-between p-5 border-b border-white/10">
+                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/30 to-transparent" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-[#F6B45A]/10 rounded-xl border border-[#F6B45A]/20">
+                      <Share2 className="w-5 h-5 text-[#F6B45A]" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg text-white font-serif">Client Portal</h3>
+                        <p className="text-[10px] text-gray-500">Share quote with client</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={() => setShowShareModal(false)}
+                    className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-5 space-y-5">
+                  {/* Info */}
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <ExternalLink className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white text-sm mb-1">Client Portal Link</p>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                          Share this link with your client. They can view the quote details and approve it directly without needing an account.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Link Display */}
+                  {isGeneratingLink ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 text-[#F6B45A] animate-spin" />
+                      <span className="ml-3 text-gray-400">Generating link...</span>
+                    </div>
+                  ) : shareError ? (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
+                      <p className="text-red-400 text-sm">{shareError}</p>
+                      <button
+                        onClick={handleGenerateShareLink}
+                        className="mt-3 text-xs text-[#F6B45A] hover:underline"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : shareUrl ? (
+                    <div className="space-y-3">
+                      <div className="bg-[#0a0a0a] border border-white/10 rounded-xl p-4 flex items-center gap-3">
+                        <Link2 className="w-5 h-5 text-gray-500 shrink-0" />
+                        <input
+                          type="text"
+                          value={shareUrl}
+                          readOnly
+                          className="flex-1 bg-transparent text-white text-sm focus:outline-none truncate"
+                        />
+                      </div>
+                      <motion.button
+                        onClick={handleCopyLink}
+                        className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                          linkCopied
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-[#F6B45A]/10 text-[#F6B45A] border border-[#F6B45A]/30 hover:bg-[#F6B45A]/20'
+                        }`}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {linkCopied ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Copied to Clipboard!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            Copy Link
+                          </>
+                        )}
+                      </motion.button>
+                    </div>
+                  ) : null}
+
+                  {/* Valid Period Info */}
+                  {shareUrl && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 justify-center">
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Link valid for 30 days</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-5 border-t border-white/10 bg-black/30">
+                  <motion.button
+                    onClick={() => setShowShareModal(false)}
+                    className="w-full py-3 rounded-xl font-bold text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Close
+                  </motion.button>
                 </div>
               </motion.div>
             </motion.div>
