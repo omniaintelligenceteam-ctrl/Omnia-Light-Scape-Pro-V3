@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Users, Plus, Trash2, Edit2, Check, X, Mail, Phone, MapPin, Loader2, Award, Search
+  Users, Plus, Trash2, Edit2, Check, X, Mail, Phone, MapPin, Loader2, Award, Search,
+  TrendingUp, DollarSign, Briefcase, Clock, Target, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { Technician, TechnicianRole, Location } from '../../types';
+import { Technician, TechnicianRole, Location, TechnicianMetrics } from '../../types';
 import { SettingsCard } from './ui/SettingsCard';
 import { CardInput } from './ui/PremiumInput';
 import { ToggleRow } from './ui/SettingsToggle';
@@ -11,6 +12,7 @@ import { ChipSelect } from './ui/SegmentedControl';
 
 interface TechniciansSectionProps {
   technicians: Technician[];
+  technicianMetrics?: TechnicianMetrics[];
   locations: Location[];
   isLoading: boolean;
   onCreateTechnician: (technician: Omit<Technician, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Technician | null>;
@@ -32,6 +34,7 @@ const roleColors: Record<TechnicianRole, string> = {
 
 export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
   technicians,
+  technicianMetrics,
   locations,
   isLoading,
   onCreateTechnician,
@@ -49,6 +52,21 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
   const [roleFilter, setRoleFilter] = useState<'all' | TechnicianRole>('all');
   const [locationFilter, setLocationFilter] = useState<'all' | 'unassigned' | string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'role' | 'location' | 'date'>('name');
+
+  // Metrics visibility state
+  const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set());
+
+  const toggleMetrics = (techId: string) => {
+    setExpandedMetrics(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(techId)) {
+        newSet.delete(techId);
+      } else {
+        newSet.add(techId);
+      }
+      return newSet;
+    });
+  };
 
   const handleStartCreate = () => {
     setIsCreating(true);
@@ -379,6 +397,156 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
                         renderForm(false)
                       ) : (
                         <SettingsCard className="p-4 hover:border-white/10 transition-colors group">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className={`p-2 rounded-xl ${tech.isActive ? 'bg-blue-500/10' : 'bg-white/5'}`}>
+                                  <Users className={`w-5 h-5 ${tech.isActive ? 'text-blue-400' : 'text-gray-500'}`} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-sm font-semibold text-white">{tech.name}</h3>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-medium ${roleColors[tech.role]}`}>
+                                      {roleLabels[tech.role]}
+                                    </span>
+                                    {!tech.isActive && (
+                                      <span className="text-[10px] px-2 py-0.5 bg-gray-500/20 text-gray-400 rounded-full uppercase font-medium">
+                                        Inactive
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                                    {tech.email && (
+                                      <span className="flex items-center gap-1">
+                                        <Mail className="w-3 h-3" />
+                                        {tech.email}
+                                      </span>
+                                    )}
+                                    {tech.phone && (
+                                      <span className="flex items-center gap-1">
+                                        <Phone className="w-3 h-3" />
+                                        {tech.phone}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleStartEdit(tech)}
+                                  className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(tech.id)}
+                                  className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-red-500/10"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Performance Metrics Toggle */}
+                            {technicianMetrics && technicianMetrics.find(m => m.technicianId === tech.id) && (
+                              <>
+                                <button
+                                  onClick={() => toggleMetrics(tech.id)}
+                                  className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                >
+                                  <TrendingUp className="w-3.5 h-3.5" />
+                                  <span>{expandedMetrics.has(tech.id) ? 'Hide' : 'Show'} Performance</span>
+                                  {expandedMetrics.has(tech.id) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                </button>
+
+                                {/* Metrics Section */}
+                                <AnimatePresence>
+                                  {expandedMetrics.has(tech.id) && (() => {
+                                    const metrics = technicianMetrics.find(m => m.technicianId === tech.id);
+                                    if (!metrics) return null;
+
+                                    return (
+                                      <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-white/[0.02] rounded-lg border border-white/5"
+                                      >
+                                        {/* Revenue */}
+                                        <div>
+                                          <div className="flex items-center gap-1 mb-1">
+                                            <DollarSign className="w-3 h-3 text-[#F6B45A]" />
+                                            <p className="text-[10px] text-gray-500">Revenue</p>
+                                          </div>
+                                          <p className="text-base font-bold text-[#F6B45A]">${(metrics.revenue / 1000).toFixed(1)}k</p>
+                                        </div>
+
+                                        {/* Jobs Completed */}
+                                        <div>
+                                          <div className="flex items-center gap-1 mb-1">
+                                            <Briefcase className="w-3 h-3 text-emerald-400" />
+                                            <p className="text-[10px] text-gray-500">Jobs</p>
+                                          </div>
+                                          <p className="text-base font-bold text-emerald-400">{metrics.jobsCompleted}</p>
+                                        </div>
+
+                                        {/* Avg Job Time */}
+                                        <div>
+                                          <div className="flex items-center gap-1 mb-1">
+                                            <Clock className="w-3 h-3 text-blue-400" />
+                                            <p className="text-[10px] text-gray-500">Avg Time</p>
+                                          </div>
+                                          <p className="text-base font-bold text-blue-400">{metrics.avgJobTime}h</p>
+                                        </div>
+
+                                        {/* Efficiency */}
+                                        <div>
+                                          <div className="flex items-center gap-1 mb-1">
+                                            <Target className="w-3 h-3 text-purple-400" />
+                                            <p className="text-[10px] text-gray-500">Efficiency</p>
+                                          </div>
+                                          <p className="text-base font-bold text-purple-400">{metrics.efficiency}%</p>
+                                        </div>
+                                      </motion.div>
+                                    );
+                                  })()}
+                                </AnimatePresence>
+                              </>
+                            )}
+                          </div>
+                        </SettingsCard>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Unassigned Technicians */}
+          {(techniciansByLocation['unassigned'] || []).length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="w-4 h-4 text-gray-500" />
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Unassigned
+                </span>
+                <span className="text-xs text-gray-600">({techniciansByLocation['unassigned'].length})</span>
+              </div>
+              <div className="space-y-3">
+                {techniciansByLocation['unassigned'].map(tech => (
+                  <motion.div
+                    key={tech.id}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    {editingId === tech.id ? (
+                      renderForm(false)
+                    ) : (
+                      <SettingsCard className="p-4 hover:border-white/10 transition-colors group">
+                        <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <div className={`p-2 rounded-xl ${tech.isActive ? 'bg-blue-500/10' : 'bg-white/5'}`}>
@@ -427,84 +595,74 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
                               </button>
                             </div>
                           </div>
-                        </SettingsCard>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
 
-          {/* Unassigned Technicians */}
-          {(techniciansByLocation['unassigned'] || []).length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="w-4 h-4 text-gray-500" />
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                  Unassigned
-                </span>
-                <span className="text-xs text-gray-600">({techniciansByLocation['unassigned'].length})</span>
-              </div>
-              <div className="space-y-3">
-                {techniciansByLocation['unassigned'].map(tech => (
-                  <motion.div
-                    key={tech.id}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                  >
-                    {editingId === tech.id ? (
-                      renderForm(false)
-                    ) : (
-                      <SettingsCard className="p-4 hover:border-white/10 transition-colors group">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className={`p-2 rounded-xl ${tech.isActive ? 'bg-blue-500/10' : 'bg-white/5'}`}>
-                              <Users className={`w-5 h-5 ${tech.isActive ? 'text-blue-400' : 'text-gray-500'}`} />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-semibold text-white">{tech.name}</h3>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-medium ${roleColors[tech.role]}`}>
-                                  {roleLabels[tech.role]}
-                                </span>
-                                {!tech.isActive && (
-                                  <span className="text-[10px] px-2 py-0.5 bg-gray-500/20 text-gray-400 rounded-full uppercase font-medium">
-                                    Inactive
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                                {tech.email && (
-                                  <span className="flex items-center gap-1">
-                                    <Mail className="w-3 h-3" />
-                                    {tech.email}
-                                  </span>
-                                )}
-                                {tech.phone && (
-                                  <span className="flex items-center gap-1">
-                                    <Phone className="w-3 h-3" />
-                                    {tech.phone}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => handleStartEdit(tech)}
-                              className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(tech.id)}
-                              className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-red-500/10"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {/* Performance Metrics Toggle */}
+                          {technicianMetrics && technicianMetrics.find(m => m.technicianId === tech.id) && (
+                            <>
+                              <button
+                                onClick={() => toggleMetrics(tech.id)}
+                                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                              >
+                                <TrendingUp className="w-3.5 h-3.5" />
+                                <span>{expandedMetrics.has(tech.id) ? 'Hide' : 'Show'} Performance</span>
+                                {expandedMetrics.has(tech.id) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              </button>
+
+                              {/* Metrics Section */}
+                              <AnimatePresence>
+                                {expandedMetrics.has(tech.id) && (() => {
+                                  const metrics = technicianMetrics.find(m => m.technicianId === tech.id);
+                                  if (!metrics) return null;
+
+                                  return (
+                                    <motion.div
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: 'auto' }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-white/[0.02] rounded-lg border border-white/5"
+                                    >
+                                      {/* Revenue */}
+                                      <div>
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <DollarSign className="w-3 h-3 text-[#F6B45A]" />
+                                          <p className="text-[10px] text-gray-500">Revenue</p>
+                                        </div>
+                                        <p className="text-base font-bold text-[#F6B45A]">${(metrics.revenue / 1000).toFixed(1)}k</p>
+                                      </div>
+
+                                      {/* Jobs Completed */}
+                                      <div>
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <Briefcase className="w-3 h-3 text-emerald-400" />
+                                          <p className="text-[10px] text-gray-500">Jobs</p>
+                                        </div>
+                                        <p className="text-base font-bold text-emerald-400">{metrics.jobsCompleted}</p>
+                                      </div>
+
+                                      {/* Avg Job Time */}
+                                      <div>
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <Clock className="w-3 h-3 text-blue-400" />
+                                          <p className="text-[10px] text-gray-500">Avg Time</p>
+                                        </div>
+                                        <p className="text-base font-bold text-blue-400">{metrics.avgJobTime}h</p>
+                                      </div>
+
+                                      {/* Efficiency */}
+                                      <div>
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <Target className="w-3 h-3 text-purple-400" />
+                                          <p className="text-[10px] text-gray-500">Efficiency</p>
+                                        </div>
+                                        <p className="text-base font-bold text-purple-400">{metrics.efficiency}%</p>
+                                      </div>
+                                    </motion.div>
+                                  );
+                                })()}
+                              </AnimatePresence>
+                            </>
+                          )}
                         </div>
                       </SettingsCard>
                     )}

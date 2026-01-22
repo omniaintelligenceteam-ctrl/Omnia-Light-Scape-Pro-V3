@@ -1059,6 +1059,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
               >
                 <LocationsSection
                   locations={locations}
+                  locationMetrics={locationMetrics?.locations}
                   isLoading={locationsLoading}
                   onCreateLocation={onCreateLocation}
                   onUpdateLocation={onUpdateLocation}
@@ -1079,6 +1080,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
               >
                 <TechniciansSection
                   technicians={technicians}
+                  technicianMetrics={technicianMetrics}
                   locations={locations}
                   isLoading={techniciansLoading}
                   onCreateTechnician={onCreateTechnician}

@@ -1,15 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MapPin, Plus, Trash2, Edit2, Check, X, Building2, Mail, User, Loader2, Search
+  MapPin, Plus, Trash2, Edit2, Check, X, Building2, Mail, User, Loader2, Search,
+  TrendingUp, TrendingDown, DollarSign, Briefcase, Target, BarChart3, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { Location } from '../../types';
+import { Location, LocationMetrics } from '../../types';
 import { SettingsCard } from './ui/SettingsCard';
 import { CardInput } from './ui/PremiumInput';
 import { ToggleRow } from './ui/SettingsToggle';
 
 interface LocationsSectionProps {
   locations: Location[];
+  locationMetrics?: LocationMetrics[];
   isLoading: boolean;
   onCreateLocation: (location: Omit<Location, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Location | null>;
   onUpdateLocation: (id: string, updates: Partial<Location>) => Promise<Location | null>;
@@ -18,6 +20,7 @@ interface LocationsSectionProps {
 
 export const LocationsSection: React.FC<LocationsSectionProps> = ({
   locations,
+  locationMetrics,
   isLoading,
   onCreateLocation,
   onUpdateLocation,
@@ -32,6 +35,21 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'date-desc' | 'date-asc'>('name-asc');
+
+  // Metrics visibility state
+  const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set());
+
+  const toggleMetrics = (locationId: string) => {
+    setExpandedMetrics(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(locationId)) {
+        newSet.delete(locationId);
+      } else {
+        newSet.add(locationId);
+      }
+      return newSet;
+    });
+  };
 
   const handleStartCreate = () => {
     setIsCreating(true);
@@ -255,53 +273,142 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
                 </SettingsCard>
               ) : (
                 <SettingsCard className="p-5 hover:border-white/10 transition-colors group">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className={`p-2.5 rounded-xl ${location.isActive ? 'bg-[#F6B45A]/10' : 'bg-white/5'}`}>
-                        <MapPin className={`w-5 h-5 ${location.isActive ? 'text-[#F6B45A]' : 'text-gray-500'}`} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-semibold text-white">{location.name}</h3>
-                          {!location.isActive && (
-                            <span className="text-[10px] px-2 py-0.5 bg-gray-500/20 text-gray-400 rounded-full uppercase font-medium">
-                              Inactive
-                            </span>
-                          )}
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className={`p-2.5 rounded-xl ${location.isActive ? 'bg-[#F6B45A]/10' : 'bg-white/5'}`}>
+                          <MapPin className={`w-5 h-5 ${location.isActive ? 'text-[#F6B45A]' : 'text-gray-500'}`} />
                         </div>
-                        {location.address && (
-                          <p className="text-sm text-gray-500 mt-0.5">{location.address}</p>
-                        )}
-                        {location.managerName && (
-                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                            <span className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              {location.managerName}
-                            </span>
-                            {location.managerEmail && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="w-3 h-3" />
-                                {location.managerEmail}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-semibold text-white">{location.name}</h3>
+                            {!location.isActive && (
+                              <span className="text-[10px] px-2 py-0.5 bg-gray-500/20 text-gray-400 rounded-full uppercase font-medium">
+                                Inactive
                               </span>
                             )}
                           </div>
-                        )}
+                          {location.address && (
+                            <p className="text-sm text-gray-500 mt-0.5">{location.address}</p>
+                          )}
+                          {location.managerName && (
+                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                              <span className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                {location.managerName}
+                              </span>
+                              {location.managerEmail && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="w-3 h-3" />
+                                  {location.managerEmail}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleStartEdit(location)}
+                          className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(location.id)}
+                          className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleStartEdit(location)}
-                        className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(location.id)}
-                        className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-red-500/10"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+
+                    {/* Performance Metrics Toggle */}
+                    {locationMetrics && locationMetrics.find(m => m.locationId === location.id) && (
+                      <>
+                        <button
+                          onClick={() => toggleMetrics(location.id)}
+                          className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          <BarChart3 className="w-3.5 h-3.5" />
+                          <span>{expandedMetrics.has(location.id) ? 'Hide' : 'Show'} Performance Metrics</span>
+                          {expandedMetrics.has(location.id) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+
+                        {/* Metrics Section */}
+                        <AnimatePresence>
+                          {expandedMetrics.has(location.id) && (() => {
+                            const metrics = locationMetrics.find(m => m.locationId === location.id);
+                            if (!metrics) return null;
+
+                            return (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="grid grid-cols-2 md:grid-cols-5 gap-3 p-3 bg-white/[0.02] rounded-lg border border-white/5"
+                              >
+                                {/* Revenue */}
+                                <div>
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <DollarSign className="w-3 h-3 text-[#F6B45A]" />
+                                    <p className="text-[10px] text-gray-500">Revenue</p>
+                                  </div>
+                                  <p className="text-base font-bold text-white">${(metrics.revenue / 1000).toFixed(1)}k</p>
+                                  {metrics.trend !== 0 && (
+                                    <div className={`flex items-center gap-0.5 text-[10px] ${metrics.trend > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                      {metrics.trend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                      <span>{Math.abs(metrics.trend)}%</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Jobs Completed */}
+                                <div>
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <Briefcase className="w-3 h-3 text-emerald-400" />
+                                    <p className="text-[10px] text-gray-500">Completed</p>
+                                  </div>
+                                  <p className="text-base font-bold text-emerald-400">{metrics.jobsCompleted}</p>
+                                  <p className="text-[10px] text-gray-600">projects</p>
+                                </div>
+
+                                {/* Active Projects */}
+                                <div>
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <Target className="w-3 h-3 text-blue-400" />
+                                    <p className="text-[10px] text-gray-500">Active</p>
+                                  </div>
+                                  <p className="text-base font-bold text-blue-400">{metrics.activeProjects}</p>
+                                  <p className="text-[10px] text-gray-600">projects</p>
+                                </div>
+
+                                {/* Avg Ticket */}
+                                <div>
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <DollarSign className="w-3 h-3 text-purple-400" />
+                                    <p className="text-[10px] text-gray-500">Avg Ticket</p>
+                                  </div>
+                                  <p className="text-base font-bold text-purple-400">${(metrics.avgTicket / 1000).toFixed(1)}k</p>
+                                  <p className="text-[10px] text-gray-600">per job</p>
+                                </div>
+
+                                {/* Conversion Rate */}
+                                <div>
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <TrendingUp className="w-3 h-3 text-green-400" />
+                                    <p className="text-[10px] text-gray-500">Conversion</p>
+                                  </div>
+                                  <p className="text-base font-bold text-green-400">{metrics.conversionRate}%</p>
+                                  <p className="text-[10px] text-gray-600">quote → job</p>
+                                </div>
+                              </motion.div>
+                            );
+                          })()}
+                        </AnimatePresence>
+                      </>
+                    )}
                   </div>
                 </SettingsCard>
               )}
