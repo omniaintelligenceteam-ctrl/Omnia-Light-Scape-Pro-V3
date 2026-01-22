@@ -414,7 +414,7 @@ const App: React.FC = () => {
 
   // Projects Sub-Tab State - Simplified to 2 main views + Analytics
   const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing' | 'analytics'>('pipeline');
-  const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'approved' | 'active' | 'completed'>('all');
+  const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'approved' | 'scheduled' | 'completed'>('all');
   const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
   // Advanced Analytics State
@@ -1782,7 +1782,7 @@ const App: React.FC = () => {
   const handleApproveProject = async (projectId: string) => {
       await updateProjectStatus(projectId, 'approved');
       setProjectsSubTab('pipeline');
-      setPipelineStatusFilter('active');
+      setPipelineStatusFilter('approved');
       showToast('success', 'Project approved!');
   };
 
@@ -2376,7 +2376,8 @@ Notes: ${invoice.notes || 'N/A'}
           if (pipelineStatusFilter !== 'all') {
               if (pipelineStatusFilter === 'draft' && p.status !== 'draft') return false;
               if (pipelineStatusFilter === 'quoted' && p.status !== 'quoted') return false;
-              if (pipelineStatusFilter === 'active' && p.status !== 'approved' && p.status !== 'scheduled') return false;
+              if (pipelineStatusFilter === 'approved' && p.status !== 'approved') return false;
+              if (pipelineStatusFilter === 'scheduled' && p.status !== 'scheduled') return false;
               if (pipelineStatusFilter === 'completed' && p.status !== 'completed') return false;
           }
           // Apply search filter
@@ -4248,15 +4249,37 @@ Notes: ${invoice.notes || 'N/A'}
                                      <span className="text-[10px] uppercase tracking-wider text-gray-500">Draft</span>
                                  </button>
                                  <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
-                                 {/* Active */}
+                                 {/* Quoted */}
                                  <button
-                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'active' ? 'all' : 'active')}
+                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'quoted' ? 'all' : 'quoted')}
                                      className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
-                                         pipelineStatusFilter === 'active' ? 'bg-emerald-500/20 ring-1 ring-emerald-400/50' : 'hover:bg-white/5'
+                                         pipelineStatusFilter === 'quoted' ? 'bg-purple-500/20 ring-1 ring-purple-400/50' : 'hover:bg-white/5'
                                      }`}
                                  >
-                                     <span className="text-lg font-bold text-emerald-400">{statusCounts.approved + statusCounts.scheduled}</span>
-                                     <span className="text-[10px] uppercase tracking-wider text-emerald-500">Active</span>
+                                     <span className="text-lg font-bold text-purple-400">{statusCounts.quoted}</span>
+                                     <span className="text-[10px] uppercase tracking-wider text-purple-500">Quoted</span>
+                                 </button>
+                                 <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
+                                 {/* Approved */}
+                                 <button
+                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'approved' ? 'all' : 'approved')}
+                                     className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'approved' ? 'bg-emerald-500/20 ring-1 ring-emerald-400/50' : 'hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <span className="text-lg font-bold text-emerald-400">{statusCounts.approved}</span>
+                                     <span className="text-[10px] uppercase tracking-wider text-emerald-500">Approved</span>
+                                 </button>
+                                 <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
+                                 {/* Scheduled */}
+                                 <button
+                                     onClick={() => setPipelineStatusFilter(pipelineStatusFilter === 'scheduled' ? 'all' : 'scheduled')}
+                                     className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all ${
+                                         pipelineStatusFilter === 'scheduled' ? 'bg-blue-500/20 ring-1 ring-blue-400/50' : 'hover:bg-white/5'
+                                     }`}
+                                 >
+                                     <span className="text-lg font-bold text-blue-400">{statusCounts.scheduled}</span>
+                                     <span className="text-[10px] uppercase tracking-wider text-blue-500">Scheduled</span>
                                  </button>
                                  <ChevronRight className="w-3 h-3 text-white/10 flex-shrink-0" />
                                  {/* Done */}
@@ -4295,14 +4318,34 @@ Notes: ${invoice.notes || 'N/A'}
                                  Draft ({statusCounts.draft})
                              </button>
                              <button
-                                 onClick={() => setPipelineStatusFilter('active')}
+                                 onClick={() => setPipelineStatusFilter('quoted')}
                                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                     pipelineStatusFilter === 'active'
+                                     pipelineStatusFilter === 'quoted'
+                                         ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-400/50'
+                                         : 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20'
+                                 }`}
+                             >
+                                 Quoted ({statusCounts.quoted})
+                             </button>
+                             <button
+                                 onClick={() => setPipelineStatusFilter('approved')}
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                     pipelineStatusFilter === 'approved'
                                          ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/50'
                                          : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
                                  }`}
                              >
-                                 Active ({statusCounts.approved + statusCounts.scheduled})
+                                 Approved ({statusCounts.approved})
+                             </button>
+                             <button
+                                 onClick={() => setPipelineStatusFilter('scheduled')}
+                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                     pipelineStatusFilter === 'scheduled'
+                                         ? 'bg-blue-500/20 text-blue-300 ring-1 ring-blue-400/50'
+                                         : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+                                 }`}
+                             >
+                                 Scheduled ({statusCounts.scheduled})
                              </button>
                              <button
                                  onClick={() => setPipelineStatusFilter('completed')}
@@ -5907,7 +5950,7 @@ Notes: ${invoice.notes || 'N/A'}
                                          <motion.button
                                            whileHover={{ scale: 1.02 }}
                                            whileTap={{ scale: 0.98 }}
-                                           onClick={() => { setProjectsSubTab('pipeline'); setPipelineStatusFilter('active'); }}
+                                           onClick={() => { setProjectsSubTab('pipeline'); setPipelineStatusFilter('approved'); }}
                                            className="mt-6 px-5 py-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-400 text-sm font-bold hover:bg-blue-500/20 transition-colors relative z-10"
                                          >
                                            View Approved Projects
