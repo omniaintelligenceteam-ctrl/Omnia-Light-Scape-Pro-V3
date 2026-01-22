@@ -415,6 +415,7 @@ const App: React.FC = () => {
   // Projects Sub-Tab State - Simplified to 2 main views + Analytics
   const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing' | 'analytics'>('pipeline');
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'approved' | 'active' | 'completed'>('all');
+  const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
   // Advanced Analytics State
   const [analyticsDateRange, setAnalyticsDateRange] = useState({
@@ -4145,34 +4146,46 @@ Notes: ${invoice.notes || 'N/A'}
                  </div>
 
 
-                 {/* Simplified Navigation: 2 Main Tabs */}
+                 {/* Simplified Navigation: 3 Main Tabs */}
                  <div className="flex items-center gap-2 mb-4">
                      <button
                          onClick={() => setProjectsSubTab('pipeline')}
-                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                         className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
                              projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing'
                                  ? 'bg-[#F6B45A] text-black shadow-lg shadow-[#F6B45A]/30'
                                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
                          }`}
                      >
-                         <FolderPlus className="w-4 h-4" />
-                         Pipeline
+                         <FolderPlus className="w-3 md:w-4 h-3 md:h-4" />
+                         <span className="hidden sm:inline">Pipeline</span>
                      </button>
                      <button
                          onClick={() => setProjectsSubTab('clients')}
-                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                         className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
                              projectsSubTab === 'clients'
                                  ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30'
                                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
                          }`}
                      >
-                         <Users className="w-4 h-4" />
-                         Clients
+                         <Users className="w-3 md:w-4 h-3 md:h-4" />
+                         <span className="hidden sm:inline">Clients</span>
+                     </button>
+                     <button
+                         onClick={() => setShowAnalyticsDropdown(!showAnalyticsDropdown)}
+                         className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                             showAnalyticsDropdown
+                                 ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                 : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                         }`}
+                     >
+                         <BarChart3 className="w-3 md:w-4 h-3 md:h-4" />
+                         <span className="hidden sm:inline">Analytics</span>
+                         <ChevronDown className={`w-3 h-3 transition-transform ${showAnalyticsDropdown ? 'rotate-180' : ''}`} />
                      </button>
 
                 </div>
-                 {/* Pipeline Analytics Dashboard - Only show when on pipeline view */}
-                 {(projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
+                 {/* Pipeline Analytics Dashboard - Only show when analytics dropdown is open */}
+                 {showAnalyticsDropdown && (projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
                      <div className="mb-4">
                          {/* Stats Grid */}
                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
