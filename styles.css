@@ -442,3 +442,211 @@ body {
     border-color: rgba(246, 180, 90, 0.5);
     outline: none;
 }
+
+/* ============================================
+   LIGHT MODE OVERRIDES
+   Override hardcoded Tailwind dark colors when light mode is active
+   ============================================ */
+
+/* Body and root backgrounds */
+[data-theme="light"] body,
+[data-theme="light"] #root {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+/* Dark background overrides - Convert to light backgrounds */
+[data-theme="light"] .bg-\[\#050505\],
+[data-theme="light"] .bg-\[\#0a0a0a\],
+[data-theme="light"] .bg-\[\#0F0F0F\],
+[data-theme="light"] .bg-\[\#111\],
+[data-theme="light"] .bg-\[\#111111\],
+[data-theme="light"] .bg-\[\#0f0f0f\] {
+    background-color: #ffffff !important;
+}
+
+[data-theme="light"] .bg-\[\#1a1a1a\],
+[data-theme="light"] .bg-\[\#151515\],
+[data-theme="light"] .bg-\[\#141414\],
+[data-theme="light"] .bg-\[\#181818\] {
+    background-color: #f8f9fa !important;
+}
+
+[data-theme="light"] .bg-\[\#222\],
+[data-theme="light"] .bg-\[\#222222\],
+[data-theme="light"] .bg-\[\#252525\],
+[data-theme="light"] .bg-\[\#2a2a2a\] {
+    background-color: #e9ecef !important;
+}
+
+/* Semi-transparent dark backgrounds */
+[data-theme="light"] .bg-\[\#111\]\/30,
+[data-theme="light"] .bg-\[\#111\]\/50,
+[data-theme="light"] .bg-\[\#111\]\/80,
+[data-theme="light"] .bg-black\/20,
+[data-theme="light"] .bg-black\/30,
+[data-theme="light"] .bg-black\/40,
+[data-theme="light"] .bg-black\/50,
+[data-theme="light"] .bg-black\/60,
+[data-theme="light"] .bg-black\/80 {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Text color overrides - Convert white/light text to dark */
+[data-theme="light"] .text-white {
+    color: #111111 !important;
+}
+
+[data-theme="light"] .text-gray-100,
+[data-theme="light"] .text-gray-200 {
+    color: #1f2937 !important;
+}
+
+[data-theme="light"] .text-gray-300,
+[data-theme="light"] .text-gray-400 {
+    color: #4b5563 !important;
+}
+
+[data-theme="light"] .text-gray-500 {
+    color: #6b7280 !important;
+}
+
+/* Border overrides - Convert light borders to dark */
+[data-theme="light"] .border-white\/5,
+[data-theme="light"] .border-white\/10,
+[data-theme="light"] .border-white\/20,
+[data-theme="light"] .border-\[\#222\],
+[data-theme="light"] .border-\[\#333\],
+[data-theme="light"] .border-gray-700,
+[data-theme="light"] .border-gray-800 {
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Divide color overrides */
+[data-theme="light"] .divide-white\/10 > * + *,
+[data-theme="light"] .divide-gray-800 > * + * {
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Ring color overrides */
+[data-theme="light"] .ring-white\/10,
+[data-theme="light"] .ring-white\/20 {
+    --tw-ring-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Gradient overrides */
+[data-theme="light"] .from-\[\#050505\],
+[data-theme="light"] .from-\[\#0a0a0a\],
+[data-theme="light"] .from-black {
+    --tw-gradient-from: #ffffff !important;
+}
+
+[data-theme="light"] .to-\[\#111\],
+[data-theme="light"] .to-\[\#0a0a0a\],
+[data-theme="light"] .to-black {
+    --tw-gradient-to: #f8f9fa !important;
+}
+
+[data-theme="light"] .via-\[\#111\],
+[data-theme="light"] .via-black {
+    --tw-gradient-via: #f8f9fa !important;
+}
+
+/* Glass effect for light mode */
+[data-theme="light"] .glass {
+    background: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Scrollbar for light mode */
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--accent-primary) 0%, var(--accent-hover) 100%);
+}
+
+/* Card shadows for light mode */
+[data-theme="light"] .card-elevate:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Input styling for light mode */
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+    background-color: #f8f9fa !important;
+    color: #111111 !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+    color: #6b7280 !important;
+}
+
+/* Shimmer animation for light mode */
+[data-theme="light"] .shimmer::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.03), transparent);
+}
+
+/* Shadow overrides for light mode */
+[data-theme="light"] .shadow-lg,
+[data-theme="light"] .shadow-xl,
+[data-theme="light"] .shadow-2xl {
+    --tw-shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Gold accent button text in light mode - ensure readability */
+[data-theme="light"] .bg-\[\#F6B45A\],
+[data-theme="light"] .bg-gradient-to-r.from-\[\#F6B45A\] {
+    color: #111111 !important;
+}
+
+/* Hover states for dark backgrounds in light mode */
+[data-theme="light"] .hover\:bg-\[\#1a1a1a\]:hover,
+[data-theme="light"] .hover\:bg-\[\#222\]:hover,
+[data-theme="light"] .hover\:bg-white\/5:hover,
+[data-theme="light"] .hover\:bg-white\/10:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Focus states */
+[data-theme="light"] .focus\:ring-white\/20:focus {
+    --tw-ring-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ============================================
+   ACCENT COLOR INTEGRATION
+   Make buttons and interactive elements use the accent color variable
+   ============================================ */
+
+/* Override gold color with accent variable */
+.bg-\[\#F6B45A\],
+.bg-omnia-gold {
+    background-color: var(--accent-primary) !important;
+}
+
+.hover\:bg-\[\#d4964a\]:hover,
+.hover\:bg-omnia-gold\/90:hover {
+    background-color: var(--accent-hover) !important;
+}
+
+.text-\[\#F6B45A\],
+.text-omnia-gold {
+    color: var(--accent-primary) !important;
+}
+
+.border-\[\#F6B45A\],
+.border-omnia-gold {
+    border-color: var(--accent-primary) !important;
+}
+
+/* Gold glow using accent color */
+.gold-glow {
+    box-shadow: 0 0 30px var(--accent-glow);
+}
+
+.gold-glow-hover:hover {
+    box-shadow: 0 0 50px var(--accent-glow);
+}
