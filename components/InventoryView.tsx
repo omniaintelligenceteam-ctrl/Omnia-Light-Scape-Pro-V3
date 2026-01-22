@@ -146,7 +146,7 @@ export const InventoryView: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#050505] p-4 md:p-8 overflow-y-auto">
+        <div className="flex flex-col h-full bg-[#050505] p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">

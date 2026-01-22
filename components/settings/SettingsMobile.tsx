@@ -91,7 +91,7 @@ const FullScreenModal: React.FC<{
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 pb-20">
+          <div className="flex-1 overflow-y-auto px-4 py-6 pb-24">
             {children}
           </div>
         </motion.div>

@@ -326,7 +326,7 @@ ${customMessage ? `\n${customMessage}\n` : ''}
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#050505] px-3 py-4 md:p-8 overflow-y-auto overflow-x-hidden relative scroll-smooth [-webkit-overflow-scrolling:touch]">
+    <div className="flex flex-col h-full bg-[#050505] px-3 py-4 md:p-8 pb-24 md:pb-8 overflow-y-auto overflow-x-hidden relative scroll-smooth [-webkit-overflow-scrolling:touch]">
       {/* Background Ambient Glow - hidden on mobile for performance */}
       <div className="hidden md:block absolute top-[-10%] right-[-10%] w-[50%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none print:hidden ambient-glow"></div>
       <div className="hidden md:block absolute bottom-[-10%] left-[-10%] w-[40%] h-[400px] bg-[#F6B45A]/3 blur-[100px] rounded-full pointer-events-none print:hidden"></div>

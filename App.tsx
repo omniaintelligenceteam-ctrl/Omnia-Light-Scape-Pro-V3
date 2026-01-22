@@ -4053,7 +4053,7 @@ Notes: ${invoice.notes || 'N/A'}
               animate={{ x: 0 }}
               exit={{ x: tabDirection * -100 + '%' }}
               transition={{ type: 'spring', stiffness: 700, damping: 45 }}
-              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-20"
+              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-24 md:pb-20"
             >
               {/* Background Tech Mesh/Glow */}
               <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
@@ -6333,7 +6333,7 @@ Notes: ${invoice.notes || 'N/A'}
               animate={{ x: 0 }}
               exit={{ x: tabDirection * -100 + '%' }}
               transition={{ type: 'spring', stiffness: 700, damping: 45 }}
-              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-20"
+              className="absolute inset-0 h-full overflow-y-auto bg-[#050505] pb-24 md:pb-20"
             >
               {/* Background Tech Mesh/Glow - Blue themed */}
               <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%)' }}></div>
