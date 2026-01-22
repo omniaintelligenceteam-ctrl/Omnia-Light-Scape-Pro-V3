@@ -14,6 +14,7 @@ import { BOMView } from './components/BOMView';
 import { Pricing } from './components/Pricing';
 import { BillingSuccess } from './components/BillingSuccess';
 import { BillingCanceled } from './components/BillingCanceled';
+import { ClientPortal } from './components/ClientPortal';
 import { generateBOM } from './utils/bomCalculator';
 import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
@@ -25,6 +26,9 @@ import { useAnalytics } from './hooks/useAnalytics';
 import { AnalyticsDashboard, ExecutiveDashboard } from './components/analytics';
 import { useLocations } from './hooks/useLocations';
 import { useTechnicians } from './hooks/useTechnicians';
+import { useLocationMetrics } from './hooks/useLocationMetrics';
+import { useTechnicianMetrics } from './hooks/useTechnicianMetrics';
+import { useCompanyMetrics } from './hooks/useCompanyMetrics';
 import { useOrganization } from './hooks/useOrganization';
 import { useTeamMembers } from './hooks/useTeamMembers';
 import { TechnicianDashboard } from './components/TechnicianDashboard';
@@ -179,6 +183,11 @@ const App: React.FC = () => {
     updateTechnician,
     deleteTechnician
   } = useTechnicians();
+
+  // Calculate real metrics for Executive Dashboard
+  const locationMetrics = useLocationMetrics(projects, locations, 'this_month');
+  const technicianMetrics = useTechnicianMetrics(projects, technicians, locations, 'this_month');
+  const companyMetrics = useCompanyMetrics(locationMetrics, technicianMetrics, projects, 'this_month');
 
   // Organization and role management
   const { role, hasPermission } = useOrganization();
@@ -715,6 +724,40 @@ const App: React.FC = () => {
       if (success) {
         showToast('info', 'Client deleted');
       }
+    }
+  };
+
+  // State for portal invite sending
+  const [sendingPortalInvite, setSendingPortalInvite] = useState<string | null>(null);
+
+  const handleSendPortalInvite = async (client: Client) => {
+    if (!client.email) {
+      showToast('error', 'Client has no email address');
+      return;
+    }
+
+    setSendingPortalInvite(client.id);
+    try {
+      const response = await fetch('/api/client-portal/send-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: client.id,
+          userId: user?.id
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send invite');
+      }
+
+      showToast('success', `Portal invite sent to ${client.email}`);
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to send portal invite');
+    } finally {
+      setSendingPortalInvite(null);
     }
   };
 
@@ -2172,7 +2215,14 @@ Notes: ${invoice.notes || 'N/A'}
     );
   }
 
-  // 4. Show Billing Success page
+  // 4. Client Portal (no auth required)
+  if (currentPath.startsWith('/portal')) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    return <ClientPortal initialToken={token} />;
+  }
+
+  // 5. Show Billing Success page
   if (currentPath === '/billing/success') {
     return (
       <AuthWrapper>
@@ -3974,6 +4024,9 @@ Notes: ${invoice.notes || 'N/A'}
                              <ExecutiveDashboard
                                  locations={locations}
                                  technicians={technicians}
+                                 locationMetrics={locationMetrics}
+                                 technicianMetrics={technicianMetrics}
+                                 companyMetrics={companyMetrics}
                                  isLoading={locationsLoading || techniciansLoading}
                              />
                          )}
@@ -5950,6 +6003,18 @@ Notes: ${invoice.notes || 'N/A'}
                                                  </div>
                                              </div>
                                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                 <button
+                                                     onClick={() => handleSendPortalInvite(client)}
+                                                     disabled={!client.email || sendingPortalInvite === client.id}
+                                                     className="p-2 hover:bg-emerald-500/10 rounded-lg text-gray-400 hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                     title={client.email ? 'Send Portal Invite' : 'No email address'}
+                                                 >
+                                                     {sendingPortalInvite === client.id ? (
+                                                         <Loader2 className="w-4 h-4 animate-spin" />
+                                                     ) : (
+                                                         <ExternalLink className="w-4 h-4" />
+                                                     )}
+                                                 </button>
                                                  <button
                                                      onClick={() => handleOpenClientModal(client)}
                                                      className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"

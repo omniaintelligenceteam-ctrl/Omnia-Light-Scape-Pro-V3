@@ -96,6 +96,9 @@ export interface SavedProject {
   invoicePaidAt?: string;         // ISO date when invoice was paid via Stripe
   assignedTo?: string[];          // Array of user IDs assigned to this project
   assignedTechnicianId?: string;  // ID of technician assigned to this project
+  location_id?: string;           // ID of location this project belongs to
+  invoice_sent_at?: string;       // ISO date when invoice was sent
+  actual_hours?: number;          // Actual hours spent on project (for technician tracking)
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';
@@ -415,7 +418,7 @@ export interface TechnicianMetrics {
   avgJobTime: number; // hours
   revenue: number;
   efficiency: number; // billable hours / total hours (0-100)
-  customerRating: number; // 1-5 stars
+  customerRating: number | null; // 1-5 stars (null if no review system)
   callbacks: number;
   rank: number;
 }
@@ -673,3 +676,53 @@ export const ROLE_PERMISSIONS: Record<OrganizationRole, RolePermissions> = {
     canViewOwnScheduleOnly: true,
   },
 };
+
+// Date Range Types for Analytics
+export type DateRange = 'today' | 'this_week' | 'this_month' | 'this_quarter' | 'this_year' | 'custom';
+
+export interface DateRangeFilter {
+  start: Date;
+  end: Date;
+  label: string;
+}
+
+// === CLIENT PORTAL TYPES ===
+export interface ClientPortalSession {
+  token: string;
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  companyName: string;
+  companyLogo: string | null;
+  expires: string;
+}
+
+export interface ClientPortalProject {
+  id: string;
+  name: string;
+  status: string;
+  imageUrl: string | null;
+  createdAt: string;
+  totalPrice: number | null;
+  quote: {
+    sentAt: string | null;
+    approvedAt: string | null;
+    token: string | null;
+  };
+  invoice: {
+    sentAt: string | null;
+    paidAt: string | null;
+    token: string | null;
+  };
+}
+
+export interface ClientPortalData {
+  projects: ClientPortalProject[];
+  summary: {
+    totalProjects: number;
+    pendingQuotes: number;
+    approvedProjects: number;
+    pendingInvoices: number;
+    paidInvoices: number;
+  };
+}

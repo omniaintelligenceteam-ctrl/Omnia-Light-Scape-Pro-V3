@@ -51,7 +51,10 @@ const getEfficiencyColor = (efficiency: number): string => {
   return 'text-red-400';
 };
 
-const getRatingStars = (rating: number): React.ReactNode => {
+const getRatingStars = (rating: number | null): React.ReactNode => {
+  if (rating === null) {
+    return <span className="text-xs text-gray-500">N/A</span>;
+  }
   const fullStars = Math.floor(rating);
   const hasHalf = rating % 1 >= 0.5;
 
@@ -107,7 +110,7 @@ export const TechnicianLeaderboard: React.FC<TechnicianLeaderboardProps> = ({
         comparison = a.efficiency - b.efficiency;
         break;
       case 'customerRating':
-        comparison = a.customerRating - b.customerRating;
+        comparison = (a.customerRating || 0) - (b.customerRating || 0);
         break;
     }
     return sortDirection === 'asc' ? comparison : -comparison;
