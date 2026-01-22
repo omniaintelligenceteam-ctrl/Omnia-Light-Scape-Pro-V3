@@ -264,6 +264,8 @@ export interface Client {
   notes?: string;
   projectCount?: number;
   totalRevenue?: number;
+  leadSource?: LeadSource;
+  marketingCost?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -725,4 +727,65 @@ export interface ClientPortalData {
     pendingInvoices: number;
     paidInvoices: number;
   };
+}
+
+// === LEAD SOURCE ROI TRACKING TYPES ===
+export interface LeadSourceROI {
+  source: LeadSource;
+  totalLeads: number;
+  convertedLeads: number;
+  conversionRate: number;
+  totalRevenue: number;
+  totalMarketingCost: number;
+  roi: number;
+  averageProjectValue: number;
+  costPerLead: number;
+  costPerAcquisition: number;
+}
+
+export interface LeadSourceMetrics {
+  bySource: LeadSourceROI[];
+  topPerformingSource: LeadSource;
+  lowestCostPerAcquisition: LeadSource;
+  totalMarketingSpend: number;
+  totalRevenueFromTracked: number;
+  overallROI: number;
+}
+
+// === CASH FLOW FORECASTING TYPES ===
+export interface CashFlowProjection {
+  period: string;              // Week start date (ISO format)
+  expectedInflow: number;
+  expectedOutflow: number;
+  netCashFlow: number;
+  cumulativeCashFlow: number;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface DSOMetrics {
+  currentDSO: number;          // Days Sales Outstanding
+  averageDSO: number;
+  trend: 'improving' | 'stable' | 'worsening';
+  dsoByMonth: { month: string; dso: number }[];
+}
+
+export interface PaymentPatternAnalysis {
+  averagePaymentDelay: number;
+  medianPaymentDelay: number;
+  percentPaidOnTime: number;     // ≤30 days
+  percentPaid30Days: number;     // 31-60 days
+  percentPaid60Days: number;     // 61-90 days
+  percentPaid90Plus: number;     // 90+ days
+}
+
+export interface CashFlowForecast {
+  projections30Day: CashFlowProjection[];
+  projections60Day: CashFlowProjection[];
+  projections90Day: CashFlowProjection[];
+  dsoMetrics: DSOMetrics;
+  paymentPatterns: PaymentPatternAnalysis;
+  totalOutstandingAR: number;
+  projectedCollections30Day: number;
+  projectedCollections60Day: number;
+  projectedCollections90Day: number;
 }

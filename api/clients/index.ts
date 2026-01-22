@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST: Create new client
     if (req.method === 'POST') {
-      const { name, email, phone, address, notes } = req.body;
+      const { name, email, phone, address, notes, leadSource, marketingCost } = req.body;
 
       if (!name) {
         return res.status(400).json({ error: 'Client name is required' });
@@ -57,7 +57,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           email: email || null,
           phone: phone || null,
           address: address || null,
-          notes: notes || null
+          notes: notes || null,
+          lead_source: leadSource || null,
+          marketing_cost: marketingCost || 0
         })
         .select()
         .single();

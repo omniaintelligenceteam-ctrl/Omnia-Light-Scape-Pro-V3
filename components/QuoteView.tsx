@@ -223,6 +223,7 @@ ${customMessage ? `\n${customMessage}\n` : ''}
           companyEmail: companyProfile.email,
           companyPhone: companyProfile.phone,
           companyAddress: companyProfile.address,
+          companyLogo: companyProfile.logo,
           lineItems: lineItems.filter(item => item.quantity > 0).map(item => ({
             name: item.name,
             description: item.description,

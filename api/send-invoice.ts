@@ -11,6 +11,7 @@ interface InvoiceEmailRequest {
   companyEmail: string;
   companyPhone?: string;
   companyAddress: string;
+  companyLogo?: string;
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string;
@@ -55,9 +56,14 @@ function generateInvoiceHtml(data: InvoiceEmailRequest): string {
 
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border-radius: 20px 20px 0 0; padding: 48px 40px; text-align: center; position: relative; overflow: hidden;">
-      <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3B82F6 0%, #2563EB 50%, #3B82F6 100%);"></div>
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, transparent, #3B82F6, transparent);"></div>
+
+      ${data.companyLogo ? `
+      <img src="${data.companyLogo}" alt="${data.companyName}" style="max-height: 60px; max-width: 180px; margin-bottom: 16px; display: inline-block;" />
+      ` : ''}
+
       <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">${data.companyName}</h1>
-      <p style="margin: 12px 0 0; color: rgba(255,255,255,0.8); font-size: 15px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Invoice ${data.invoiceNumber}</p>
+      <p style="margin: 12px 0 0; color: #3B82F6; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;">Invoice ${data.invoiceNumber}</p>
     </div>
 
     <!-- Main Content -->

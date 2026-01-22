@@ -50,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // PUT: Update client
     if (req.method === 'PUT') {
-      const { name, email, phone, address, notes } = req.body;
+      const { name, email, phone, address, notes, leadSource, marketingCost } = req.body;
 
       const updates: Record<string, any> = { updated_at: new Date().toISOString() };
       if (name !== undefined) updates.name = name;
@@ -58,6 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (phone !== undefined) updates.phone = phone;
       if (address !== undefined) updates.address = address;
       if (notes !== undefined) updates.notes = notes;
+      if (leadSource !== undefined) updates.lead_source = leadSource;
+      if (marketingCost !== undefined) updates.marketing_cost = marketingCost;
 
       const { data, error } = await supabase
         .from('clients')

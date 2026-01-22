@@ -258,7 +258,15 @@ const App: React.FC = () => {
   // Client management UI state
   const [showClientModal, setShowClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [clientFormData, setClientFormData] = useState({ name: '', email: '', phone: '', address: '', notes: '' });
+  const [clientFormData, setClientFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    notes: '',
+    leadSource: undefined as LeadSource | undefined,
+    marketingCost: undefined as number | undefined
+  });
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [showClientImportModal, setShowClientImportModal] = useState(false);
   const [clientImportData, setClientImportData] = useState<{ valid: ParsedClientRow[]; invalid: ParsedClientRow[] } | null>(null);
@@ -748,11 +756,21 @@ const App: React.FC = () => {
         email: client.email || '',
         phone: client.phone || '',
         address: client.address || '',
-        notes: client.notes || ''
+        notes: client.notes || '',
+        leadSource: client.leadSource,
+        marketingCost: client.marketingCost
       });
     } else {
       setEditingClient(null);
-      setClientFormData({ name: '', email: '', phone: '', address: '', notes: '' });
+      setClientFormData({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        notes: '',
+        leadSource: undefined,
+        marketingCost: undefined
+      });
     }
     setShowClientModal(true);
   };
@@ -2017,6 +2035,7 @@ Notes: ${invoice.notes || 'N/A'}
                   companyEmail: companyProfile.email,
                   companyPhone: companyProfile.phone,
                   companyAddress: companyProfile.address,
+                  companyLogo: companyProfile.logo,
                   invoiceNumber: currentInvoice.invoiceNumber,
                   invoiceDate: currentInvoice.invoiceDate,
                   dueDate: currentInvoice.dueDate,
@@ -7609,6 +7628,57 @@ Notes: ${invoice.notes || 'N/A'}
                     rows={3}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
                   />
+                </div>
+
+                {/* Lead Source */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Lead Source
+                  </label>
+                  <select
+                    value={clientFormData.leadSource || ''}
+                    onChange={(e) => setClientFormData({
+                      ...clientFormData,
+                      leadSource: e.target.value as LeadSource | undefined || undefined
+                    })}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  >
+                    <option value="">Select source...</option>
+                    <option value="google">Google Ads</option>
+                    <option value="referral">Referral</option>
+                    <option value="angi">Angi/HomeAdvisor</option>
+                    <option value="thumbtack">Thumbtack</option>
+                    <option value="website">Website</option>
+                    <option value="social">Social Media</option>
+                    <option value="yard_sign">Yard Sign</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {/* Marketing Cost */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Marketing Cost
+                    <span className="text-gray-500 text-xs ml-2">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={clientFormData.marketingCost || ''}
+                      onChange={(e) => setClientFormData({
+                        ...clientFormData,
+                        marketingCost: parseFloat(e.target.value) || undefined
+                      })}
+                      placeholder="0.00"
+                      className="w-full pl-8 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cost to acquire this lead (e.g., ad spend, referral fee)
+                  </p>
                 </div>
               </div>
 

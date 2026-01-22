@@ -233,17 +233,38 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-white">{session?.companyName}</h1>
-            <p className="text-sm text-gray-400">Welcome, {session?.clientName}</p>
+          <div className="flex items-center gap-4">
+            {session?.companyLogo ? (
+              <img
+                src={session.companyLogo}
+                alt={session.companyName}
+                className="h-10 md:h-12 max-w-[140px] object-contain"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#F6B45A] to-[#E09A3A] flex items-center justify-center">
+                <span className="text-black font-bold text-lg">
+                  {session?.companyName?.charAt(0) || 'C'}
+                </span>
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl font-bold text-white">{session?.companyName}</h1>
+              <p className="text-xs text-[#F6B45A]/80 uppercase tracking-wider font-medium">Client Portal</p>
+            </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-            title="Sign Out"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm text-gray-400">Welcome back</p>
+              <p className="text-white font-medium">{session?.clientName}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 

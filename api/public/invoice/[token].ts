@@ -74,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let companySettings = null;
     const { data: settingsData } = await supabase
       .from('settings')
-      .select('company_name, company_email, company_phone, company_address')
+      .select('company_name, company_email, company_phone, company_address, company_logo')
       .eq('user_id', userData.id)
       .single();
 
@@ -136,7 +136,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name: companySettings?.company_name || 'Lighting Company',
           email: companySettings?.company_email || userData.email,
           phone: companySettings?.company_phone || null,
-          address: companySettings?.company_address || null
+          address: companySettings?.company_address || null,
+          logo: companySettings?.company_logo || null
         },
         paid: isPaid,
         canAcceptPayment: !!stripeAccountId

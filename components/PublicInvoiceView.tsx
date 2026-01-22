@@ -26,6 +26,7 @@ interface InvoiceCompany {
   email: string;
   phone: string | null;
   address: string | null;
+  logo: string | null;
 }
 
 interface InvoiceLineItem {
@@ -198,10 +199,21 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
+          {company.logo ? (
+            <img
+              src={company.logo}
+              alt={company.name}
+              className="h-16 md:h-20 max-w-[200px] mx-auto mb-4 object-contain"
+            />
+          ) : null}
           <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600 mb-2">
             {company.name}
           </h1>
-          <p className="text-gray-400">Invoice</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-blue-500/50" />
+            <p className="text-blue-500/80 text-sm font-medium tracking-wider uppercase">Invoice</p>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-blue-500/50" />
+          </div>
         </motion.div>
 
         {/* Main Card */}

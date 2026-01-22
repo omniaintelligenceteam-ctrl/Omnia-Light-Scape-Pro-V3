@@ -22,6 +22,7 @@ interface QuoteCompany {
   email: string;
   phone: string | null;
   address: string | null;
+  logo: string | null;
 }
 
 interface QuoteApproval {
@@ -157,10 +158,21 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
+          {company.logo ? (
+            <img
+              src={company.logo}
+              alt={company.name}
+              className="h-16 md:h-20 max-w-[200px] mx-auto mb-4 object-contain"
+            />
+          ) : null}
           <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600 mb-2">
             {company.name}
           </h1>
-          <p className="text-gray-400">Landscape Lighting Quote</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-500/50" />
+            <p className="text-amber-500/80 text-sm font-medium tracking-wider uppercase">Landscape Lighting Quote</p>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/50" />
+          </div>
         </motion.div>
 
         {/* Main Card */}

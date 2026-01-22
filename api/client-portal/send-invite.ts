@@ -12,6 +12,7 @@ function generateToken(): string {
 function generatePortalInviteHtml(data: {
   clientName: string;
   companyName: string;
+  companyLogo?: string | null;
   portalUrl: string;
 }): string {
   return `
@@ -22,49 +23,58 @@ function generatePortalInviteHtml(data: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Access Your Project Portal</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
   <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
 
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #F6B45A 0%, #E09F45 100%); border-radius: 16px 16px 0 0; padding: 32px; text-align: center;">
-      <h1 style="margin: 0; color: #000; font-size: 24px; font-weight: 700;">${data.companyName}</h1>
-      <p style="margin: 8px 0 0; color: rgba(0,0,0,0.7); font-size: 14px;">Client Portal Access</p>
+    <!-- Premium Header with Logo -->
+    <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 16px 16px 0 0; padding: 40px 32px; text-align: center; position: relative;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #D4A04A, transparent);"></div>
+
+      ${data.companyLogo ? `
+      <img src="${data.companyLogo}" alt="${data.companyName}" style="max-height: 60px; max-width: 180px; margin-bottom: 16px; display: inline-block;" />
+      ` : ''}
+
+      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">${data.companyName}</h1>
+      <p style="margin: 10px 0 0; color: #D4A04A; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;">Client Portal</p>
     </div>
 
     <!-- Main Content -->
-    <div style="background: white; padding: 32px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <div style="background: #ffffff; padding: 40px 32px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);">
 
-      <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-        Hi ${data.clientName},
+      <p style="margin: 0 0 20px; color: #1a1a1a; font-size: 17px; font-weight: 600;">
+        Hello ${data.clientName},
       </p>
-      <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-        You've been invited to access your project portal where you can view your projects, quotes, and invoices.
+      <p style="margin: 0 0 28px; color: #555; font-size: 15px; line-height: 1.7;">
+        You've been granted exclusive access to your personal project portal. Here you can view your projects, review quotes, and manage invoices.
       </p>
 
-      <!-- CTA Button -->
-      <div style="text-align: center; margin: 32px 0;">
-        <a href="${data.portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #F6B45A 0%, #E09F45 100%); color: #000; font-weight: 600; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-size: 16px;">
-          Access My Portal
+      <!-- Premium CTA Button -->
+      <div style="text-align: center; margin: 36px 0;">
+        <a href="${data.portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #D4A04A 0%, #B8903D 100%); color: #ffffff; font-weight: 700; padding: 18px 48px; border-radius: 8px; text-decoration: none; font-size: 14px; letter-spacing: 0.5px; text-transform: uppercase; box-shadow: 0 4px 14px rgba(212, 160, 74, 0.35);">
+          Access Your Portal
         </a>
       </div>
 
-      <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; text-align: center;">
-        This link expires in 7 days. If you need a new link, please contact ${data.companyName}.
+      <p style="margin: 28px 0 0; color: #888; font-size: 13px; text-align: center; line-height: 1.6;">
+        This secure link expires in 7 days.<br>
+        Need assistance? Contact ${data.companyName} directly.
       </p>
 
       <!-- Divider -->
-      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+      <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
 
-      <!-- Footer -->
-      <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+      <!-- Footer Note -->
+      <p style="margin: 0; color: #aaa; font-size: 12px; text-align: center;">
         If you didn't request this access, you can safely ignore this email.
       </p>
 
     </div>
 
     <!-- Footer -->
-    <div style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 11px;">
-      <p style="margin: 0;">Powered by Omnia LightScape</p>
+    <div style="text-align: center; margin-top: 24px; padding: 0 20px;">
+      <p style="margin: 0; color: #bbb; font-size: 10px;">
+        Powered by Omnia LightScape
+      </p>
     </div>
 
   </div>
@@ -123,14 +133,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Client has no email address' });
     }
 
-    // Get company settings
+    // Get company settings including logo
     const { data: settings } = await supabase
       .from('settings')
-      .select('company_name')
+      .select('company_name, company_logo')
       .eq('user_id', userData.id)
       .single();
 
     const companyName = settings?.company_name || 'Your Lighting Company';
+    const companyLogo = settings?.company_logo || null;
 
     // Generate token
     const token = generateToken();
@@ -167,10 +178,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : 'http://localhost:5173';
     const portalUrl = `${baseUrl}/portal?token=${token}`;
 
-    // Send email
+    // Send email with premium template
     const html = generatePortalInviteHtml({
       clientName: client.name,
       companyName,
+      companyLogo,
       portalUrl
     });
 

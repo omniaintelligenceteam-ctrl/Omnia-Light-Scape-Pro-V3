@@ -118,6 +118,8 @@ export function useClients() {
             phone: c.phone || undefined,
             address: c.address || undefined,
             notes: c.notes || undefined,
+            leadSource: c.lead_source || undefined,
+            marketingCost: c.marketing_cost || undefined,
             createdAt: c.created_at,
             updatedAt: c.updated_at
           }));

@@ -68,10 +68,18 @@ export const ClientPortalLogin: React.FC<ClientPortalLoginProps> = ({ onRequestA
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F6B45A] to-[#E09F45] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#F6B45A]/20">
-            <Mail className="w-8 h-8 text-black" />
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#F6B45A] to-[#E09F45] blur-xl opacity-40" />
+            <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-[#F6B45A] to-[#E09F45] flex items-center justify-center shadow-2xl shadow-[#F6B45A]/30">
+              <Mail className="w-10 h-10 text-black" />
+            </div>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Client Portal</h1>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#F6B45A]/50" />
+            <p className="text-[#F6B45A]/80 text-xs font-medium tracking-wider uppercase">Secure Access</p>
+            <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#F6B45A]/50" />
+          </div>
           <p className="text-gray-400">Enter your email to access your projects</p>
         </div>
 
