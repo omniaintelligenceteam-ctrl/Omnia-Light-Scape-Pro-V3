@@ -4,7 +4,7 @@ import {
   Users,
   DollarSign,
   Clock,
-  Star,
+  TrendingUp,
   ChevronDown,
   ChevronUp,
   AlertCircle,
@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { TechnicianMetrics } from '../../types';
 
-type SortField = 'rank' | 'jobsCompleted' | 'revenue' | 'efficiency' | 'customerRating';
+type SortField = 'rank' | 'jobsCompleted' | 'revenue' | 'efficiency' | 'potentialUtilization';
 type SortDirection = 'asc' | 'desc';
 
 interface TechnicianLeaderboardProps {
@@ -51,30 +51,18 @@ const getEfficiencyColor = (efficiency: number): string => {
   return 'text-red-400';
 };
 
-const getRatingStars = (rating: number | null): React.ReactNode => {
-  if (rating === null) {
-    return <span className="text-xs text-gray-500">N/A</span>;
-  }
-  const fullStars = Math.floor(rating);
-  const hasHalf = rating % 1 >= 0.5;
+const getPotentialColor = (utilization: number): string => {
+  if (utilization >= 85) return 'text-emerald-400';
+  if (utilization >= 70) return 'text-blue-400';
+  if (utilization >= 50) return 'text-amber-400';
+  return 'text-red-400';
+};
 
-  return (
-    <div className="flex items-center gap-0.5">
-      {[...Array(5)].map((_, i) => (
-        <Star
-          key={i}
-          className={`w-3 h-3 ${
-            i < fullStars
-              ? 'text-amber-400 fill-amber-400'
-              : i === fullStars && hasHalf
-              ? 'text-amber-400 fill-amber-400/50'
-              : 'text-gray-600'
-          }`}
-        />
-      ))}
-      <span className="ml-1 text-xs text-gray-400">{rating.toFixed(1)}</span>
-    </div>
-  );
+const getPotentialBgColor = (utilization: number): string => {
+  if (utilization >= 85) return 'bg-emerald-500';
+  if (utilization >= 70) return 'bg-blue-500';
+  if (utilization >= 50) return 'bg-amber-500';
+  return 'bg-red-500';
 };
 
 export const TechnicianLeaderboard: React.FC<TechnicianLeaderboardProps> = ({
@@ -109,8 +97,8 @@ export const TechnicianLeaderboard: React.FC<TechnicianLeaderboardProps> = ({
       case 'efficiency':
         comparison = a.efficiency - b.efficiency;
         break;
-      case 'customerRating':
-        comparison = (a.customerRating || 0) - (b.customerRating || 0);
+      case 'potentialUtilization':
+        comparison = a.potentialUtilization - b.potentialUtilization;
         break;
     }
     return sortDirection === 'asc' ? comparison : -comparison;
@@ -209,7 +197,7 @@ export const TechnicianLeaderboard: React.FC<TechnicianLeaderboardProps> = ({
                 <SortHeader field="efficiency" label="Efficiency" icon={<Zap className="w-3 h-3" />} />
               </th>
               <th className="px-4 py-3 text-right">
-                <SortHeader field="customerRating" label="Rating" icon={<Star className="w-3 h-3" />} />
+                <SortHeader field="potentialUtilization" label="Potential" icon={<TrendingUp className="w-3 h-3" />} />
               </th>
               <th className="px-4 py-3 text-right">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Callbacks</span>
@@ -261,7 +249,17 @@ export const TechnicianLeaderboard: React.FC<TechnicianLeaderboardProps> = ({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  {getRatingStars(tech.customerRating)}
+                  <div className="flex items-center justify-end gap-2">
+                    <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${getPotentialBgColor(tech.potentialUtilization)}`}
+                        style={{ width: `${tech.potentialUtilization}%` }}
+                      />
+                    </div>
+                    <span className={`text-sm font-bold ${getPotentialColor(tech.potentialUtilization)}`}>
+                      {tech.potentialUtilization}
+                    </span>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className={`text-sm ${tech.callbacks > 2 ? 'text-red-400' : 'text-gray-400'}`}>

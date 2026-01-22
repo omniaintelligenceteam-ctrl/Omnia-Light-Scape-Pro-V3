@@ -418,7 +418,7 @@ export interface TechnicianMetrics {
   avgJobTime: number; // hours
   revenue: number;
   efficiency: number; // billable hours / total hours (0-100)
-  customerRating: number | null; // 1-5 stars (null if no review system)
+  potentialUtilization: number; // 1-100 score representing how much of their potential is being used
   callbacks: number;
   rank: number;
 }

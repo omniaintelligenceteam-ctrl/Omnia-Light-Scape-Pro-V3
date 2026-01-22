@@ -113,8 +113,17 @@ export function useTechnicianMetrics(
             ? 80 // Default for techs with jobs but no time tracking
             : 0;
 
-        // Customer rating - placeholder until review system is added
-        const customerRating = jobsCompleted > 0 ? null : null; // null = N/A
+        // Calculate potential utilization (1-100)
+        // Composite score based on: efficiency, jobs completed, revenue, and low callbacks
+        // This represents how much of their potential capacity is being used
+        const potentialUtilization = jobsCompleted > 0
+          ? Math.min(100, Math.round(
+              (efficiency * 0.4) +                    // 40% weight on efficiency
+              (Math.min(jobsCompleted * 8, 30)) +     // 30% weight on job volume (capped)
+              (Math.min((revenue / 1000) * 0.3, 20)) + // 20% weight on revenue generation
+              (10)                                     // 10% baseline for active techs
+            ))
+          : 0;
 
         // Callbacks count - placeholder until callback tracking added
         const callbacks = 0;
@@ -132,7 +141,7 @@ export function useTechnicianMetrics(
           avgJobTime: Math.round(avgJobTime * 10) / 10, // Round to 1 decimal
           revenue: Math.round(revenue),
           efficiency: Math.round(efficiency),
-          customerRating,
+          potentialUtilization,
           callbacks,
           rank: 0 // Will be set after sorting
         };

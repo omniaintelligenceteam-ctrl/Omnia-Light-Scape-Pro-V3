@@ -71,7 +71,7 @@ const generateMockTechnicianMetrics = (technicians: Technician[], locations: Loc
       avgJobTime: Math.random() * 2 + 2,
       revenue: Math.floor(Math.random() * 30000) + 10000,
       efficiency: Math.floor(Math.random() * 25) + 70,
-      customerRating: Math.random() * 1.5 + 3.5,
+      potentialUtilization: Math.floor(Math.random() * 30) + 65,
       callbacks: Math.floor(Math.random() * 4),
       rank: idx + 1
     };
