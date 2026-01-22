@@ -14,10 +14,10 @@ export function useCashFlowForecast({ projects }: UseCashFlowForecastProps): Cas
     // ============================================
 
     // Get all projects with both invoice sent and paid dates
-    const paidProjects = projects.filter(p => p.invoiceSentAt && p.invoicePaidAt);
+    const paidProjects = projects.filter(p => p.invoice_sent_at && p.invoicePaidAt);
 
     const paymentDelays = paidProjects.map(p => {
-      const sentDate = new Date(p.invoiceSentAt!);
+      const sentDate = new Date(p.invoice_sent_at!);
       const paidDate = new Date(p.invoicePaidAt!);
       return Math.floor((paidDate.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
     });
@@ -63,10 +63,10 @@ export function useCashFlowForecast({ projects }: UseCashFlowForecastProps): Cas
     // ============================================
 
     // Get outstanding invoices (sent but not paid)
-    const outstandingInvoices = projects.filter(p => p.invoiceSentAt && !p.invoicePaidAt);
+    const outstandingInvoices = projects.filter(p => p.invoice_sent_at && !p.invoicePaidAt);
 
     const currentDSODelays = outstandingInvoices.map(p => {
-      const sentDate = new Date(p.invoiceSentAt!);
+      const sentDate = new Date(p.invoice_sent_at!);
       return Math.floor((now.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
     });
 
@@ -89,7 +89,7 @@ export function useCashFlowForecast({ projects }: UseCashFlowForecastProps): Cas
       });
 
       const monthDelays = monthPaidProjects.map(p => {
-        const sentDate = new Date(p.invoiceSentAt!);
+        const sentDate = new Date(p.invoice_sent_at!);
         const paidDate = new Date(p.invoicePaidAt!);
         return Math.floor((paidDate.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
       });
@@ -160,7 +160,7 @@ export function useCashFlowForecast({ projects }: UseCashFlowForecastProps): Cas
 
         // Project payments from outstanding invoices
         outstandingInvoices.forEach(p => {
-          const sentDate = new Date(p.invoiceSentAt!);
+          const sentDate = new Date(p.invoice_sent_at!);
           const projectedPaymentDate = new Date(sentDate);
           projectedPaymentDate.setDate(sentDate.getDate() + averagePaymentDelay);
 
@@ -173,7 +173,7 @@ export function useCashFlowForecast({ projects }: UseCashFlowForecastProps): Cas
         const scheduledProjects = projects.filter(p =>
           p.status === 'scheduled' &&
           p.schedule?.scheduledDate &&
-          !p.invoiceSentAt
+          !p.invoice_sent_at
         );
 
         scheduledProjects.forEach(p => {

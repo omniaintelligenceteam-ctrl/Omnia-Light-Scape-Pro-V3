@@ -61,8 +61,8 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     };
 
     // Calculate goals progress
-    const revenueGoal = goals.find(g => g.type === 'revenue' && g.period === 'yearly');
-    const projectsGoal = goals.find(g => g.type === 'projects' && g.period === 'yearly');
+    const revenueGoal = goals.find(g => g.goalType === 'revenue' && g.periodType === 'yearly');
+    const projectsGoal = goals.find(g => g.goalType === 'projects_completed' && g.periodType === 'yearly');
 
     const reportData: ReportData = {
       companyProfile,
@@ -71,10 +71,10 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
       projects: paidProjects,
       projectsByStatus,
       goals: {
-        revenueGoal: revenueGoal?.target,
-        revenueProgress: revenueGoal?.current,
-        projectsGoal: projectsGoal?.target,
-        projectsProgress: projectsGoal?.current
+        revenueGoal: revenueGoal?.targetValue,
+        revenueProgress: undefined, // BusinessGoal doesn't track current value
+        projectsGoal: projectsGoal?.targetValue,
+        projectsProgress: undefined // BusinessGoal doesn't track current value
       }
     };
 

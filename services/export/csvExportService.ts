@@ -27,15 +27,10 @@ export function exportRevenueReportCSV(projects: SavedProject[], dateRange?: Dat
       'Client Email': p.quote?.clientDetails?.email || 'N/A',
       'Client Phone': p.quote?.clientDetails?.phone || 'N/A',
       'Status': p.status,
-      'Quote Date': p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A',
-      'Quote Sent': p.quoteSentAt ? new Date(p.quoteSentAt).toLocaleDateString() : 'N/A',
-      'Approved Date': p.quoteApprovedAt ? new Date(p.quoteApprovedAt).toLocaleDateString() : 'N/A',
+      'Quote Date': p.date ? new Date(p.date).toLocaleDateString() : 'N/A',
       'Scheduled Date': p.schedule?.scheduledDate ? new Date(p.schedule.scheduledDate).toLocaleDateString() : 'N/A',
-      'Completed Date': p.completedAt ? new Date(p.completedAt).toLocaleDateString() : 'N/A',
-      'Invoice Sent': p.invoiceSentAt ? new Date(p.invoiceSentAt).toLocaleDateString() : 'N/A',
+      'Invoice Sent': p.invoice_sent_at ? new Date(p.invoice_sent_at).toLocaleDateString() : 'N/A',
       'Invoice Paid': p.invoicePaidAt ? new Date(p.invoicePaidAt).toLocaleDateString() : 'N/A',
-      'Subtotal': p.quote?.subtotal || 0,
-      'Tax': p.quote?.tax || 0,
       'Discount': p.quote?.discount || 0,
       'Total Revenue': p.quote?.total || 0,
       'Location': p.quote?.clientDetails?.address || 'N/A'
@@ -54,16 +49,12 @@ export function exportProjectsCSV(projects: SavedProject[]): void {
     'Client Email': p.quote?.clientDetails?.email || 'N/A',
     'Client Phone': p.quote?.clientDetails?.phone || 'N/A',
     'Status': p.status,
-    'Created': p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A',
-    'Quote Sent': p.quoteSentAt ? new Date(p.quoteSentAt).toLocaleDateString() : 'N/A',
-    'Approved': p.quoteApprovedAt ? new Date(p.quoteApprovedAt).toLocaleDateString() : 'N/A',
+    'Created': p.date ? new Date(p.date).toLocaleDateString() : 'N/A',
     'Scheduled': p.schedule?.scheduledDate ? new Date(p.schedule.scheduledDate).toLocaleDateString() : 'N/A',
-    'Completed': p.completedAt ? new Date(p.completedAt).toLocaleDateString() : 'N/A',
-    'Invoice Sent': p.invoiceSentAt ? new Date(p.invoiceSentAt).toLocaleDateString() : 'N/A',
+    'Invoice Sent': p.invoice_sent_at ? new Date(p.invoice_sent_at).toLocaleDateString() : 'N/A',
     'Invoice Paid': p.invoicePaidAt ? new Date(p.invoicePaidAt).toLocaleDateString() : 'N/A',
     'Total': p.quote?.total || 0,
-    'Address': p.quote?.clientDetails?.address || 'N/A',
-    'Notes': p.notes || ''
+    'Address': p.quote?.clientDetails?.address || 'N/A'
   }));
 
   const csv = Papa.unparse(data);
@@ -94,14 +85,12 @@ export function exportClientsCSV(clients: Client[]): void {
 export function exportGoalsCSV(goals: BusinessGoal[]): void {
   const data = goals.map(g => ({
     'Goal ID': g.id,
-    'Type': g.type,
-    'Period': g.period,
-    'Target': g.target,
-    'Current': g.current,
-    'Progress %': ((g.current / g.target) * 100).toFixed(1),
-    'Status': g.current >= g.target ? 'Achieved' : 'In Progress',
-    'Start Date': new Date(g.startDate).toLocaleDateString(),
-    'End Date': new Date(g.endDate).toLocaleDateString(),
+    'Type': g.goalType,
+    'Period': g.periodType,
+    'Target': g.targetValue,
+    'Year': g.year,
+    'Month': g.month || 'N/A',
+    'Quarter': g.quarter || 'N/A',
     'Created': new Date(g.createdAt).toLocaleDateString()
   }));
 

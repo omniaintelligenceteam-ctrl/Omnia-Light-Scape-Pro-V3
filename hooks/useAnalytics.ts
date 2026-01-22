@@ -108,6 +108,16 @@ interface AnalyticsResult {
   overdueCount: number;
   conversionRate: number;
   avgProjectValue: number;
+
+  // Date range and comparison
+  getMetricsForDateRange: (startDate: Date, endDate: Date) => {
+    revenue: number;
+    projects: number;
+    clients: number;
+    averageTicket: number;
+  };
+  compareMonths: (month1: number, year1: number, month2: number, year2: number) => any;
+  compareYears: (year1: number, year2: number) => any;
 }
 
 export function useAnalytics({ projects, clients, goals }: UseAnalyticsProps): AnalyticsResult {
@@ -557,8 +567,8 @@ export function useAnalytics({ projects, clients, goals }: UseAnalyticsProps): A
 
       return {
         current: {
-          revenue: month1Metrics.revenue,
-          projects: month1Metrics.completedJobs,
+          revenue: month1Metrics.revenueActual,
+          projects: month1Metrics.projectsCompleted,
           clients: clients.filter(c => {
             const d = new Date(c.createdAt);
             return isInMonth(d, month1, year1);
@@ -566,8 +576,8 @@ export function useAnalytics({ projects, clients, goals }: UseAnalyticsProps): A
           label: new Date(year1, month1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
         },
         previous: {
-          revenue: month2Metrics.revenue,
-          projects: month2Metrics.completedJobs,
+          revenue: month2Metrics.revenueActual,
+          projects: month2Metrics.projectsCompleted,
           clients: clients.filter(c => {
             const d = new Date(c.createdAt);
             return isInMonth(d, month2, year2);
@@ -586,8 +596,8 @@ export function useAnalytics({ projects, clients, goals }: UseAnalyticsProps): A
 
       return {
         current: {
-          revenue: year1Metrics.revenue,
-          projects: year1Metrics.completedJobs,
+          revenue: year1Metrics.yearToDateRevenue,
+          projects: year1Metrics.totalProjects,
           clients: clients.filter(c => {
             const d = new Date(c.createdAt);
             return d.getFullYear() === year1;
@@ -595,8 +605,8 @@ export function useAnalytics({ projects, clients, goals }: UseAnalyticsProps): A
           label: year1.toString()
         },
         previous: {
-          revenue: year2Metrics.revenue,
-          projects: year2Metrics.completedJobs,
+          revenue: year2Metrics.yearToDateRevenue,
+          projects: year2Metrics.totalProjects,
           clients: clients.filter(c => {
             const d = new Date(c.createdAt);
             return d.getFullYear() === year2;

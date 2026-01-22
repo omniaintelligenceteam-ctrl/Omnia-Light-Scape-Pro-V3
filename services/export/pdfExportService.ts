@@ -46,7 +46,7 @@ export function generatePDFReport(data: ReportData): void {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  const companyName = data.companyProfile?.companyName || 'Business Report';
+  const companyName = data.companyProfile?.name || 'Business Report';
   doc.text(companyName, pageWidth / 2, 18, { align: 'center' });
 
   doc.setFontSize(10);

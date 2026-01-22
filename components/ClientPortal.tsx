@@ -329,7 +329,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
             >
               <MessageCircle className="w-4 h-4" />
               Messages
-              {(data?.unreadMessageCount || 0) > 0 && (
+              {data && data.unreadMessageCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
                   {data.unreadMessageCount}
                 </span>
@@ -603,9 +603,9 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
                     senderName: session.clientName
                   })
                 });
-                if (response.ok) {
+                if (response.ok && session) {
                   // Refresh data to show new message
-                  fetchPortalData();
+                  loadData(session.clientId, session.token);
                 }
               }}
               onMarkRead={(messageIds: string[]) => {
