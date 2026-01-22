@@ -27,3 +27,4 @@ Vite, React, TypeScript, Tailwind, Supabase, Clerk, Stripe, Gemini API
 ## Before Creating New Code
 - Check existing components/hooks/utils for similar patterns
 - Prefer extending existing code over creating new files
+- All simple tasks, give it to sonnet to do

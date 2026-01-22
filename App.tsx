@@ -472,6 +472,10 @@ const App: React.FC = () => {
   const [showProjectDetailModal, setShowProjectDetailModal] = useState(false);
   const [viewProjectId, setViewProjectId] = useState<string | null>(null);
 
+  // Client Projects Modal State (for viewing all projects for a client)
+  const [showClientProjectsModal, setShowClientProjectsModal] = useState(false);
+  const [viewClientId, setViewClientId] = useState<string | null>(null);
+
   // Calendar Events State (from Supabase)
   const { events: calendarEvents, createEvent, updateEvent: updateCalendarEvent, deleteEvent } = useCalendarEvents();
   const [showEventModal, setShowEventModal] = useState(false);
@@ -6129,13 +6133,19 @@ Notes: ${invoice.notes || 'N/A'}
                              </motion.div>
                          ) : (
                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                 {filteredClients.map((client, index) => (
+                                 {filteredClients.map((client, index) => {
+                                     const clientProjectCount = projects.filter(p => p.clientId === client.id).length;
+                                     return (
                                      <motion.div
                                          key={client.id}
                                          initial={{ opacity: 0, y: 20 }}
                                          animate={{ opacity: 1, y: 0 }}
                                          transition={{ delay: index * 0.05 }}
-                                         className="group bg-gradient-to-b from-[#151515] to-[#111] border border-white/5 rounded-2xl p-5 hover:border-purple-500/30 transition-all"
+                                         className="group bg-gradient-to-b from-[#151515] to-[#111] border border-white/5 rounded-2xl p-5 hover:border-purple-500/30 transition-all cursor-pointer"
+                                         onClick={() => {
+                                             setViewClientId(client.id);
+                                             setShowClientProjectsModal(true);
+                                         }}
                                      >
                                          <div className="flex items-start justify-between mb-4">
                                              <div className="flex items-center gap-3">
@@ -6143,17 +6153,17 @@ Notes: ${invoice.notes || 'N/A'}
                                                      <User className="w-6 h-6 text-purple-400" />
                                                  </div>
                                                  <div>
-                                                     <h4 className="font-bold text-white">{client.name}</h4>
+                                                     <h4 className="font-bold text-white group-hover:text-purple-300 transition-colors">{client.name}</h4>
                                                      {client.email && (
-                                                         <a href={`mailto:${client.email}`} className="text-xs text-purple-400 hover:underline">
+                                                         <span className="text-xs text-purple-400">
                                                              {client.email}
-                                                         </a>
+                                                         </span>
                                                      )}
                                                  </div>
                                              </div>
                                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                  <button
-                                                     onClick={() => handleSendPortalInvite(client)}
+                                                     onClick={(e) => { e.stopPropagation(); handleSendPortalInvite(client); }}
                                                      disabled={!client.email || sendingPortalInvite === client.id}
                                                      className="p-2 hover:bg-emerald-500/10 rounded-lg text-gray-400 hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed"
                                                      title={client.email ? 'Send Portal Invite' : 'No email address'}
@@ -6165,13 +6175,13 @@ Notes: ${invoice.notes || 'N/A'}
                                                      )}
                                                  </button>
                                                  <button
-                                                     onClick={() => handleOpenClientModal(client)}
+                                                     onClick={(e) => { e.stopPropagation(); handleOpenClientModal(client); }}
                                                      className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
                                                  >
                                                      <Edit className="w-4 h-4" />
                                                  </button>
                                                  <button
-                                                     onClick={() => handleDeleteClient(client.id)}
+                                                     onClick={(e) => { e.stopPropagation(); handleDeleteClient(client.id); }}
                                                      className="p-2 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-400"
                                                  >
                                                      <Trash2 className="w-4 h-4" />
@@ -6179,7 +6189,7 @@ Notes: ${invoice.notes || 'N/A'}
                                              </div>
                                          </div>
 
-                                         <div className="space-y-2 text-sm">
+                                         <div className="space-y-2 text-sm" onClick={(e) => e.stopPropagation()}>
                                              {client.phone && (
                                                  <div className="flex items-center gap-2 text-gray-400">
                                                      <Phone className="w-4 h-4" />
@@ -6199,8 +6209,21 @@ Notes: ${invoice.notes || 'N/A'}
                                                  <p className="text-xs text-gray-500 line-clamp-2">{client.notes}</p>
                                              </div>
                                          )}
+
+                                         {/* Projects Count Badge */}
+                                         <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                                             <div className="flex items-center gap-2 text-xs text-gray-400">
+                                                 <FolderPlus className="w-3.5 h-3.5" />
+                                                 <span>{clientProjectCount} project{clientProjectCount !== 1 ? 's' : ''}</span>
+                                             </div>
+                                             <div className="flex items-center gap-1 text-xs text-purple-400 group-hover:text-purple-300">
+                                                 <span>View</span>
+                                                 <ChevronRight className="w-3.5 h-3.5" />
+                                             </div>
+                                         </div>
                                      </motion.div>
-                                 ))}
+                                     );
+                                 })}
                              </div>
                          )}
                      </>
@@ -6969,6 +6992,192 @@ Notes: ${invoice.notes || 'N/A'}
                 <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10 sticky bottom-0 bg-[#111]/95 backdrop-blur-sm">
                   <motion.button
                     onClick={() => setShowProjectDetailModal(false)}
+                    className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Close
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Client Projects Modal (View all projects for a client) */}
+      <AnimatePresence>
+        {showClientProjectsModal && viewClientId && (() => {
+          const client = clients.find(c => c.id === viewClientId);
+          if (!client) return null;
+
+          const clientProjects = projects.filter(p => p.clientId === viewClientId);
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowClientProjectsModal(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-4 border-b border-white/10 sticky top-0 bg-[#111]/95 backdrop-blur-sm z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <User className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{client.name}</h3>
+                      <p className="text-xs text-gray-400">
+                        {clientProjects.length} project{clientProjects.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={() => setShowClientProjectsModal(false)}
+                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-5 h-5 text-gray-400" />
+                  </motion.button>
+                </div>
+
+                {/* Client Info */}
+                <div className="p-4 border-b border-white/10 bg-white/5">
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    {client.email && (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <Mail className="w-4 h-4" />
+                        <span>{client.email}</span>
+                      </div>
+                    )}
+                    {client.phone && (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <Phone className="w-4 h-4" />
+                        <span>{client.phone}</span>
+                      </div>
+                    )}
+                    {client.address && (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <MapPin className="w-4 h-4" />
+                        <span>{client.address}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Modal Content - Projects List */}
+                <div className="p-4">
+                  {clientProjects.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="w-16 h-16 rounded-full bg-gray-500/10 flex items-center justify-center mb-4 border border-gray-500/20">
+                        <FolderPlus className="w-7 h-7 text-gray-400/60" />
+                      </div>
+                      <p className="font-bold text-lg text-white font-serif mb-2">No Projects Yet</p>
+                      <p className="text-sm text-gray-400">This client doesn't have any projects.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {clientProjects.map((project) => {
+                        const primaryImage = project.images && project.images.length > 0 ? project.images[0].url : project.image;
+                        const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+                          draft: { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30' },
+                          quoted: { bg: 'bg-purple-500/20', text: 'text-purple-300', border: 'border-purple-500/30' },
+                          approved: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-500/30' },
+                          scheduled: { bg: 'bg-blue-500/20', text: 'text-blue-300', border: 'border-blue-500/30' },
+                          completed: { bg: 'bg-[#F6B45A]/20', text: 'text-[#F6B45A]', border: 'border-[#F6B45A]/30' },
+                        };
+                        const colors = statusColors[project.status] || statusColors.draft;
+
+                        return (
+                          <motion.div
+                            key={project.id}
+                            onClick={() => {
+                              setShowClientProjectsModal(false);
+                              setViewProjectId(project.id);
+                              setShowProjectDetailModal(true);
+                            }}
+                            className="group bg-gradient-to-b from-[#151515] to-[#111] border border-white/10 rounded-xl overflow-hidden cursor-pointer hover:border-purple-500/30 transition-all"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {/* Project Image */}
+                            {primaryImage ? (
+                              <div className="relative h-40 overflow-hidden">
+                                <img
+                                  src={primaryImage}
+                                  alt={project.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                <div className="absolute top-2 right-2">
+                                  <span className={`px-2 py-1 ${colors.bg} ${colors.text} ${colors.border} border rounded-full text-xs font-medium`}>
+                                    {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="h-32 bg-gradient-to-br from-purple-500/10 to-pink-500/10 flex items-center justify-center">
+                                <FileText className="w-8 h-8 text-gray-500" />
+                              </div>
+                            )}
+
+                            {/* Project Info */}
+                            <div className="p-4">
+                              <h4 className="font-semibold text-white mb-1 group-hover:text-purple-300 transition-colors">
+                                {project.name}
+                              </h4>
+                              <p className="text-xs text-gray-400 mb-3">
+                                Created {new Date(project.date).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </p>
+
+                              {/* Quote Total */}
+                              {project.quote && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-gray-400">Quote Total</span>
+                                  <span className="text-[#F6B45A] font-bold">
+                                    ${project.quote.total.toLocaleString()}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Schedule Info */}
+                              {project.schedule && (
+                                <div className="flex items-center gap-2 mt-2 text-xs text-blue-400">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>
+                                    {new Date(project.schedule.scheduledDate).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10 sticky bottom-0 bg-[#111]/95 backdrop-blur-sm">
+                  <motion.button
+                    onClick={() => setShowClientProjectsModal(false)}
                     className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
