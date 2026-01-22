@@ -467,6 +467,10 @@ const App: React.FC = () => {
   const [completionNotes, setCompletionNotes] = useState<string>('');
   const [autoGenerateInvoice, setAutoGenerateInvoice] = useState(false);
 
+  // Project Detail Modal State (for viewing from Schedule)
+  const [showProjectDetailModal, setShowProjectDetailModal] = useState(false);
+  const [viewProjectId, setViewProjectId] = useState<string | null>(null);
+
   // Calendar Events State (from Supabase)
   const { events: calendarEvents, createEvent, updateEvent: updateCalendarEvent, deleteEvent } = useCalendarEvents();
   const [showEventModal, setShowEventModal] = useState(false);
@@ -6217,10 +6221,10 @@ Notes: ${invoice.notes || 'N/A'}
                     projects={projects}
                     selectedDate={selectedCalendarDate}
                     onDateSelect={setSelectedCalendarDate}
-                    onViewProject={(_project) => {
-                      // Navigate to projects tab and select the project
-                      handleTabChange('projects');
-                      setProjectsSubTab('pipeline'); setPipelineStatusFilter('active');
+                    onViewProject={(project) => {
+                      // Open project detail modal to show quote and photo
+                      setViewProjectId(project.id);
+                      setShowProjectDetailModal(true);
                     }}
                     onReschedule={(project) => {
                       // Open schedule modal with existing data
@@ -6721,6 +6725,236 @@ Notes: ${invoice.notes || 'N/A'}
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Project Detail Modal (View from Schedule) */}
+      <AnimatePresence>
+        {showProjectDetailModal && viewProjectId && (() => {
+          const project = projects.find(p => p.id === viewProjectId);
+          if (!project) return null;
+
+          const primaryImage = project.images && project.images.length > 0 ? project.images[0].url : project.image;
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowProjectDetailModal(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-4 border-b border-white/10 sticky top-0 bg-[#111]/95 backdrop-blur-sm z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#F6B45A]/20 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-[#F6B45A]" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{project.name}</h3>
+                      <p className="text-xs text-gray-400">
+                        {project.quote?.clientDetails?.name || 'No client info'}
+                      </p>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={() => setShowProjectDetailModal(false)}
+                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-5 h-5 text-gray-400" />
+                  </motion.button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-4 space-y-6">
+                  {/* Project Image */}
+                  {primaryImage && (
+                    <div className="relative rounded-xl overflow-hidden border border-white/10">
+                      <img
+                        src={primaryImage}
+                        alt={project.name}
+                        className="w-full h-64 md:h-96 object-cover"
+                      />
+                      <div className="absolute top-3 right-3">
+                        <span className="px-3 py-1 bg-black/60 backdrop-blur-sm rounded-full text-xs text-white font-medium border border-white/10">
+                          {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Schedule Info */}
+                  {project.schedule && (
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-blue-400">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-sm font-semibold">Scheduled Installation</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-400">Date:</span>
+                          <p className="text-white font-medium">
+                            {new Date(project.schedule.scheduledDate).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Time:</span>
+                          <p className="text-white font-medium">
+                            {formatTimeSlot(project.schedule.timeSlot, project.schedule.customTime)}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Duration:</span>
+                          <p className="text-white font-medium">{project.schedule.estimatedDuration} hours</p>
+                        </div>
+                        {project.schedule.installationNotes && (
+                          <div className="col-span-2">
+                            <span className="text-gray-400">Notes:</span>
+                            <p className="text-white">{project.schedule.installationNotes}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quote Details */}
+                  {project.quote && (
+                    <div className="space-y-4">
+                      <h4 className="text-white font-semibold text-lg flex items-center gap-2">
+                        <Receipt className="w-5 h-5 text-[#F6B45A]" />
+                        Quote Details
+                      </h4>
+
+                      {/* Client Details */}
+                      <div className="bg-white/5 rounded-xl p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <User className="w-5 h-5 text-gray-400 mt-0.5" />
+                          <div className="flex-1 space-y-1">
+                            <p className="text-white font-medium">{project.quote.clientDetails.name}</p>
+                            <p className="text-sm text-gray-400 flex items-center gap-2">
+                              <Mail className="w-4 h-4" />
+                              {project.quote.clientDetails.email}
+                            </p>
+                            {project.quote.clientDetails.phone && (
+                              <p className="text-sm text-gray-400 flex items-center gap-2">
+                                <Phone className="w-4 h-4" />
+                                {project.quote.clientDetails.phone}
+                              </p>
+                            )}
+                            {project.quote.clientDetails.address && (
+                              <p className="text-sm text-gray-400 flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                {project.quote.clientDetails.address}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Line Items */}
+                      {project.quote.lineItems && project.quote.lineItems.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-400 font-medium">Line Items</p>
+                          <div className="bg-white/5 rounded-xl overflow-hidden border border-white/10">
+                            {project.quote.lineItems.map((item, idx) => (
+                              <div
+                                key={item.id}
+                                className={`p-3 flex items-center justify-between ${
+                                  idx !== project.quote!.lineItems.length - 1 ? 'border-b border-white/5' : ''
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <p className="text-white text-sm font-medium">{item.name}</p>
+                                  {item.description && (
+                                    <p className="text-xs text-gray-400 mt-0.5">{item.description}</p>
+                                  )}
+                                </div>
+                                <div className="text-right ml-4">
+                                  <p className="text-white text-sm">
+                                    {item.quantity} × ${item.unitPrice.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    ${(item.quantity * item.unitPrice).toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Quote Summary */}
+                      <div className="bg-gradient-to-r from-[#F6B45A]/10 to-[#F6B45A]/5 border border-[#F6B45A]/20 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-300">Subtotal</span>
+                          <span className="text-white font-medium">
+                            ${(project.quote.total / (1 + project.quote.taxRate / 100) + (project.quote.discount || 0)).toFixed(2)}
+                          </span>
+                        </div>
+                        {project.quote.discount && project.quote.discount > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-300">Discount</span>
+                            <span className="text-emerald-400 font-medium">-${project.quote.discount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-300">Tax ({project.quote.taxRate}%)</span>
+                          <span className="text-white font-medium">
+                            ${((project.quote.total / (1 + project.quote.taxRate / 100)) * (project.quote.taxRate / 100)).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="pt-2 border-t border-[#F6B45A]/20">
+                          <div className="flex items-center justify-between">
+                            <span className="text-white font-semibold">Total</span>
+                            <span className="text-[#F6B45A] font-bold text-xl">
+                              ${project.quote.total.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No Quote Message */}
+                  {!project.quote && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-amber-400 font-medium text-sm">No Quote Available</p>
+                        <p className="text-gray-400 text-xs mt-1">This project doesn't have a quote generated yet.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10 sticky bottom-0 bg-[#111]/95 backdrop-blur-sm">
+                  <motion.button
+                    onClick={() => setShowProjectDetailModal(false)}
+                    className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Close
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Event Modal */}
