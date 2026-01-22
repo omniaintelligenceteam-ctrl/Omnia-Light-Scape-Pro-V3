@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
   UserPlus,
@@ -12,7 +13,12 @@ import {
   AlertCircle,
   ChevronDown,
   X,
-  Search
+  Search,
+  Edit3,
+  Save,
+  UserCheck,
+  Building2,
+  TrendingUp
 } from 'lucide-react';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { useLocations } from '../../hooks/useLocations';
@@ -59,11 +65,66 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
   const [isSending, setIsSending] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
+  // Bulk Invite State
+  const [showBulkInvite, setShowBulkInvite] = useState(false);
+  const [bulkEmails, setBulkEmails] = useState('');
+  const [bulkRole, setBulkRole] = useState<Exclude<OrganizationRole, 'owner'>>('salesperson');
+  const [bulkLocationId, setBulkLocationId] = useState<string>('');
+  const [isBulkSending, setIsBulkSending] = useState(false);
+  const [bulkResults, setBulkResults] = useState<{ successful: number; failed: number } | null>(null);
+
+  // Show permissions matrix
+  const [showPermissions, setShowPermissions] = useState(false);
+
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | OrganizationRole>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending'>('all');
   const [locationFilter, setLocationFilter] = useState<'all' | 'all-access' | string>('all');
+
+  // Parse bulk emails
+  const parsedEmails = useMemo(() => {
+    return bulkEmails
+      .split(/[\n,]+/)
+      .map(email => email.trim())
+      .filter(email => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+  }, [bulkEmails]);
+
+  const handleBulkInvite = async () => {
+    if (parsedEmails.length === 0) return;
+
+    setIsBulkSending(true);
+    setBulkResults(null);
+
+    const results = await Promise.allSettled(
+      parsedEmails.map(email =>
+        sendInvite(email, bulkRole, bulkLocationId || undefined)
+      )
+    );
+
+    const successful = results.filter(r => r.status === 'fulfilled' && (r.value as any)?.inviteLink).length;
+    const failed = results.length - successful;
+
+    setBulkResults({ successful, failed });
+    setIsBulkSending(false);
+
+    if (successful > 0 && failed === 0) {
+      // All succeeded, close after delay
+      setTimeout(() => {
+        setShowBulkInvite(false);
+        setBulkEmails('');
+        setBulkResults(null);
+      }, 2000);
+    }
+  };
+
+  const handleCloseBulkInvite = () => {
+    setShowBulkInvite(false);
+    setBulkEmails('');
+    setBulkRole('salesperson');
+    setBulkLocationId('');
+    setBulkResults(null);
+  };
 
   const handleSendInvite = async () => {
     if (!inviteEmail.trim()) return;
@@ -138,6 +199,29 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
   const editableMembers = members.filter(m => m.role !== 'owner');
   const ownerMember = members.find(m => m.role === 'owner');
 
+  // Team capacity calculations
+  const teamStats = useMemo(() => {
+    const activeMembers = members.filter(m => m.isActive);
+    const roleBreakdown = {
+      admin: activeMembers.filter(m => m.role === 'admin').length,
+      salesperson: activeMembers.filter(m => m.role === 'salesperson').length,
+      lead_technician: activeMembers.filter(m => m.role === 'lead_technician').length,
+      technician: activeMembers.filter(m => m.role === 'technician').length
+    };
+
+    const locationsWithMembers = new Set(
+      activeMembers.filter(m => m.locationId).map(m => m.locationId)
+    ).size;
+
+    return {
+      totalActive: activeMembers.length,
+      pendingInvites: invites.length,
+      locationsWithMembers,
+      totalLocations: locations?.length || 0,
+      roleBreakdown
+    };
+  }, [members, invites, locations]);
+
   // Filtered Members
   const filteredMembers = useMemo(() => {
     let filtered = editableMembers || [];
@@ -196,14 +280,24 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
         </div>
 
         {isOwner && (
-          <button
-            onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F6B45A] text-black font-medium
-              hover:bg-[#f6c45a] transition-colors"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Invite</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowBulkInvite(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-medium
+                hover:bg-white/10 transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              <span>Bulk Invite</span>
+            </button>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F6B45A] text-black font-medium
+                hover:bg-[#f6c45a] transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Invite</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -274,6 +368,161 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
           Showing {statusFilter === 'pending' ? filteredInvites.length : filteredMembers.length} of {statusFilter === 'pending' ? invites.length : editableMembers.length} {statusFilter === 'pending' ? 'invites' : 'members'}
         </p>
       )}
+
+      {/* Team Capacity Dashboard */}
+      <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-white/10">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-purple-400" />
+            Team Overview
+          </h4>
+          <button
+            onClick={() => setShowPermissions(!showPermissions)}
+            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            {showPermissions ? 'Hide' : 'View'} Role Permissions
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+            <UserCheck className="w-5 h-5 text-blue-400 mb-2" />
+            <p className="text-xl font-bold text-white">{teamStats.totalActive}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Active Members</p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+            <Clock className="w-5 h-5 text-yellow-400 mb-2" />
+            <p className="text-xl font-bold text-white">{teamStats.pendingInvites}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Pending Invites</p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+            <Building2 className="w-5 h-5 text-emerald-400 mb-2" />
+            <p className="text-xl font-bold text-white">
+              {teamStats.locationsWithMembers}/{teamStats.totalLocations}
+            </p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Location Coverage</p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+            <Users className="w-5 h-5 text-purple-400 mb-2" />
+            <p className="text-xl font-bold text-white">
+              {teamStats.roleBreakdown.technician + teamStats.roleBreakdown.lead_technician}
+            </p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Field Techs</p>
+          </div>
+        </div>
+
+        {/* Role Breakdown */}
+        <div className="flex flex-wrap gap-2">
+          {teamStats.roleBreakdown.admin > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+              <div className="w-2 h-2 rounded-full bg-purple-400" />
+              <span className="text-xs text-gray-300">Office Managers: {teamStats.roleBreakdown.admin}</span>
+            </div>
+          )}
+          {teamStats.roleBreakdown.salesperson > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="w-2 h-2 rounded-full bg-blue-400" />
+              <span className="text-xs text-gray-300">Salespeople: {teamStats.roleBreakdown.salesperson}</span>
+            </div>
+          )}
+          {teamStats.roleBreakdown.lead_technician > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-xs text-gray-300">Lead Techs: {teamStats.roleBreakdown.lead_technician}</span>
+            </div>
+          )}
+          {teamStats.roleBreakdown.technician > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-500/10 border border-gray-500/20 rounded-lg">
+              <div className="w-2 h-2 rounded-full bg-gray-400" />
+              <span className="text-xs text-gray-300">Technicians: {teamStats.roleBreakdown.technician}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Permissions Matrix */}
+        <AnimatePresence>
+          {showPermissions && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Role Permissions</h5>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-gray-500">
+                        <th className="text-left py-2 pr-4 font-medium">Permission</th>
+                        <th className="text-center px-2 py-2 font-medium">Owner</th>
+                        <th className="text-center px-2 py-2 font-medium">Admin</th>
+                        <th className="text-center px-2 py-2 font-medium">Sales</th>
+                        <th className="text-center px-2 py-2 font-medium">Lead</th>
+                        <th className="text-center px-2 py-2 font-medium">Tech</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-gray-300">
+                      <tr className="border-t border-white/5">
+                        <td className="py-2 pr-4">Manage team members</td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                      </tr>
+                      <tr className="border-t border-white/5">
+                        <td className="py-2 pr-4">View all locations</td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><span className="text-yellow-400">Own</span></td>
+                        <td className="text-center px-2"><span className="text-yellow-400">Own</span></td>
+                      </tr>
+                      <tr className="border-t border-white/5">
+                        <td className="py-2 pr-4">Create/edit projects</td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><span className="text-yellow-400">Own</span></td>
+                        <td className="text-center px-2"><span className="text-yellow-400">Assigned</span></td>
+                      </tr>
+                      <tr className="border-t border-white/5">
+                        <td className="py-2 pr-4">View analytics</td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><span className="text-yellow-400">Own</span></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                      </tr>
+                      <tr className="border-t border-white/5">
+                        <td className="py-2 pr-4">Manage billing</td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                      </tr>
+                      <tr className="border-t border-white/5">
+                        <td className="py-2 pr-4">Manage crew</td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                        <td className="text-center px-2"><Check className="w-3 h-3 text-emerald-400 mx-auto" /></td>
+                        <td className="text-center px-2"><X className="w-3 h-3 text-red-400 mx-auto" /></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Owner Card */}
       {ownerMember && (
@@ -513,6 +762,182 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
           </div>
         </div>
       )}
+
+      {/* Bulk Invite Modal */}
+      {showBulkInvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="w-full max-w-lg p-6 rounded-2xl bg-[#1a1a1a] border border-white/10">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-500/20">
+                  <Users className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Bulk Invite Team Members</h3>
+                  <p className="text-xs text-gray-500">Invite multiple team members at once</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseBulkInvite}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {!bulkResults ? (
+              <div className="space-y-4">
+                {/* Email Textarea */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Email Addresses</label>
+                  <textarea
+                    value={bulkEmails}
+                    onChange={(e) => setBulkEmails(e.target.value)}
+                    placeholder={"Enter email addresses (one per line or comma-separated)\nemail1@example.com, email2@example.com\nemail3@example.com"}
+                    rows={5}
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#F6B45A]/50 resize-none"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    {parsedEmails.length} valid email{parsedEmails.length !== 1 ? 's' : ''} detected
+                  </p>
+                </div>
+
+                {/* Role Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Role for All</label>
+                  <div className="relative">
+                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <select
+                      value={bulkRole}
+                      onChange={(e) => setBulkRole(e.target.value as Exclude<OrganizationRole, 'owner'>)}
+                      className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10
+                        text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
+                    >
+                      <option value="admin" className="bg-[#1a1a1a]">Office Manager</option>
+                      <option value="salesperson" className="bg-[#1a1a1a]">Salesperson</option>
+                      <option value="lead_technician" className="bg-[#1a1a1a]">Lead Technician</option>
+                      <option value="technician" className="bg-[#1a1a1a]">Technician</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">{ROLE_DESCRIPTIONS[bulkRole]}</p>
+                </div>
+
+                {/* Location (for technicians) */}
+                {(bulkRole === 'technician' || bulkRole === 'lead_technician') && locations.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Location (Optional)</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <select
+                        value={bulkLocationId}
+                        onChange={(e) => setBulkLocationId(e.target.value)}
+                        className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10
+                          text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
+                      >
+                        <option value="" className="bg-[#1a1a1a]">All Locations</option>
+                        {locations.map((loc) => (
+                          <option key={loc.id} value={loc.id} className="bg-[#1a1a1a]">
+                            {loc.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview */}
+                {parsedEmails.length > 0 && (
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 max-h-32 overflow-y-auto">
+                    <p className="text-xs text-gray-500 mb-2">Preview ({parsedEmails.length} invites):</p>
+                    <div className="space-y-1">
+                      {parsedEmails.map((email, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-sm text-gray-300">
+                          <Mail className="w-3 h-3 text-gray-500" />
+                          {email}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleBulkInvite}
+                    disabled={parsedEmails.length === 0 || isBulkSending}
+                    className="flex-1 py-3 rounded-xl bg-[#F6B45A] text-black font-medium
+                      hover:bg-[#f6c45a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+                      flex items-center justify-center gap-2"
+                  >
+                    {isBulkSending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-black/30 border-t-black" />
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        <span>Send {parsedEmails.length} Invite{parsedEmails.length !== 1 ? 's' : ''}</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleCloseBulkInvite}
+                    className="px-6 py-3 rounded-xl bg-white/10 text-white font-medium
+                      hover:bg-white/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className={`p-4 rounded-xl ${
+                  bulkResults.failed === 0
+                    ? 'bg-emerald-500/10 border border-emerald-500/30'
+                    : 'bg-yellow-500/10 border border-yellow-500/30'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {bulkResults.failed === 0 ? (
+                      <>
+                        <Check className="w-5 h-5 text-emerald-400" />
+                        <span className="font-medium text-emerald-400">All Invites Sent!</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-5 h-5 text-yellow-400" />
+                        <span className="font-medium text-yellow-400">Partially Completed</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-400 space-y-1">
+                    <p className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      {bulkResults.successful} invite{bulkResults.successful !== 1 ? 's' : ''} sent successfully
+                    </p>
+                    {bulkResults.failed > 0 && (
+                      <p className="flex items-center gap-2">
+                        <X className="w-4 h-4 text-red-400" />
+                        {bulkResults.failed} invite{bulkResults.failed !== 1 ? 's' : ''} failed
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCloseBulkInvite}
+                  className="w-full py-3 rounded-xl bg-white/10 text-white font-medium
+                    hover:bg-white/20 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -526,10 +951,53 @@ interface MemberCardProps {
   onRemove: () => void;
 }
 
-const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onRemove }) => {
+const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onUpdate, onRemove }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editRole, setEditRole] = useState<Exclude<OrganizationRole, 'owner'>>(member.role as Exclude<OrganizationRole, 'owner'>);
+  const [editLocationId, setEditLocationId] = useState<string>(member.locationId || '');
+  const [isSaving, setIsSaving] = useState(false);
+
   const locationName = member.locationId
     ? locations.find(l => l.id === member.locationId)?.name || 'Unknown'
     : 'All Locations';
+
+  const handleStartEdit = () => {
+    setEditRole(member.role as Exclude<OrganizationRole, 'owner'>);
+    setEditLocationId(member.locationId || '');
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditRole(member.role as Exclude<OrganizationRole, 'owner'>);
+    setEditLocationId(member.locationId || '');
+  };
+
+  const handleSaveEdit = async () => {
+    setIsSaving(true);
+    const updates: { role?: OrganizationRole; locationId?: string | null } = {};
+
+    if (editRole !== member.role) {
+      updates.role = editRole;
+    }
+
+    const newLocationId = editLocationId || null;
+    if (newLocationId !== member.locationId) {
+      updates.locationId = newLocationId;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const success = await onUpdate(member.id, updates);
+      if (success) {
+        setIsEditing(false);
+      }
+    } else {
+      setIsEditing(false);
+    }
+    setIsSaving(false);
+  };
+
+  const showLocationSelect = editRole === 'technician' || editRole === 'lead_technician';
 
   return (
     <div className={`p-4 rounded-xl border transition-colors ${
@@ -558,27 +1026,96 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onR
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Location badge */}
-          {(member.role === 'technician' || member.role === 'lead_technician') && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 text-xs text-gray-400">
-              <MapPin className="w-3 h-3" />
-              {locationName}
-            </span>
-          )}
+          {!isEditing ? (
+            <>
+              {/* Location badge */}
+              {(member.role === 'technician' || member.role === 'lead_technician') && (
+                <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 text-xs text-gray-400">
+                  <MapPin className="w-3 h-3" />
+                  {locationName}
+                </span>
+              )}
 
-          {/* Role badge */}
-          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${ROLE_COLORS[member.role]}`}>
-            {ROLE_LABELS[member.role]}
-          </span>
+              {/* Role badge */}
+              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${ROLE_COLORS[member.role]}`}>
+                {ROLE_LABELS[member.role]}
+              </span>
 
-          {/* Remove button */}
-          {isOwner && (
-            <button
-              onClick={onRemove}
-              className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              {/* Edit button */}
+              {isOwner && (
+                <button
+                  onClick={handleStartEdit}
+                  className="p-2 rounded-lg hover:bg-blue-500/20 text-gray-400 hover:text-blue-400 transition-colors"
+                  title="Edit role"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Remove button */}
+              {isOwner && (
+                <button
+                  onClick={onRemove}
+                  className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Role Select */}
+              <select
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value as Exclude<OrganizationRole, 'owner'>)}
+                className="px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+              >
+                <option value="admin" className="bg-[#1a1a1a]">Office Manager</option>
+                <option value="salesperson" className="bg-[#1a1a1a]">Salesperson</option>
+                <option value="lead_technician" className="bg-[#1a1a1a]">Lead Technician</option>
+                <option value="technician" className="bg-[#1a1a1a]">Technician</option>
+              </select>
+
+              {/* Location Select (for technicians) */}
+              {showLocationSelect && locations.length > 0 && (
+                <select
+                  value={editLocationId}
+                  onChange={(e) => setEditLocationId(e.target.value)}
+                  className="px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
+                >
+                  <option value="" className="bg-[#1a1a1a]">All Locations</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id} className="bg-[#1a1a1a]">
+                      {loc.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Save button */}
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className="p-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors disabled:opacity-50"
+                title="Save changes"
+              >
+                {isSaving ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-emerald-400/30 border-t-emerald-400" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+              </button>
+
+              {/* Cancel button */}
+              <button
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+                className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
+                title="Cancel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </>
           )}
         </div>
       </div>
