@@ -4,7 +4,7 @@ import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
   HelpCircle, LogOut, Save, Loader2, Upload, Check, Moon,
   Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2, Phone,
-  X, ChevronRight, Download, FileJson, Clock, Target
+  X, ChevronRight, Download, FileJson, Clock, Target, MapPin, Users
 } from 'lucide-react';
 import { ToggleRow } from './ui/SettingsToggle';
 import { SettingsSlider } from './ui/SettingsSlider';
@@ -14,6 +14,8 @@ import { CardInput } from './ui/PremiumInput';
 import { COLOR_TEMPERATURES, BEAM_ANGLES, ACCENT_COLORS, FIXTURE_TYPE_NAMES } from '../../constants';
 import { SettingsViewProps } from './types';
 import { AIAssistant } from './AIAssistant';
+import { LocationsSection } from './LocationsSection';
+import { TechniciansSection } from './TechniciansSection';
 
 // Menu item button component
 const MenuButton: React.FC<{
@@ -133,7 +135,17 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   onSaveSettings,
   isSaving = false,
   onManageSubscription,
-  isLoadingPortal = false
+  isLoadingPortal = false,
+  locations = [],
+  locationsLoading = false,
+  onCreateLocation,
+  onUpdateLocation,
+  onDeleteLocation,
+  technicians = [],
+  techniciansLoading = false,
+  onCreateTechnician,
+  onUpdateTechnician,
+  onDeleteTechnician
 }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [showAIChat, setShowAIChat] = useState(false);
@@ -244,6 +256,22 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           title="Business Goals"
           description="Revenue & project targets"
           onClick={() => setActiveModal('goals')}
+        />
+
+        {/* Locations */}
+        <MenuButton
+          icon={MapPin}
+          title="Locations"
+          description={`${locations.length} location${locations.length !== 1 ? 's' : ''}`}
+          onClick={() => setActiveModal('locations')}
+        />
+
+        {/* Technicians */}
+        <MenuButton
+          icon={Users}
+          title="Technicians"
+          description={`${technicians.length} technician${technicians.length !== 1 ? 's' : ''}`}
+          onClick={() => setActiveModal('technicians')}
         />
 
         {/* Subscription */}
@@ -1030,6 +1058,41 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       </FullScreenModal>
+
+      {/* Locations Modal */}
+      {onCreateLocation && onUpdateLocation && onDeleteLocation && (
+        <FullScreenModal
+          isOpen={activeModal === 'locations'}
+          onClose={() => setActiveModal(null)}
+          title="Locations"
+        >
+          <LocationsSection
+            locations={locations}
+            isLoading={locationsLoading}
+            onCreateLocation={onCreateLocation}
+            onUpdateLocation={onUpdateLocation}
+            onDeleteLocation={onDeleteLocation}
+          />
+        </FullScreenModal>
+      )}
+
+      {/* Technicians Modal */}
+      {onCreateTechnician && onUpdateTechnician && onDeleteTechnician && (
+        <FullScreenModal
+          isOpen={activeModal === 'technicians'}
+          onClose={() => setActiveModal(null)}
+          title="Technicians"
+        >
+          <TechniciansSection
+            technicians={technicians}
+            locations={locations}
+            isLoading={techniciansLoading}
+            onCreateTechnician={onCreateTechnician}
+            onUpdateTechnician={onUpdateTechnician}
+            onDeleteTechnician={onDeleteTechnician}
+          />
+        </FullScreenModal>
+      )}
 
       {/* Subscription Modal */}
       {subscription && (

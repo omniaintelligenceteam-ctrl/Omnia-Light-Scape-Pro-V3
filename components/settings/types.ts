@@ -1,4 +1,4 @@
-import { CompanyProfile, FixturePricing, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences, CustomPricingItem, BusinessGoal } from '../../types';
+import { CompanyProfile, FixturePricing, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences, CustomPricingItem, BusinessGoal, Location, Technician } from '../../types';
 
 export interface SubscriptionInfo {
   hasActiveSubscription: boolean;
@@ -67,4 +67,16 @@ export interface SettingsViewProps {
   // Portal management
   onManageSubscription?: () => void;
   isLoadingPortal?: boolean;
+  // Locations
+  locations?: Location[];
+  locationsLoading?: boolean;
+  onCreateLocation?: (location: Omit<Location, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Location | null>;
+  onUpdateLocation?: (id: string, updates: Partial<Location>) => Promise<Location | null>;
+  onDeleteLocation?: (id: string) => Promise<boolean>;
+  // Technicians
+  technicians?: Technician[];
+  techniciansLoading?: boolean;
+  onCreateTechnician?: (technician: Omit<Technician, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Technician | null>;
+  onUpdateTechnician?: (id: string, updates: Partial<Technician>) => Promise<Technician | null>;
+  onDeleteTechnician?: (id: string) => Promise<boolean>;
 }

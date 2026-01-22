@@ -14,6 +14,8 @@ import { CardInput } from './ui/PremiumInput';
 import { COLOR_TEMPERATURES, BEAM_ANGLES, ACCENT_COLORS, FIXTURE_TYPE_NAMES } from '../../constants';
 import { SettingsViewProps } from './types';
 import { AIAssistant } from './AIAssistant';
+import { LocationsSection } from './LocationsSection';
+import { TechniciansSection } from './TechniciansSection';
 
 export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   profile,
@@ -52,7 +54,17 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   onSaveSettings,
   isSaving = false,
   onManageSubscription,
-  isLoadingPortal = false
+  isLoadingPortal = false,
+  locations = [],
+  locationsLoading = false,
+  onCreateLocation,
+  onUpdateLocation,
+  onDeleteLocation,
+  technicians = [],
+  techniciansLoading = false,
+  onCreateTechnician,
+  onUpdateTechnician,
+  onDeleteTechnician
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [showAIChat, setShowAIChat] = useState(false);
@@ -1060,6 +1072,47 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                     </div>
                   </div>
                 </SettingsCard>
+              </motion.div>
+            )}
+
+            {/* Locations Section */}
+            {activeSection === 'locations' && onCreateLocation && onUpdateLocation && onDeleteLocation && (
+              <motion.div
+                key="locations"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+              >
+                <LocationsSection
+                  locations={locations}
+                  isLoading={locationsLoading}
+                  onCreateLocation={onCreateLocation}
+                  onUpdateLocation={onUpdateLocation}
+                  onDeleteLocation={onDeleteLocation}
+                />
+              </motion.div>
+            )}
+
+            {/* Technicians Section */}
+            {activeSection === 'technicians' && onCreateTechnician && onUpdateTechnician && onDeleteTechnician && (
+              <motion.div
+                key="technicians"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+              >
+                <TechniciansSection
+                  technicians={technicians}
+                  locations={locations}
+                  isLoading={techniciansLoading}
+                  onCreateTechnician={onCreateTechnician}
+                  onUpdateTechnician={onUpdateTechnician}
+                  onDeleteTechnician={onDeleteTechnician}
+                />
               </motion.div>
             )}
 

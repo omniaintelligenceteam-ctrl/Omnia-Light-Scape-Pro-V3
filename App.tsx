@@ -22,7 +22,9 @@ import { useCalendarEvents } from './hooks/useCalendarEvents';
 import { useClients, parseClientCSV, ParsedClientRow, ImportResult } from './hooks/useClients';
 import { useBusinessGoals } from './hooks/useBusinessGoals';
 import { useAnalytics } from './hooks/useAnalytics';
-import { AnalyticsDashboard } from './components/analytics';
+import { AnalyticsDashboard, ExecutiveDashboard } from './components/analytics';
+import { useLocations } from './hooks/useLocations';
+import { useTechnicians } from './hooks/useTechnicians';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
@@ -156,6 +158,23 @@ const App: React.FC = () => {
 
   // Analytics calculated from projects, clients, and goals
   const analytics = useAnalytics({ projects, clients, goals: businessGoals });
+
+  // Multi-location and technician management for executive dashboard
+  const {
+    locations,
+    isLoading: locationsLoading,
+    createLocation,
+    updateLocation,
+    deleteLocation
+  } = useLocations();
+
+  const {
+    technicians,
+    isLoading: techniciansLoading,
+    createTechnician,
+    updateTechnician,
+    deleteTechnician
+  } = useTechnicians();
 
   // Client management UI state
   const [showClientModal, setShowClientModal] = useState(false);
@@ -3922,7 +3941,17 @@ Notes: ${invoice.notes || 'N/A'}
 
                  {/* Analytics Dashboard - Full view when Analytics tab is selected */}
                  {projectsSubTab === 'analytics' && (
-                     <div className="mb-4">
+                     <div className="mb-4 space-y-6">
+                         {/* Executive Dashboard - Shows when locations exist */}
+                         {locations.length > 0 && (
+                             <ExecutiveDashboard
+                                 locations={locations}
+                                 technicians={technicians}
+                                 isLoading={locationsLoading || techniciansLoading}
+                             />
+                         )}
+
+                         {/* Basic Analytics Dashboard - Always shows */}
                          <AnalyticsDashboard
                              todayMetrics={analytics.todayMetrics}
                              thisWeekMetrics={analytics.thisWeekMetrics}
@@ -6101,6 +6130,17 @@ Notes: ${invoice.notes || 'N/A'}
                 // Save settings
                 onSaveSettings={handleSaveSettings}
                 isSaving={isSavingSettings}
+                // Locations and Technicians
+                locations={locations}
+                locationsLoading={locationsLoading}
+                onCreateLocation={createLocation}
+                onUpdateLocation={updateLocation}
+                onDeleteLocation={deleteLocation}
+                technicians={technicians}
+                techniciansLoading={techniciansLoading}
+                onCreateTechnician={createTechnician}
+                onUpdateTechnician={updateTechnician}
+                onDeleteTechnician={deleteTechnician}
              />
              </motion.div>
           )}

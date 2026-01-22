@@ -2,3 +2,8 @@ export { AnalyticsDashboard } from './AnalyticsDashboard';
 export { KPICard, KPICardGrid } from './KPICard';
 export { GoalTracker, GoalTrackerGrid } from './GoalTracker';
 export { DateRangeSelector } from './DateRangeSelector';
+export { ExecutiveDashboard } from './ExecutiveDashboard';
+export { CompanyTotals } from './CompanyTotals';
+export { LocationLeaderboard } from './LocationLeaderboard';
+export { TechnicianLeaderboard } from './TechnicianLeaderboard';
+export { SmartAlertsBanner, generateSmartAlerts } from './SmartAlertsBanner';

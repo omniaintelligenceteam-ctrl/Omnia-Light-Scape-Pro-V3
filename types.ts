@@ -357,3 +357,101 @@ export interface YearlyMetrics {
   worstMonth: { month: string; revenue: number };
   growthRate?: number;
 }
+
+// ============================================
+// MULTI-LOCATION & EXECUTIVE ANALYTICS TYPES
+// ============================================
+
+export interface Location {
+  id: string;
+  name: string;
+  address?: string;
+  managerName?: string;
+  managerEmail?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TechnicianRole = 'lead' | 'technician' | 'apprentice';
+
+export interface Technician {
+  id: string;
+  locationId?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  role: TechnicianRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type LeadSource = 'google' | 'referral' | 'angi' | 'thumbtack' | 'website' | 'social' | 'yard_sign' | 'other';
+
+export interface LocationMetrics {
+  locationId: string;
+  locationName: string;
+  revenue: number;
+  revenueTarget?: number;
+  revenueProgress: number;
+  jobsCompleted: number;
+  activeProjects: number;
+  avgTicket: number;
+  conversionRate: number;
+  outstandingAR: number;
+  trend: number; // % change vs previous period
+  rank: number;
+}
+
+export interface TechnicianMetrics {
+  technicianId: string;
+  name: string;
+  locationId?: string;
+  locationName?: string;
+  jobsCompleted: number;
+  avgJobTime: number; // hours
+  revenue: number;
+  efficiency: number; // billable hours / total hours (0-100)
+  customerRating: number; // 1-5 stars
+  callbacks: number;
+  rank: number;
+}
+
+export interface ARAgingBuckets {
+  current: number;    // 0-30 days
+  days30: number;     // 31-60 days
+  days60: number;     // 61-90 days
+  days90Plus: number; // 90+ days
+}
+
+export interface CompanyMetrics {
+  totalRevenue: number;
+  totalRevenueYTD: number;
+  yoyGrowth: number;
+  totalJobsCompleted: number;
+  totalActiveProjects: number;
+  totalQuotesPending: number;
+  totalOutstandingAR: number;
+  arAgingBuckets: ARAgingBuckets;
+  companyConversionRate: number;
+  avgProjectValue: number;
+  locationCount: number;
+  technicianCount: number;
+}
+
+export type AlertType = 'warning' | 'success' | 'info' | 'danger';
+
+export interface SmartAlert {
+  id: string;
+  type: AlertType;
+  title: string;
+  message: string;
+  locationId?: string;
+  locationName?: string;
+  metric: string;
+  value: number;
+  threshold?: number;
+  createdAt: string;
+  isRead: boolean;
+}
