@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
-  HelpCircle, LogOut, Save, Loader2, Upload, Check, Sun, Moon,
+  HelpCircle, LogOut, Save, Loader2, Upload, Check, Moon,
   Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2, Phone,
   X, ChevronRight
 } from 'lucide-react';
@@ -334,52 +334,22 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
         onSave={onSaveSettings}
       >
         <div className="space-y-8">
-          {/* Theme Toggle */}
+          {/* Theme - Dark Mode Only */}
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 block">
               Theme
             </label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => onThemeChange?.('light')}
-                className={`relative p-5 rounded-2xl border flex flex-col items-center gap-3 transition-all ${
-                  theme === 'light'
-                    ? 'border-[#F6B45A] bg-[#F6B45A]/10'
-                    : 'border-white/10 bg-white/[0.02]'
-                }`}
-              >
-                <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center">
-                  <Sun className="w-7 h-7 text-amber-500" />
-                </div>
-                <span className={`text-sm font-semibold ${theme === 'light' ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
-                  Light
-                </span>
-                {theme === 'light' && (
-                  <div className="absolute top-3 right-3 text-[#F6B45A]">
-                    <Check className="w-5 h-5" />
-                  </div>
-                )}
-              </button>
-              <button
-                onClick={() => onThemeChange?.('dark')}
-                className={`relative p-5 rounded-2xl border flex flex-col items-center gap-3 transition-all ${
-                  theme === 'dark'
-                    ? 'border-[#F6B45A] bg-[#F6B45A]/10'
-                    : 'border-white/10 bg-white/[0.02]'
-                }`}
-              >
-                <div className="w-14 h-14 rounded-xl bg-gray-800 flex items-center justify-center">
-                  <Moon className="w-7 h-7 text-blue-400" />
-                </div>
-                <span className={`text-sm font-semibold ${theme === 'dark' ? 'text-[#F6B45A]' : 'text-gray-400'}`}>
-                  Dark
-                </span>
-                {theme === 'dark' && (
-                  <div className="absolute top-3 right-3 text-[#F6B45A]">
-                    <Check className="w-5 h-5" />
-                  </div>
-                )}
-              </button>
+            <div className="flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-white/[0.02]">
+              <div className="w-14 h-14 rounded-xl bg-gray-800 flex items-center justify-center">
+                <Moon className="w-7 h-7 text-blue-400" />
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-white">Dark Mode</span>
+                <p className="text-xs text-gray-500">Optimized for professional use</p>
+              </div>
+              <div className="ml-auto text-[#F6B45A]">
+                <Check className="w-5 h-5" />
+              </div>
             </div>
           </div>
 
@@ -448,14 +418,6 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
               description="Reminders for pending quotes"
               checked={notifications.emailQuoteReminders}
               onChange={(v) => onNotificationsChange?.({ ...notifications, emailQuoteReminders: v })}
-            />
-            <ToggleRow
-              icon={MessageCircle}
-              iconColor="text-green-400"
-              title="SMS Notifications"
-              description="Receive text message updates"
-              checked={notifications.smsNotifications}
-              onChange={(v) => onNotificationsChange?.({ ...notifications, smsNotifications: v })}
             />
             <ToggleRow
               icon={Sparkles}

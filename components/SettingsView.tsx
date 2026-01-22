@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail, Palette, Bell, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail, Palette, Bell, Moon, Volume2, VolumeX } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES, ACCENT_COLORS } from '../constants';
 import { FixturePricing, CompanyProfile, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences } from '../types';
@@ -511,46 +511,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   className="overflow-hidden"
                 >
                   <div className="p-6 md:p-8 space-y-8">
-                    {/* Appearance - Light/Dark Mode */}
+                    {/* Appearance - Dark Mode Only */}
                     <div>
                       <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Appearance</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => onThemeChange?.('light')}
-                          className={`relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${
-                            theme === 'light'
-                              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 shadow-[0_0_20px_var(--accent-glow)]'
-                              : 'border-white/10 bg-[#0a0a0a] hover:border-white/20'
-                          }`}
-                        >
-                          <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center">
-                            <Sun className="w-6 h-6 text-amber-500" />
-                          </div>
-                          <span className={`text-sm font-bold ${theme === 'light' ? 'text-[var(--accent-primary)]' : 'text-gray-300'}`}>Light</span>
-                          {theme === 'light' && (
-                            <div className="absolute top-2 right-2 text-[var(--accent-primary)]">
-                              <Check className="w-4 h-4" />
-                            </div>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => onThemeChange?.('dark')}
-                          className={`relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${
-                            theme === 'dark'
-                              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 shadow-[0_0_20px_var(--accent-glow)]'
-                              : 'border-white/10 bg-[#0a0a0a] hover:border-white/20'
-                          }`}
-                        >
-                          <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center">
-                            <Moon className="w-6 h-6 text-blue-400" />
-                          </div>
-                          <span className={`text-sm font-bold ${theme === 'dark' ? 'text-[var(--accent-primary)]' : 'text-gray-300'}`}>Dark</span>
-                          {theme === 'dark' && (
-                            <div className="absolute top-2 right-2 text-[var(--accent-primary)]">
-                              <Check className="w-4 h-4" />
-                            </div>
-                          )}
-                        </button>
+                      <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-[#0a0a0a]">
+                        <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center">
+                          <Moon className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <div>
+                          <span className="text-sm font-bold text-white">Dark Mode</span>
+                          <p className="text-xs text-gray-500">Optimized for professional use</p>
+                        </div>
+                        <div className="ml-auto text-[var(--accent-primary)]">
+                          <Check className="w-5 h-5" />
+                        </div>
                       </div>
                     </div>
 
@@ -697,25 +671,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     </div>
 
-                    {/* SMS & Marketing */}
+                    {/* Marketing & Sound */}
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">SMS & Marketing</label>
+                      <label className="text-xs font-bold uppercase tracking-widest text-gray-300 block mb-4">Other</label>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                              <MessageCircle className="w-4 h-4 text-green-400" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-white">SMS Notifications</p>
-                              <p className="text-xs text-gray-400">Receive important updates via text</p>
-                            </div>
-                          </div>
-                          <Toggle
-                            checked={notifications.smsNotifications}
-                            onChange={(val) => onNotificationsChange?.({ ...notifications, smsNotifications: val })}
-                          />
-                        </div>
                         <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">

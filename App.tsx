@@ -2194,54 +2194,54 @@ Notes: ${invoice.notes || 'N/A'}
                                 </svg>
                             </motion.div>
 
-                            {/* === BIG EXPLOSION - Instant when logo presses button at 8.25s === */}
+                            {/* === SMALLER EXPLOSION - When logo presses button at 8.25s === */}
 
-                            {/* Main explosion - BIGGER bright white flash */}
+                            {/* Main explosion - reduced size */}
                             <motion.div
-                                className="absolute -inset-24 rounded-full pointer-events-none"
+                                className="absolute -inset-12 rounded-full pointer-events-none"
                                 initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: [0, 3, 4.5], opacity: [0, 1, 0] }}
-                                transition={{ duration: 0.7, ease: "easeOut", delay: 8.25 }}
+                                animate={{ scale: [0, 1.8, 2.5], opacity: [0, 1, 0] }}
+                                transition={{ duration: 0.5, ease: "easeOut", delay: 8.25 }}
                                 style={{
-                                    background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 25%, rgba(246,180,90,1) 50%, rgba(246,180,90,0.4) 75%, transparent 100%)'
+                                    background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 25%, rgba(246,180,90,0.9) 50%, rgba(246,180,90,0.3) 75%, transparent 100%)'
                                 }}
                             />
 
-                            {/* Second explosion wave */}
+                            {/* Second explosion wave - reduced */}
                             <motion.div
-                                className="absolute -inset-32 rounded-full pointer-events-none"
+                                className="absolute -inset-16 rounded-full pointer-events-none"
                                 initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: [0, 2.5, 4], opacity: [0, 0.9, 0] }}
-                                transition={{ duration: 0.8, ease: "easeOut", delay: 8.3 }}
+                                animate={{ scale: [0, 1.5, 2.2], opacity: [0, 0.8, 0] }}
+                                transition={{ duration: 0.6, ease: "easeOut", delay: 8.3 }}
                                 style={{
-                                    background: 'radial-gradient(circle, rgba(246,180,90,0.8) 0%, rgba(246,180,90,0.4) 50%, transparent 100%)'
+                                    background: 'radial-gradient(circle, rgba(246,180,90,0.7) 0%, rgba(246,180,90,0.3) 50%, transparent 100%)'
                                 }}
                             />
 
-                            {/* Explosion ring */}
+                            {/* Explosion ring - reduced */}
                             <motion.div
-                                className="absolute -inset-28 rounded-full pointer-events-none"
+                                className="absolute -inset-14 rounded-full pointer-events-none"
                                 initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: [0, 2.5, 4], opacity: [0, 1, 0] }}
-                                transition={{ duration: 0.9, ease: "easeOut", delay: 8.35 }}
+                                animate={{ scale: [0, 1.5, 2.2], opacity: [0, 0.9, 0] }}
+                                transition={{ duration: 0.7, ease: "easeOut", delay: 8.35 }}
                                 style={{
-                                    border: '6px solid rgba(246,180,90,0.9)',
-                                    boxShadow: '0 0 60px rgba(246,180,90,0.8), 0 0 100px rgba(246,180,90,0.4)'
+                                    border: '4px solid rgba(246,180,90,0.8)',
+                                    boxShadow: '0 0 40px rgba(246,180,90,0.6), 0 0 60px rgba(246,180,90,0.3)'
                                 }}
                             />
 
-                            {/* === REPEATING PULSE === */}
+                            {/* === REPEATING PULSE - Starts small, grows bigger === */}
 
-                            {/* Main pulsing glow */}
+                            {/* Main pulsing glow - starts small, expands over time */}
                             <motion.div
-                                className="absolute -inset-4 rounded-full pointer-events-none"
+                                className="absolute -inset-2 rounded-full pointer-events-none"
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{
-                                    scale: [1, 1.3, 1],
-                                    opacity: [0.6, 0.9, 0.6]
+                                    scale: [0.5, 0.8, 0.5, 0.9, 1.0, 0.9, 1.1, 1.3, 1.1],
+                                    opacity: [0.3, 0.5, 0.3, 0.5, 0.7, 0.5, 0.6, 0.9, 0.6]
                                 }}
                                 transition={{
-                                    duration: 2,
+                                    duration: 6,
                                     delay: 9.0,
                                     repeat: Infinity,
                                     ease: "easeInOut"
@@ -2252,16 +2252,16 @@ Notes: ${invoice.notes || 'N/A'}
                                 }}
                             />
 
-                            {/* Pulsing ring */}
+                            {/* Pulsing ring - starts tight, grows outward */}
                             <motion.div
-                                className="absolute -inset-8 rounded-full pointer-events-none"
-                                initial={{ opacity: 0 }}
+                                className="absolute -inset-4 rounded-full pointer-events-none"
+                                initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{
-                                    scale: [1, 1.2, 1],
-                                    opacity: [0.4, 0.7, 0.4]
+                                    scale: [0.6, 0.8, 0.6, 0.9, 1.0, 0.9, 1.1, 1.2, 1.1],
+                                    opacity: [0.2, 0.4, 0.2, 0.4, 0.6, 0.4, 0.5, 0.7, 0.5]
                                 }}
                                 transition={{
-                                    duration: 2,
+                                    duration: 6,
                                     delay: 9.0,
                                     repeat: Infinity,
                                     ease: "easeInOut"
@@ -2272,25 +2272,25 @@ Notes: ${invoice.notes || 'N/A'}
                                 }}
                             />
 
-                            {/* Inner core glow that pulses */}
+                            {/* Inner core glow - starts small, pulses bigger */}
                             <motion.div
                                 className="absolute rounded-full pointer-events-none"
                                 style={{
-                                    width: '40px',
-                                    height: '40px',
+                                    width: '30px',
+                                    height: '30px',
                                     left: '50%',
                                     top: '50%',
-                                    marginLeft: '-20px',
-                                    marginTop: '-20px',
+                                    marginLeft: '-15px',
+                                    marginTop: '-15px',
                                     background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(246,180,90,0.7) 40%, transparent 100%)',
                                 }}
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{
-                                    scale: [1, 1.4, 1],
-                                    opacity: [0.7, 1, 0.7]
+                                    scale: [0.5, 0.8, 0.5, 0.9, 1.2, 0.9, 1.0, 1.4, 1.0],
+                                    opacity: [0.4, 0.6, 0.4, 0.6, 0.9, 0.6, 0.7, 1, 0.7]
                                 }}
                                 transition={{
-                                    duration: 2,
+                                    duration: 6,
                                     delay: 8.8,
                                     repeat: Infinity,
                                     ease: "easeInOut"
@@ -2361,71 +2361,81 @@ Notes: ${invoice.notes || 'N/A'}
                                     transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
                                 />
 
-                                {/* SVG Progress Ring - Enhanced with more color */}
+                                {/* SVG Progress Ring - Colorless until logo hits, then turns gold */}
                                 <motion.svg
                                     className="absolute -inset-5 w-[calc(100%+40px)] h-[calc(100%+40px)]"
                                     viewBox="0 0 140 140"
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                                    style={{ filter: 'drop-shadow(0 0 8px rgba(246,180,90,0.4))' }}
+                                    initial={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.2))' }}
                                 >
-                                    {/* Background track - more visible */}
-                                    <circle
-                                        cx="70"
-                                        cy="70"
-                                        r="65"
-                                        fill="none"
-                                        stroke="rgba(246,180,90,0.25)"
-                                        strokeWidth="5"
-                                    />
-                                    {/* Animated progress arc - thicker and brighter */}
+                                    {/* Background track - starts gray, turns gold after 8.25s */}
                                     <motion.circle
                                         cx="70"
                                         cy="70"
                                         r="65"
                                         fill="none"
-                                        stroke="url(#progressGradient)"
+                                        initial={{ stroke: 'rgba(255,255,255,0.15)' }}
+                                        animate={{ stroke: ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.15)', 'rgba(246,180,90,0.25)'] }}
+                                        transition={{ duration: 8.5, times: [0, 0.97, 1], ease: "easeOut" }}
+                                        strokeWidth="5"
+                                    />
+                                    {/* Animated progress arc - starts white/gray, turns gold after logo hits */}
+                                    <motion.circle
+                                        cx="70"
+                                        cy="70"
+                                        r="65"
+                                        fill="none"
+                                        initial={{ stroke: 'rgba(255,255,255,0.5)' }}
+                                        animate={{
+                                            strokeDashoffset: showLoadingCelebration ? 0 : [408.4, 286, 204, 122, 61, 30],
+                                            stroke: ['rgba(255,255,255,0.5)', 'rgba(255,255,255,0.5)', 'url(#progressGradient)']
+                                        }}
+                                        transition={{
+                                            strokeDashoffset: { duration: showLoadingCelebration ? 0.5 : 12, ease: "easeOut" },
+                                            stroke: { duration: 8.5, times: [0, 0.97, 1], ease: "easeOut" }
+                                        }}
                                         strokeWidth="5"
                                         strokeLinecap="round"
                                         strokeDasharray="408.4"
-                                        initial={{ strokeDashoffset: 408.4 }}
-                                        animate={{
-                                            strokeDashoffset: showLoadingCelebration ? 0 : [408.4, 286, 204, 122, 61, 30]
-                                        }}
-                                        transition={{
-                                            duration: showLoadingCelebration ? 0.5 : 12,
-                                            ease: "easeOut"
-                                        }}
                                         style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
                                     />
-                                    {/* Glowing accent dots - larger */}
+                                    {/* Glowing accent dots - start gray/white, turn gold after 8.25s */}
                                     <motion.circle
                                         cx="70"
                                         cy="5"
                                         r="5"
-                                        fill="#ffcc70"
-                                        style={{ filter: 'drop-shadow(0 0 8px #F6B45A)' }}
+                                        initial={{ fill: '#888888' }}
+                                        animate={{ fill: ['#888888', '#888888', '#ffcc70'] }}
+                                        transition={{ duration: 8.5, times: [0, 0.97, 1] }}
+                                        style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))' }}
                                     />
                                     <motion.circle
                                         cx="70"
                                         cy="135"
                                         r="4"
-                                        fill="#F6B45A"
-                                        style={{ filter: 'drop-shadow(0 0 6px #F6B45A)' }}
+                                        initial={{ fill: '#666666' }}
+                                        animate={{ fill: ['#666666', '#666666', '#F6B45A'] }}
+                                        transition={{ duration: 8.5, times: [0, 0.97, 1] }}
+                                        style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))' }}
                                     />
                                     <motion.circle
                                         cx="5"
                                         cy="70"
                                         r="3.5"
-                                        fill="#ffd280"
-                                        style={{ filter: 'drop-shadow(0 0 6px #ffd280)' }}
+                                        initial={{ fill: '#777777' }}
+                                        animate={{ fill: ['#777777', '#777777', '#ffd280'] }}
+                                        transition={{ duration: 8.5, times: [0, 0.97, 1] }}
+                                        style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))' }}
                                     />
                                     <motion.circle
                                         cx="135"
                                         cy="70"
                                         r="3.5"
-                                        fill="#F6B45A"
-                                        style={{ filter: 'drop-shadow(0 0 6px #F6B45A)' }}
+                                        initial={{ fill: '#666666' }}
+                                        animate={{ fill: ['#666666', '#666666', '#F6B45A'] }}
+                                        transition={{ duration: 8.5, times: [0, 0.97, 1] }}
+                                        style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))' }}
                                     />
                                     <defs>
                                         <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -2522,29 +2532,33 @@ Notes: ${invoice.notes || 'N/A'}
                             </motion.span>
                         </motion.h2>
 
-                        {/* Stepped progress with cycling status messages */}
+                        {/* Stepped progress with cycling status messages - HORIZONTAL */}
                         <motion.div
-                            className="flex flex-col items-center gap-6"
+                            className="flex flex-row items-center justify-center gap-3 flex-wrap max-w-md px-4"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.4 }}
                         >
-                            {/* Main status message - large and prominent */}
-                            <div className="h-8 overflow-hidden relative min-w-[280px]">
-                                <AnimatePresence mode="wait">
-                                    <motion.p
-                                        key={statusMessageIndex}
-                                        initial={{ opacity: 0, y: 20, filter: 'blur(4px)' }}
-                                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                                        exit={{ opacity: 0, y: -20, filter: 'blur(4px)' }}
-                                        transition={{ duration: 0.4, ease: "easeOut" }}
-                                        className="text-[#F6B45A] font-bold text-lg uppercase tracking-[0.2em] absolute inset-0 flex items-center justify-center"
-                                    >
-                                        {statusMessages[statusMessageIndex]}
-                                    </motion.p>
-                                </AnimatePresence>
-                            </div>
-
+                            {/* All status messages displayed horizontally with active one highlighted */}
+                            {statusMessages.map((message, index) => (
+                                <motion.span
+                                    key={message}
+                                    className={`text-xs uppercase tracking-[0.15em] whitespace-nowrap transition-all duration-300 ${
+                                        index === statusMessageIndex
+                                            ? 'text-[#F6B45A] font-bold scale-110'
+                                            : index < statusMessageIndex
+                                                ? 'text-[#F6B45A]/40'
+                                                : 'text-white/20'
+                                    }`}
+                                    animate={index === statusMessageIndex ? {
+                                        textShadow: ['0 0 10px rgba(246,180,90,0.5)', '0 0 20px rgba(246,180,90,0.8)', '0 0 10px rgba(246,180,90,0.5)']
+                                    } : {}}
+                                    transition={{ duration: 1, repeat: Infinity }}
+                                >
+                                    {message}
+                                    {index < statusMessages.length - 1 && <span className="ml-3 text-white/10">•</span>}
+                                </motion.span>
+                            ))}
                         </motion.div>
 
                         {/* Progress bar */}

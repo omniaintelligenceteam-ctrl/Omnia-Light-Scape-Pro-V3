@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Upload, Check, Sun, Moon, Mail, MessageCircle, Sparkles,
+  Upload, Check, Moon, Mail, MessageCircle, Sparkles,
   Volume2, VolumeX, ExternalLink, Loader2, Save, Plus, Trash2, Phone, LogOut
 } from 'lucide-react';
 import { SettingsNav, SettingsSection } from './SettingsNav';
@@ -224,52 +224,22 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 </p>
 
                 <SettingsCard className="p-6 space-y-8">
-                  {/* Theme */}
+                  {/* Theme - Dark Mode Only */}
                   <div>
                     <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-4 block">
                       Theme
                     </label>
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => onThemeChange?.('light')}
-                        className={`relative flex-1 max-w-[180px] p-5 rounded-2xl border flex flex-col items-center gap-3 transition-all hover:scale-[1.02] ${
-                          theme === 'light'
-                            ? 'border-[#F6B45A] bg-[#F6B45A]/10 shadow-[0_0_30px_rgba(246,180,90,0.1)]'
-                            : 'border-white/5 bg-white/[0.02] hover:border-white/10'
-                        }`}
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-lg">
-                          <Sun className="w-6 h-6 text-amber-500" />
-                        </div>
-                        <span className={`text-sm font-semibold ${theme === 'light' ? 'text-[#F6B45A]' : 'text-gray-300'}`}>
-                          Light
-                        </span>
-                        {theme === 'light' && (
-                          <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#F6B45A] flex items-center justify-center">
-                            <Check className="w-3 h-3 text-black" />
-                          </div>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => onThemeChange?.('dark')}
-                        className={`relative flex-1 max-w-[180px] p-5 rounded-2xl border flex flex-col items-center gap-3 transition-all hover:scale-[1.02] ${
-                          theme === 'dark'
-                            ? 'border-[#F6B45A] bg-[#F6B45A]/10 shadow-[0_0_30px_rgba(246,180,90,0.1)]'
-                            : 'border-white/5 bg-white/[0.02] hover:border-white/10'
-                        }`}
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center shadow-lg">
-                          <Moon className="w-6 h-6 text-blue-400" />
-                        </div>
-                        <span className={`text-sm font-semibold ${theme === 'dark' ? 'text-[#F6B45A]' : 'text-gray-300'}`}>
-                          Dark
-                        </span>
-                        {theme === 'dark' && (
-                          <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#F6B45A] flex items-center justify-center">
-                            <Check className="w-3 h-3 text-black" />
-                          </div>
-                        )}
-                      </button>
+                    <div className="flex items-center gap-4 p-4 rounded-2xl border border-white/5 bg-white/[0.02]">
+                      <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center shadow-lg">
+                        <Moon className="w-6 h-6 text-blue-400" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-white">Dark Mode</span>
+                        <p className="text-xs text-gray-500">Optimized for professional use</p>
+                      </div>
+                      <div className="ml-auto w-5 h-5 rounded-full bg-[#F6B45A] flex items-center justify-center">
+                        <Check className="w-3 h-3 text-black" />
+                      </div>
                     </div>
                   </div>
 
@@ -352,16 +322,8 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
 
                 <SettingsCard className="p-6 space-y-4">
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    Other Notifications
+                    Other
                   </h3>
-                  <ToggleRow
-                    icon={MessageCircle}
-                    iconColor="text-green-400"
-                    title="SMS Notifications"
-                    description="Receive important updates via text"
-                    checked={notifications.smsNotifications}
-                    onChange={(v) => onNotificationsChange?.({ ...notifications, smsNotifications: v })}
-                  />
                   <ToggleRow
                     icon={Sparkles}
                     iconColor="text-purple-400"
