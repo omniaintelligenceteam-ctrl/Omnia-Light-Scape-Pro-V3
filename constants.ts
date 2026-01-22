@@ -1196,26 +1196,27 @@ IDENTIFICATION:
 - Identify dormer face (front wall), dormer window, and dormer roof
 
 FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
-- Type: SMALL compact brass bullet or mini flood up light with gutter-mount bracket
-- Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
-- Size: SMALL/COMPACT fixture - NOT large floodlights
-- Profile: LOW-PROFILE design that sits discreetly in/on gutter
-- Mounting: on gutter lip, inside gutter trough, or on fascia board adjacent to gutter
-- Beam spread: medium -- enough to wash dormer face
+- Type: VERY SMALL compact mini bullet up light - TINY fixture
+- Housing: DARK BRONZE finish - this is REQUIRED, no brass or silver
+- Color: Dark bronze / dark brown / oil-rubbed bronze finish only
+- Size: VERY SMALL/MINI/COMPACT fixture - smaller than a fist - NOT large floodlights
+- Profile: ULTRA LOW-PROFILE design that sits discreetly INSIDE the gutter trough
+- Mounting: INSIDE the gutter trough ONLY - fixture sits IN the gutter channel
+- Beam spread: narrow to medium -- focused wash on dormer face
 
 PLACEMENT GEOMETRY (STRICT RULE - CRITICAL):
 *** EXACTLY ONE (1) FIXTURE PER DORMER - THIS IS MANDATORY ***
 - Each dormer receives ONE and ONLY ONE gutter-mounted up light
-- Mount on the MAIN ROOF gutter line directly BELOW each dormer
+- The fixture MUST be placed INSIDE the gutter trough directly BELOW the dormer
 - The fixture MUST be CENTERED horizontally under the dormer (aligned with the dormer's vertical centerline)
-- The fixture sits INSIDE the horizontal gutter trough
+- The fixture sits INSIDE the horizontal gutter channel/trough - NOT on the lip, NOT on fascia
 - COUNT RULE: If the house has 2 dormers, place exactly 2 lights. If 3 dormers, exactly 3 lights.
-- FORBIDDEN: Multiple lights per dormer, lights placed between dormers, lights on roof shingles
+- FORBIDDEN: Multiple lights per dormer, lights placed between dormers, lights on roof shingles, lights on gutter lip
 
-MOUNTING OPTIONS:
-- INSIDE GUTTER TROUGH: fixture sits in gutter, aims up at dormer
-- ON GUTTER LIP: fixture clips to outer edge of gutter
-- ON FASCIA BOARD: fixture mounts to fascia adjacent to gutter
+MOUNTING LOCATION (STRICT):
+- INSIDE GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims up at dormer
+- The fixture is small enough to fit inside the gutter without blocking water flow
+- FORBIDDEN: On gutter lip, on fascia board, on roof surface
 
 ALIGNMENT:
 - HORIZONTAL: centered on dormer width
@@ -1250,7 +1251,7 @@ STRICT EXCLUSION ZONES:
 - Do NOT use one fixture for multiple dormers -- one fixture per dormer
 - Do NOT skip dormers -- all dormers should be lit for balance
 - Ensure SYMMETRIC placement for balanced facade`,
-        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE light per dormer - no more, no less. Light must be CENTERED in gutter directly below dormer. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`
+        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE VERY SMALL DARK BRONZE light per dormer - no more, no less. Fixture must be TINY and sit INSIDE the gutter trough, CENTERED directly below dormer. Do NOT use large fixtures. Do NOT use brass or silver fixtures. Do NOT mount on gutter lip or fascia. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`
       },
       {
         id: 'peaks',
