@@ -544,6 +544,8 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
             </AnimatePresence>
           </div>
         )}
+          </>
+        )}
 
         {/* Gallery Tab */}
         {portalView === 'gallery' && data && (
