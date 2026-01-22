@@ -4,7 +4,7 @@ import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
   HelpCircle, LogOut, Save, Loader2, Upload, Check, Moon,
   Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2, Phone,
-  X, ChevronRight, Download, FileJson
+  X, ChevronRight, Download, FileJson, Clock
 } from 'lucide-react';
 import { ToggleRow } from './ui/SettingsToggle';
 import { SettingsSlider } from './ui/SettingsSlider';
@@ -125,6 +125,8 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   onHighContrastChange,
   notifications,
   onNotificationsChange,
+  followUpSettings,
+  onFollowUpSettingsChange,
   onSignOut,
   onSaveSettings,
   isSaving = false,
@@ -224,6 +226,14 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           title="Lighting Defaults"
           description="Color temp & beam angle"
           onClick={() => setActiveModal('lighting')}
+        />
+
+        {/* Follow-ups */}
+        <MenuButton
+          icon={Clock}
+          title="Follow-ups"
+          description="Automated reminders"
+          onClick={() => setActiveModal('followups')}
         />
 
         {/* Subscription */}
@@ -719,6 +729,162 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
                 value={darknessLevel}
                 onChange={onDarknessLevelChange}
               />
+            )}
+          </div>
+        </div>
+      </FullScreenModal>
+
+      {/* Follow-ups Modal */}
+      <FullScreenModal
+        isOpen={activeModal === 'followups'}
+        onClose={() => setActiveModal(null)}
+        title="Follow-ups"
+        onSave={onSaveSettings}
+      >
+        <div className="space-y-6">
+          {/* Quote Reminders */}
+          <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-4">
+            <h3 className="text-base font-semibold text-white">Quote Reminders</h3>
+            <ToggleRow
+              title="Enable quote reminders"
+              description="Auto-remind clients about pending quotes"
+              checked={followUpSettings?.enableQuoteReminders ?? true}
+              onChange={(checked) => onFollowUpSettingsChange?.({
+                ...followUpSettings!,
+                enableQuoteReminders: checked
+              })}
+            />
+            {followUpSettings?.enableQuoteReminders !== false && (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Reminder after</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={14}
+                      value={followUpSettings?.quoteReminderDays ?? 3}
+                      onChange={(e) => onFollowUpSettingsChange?.({
+                        ...followUpSettings!,
+                        quoteReminderDays: parseInt(e.target.value) || 3
+                      })}
+                      className="w-14 px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-center text-sm"
+                    />
+                    <span className="text-sm text-gray-400">days</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Expiry warning</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={7}
+                      value={followUpSettings?.quoteExpiringDays ?? 2}
+                      onChange={(e) => onFollowUpSettingsChange?.({
+                        ...followUpSettings!,
+                        quoteExpiringDays: parseInt(e.target.value) || 2
+                      })}
+                      className="w-14 px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-center text-sm"
+                    />
+                    <span className="text-sm text-gray-400">days</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Invoice Reminders */}
+          <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-4">
+            <h3 className="text-base font-semibold text-white">Invoice Reminders</h3>
+            <ToggleRow
+              title="Enable invoice reminders"
+              description="Auto-remind about unpaid invoices"
+              checked={followUpSettings?.enableInvoiceReminders ?? true}
+              onChange={(checked) => onFollowUpSettingsChange?.({
+                ...followUpSettings!,
+                enableInvoiceReminders: checked
+              })}
+            />
+            {followUpSettings?.enableInvoiceReminders !== false && (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Payment reminder</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={followUpSettings?.invoiceReminderDays ?? 7}
+                      onChange={(e) => onFollowUpSettingsChange?.({
+                        ...followUpSettings!,
+                        invoiceReminderDays: parseInt(e.target.value) || 7
+                      })}
+                      className="w-14 px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-center text-sm"
+                    />
+                    <span className="text-sm text-gray-400">days</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Overdue notice</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={7}
+                      value={followUpSettings?.invoiceOverdueDays ?? 1}
+                      onChange={(e) => onFollowUpSettingsChange?.({
+                        ...followUpSettings!,
+                        invoiceOverdueDays: parseInt(e.target.value) || 1
+                      })}
+                      className="w-14 px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-center text-sm"
+                    />
+                    <span className="text-sm text-gray-400">days</span>
+                  </div>
+                </div>
+                <ToggleRow
+                  title="SMS for overdue"
+                  description="Send SMS for overdue payments"
+                  checked={followUpSettings?.enableSmsForOverdue ?? false}
+                  onChange={(checked) => onFollowUpSettingsChange?.({
+                    ...followUpSettings!,
+                    enableSmsForOverdue: checked
+                  })}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Installation Reminders */}
+          <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-4">
+            <h3 className="text-base font-semibold text-white">Installation Reminders</h3>
+            <ToggleRow
+              title="Pre-installation reminders"
+              description="Remind clients before installation"
+              checked={followUpSettings?.enablePreInstallReminders ?? true}
+              onChange={(checked) => onFollowUpSettingsChange?.({
+                ...followUpSettings!,
+                enablePreInstallReminders: checked
+              })}
+            />
+            {followUpSettings?.enablePreInstallReminders !== false && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-300">Remind before</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={7}
+                    value={followUpSettings?.preInstallationDays ?? 1}
+                    onChange={(e) => onFollowUpSettingsChange?.({
+                      ...followUpSettings!,
+                      preInstallationDays: parseInt(e.target.value) || 1
+                    })}
+                    className="w-14 px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-center text-sm"
+                  />
+                  <span className="text-sm text-gray-400">days</span>
+                </div>
+              </div>
             )}
           </div>
         </div>

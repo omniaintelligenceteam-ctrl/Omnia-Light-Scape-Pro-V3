@@ -3967,7 +3967,7 @@ Notes: ${invoice.notes || 'N/A'}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-bold text-sm text-white truncate">{p.name}</h3>
-                                                <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-bold uppercase ${STATUS_CONFIG[p.status].color}`}>{STATUS_CONFIG[p.status].label}</span><span className="text-gray-600">•</span><span className="text-[10px] text-gray-500">{p.date}</span></div>
+                                                <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-bold uppercase ${STATUS_CONFIG[p.status].color}`}>{STATUS_CONFIG[p.status].label}</span>{p.invoicePaidAt && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PAID</span>}<span className="text-gray-600">•</span><span className="text-[10px] text-gray-500">{p.date}</span></div>
                                                 {p.quote && <div className="text-xs font-bold text-[#F6B45A] mt-1">${p.quote.total.toFixed(0)}</div>}
                                             </div>
                                             <div className="flex items-center gap-1">
@@ -4123,6 +4123,19 @@ Notes: ${invoice.notes || 'N/A'}
                                                 </motion.div>
                                             )}
                                         </motion.div>
+
+                                        {/* Paid Badge - Top Right */}
+                                        {p.invoicePaidAt && (
+                                            <motion.div
+                                                className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                                initial={{ opacity: 0, scale: 0.8, x: 10 }}
+                                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                transition={{ delay: index * 0.05 + 0.15, type: "spring", stiffness: 400 }}
+                                            >
+                                                <Check className="w-3 h-3" />
+                                                PAID
+                                            </motion.div>
+                                        )}
 
                                         {/* Image Section - Hero (Multi-Image Support) with Parallax */}
                                         {(() => {
@@ -6042,6 +6055,7 @@ Notes: ${invoice.notes || 'N/A'}
                 <motion.button
                   onClick={async () => {
                     if (!scheduleProjectId) return;
+                    const project = projects.find(p => p.id === scheduleProjectId);
                     const scheduleData: ScheduleData = {
                       scheduledDate: scheduleDate.toISOString().split('T')[0],
                       timeSlot: scheduleTimeSlot,
@@ -6055,6 +6069,32 @@ Notes: ${invoice.notes || 'N/A'}
                       setShowScheduleModal(false);
                       setScheduleProjectId(null);
                       setScheduleNotes('');
+
+                      // Send scheduling confirmation email to client
+                      if (project?.quote?.clientDetails?.email) {
+                        try {
+                          await fetch('/api/send-schedule-confirmation', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              clientEmail: project.quote.clientDetails.email,
+                              clientName: project.quote.clientDetails.name || 'Valued Customer',
+                              projectName: project.name,
+                              companyName: companyProfile.name,
+                              companyEmail: companyProfile.email,
+                              companyPhone: companyProfile.phone,
+                              scheduledDate: scheduleData.scheduledDate,
+                              timeSlot: scheduleData.timeSlot,
+                              customTime: scheduleData.customTime,
+                              installationNotes: scheduleData.installationNotes,
+                              address: project.quote.clientDetails.address
+                            })
+                          });
+                          showToast('success', 'Confirmation email sent to client');
+                        } catch (emailErr) {
+                          console.error('Failed to send schedule confirmation:', emailErr);
+                        }
+                      }
                     } else {
                       showToast('error', 'Failed to schedule job');
                     }

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Palette, Bell, DollarSign, Package, Lightbulb,
-  CreditCard, HelpCircle, LogOut
+  CreditCard, HelpCircle, LogOut, Clock
 } from 'lucide-react';
 
 export type SettingsSection =
@@ -12,6 +12,7 @@ export type SettingsSection =
   | 'pricing'
   | 'catalog'
   | 'lighting'
+  | 'followups'
   | 'subscription'
   | 'support';
 
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { id: 'pricing', label: 'Pricing', icon: DollarSign, group: 'Business' },
   { id: 'catalog', label: 'Catalog', icon: Package, group: 'Business' },
   { id: 'lighting', label: 'Lighting', icon: Lightbulb, group: 'Business' },
+  { id: 'followups', label: 'Follow-ups', icon: Clock, group: 'Business' },
   { id: 'support', label: 'Help', icon: HelpCircle, group: 'Support' },
 ];
 

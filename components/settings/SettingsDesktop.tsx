@@ -44,6 +44,8 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   onHighContrastChange,
   notifications,
   onNotificationsChange,
+  followUpSettings,
+  onFollowUpSettingsChange,
   onSignOut,
   onSaveSettings,
   isSaving = false,
@@ -653,6 +655,190 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                         value={darknessLevel}
                         onChange={onDarknessLevelChange}
                       />
+                    )}
+                  </div>
+                </SettingsCard>
+              </motion.div>
+            )}
+
+            {/* Follow-ups Section */}
+            {activeSection === 'followups' && (
+              <motion.div
+                key="followups"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <p className="text-sm text-gray-400 mb-6">
+                  Configure automatic follow-up reminders for quotes, invoices, and installations.
+                </p>
+
+                {/* Quote Follow-ups */}
+                <SettingsCard className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Quote Reminders</h3>
+                  <div className="space-y-4">
+                    <ToggleRow
+                      title="Enable quote reminders"
+                      description="Automatically remind clients about pending quotes"
+                      checked={followUpSettings?.enableQuoteReminders ?? true}
+                      onChange={(checked) => onFollowUpSettingsChange?.({
+                        ...followUpSettings!,
+                        enableQuoteReminders: checked
+                      })}
+                    />
+                    {followUpSettings?.enableQuoteReminders !== false && (
+                      <>
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <span className="text-sm text-white">Reminder after</span>
+                            <p className="text-xs text-gray-500">Days after quote is sent</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={1}
+                              max={14}
+                              value={followUpSettings?.quoteReminderDays ?? 3}
+                              onChange={(e) => onFollowUpSettingsChange?.({
+                                ...followUpSettings!,
+                                quoteReminderDays: parseInt(e.target.value) || 3
+                              })}
+                              className="w-16 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-center"
+                            />
+                            <span className="text-sm text-gray-400">days</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <span className="text-sm text-white">Expiration warning</span>
+                            <p className="text-xs text-gray-500">Days before quote expires</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={1}
+                              max={7}
+                              value={followUpSettings?.quoteExpiringDays ?? 2}
+                              onChange={(e) => onFollowUpSettingsChange?.({
+                                ...followUpSettings!,
+                                quoteExpiringDays: parseInt(e.target.value) || 2
+                              })}
+                              className="w-16 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-center"
+                            />
+                            <span className="text-sm text-gray-400">days</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </SettingsCard>
+
+                {/* Invoice Follow-ups */}
+                <SettingsCard className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Invoice Reminders</h3>
+                  <div className="space-y-4">
+                    <ToggleRow
+                      title="Enable invoice reminders"
+                      description="Automatically remind clients about unpaid invoices"
+                      checked={followUpSettings?.enableInvoiceReminders ?? true}
+                      onChange={(checked) => onFollowUpSettingsChange?.({
+                        ...followUpSettings!,
+                        enableInvoiceReminders: checked
+                      })}
+                    />
+                    {followUpSettings?.enableInvoiceReminders !== false && (
+                      <>
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <span className="text-sm text-white">Payment reminder</span>
+                            <p className="text-xs text-gray-500">Days after invoice sent</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={1}
+                              max={30}
+                              value={followUpSettings?.invoiceReminderDays ?? 7}
+                              onChange={(e) => onFollowUpSettingsChange?.({
+                                ...followUpSettings!,
+                                invoiceReminderDays: parseInt(e.target.value) || 7
+                              })}
+                              className="w-16 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-center"
+                            />
+                            <span className="text-sm text-gray-400">days</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <span className="text-sm text-white">Overdue notice</span>
+                            <p className="text-xs text-gray-500">Days after due date</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={1}
+                              max={7}
+                              value={followUpSettings?.invoiceOverdueDays ?? 1}
+                              onChange={(e) => onFollowUpSettingsChange?.({
+                                ...followUpSettings!,
+                                invoiceOverdueDays: parseInt(e.target.value) || 1
+                              })}
+                              className="w-16 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-center"
+                            />
+                            <span className="text-sm text-gray-400">days</span>
+                          </div>
+                        </div>
+                        <ToggleRow
+                          title="SMS for overdue invoices"
+                          description="Send SMS reminders for overdue payments (requires phone number)"
+                          checked={followUpSettings?.enableSmsForOverdue ?? false}
+                          onChange={(checked) => onFollowUpSettingsChange?.({
+                            ...followUpSettings!,
+                            enableSmsForOverdue: checked
+                          })}
+                        />
+                      </>
+                    )}
+                  </div>
+                </SettingsCard>
+
+                {/* Installation Reminders */}
+                <SettingsCard className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Installation Reminders</h3>
+                  <div className="space-y-4">
+                    <ToggleRow
+                      title="Enable pre-installation reminders"
+                      description="Remind clients before their scheduled installation"
+                      checked={followUpSettings?.enablePreInstallReminders ?? true}
+                      onChange={(checked) => onFollowUpSettingsChange?.({
+                        ...followUpSettings!,
+                        enablePreInstallReminders: checked
+                      })}
+                    />
+                    {followUpSettings?.enablePreInstallReminders !== false && (
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <span className="text-sm text-white">Reminder before</span>
+                          <p className="text-xs text-gray-500">Days before scheduled date</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            max={7}
+                            value={followUpSettings?.preInstallationDays ?? 1}
+                            onChange={(e) => onFollowUpSettingsChange?.({
+                              ...followUpSettings!,
+                              preInstallationDays: parseInt(e.target.value) || 1
+                            })}
+                            className="w-16 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-center"
+                          />
+                          <span className="text-sm text-gray-400">days</span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </SettingsCard>

@@ -37,7 +37,8 @@ export function useProjects() {
             quote: p.prompt_config?.quote || null,
             bom: p.prompt_config?.bom || null,
             status: (p.prompt_config?.status as ProjectStatus) || 'draft',
-            schedule: p.prompt_config?.schedule || undefined
+            schedule: p.prompt_config?.schedule || undefined,
+            invoicePaidAt: p.invoice_paid_at || undefined
           }));
           setProjects(loadedProjects);
         }

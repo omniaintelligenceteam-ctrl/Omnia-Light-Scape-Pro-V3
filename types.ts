@@ -93,6 +93,7 @@ export interface SavedProject {
   bom: BOMData | null;
   status: ProjectStatus;
   schedule?: ScheduleData;
+  invoicePaidAt?: string;         // ISO date when invoice was paid via Stripe
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';

@@ -9,6 +9,18 @@ export interface SubscriptionInfo {
   monthlyLimit?: number;
 }
 
+export interface FollowUpSettings {
+  quoteReminderDays: number;       // Days after quote sent to send reminder
+  quoteExpiringDays: number;       // Days before expiry to warn
+  invoiceReminderDays: number;     // Days after invoice sent to remind
+  invoiceOverdueDays: number;      // Days after due date to send overdue notice
+  preInstallationDays: number;     // Days before scheduled date to remind
+  enableQuoteReminders: boolean;
+  enableInvoiceReminders: boolean;
+  enablePreInstallReminders: boolean;
+  enableSmsForOverdue: boolean;    // Send SMS for overdue invoices
+}
+
 export interface SettingsViewProps {
   profile?: CompanyProfile;
   onProfileChange?: (profile: CompanyProfile) => void;
@@ -41,6 +53,9 @@ export interface SettingsViewProps {
   // Notification props
   notifications?: NotificationPreferences;
   onNotificationsChange?: (prefs: NotificationPreferences) => void;
+  // Follow-up settings
+  followUpSettings?: FollowUpSettings;
+  onFollowUpSettingsChange?: (settings: FollowUpSettings) => void;
   // Sign out
   onSignOut?: () => void;
   // Save all settings
