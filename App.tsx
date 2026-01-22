@@ -20,12 +20,15 @@ import { useProjects } from './hooks/useProjects';
 import { useSubscription } from './hooks/useSubscription';
 import { useCalendarEvents } from './hooks/useCalendarEvents';
 import { useClients, parseClientCSV, ParsedClientRow, ImportResult } from './hooks/useClients';
+import { useBusinessGoals } from './hooks/useBusinessGoals';
+import { useAnalytics } from './hooks/useAnalytics';
+import { AnalyticsDashboard } from './components/analytics';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink, BarChart3 } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -147,6 +150,12 @@ const App: React.FC = () => {
 
   // Load/save clients from Supabase
   const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients } = useClients();
+
+  // Load/save business goals from Supabase
+  const { goals: businessGoals, createGoal, isLoading: goalsLoading } = useBusinessGoals();
+
+  // Analytics calculated from projects, clients, and goals
+  const analytics = useAnalytics({ projects, clients, goals: businessGoals });
 
   // Client management UI state
   const [showClientModal, setShowClientModal] = useState(false);
@@ -280,8 +289,8 @@ const App: React.FC = () => {
   const [currentBOM, setCurrentBOM] = useState<BOMData | null>(null);
   const [fixtureCatalog, setFixtureCatalog] = useState<FixtureCatalogItem[]>([]);
 
-  // Projects Sub-Tab State - Simplified to 2 main views
-  const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing'>('pipeline');
+  // Projects Sub-Tab State - Simplified to 2 main views + Analytics
+  const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing' | 'analytics'>('pipeline');
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'active' | 'completed'>('all');
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [inlineEditQuote, setInlineEditQuote] = useState<{ [key: string]: { clientName: string; total: number; notes: string } }>({});
@@ -339,6 +348,10 @@ const App: React.FC = () => {
   const [eventNotes, setEventNotes] = useState('');
   const [eventClientName, setEventClientName] = useState('');
   const [eventClientPhone, setEventClientPhone] = useState('');
+  // Service Call Recurrence State
+  const [eventRecurrence, setEventRecurrence] = useState<RecurrencePattern>('none');
+  const [eventRecurrenceEndDate, setEventRecurrenceEndDate] = useState<string>('');
+  const [eventRecurrenceCount, setEventRecurrenceCount] = useState<number>(0);
 
   // Inventory Sub-Tab State
   const [inventorySubTab, setInventorySubTab] = useState<'bom' | 'inventory'>('bom');
@@ -1552,6 +1565,10 @@ const App: React.FC = () => {
     setEventNotes('');
     setEventClientName('');
     setEventClientPhone('');
+    // Reset recurrence fields
+    setEventRecurrence('none');
+    setEventRecurrenceEndDate('');
+    setEventRecurrenceCount(0);
   };
 
   // Open create event modal
@@ -1574,6 +1591,10 @@ const App: React.FC = () => {
     setEventNotes(event.notes || '');
     setEventClientName(event.clientName || '');
     setEventClientPhone(event.clientPhone || '');
+    // Load recurrence data
+    setEventRecurrence(event.recurrence || 'none');
+    setEventRecurrenceEndDate(event.recurrenceEndDate || '');
+    setEventRecurrenceCount(event.recurrenceCount || 0);
     setShowEventModal(true);
   };
 
@@ -1595,6 +1616,10 @@ const App: React.FC = () => {
       notes: eventNotes.trim() || undefined,
       clientName: eventClientName.trim() || undefined,
       clientPhone: eventClientPhone.trim() || undefined,
+      // Include recurrence data for service calls
+      recurrence: eventType === 'service-call' ? eventRecurrence : undefined,
+      recurrenceEndDate: eventType === 'service-call' && eventRecurrence !== 'none' && eventRecurrenceEndDate ? eventRecurrenceEndDate : undefined,
+      recurrenceCount: eventType === 'service-call' && eventRecurrence !== 'none' && eventRecurrenceCount > 0 ? eventRecurrenceCount : undefined,
     };
 
     if (editingEventId) {
@@ -1913,6 +1938,92 @@ Notes: ${invoice.notes || 'N/A'}
     });
     return counts;
   }, [projects]);
+
+  // Pipeline Analytics - Conversion metrics, revenue, overdue invoices
+  const pipelineAnalytics = useMemo(() => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+
+    // Conversion rates
+    const totalProjects = projects.length;
+    const quotedOrBeyond = projects.filter(p => p.status !== 'draft').length;
+    const approvedOrBeyond = projects.filter(p => ['approved', 'scheduled', 'completed'].includes(p.status)).length;
+    const completedCount = projects.filter(p => p.status === 'completed').length;
+
+    const draftToQuotedRate = totalProjects > 0 ? Math.round((quotedOrBeyond / totalProjects) * 100) : 0;
+    const quotedToApprovedRate = quotedOrBeyond > 0 ? Math.round((approvedOrBeyond / quotedOrBeyond) * 100) : 0;
+    const approvedToCompletedRate = approvedOrBeyond > 0 ? Math.round((completedCount / approvedOrBeyond) * 100) : 0;
+
+    // Revenue calculations
+    let revenueThisMonth = 0;
+    let pendingRevenue = 0;
+    let overdueRevenue = 0;
+    const overdueProjects: SavedProject[] = [];
+
+    // Calculate average quote value and days to approval
+    let totalQuoteValue = 0;
+    let quoteCount = 0;
+
+    projects.forEach(p => {
+      const quoteTotal = p.quote?.total || 0;
+
+      // Count quote values for average
+      if (p.quote && quoteTotal > 0) {
+        totalQuoteValue += quoteTotal;
+        quoteCount++;
+      }
+
+      // Revenue this month (paid invoices)
+      if (p.invoicePaidAt) {
+        const paidDate = new Date(p.invoicePaidAt);
+        if (paidDate.getMonth() === thisMonth && paidDate.getFullYear() === thisYear) {
+          revenueThisMonth += quoteTotal;
+        }
+      }
+
+      // Pending revenue (approved/scheduled but not paid)
+      if ((p.status === 'approved' || p.status === 'scheduled') && !p.invoicePaidAt) {
+        pendingRevenue += quoteTotal;
+      }
+
+      // Overdue invoices - quoted projects older than 14 days without approval
+      // or approved/scheduled projects older than 30 days without payment
+      if (p.status === 'quoted') {
+        const projectDate = new Date(p.date);
+        const daysSinceQuote = Math.floor((now.getTime() - projectDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceQuote > 7) {
+          overdueRevenue += quoteTotal;
+          overdueProjects.push(p);
+        }
+      } else if ((p.status === 'approved' || p.status === 'scheduled' || p.status === 'completed') && !p.invoicePaidAt) {
+        const projectDate = new Date(p.date);
+        const daysSinceApproval = Math.floor((now.getTime() - projectDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceApproval > 14) {
+          overdueRevenue += quoteTotal;
+          overdueProjects.push(p);
+        }
+      }
+    });
+
+    const avgQuoteValue = quoteCount > 0 ? Math.round(totalQuoteValue / quoteCount) : 0;
+
+    return {
+      // Conversion funnel
+      draftToQuotedRate,
+      quotedToApprovedRate,
+      approvedToCompletedRate,
+      // Revenue
+      revenueThisMonth,
+      pendingRevenue,
+      overdueRevenue,
+      overdueProjects,
+      // Quick stats
+      avgQuoteValue,
+      totalProjects,
+      activeProjects: statusCounts.approved + statusCounts.scheduled
+    };
+  }, [projects, statusCounts]);
 
   // Memoized filtered project lists (includes search and status filtering)
   const filteredUnapprovedProjects = useMemo(() =>
@@ -3796,7 +3907,93 @@ Notes: ${invoice.notes || 'N/A'}
                          <Users className="w-4 h-4" />
                          Clients
                      </button>
+                     <button
+                         onClick={() => setProjectsSubTab('analytics')}
+                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                             projectsSubTab === 'analytics'
+                                 ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
+                                 : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                         }`}
+                     >
+                         <BarChart3 className="w-4 h-4" />
+                         Analytics
+                     </button>
                  </div>
+
+                 {/* Analytics Dashboard - Full view when Analytics tab is selected */}
+                 {projectsSubTab === 'analytics' && (
+                     <div className="mb-4">
+                         <AnalyticsDashboard
+                             todayMetrics={analytics.todayMetrics}
+                             thisWeekMetrics={analytics.thisWeekMetrics}
+                             thisMonthMetrics={analytics.thisMonthMetrics}
+                             thisYearMetrics={analytics.thisYearMetrics}
+                             currentGoalsProgress={analytics.currentGoalsProgress}
+                             pendingRevenue={analytics.pendingRevenue}
+                             overdueCount={analytics.overdueCount}
+                         />
+                     </div>
+                 )}
+
+                 {/* Pipeline Analytics Dashboard - Only show when on pipeline view */}
+                 {(projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
+                     <div className="mb-4 p-4 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-2xl border border-white/5">
+                         {/* Analytics Header */}
+                         <div className="flex items-center justify-between mb-4">
+                             <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider">Pipeline Analytics</h3>
+                             {pipelineAnalytics.overdueProjects.length > 0 && (
+                                 <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold">
+                                     <AlertCircle className="w-3 h-3" />
+                                     {pipelineAnalytics.overdueProjects.length} Overdue
+                                 </span>
+                             )}
+                         </div>
+
+                         {/* Stats Grid */}
+                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                             {/* Revenue This Month */}
+                             <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                 <p className="text-[10px] uppercase tracking-wider text-emerald-500 mb-1">Paid This Month</p>
+                                 <p className="text-xl font-bold text-emerald-400">${pipelineAnalytics.revenueThisMonth.toLocaleString()}</p>
+                             </div>
+
+                             {/* Pending Revenue */}
+                             <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                 <p className="text-[10px] uppercase tracking-wider text-blue-500 mb-1">Pending</p>
+                                 <p className="text-xl font-bold text-blue-400">${pipelineAnalytics.pendingRevenue.toLocaleString()}</p>
+                             </div>
+
+                             {/* Overdue */}
+                             <div className={`p-3 rounded-xl border ${pipelineAnalytics.overdueRevenue > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
+                                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-500' : 'text-gray-500'}`}>Overdue</p>
+                                 <p className={`text-xl font-bold ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-400' : 'text-gray-500'}`}>${pipelineAnalytics.overdueRevenue.toLocaleString()}</p>
+                             </div>
+
+                             {/* Avg Quote Value */}
+                             <div className="p-3 bg-[#F6B45A]/10 rounded-xl border border-[#F6B45A]/20">
+                                 <p className="text-[10px] uppercase tracking-wider text-[#F6B45A]/70 mb-1">Avg Quote</p>
+                                 <p className="text-xl font-bold text-[#F6B45A]">${pipelineAnalytics.avgQuoteValue.toLocaleString()}</p>
+                             </div>
+                         </div>
+
+                         {/* Conversion Funnel - Desktop Only */}
+                         <div className="hidden md:flex items-center gap-3 mt-4 pt-4 border-t border-white/5">
+                             <span className="text-[10px] uppercase tracking-wider text-gray-500">Conversion:</span>
+                             <div className="flex items-center gap-2">
+                                 <span className="text-xs text-gray-400">Draft</span>
+                                 <span className="text-sm font-bold text-purple-400">{pipelineAnalytics.draftToQuotedRate}%</span>
+                                 <ChevronRight className="w-3 h-3 text-gray-600" />
+                                 <span className="text-xs text-gray-400">Quoted</span>
+                                 <span className="text-sm font-bold text-emerald-400">{pipelineAnalytics.quotedToApprovedRate}%</span>
+                                 <ChevronRight className="w-3 h-3 text-gray-600" />
+                                 <span className="text-xs text-gray-400">Approved</span>
+                                 <span className="text-sm font-bold text-[#F6B45A]">{pipelineAnalytics.approvedToCompletedRate}%</span>
+                                 <ChevronRight className="w-3 h-3 text-gray-600" />
+                                 <span className="text-xs text-gray-400">Done</span>
+                             </div>
+                         </div>
+                     </div>
+                 )}
 
                  {/* Pipeline Status Bar - Only show when on pipeline view */}
                  {(projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
@@ -3967,7 +4164,7 @@ Notes: ${invoice.notes || 'N/A'}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-bold text-sm text-white truncate">{p.name}</h3>
-                                                <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-bold uppercase ${STATUS_CONFIG[p.status].color}`}>{STATUS_CONFIG[p.status].label}</span>{p.invoicePaidAt && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PAID</span>}<span className="text-gray-600">•</span><span className="text-[10px] text-gray-500">{p.date}</span></div>
+                                                <div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-bold uppercase ${STATUS_CONFIG[p.status].color}`}>{STATUS_CONFIG[p.status].label}</span>{p.invoicePaidAt && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PAID</span>}{pipelineAnalytics.overdueProjects.some(op => op.id === p.id) && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">OVERDUE</span>}<span className="text-gray-600">•</span><span className="text-[10px] text-gray-500">{p.date}</span></div>
                                                 {p.quote && <div className="text-xs font-bold text-[#F6B45A] mt-1">${p.quote.total.toFixed(0)}</div>}
                                             </div>
                                             <div className="flex items-center gap-1">
@@ -4134,6 +4331,19 @@ Notes: ${invoice.notes || 'N/A'}
                                             >
                                                 <Check className="w-3 h-3" />
                                                 PAID
+                                            </motion.div>
+                                        )}
+
+                                        {/* Overdue Badge - Top Right (only if not paid) */}
+                                        {!p.invoicePaidAt && pipelineAnalytics.overdueProjects.some(op => op.id === p.id) && (
+                                            <motion.div
+                                                className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30"
+                                                initial={{ opacity: 0, scale: 0.8, x: 10 }}
+                                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                transition={{ delay: index * 0.05 + 0.15, type: "spring", stiffness: 400 }}
+                                            >
+                                                <AlertCircle className="w-3 h-3" />
+                                                OVERDUE
                                             </motion.div>
                                         )}
 
@@ -5881,6 +6091,11 @@ Notes: ${invoice.notes || 'N/A'}
                 // Notification props
                 notifications={notifications}
                 onNotificationsChange={setNotifications}
+                // Business Goals
+                businessGoals={businessGoals}
+                onBusinessGoalChange={async (goal) => {
+                  await createGoal(goal);
+                }}
                 // Sign out
                 onSignOut={handleSignOut}
                 // Save settings
@@ -6283,12 +6498,13 @@ Notes: ${invoice.notes || 'N/A'}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Event Type</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {(['consultation', 'meeting', 'site-visit', 'follow-up', 'personal', 'other'] as EventType[]).map(type => {
+                    {(['consultation', 'meeting', 'site-visit', 'follow-up', 'service-call', 'personal', 'other'] as EventType[]).map(type => {
                       const typeLabels: Record<EventType, string> = {
                         'consultation': 'Consultation',
                         'meeting': 'Meeting',
                         'site-visit': 'Site Visit',
                         'follow-up': 'Follow-up',
+                        'service-call': 'Service Call',
                         'personal': 'Personal',
                         'other': 'Other'
                       };
@@ -6297,6 +6513,7 @@ Notes: ${invoice.notes || 'N/A'}
                         'meeting': 'blue',
                         'site-visit': 'green',
                         'follow-up': 'orange',
+                        'service-call': 'emerald',
                         'personal': 'pink',
                         'other': 'gray'
                       };
@@ -6312,6 +6529,7 @@ Notes: ${invoice.notes || 'N/A'}
                               : color === 'blue' ? 'bg-blue-500/20 border-blue-500 text-blue-400'
                               : color === 'green' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
                               : color === 'orange' ? 'bg-orange-500/20 border-orange-500 text-orange-400'
+                              : color === 'emerald' ? 'bg-teal-500/20 border-teal-500 text-teal-400'
                               : color === 'pink' ? 'bg-pink-500/20 border-pink-500 text-pink-400'
                               : 'bg-gray-500/20 border-gray-500 text-gray-400'
                               : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
@@ -6325,6 +6543,72 @@ Notes: ${invoice.notes || 'N/A'}
                     })}
                   </div>
                 </div>
+
+                {/* Recurrence Options - Only show for service-call type */}
+                {eventType === 'service-call' && (
+                  <div className="p-4 bg-teal-500/10 rounded-xl border border-teal-500/20">
+                    <label className="block text-sm font-medium text-teal-400 mb-3">Recurring Service Schedule</label>
+                    <div className="space-y-3">
+                      {/* Recurrence Pattern */}
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1.5">Repeat</label>
+                        <select
+                          value={eventRecurrence}
+                          onChange={(e) => setEventRecurrence(e.target.value as RecurrencePattern)}
+                          className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                        >
+                          <option value="none">Does not repeat</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="biweekly">Every 2 weeks</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Every 3 months</option>
+                          <option value="biannually">Every 6 months</option>
+                          <option value="annually">Annually</option>
+                        </select>
+                      </div>
+
+                      {/* End Condition - Only show if recurring */}
+                      {eventRecurrence !== 'none' && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1.5">End Date (optional)</label>
+                            <input
+                              type="date"
+                              value={eventRecurrenceEndDate}
+                              onChange={(e) => setEventRecurrenceEndDate(e.target.value)}
+                              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1.5">Or # of occurrences</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={eventRecurrenceCount || ''}
+                              onChange={(e) => setEventRecurrenceCount(parseInt(e.target.value) || 0)}
+                              placeholder="Indefinite"
+                              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {eventRecurrence !== 'none' && (
+                        <p className="text-xs text-teal-400/70">
+                          {eventRecurrence === 'weekly' && 'This service call will repeat every week'}
+                          {eventRecurrence === 'biweekly' && 'This service call will repeat every 2 weeks'}
+                          {eventRecurrence === 'monthly' && 'This service call will repeat every month on the same day'}
+                          {eventRecurrence === 'quarterly' && 'This service call will repeat every 3 months'}
+                          {eventRecurrence === 'biannually' && 'This service call will repeat every 6 months'}
+                          {eventRecurrence === 'annually' && 'This service call will repeat once a year'}
+                          {eventRecurrenceCount > 0 && ` for ${eventRecurrenceCount} occurrences`}
+                          {eventRecurrenceEndDate && ` until ${new Date(eventRecurrenceEndDate).toLocaleDateString()}`}
+                          {!eventRecurrenceCount && !eventRecurrenceEndDate && ' indefinitely'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Date Picker */}
                 <div>

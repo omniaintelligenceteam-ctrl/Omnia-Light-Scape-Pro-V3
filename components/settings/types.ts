@@ -1,4 +1,4 @@
-import { CompanyProfile, FixturePricing, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences, CustomPricingItem } from '../../types';
+import { CompanyProfile, FixturePricing, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences, CustomPricingItem, BusinessGoal } from '../../types';
 
 export interface SubscriptionInfo {
   hasActiveSubscription: boolean;
@@ -56,6 +56,9 @@ export interface SettingsViewProps {
   // Follow-up settings
   followUpSettings?: FollowUpSettings;
   onFollowUpSettingsChange?: (settings: FollowUpSettings) => void;
+  // Business goals
+  businessGoals?: BusinessGoal[];
+  onBusinessGoalChange?: (goal: Omit<BusinessGoal, 'id' | 'createdAt' | 'updatedAt'>) => void;
   // Sign out
   onSignOut?: () => void;
   // Save all settings

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import { CalendarEvent, EventType, TimeSlot } from '../types';
+import { CalendarEvent, EventType, TimeSlot, RecurrencePattern } from '../types';
 
 export function useCalendarEvents() {
   const { user } = useUser();
@@ -36,7 +36,14 @@ export function useCalendarEvents() {
             notes: e.notes,
             clientName: e.client_name,
             clientPhone: e.client_phone,
+            clientId: e.client_id,
+            projectId: e.project_id,
             color: e.color,
+            recurrence: e.recurrence as RecurrencePattern | undefined,
+            recurrenceEndDate: e.recurrence_end_date,
+            recurrenceCount: e.recurrence_count ? Number(e.recurrence_count) : undefined,
+            parentEventId: e.parent_event_id,
+            isRecurringInstance: e.is_recurring_instance,
             createdAt: e.created_at
           }));
           setEvents(loadedEvents);
@@ -73,7 +80,12 @@ export function useCalendarEvents() {
           notes: eventData.notes,
           client_name: eventData.clientName,
           client_phone: eventData.clientPhone,
-          color: eventData.color
+          client_id: eventData.clientId,
+          project_id: eventData.projectId,
+          color: eventData.color,
+          recurrence: eventData.recurrence,
+          recurrence_end_date: eventData.recurrenceEndDate,
+          recurrence_count: eventData.recurrenceCount
         })
       });
 
@@ -93,7 +105,14 @@ export function useCalendarEvents() {
           notes: data.data.notes,
           clientName: data.data.client_name,
           clientPhone: data.data.client_phone,
+          clientId: data.data.client_id,
+          projectId: data.data.project_id,
           color: data.data.color,
+          recurrence: data.data.recurrence as RecurrencePattern | undefined,
+          recurrenceEndDate: data.data.recurrence_end_date,
+          recurrenceCount: data.data.recurrence_count ? Number(data.data.recurrence_count) : undefined,
+          parentEventId: data.data.parent_event_id,
+          isRecurringInstance: data.data.is_recurring_instance,
           createdAt: data.data.created_at
         };
         setEvents(prev => [...prev, newEvent]);
@@ -129,7 +148,12 @@ export function useCalendarEvents() {
           notes: updates.notes,
           client_name: updates.clientName,
           client_phone: updates.clientPhone,
-          color: updates.color
+          client_id: updates.clientId,
+          project_id: updates.projectId,
+          color: updates.color,
+          recurrence: updates.recurrence,
+          recurrence_end_date: updates.recurrenceEndDate,
+          recurrence_count: updates.recurrenceCount
         })
       });
 

@@ -4,7 +4,7 @@ import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
   HelpCircle, LogOut, Save, Loader2, Upload, Check, Moon,
   Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2, Phone,
-  X, ChevronRight, Download, FileJson, Clock
+  X, ChevronRight, Download, FileJson, Clock, Target
 } from 'lucide-react';
 import { ToggleRow } from './ui/SettingsToggle';
 import { SettingsSlider } from './ui/SettingsSlider';
@@ -127,6 +127,8 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   onNotificationsChange,
   followUpSettings,
   onFollowUpSettingsChange,
+  businessGoals,
+  onBusinessGoalChange,
   onSignOut,
   onSaveSettings,
   isSaving = false,
@@ -234,6 +236,14 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           title="Follow-ups"
           description="Automated reminders"
           onClick={() => setActiveModal('followups')}
+        />
+
+        {/* Goals */}
+        <MenuButton
+          icon={Target}
+          title="Business Goals"
+          description="Revenue & project targets"
+          onClick={() => setActiveModal('goals')}
         />
 
         {/* Subscription */}
@@ -886,6 +896,137 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </FullScreenModal>
+
+      {/* Goals Modal */}
+      <FullScreenModal
+        isOpen={activeModal === 'goals'}
+        onClose={() => setActiveModal(null)}
+        title="Business Goals"
+        onSave={onSaveSettings}
+      >
+        <div className="space-y-6">
+          <p className="text-sm text-gray-400">
+            Set targets to track your business performance in the analytics dashboard.
+          </p>
+
+          {/* Monthly Revenue Goal */}
+          <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Monthly Revenue</h3>
+                <p className="text-xs text-gray-500">Target for {new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">$</span>
+              <input
+                type="number"
+                min={0}
+                step={1000}
+                value={businessGoals?.find(g => g.goalType === 'revenue' && g.periodType === 'monthly' && g.month === new Date().getMonth() + 1 && g.year === new Date().getFullYear())?.targetValue || ''}
+                onChange={(e) => onBusinessGoalChange?.({
+                  goalType: 'revenue',
+                  periodType: 'monthly',
+                  targetValue: parseFloat(e.target.value) || 0,
+                  year: new Date().getFullYear(),
+                  month: new Date().getMonth() + 1
+                })}
+                placeholder="15000"
+                className="flex-1 px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Yearly Revenue Goal */}
+          <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Yearly Revenue</h3>
+                <p className="text-xs text-gray-500">Target for {new Date().getFullYear()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">$</span>
+              <input
+                type="number"
+                min={0}
+                step={10000}
+                value={businessGoals?.find(g => g.goalType === 'revenue' && g.periodType === 'yearly' && g.year === new Date().getFullYear())?.targetValue || ''}
+                onChange={(e) => onBusinessGoalChange?.({
+                  goalType: 'revenue',
+                  periodType: 'yearly',
+                  targetValue: parseFloat(e.target.value) || 0,
+                  year: new Date().getFullYear()
+                })}
+                placeholder="180000"
+                className="flex-1 px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-600 focus:border-blue-500/50 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Monthly Projects Goal */}
+          <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <Package className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Projects Completed</h3>
+                <p className="text-xs text-gray-500">Monthly target for {new Date().toLocaleString('default', { month: 'long' })}</p>
+              </div>
+            </div>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={businessGoals?.find(g => g.goalType === 'projects_completed' && g.periodType === 'monthly' && g.month === new Date().getMonth() + 1 && g.year === new Date().getFullYear())?.targetValue || ''}
+              onChange={(e) => onBusinessGoalChange?.({
+                goalType: 'projects_completed',
+                periodType: 'monthly',
+                targetValue: parseInt(e.target.value) || 0,
+                year: new Date().getFullYear(),
+                month: new Date().getMonth() + 1
+              })}
+              placeholder="10"
+              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-600 focus:border-purple-500/50 focus:outline-none"
+            />
+          </div>
+
+          {/* Monthly New Clients Goal */}
+          <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <User className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">New Clients</h3>
+                <p className="text-xs text-gray-500">Monthly target for {new Date().toLocaleString('default', { month: 'long' })}</p>
+              </div>
+            </div>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={businessGoals?.find(g => g.goalType === 'new_clients' && g.periodType === 'monthly' && g.month === new Date().getMonth() + 1 && g.year === new Date().getFullYear())?.targetValue || ''}
+              onChange={(e) => onBusinessGoalChange?.({
+                goalType: 'new_clients',
+                periodType: 'monthly',
+                targetValue: parseInt(e.target.value) || 0,
+                year: new Date().getFullYear(),
+                month: new Date().getMonth() + 1
+              })}
+              placeholder="5"
+              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-600 focus:border-amber-500/50 focus:outline-none"
+            />
           </div>
         </div>
       </FullScreenModal>

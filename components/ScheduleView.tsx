@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star } from 'lucide-react';
-import { SavedProject, ScheduleData, TimeSlot, CalendarEvent, EventType } from '../types';
+import { SavedProject, TimeSlot, CalendarEvent, EventType } from '../types';
 
 interface ScheduleViewProps {
   projects: SavedProject[];
@@ -60,6 +60,8 @@ const getEventTypeDisplay = (type: EventType): { label: string; icon: React.Reac
       return { label: 'Site Visit', icon: <Eye className="w-4 h-4" />, color: 'green' };
     case 'follow-up':
       return { label: 'Follow-up', icon: <MessageSquare className="w-4 h-4" />, color: 'orange' };
+    case 'service-call':
+      return { label: 'Service Call', icon: <CalendarDays className="w-4 h-4" />, color: 'emerald' };
     case 'personal':
       return { label: 'Personal', icon: <Star className="w-4 h-4" />, color: 'pink' };
     case 'other':

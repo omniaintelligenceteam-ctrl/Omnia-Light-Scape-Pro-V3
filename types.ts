@@ -184,7 +184,9 @@ export interface NotificationPreferences {
 }
 
 // === CALENDAR EVENT TYPES ===
-export type EventType = 'consultation' | 'meeting' | 'site-visit' | 'follow-up' | 'personal' | 'other';
+export type EventType = 'consultation' | 'meeting' | 'site-visit' | 'follow-up' | 'service-call' | 'personal' | 'other';
+
+export type RecurrencePattern = 'none' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'biannually' | 'annually';
 
 export interface CalendarEvent {
   id: string;
@@ -198,7 +200,15 @@ export interface CalendarEvent {
   notes?: string;
   clientName?: string;
   clientPhone?: string;
+  clientId?: string;         // Link to client for service calls
+  projectId?: string;        // Link to project for service calls
   color?: string;            // Custom color for the event
+  // Recurrence fields for service scheduling
+  recurrence?: RecurrencePattern;
+  recurrenceEndDate?: string;  // ISO date - when recurrence ends (optional, null = indefinite)
+  recurrenceCount?: number;    // Number of occurrences (alternative to end date)
+  parentEventId?: string;      // For recurring events, link to parent
+  isRecurringInstance?: boolean; // True if this is a generated recurring instance
   createdAt: string;
 }
 
@@ -270,4 +280,80 @@ export interface InvoiceTracking {
   sentAt?: string;
   clientDetails: ClientDetails;
   createdAt: string;
+}
+
+// === BUSINESS GOALS & ANALYTICS TYPES ===
+export type GoalType = 'revenue' | 'projects_completed' | 'new_clients';
+export type PeriodType = 'monthly' | 'quarterly' | 'yearly';
+export type DateRangePreset = 'today' | 'this_week' | 'this_month' | 'this_quarter' | 'this_year' | 'custom';
+
+export interface BusinessGoal {
+  id: string;
+  goalType: GoalType;
+  periodType: PeriodType;
+  targetValue: number;
+  year: number;
+  month?: number;      // 1-12 for monthly goals
+  quarter?: number;    // 1-4 for quarterly goals
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoalProgress {
+  goal: BusinessGoal;
+  currentValue: number;
+  progress: number;    // 0-100 percentage
+  daysRemaining: number;
+  onTrack: boolean;    // Green = on track, Yellow = behind, Red = at risk
+}
+
+export interface DailyMetrics {
+  date: string;
+  scheduledJobs: number;
+  completedJobs: number;
+  revenueCollected: number;
+  followUpsDue: number;
+  activeProjects: number;
+}
+
+export interface WeeklyMetrics {
+  weekStart: string;
+  weekEnd: string;
+  jobsCompleted: number;
+  revenueCollected: number;
+  quotesSent: number;
+  quotesApproved: number;
+  newClients: number;
+  comparisonToLastWeek: {
+    revenue: number;      // percentage change
+    jobs: number;
+  };
+}
+
+export interface MonthlyMetrics {
+  month: number;
+  year: number;
+  revenueActual: number;
+  revenueTarget: number;
+  revenueProgress: number;
+  projectsCompleted: number;
+  projectsTarget: number;
+  avgProjectValue: number;
+  newClients: number;
+  newClientsTarget: number;
+  conversionRate: number;
+  outstandingReceivables: number;
+}
+
+export interface YearlyMetrics {
+  year: number;
+  revenueByMonth: { month: string; revenue: number; target?: number }[];
+  yearToDateRevenue: number;
+  yearToDateTarget: number;
+  totalProjects: number;
+  totalClients: number;
+  avgMonthlyRevenue: number;
+  bestMonth: { month: string; revenue: number };
+  worstMonth: { month: string; revenue: number };
+  growthRate?: number;
 }
