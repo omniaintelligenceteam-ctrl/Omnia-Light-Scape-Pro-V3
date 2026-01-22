@@ -414,7 +414,7 @@ const App: React.FC = () => {
 
   // Projects Sub-Tab State - Simplified to 2 main views + Analytics
   const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing' | 'analytics'>('pipeline');
-  const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'active' | 'completed'>('all');
+  const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'approved' | 'active' | 'completed'>('all');
 
   // Advanced Analytics State
   const [analyticsDateRange, setAnalyticsDateRange] = useState({
@@ -4140,55 +4140,6 @@ Notes: ${invoice.notes || 'N/A'}
                      </div>
                  </div>
 
-                 {/* Mobile Status Pipeline - Compact */}
-                 <div className="md:hidden mb-4">
-                     <div className="flex items-center justify-between gap-1 p-2 bg-[#0a0a0a] rounded-xl border border-white/5">
-                         {(['draft', 'quoted', 'approved', 'scheduled', 'completed'] as ProjectStatus[]).map((status, index) => {
-                             const config = STATUS_CONFIG[status];
-                             const count = statusCounts[status];
-                             return (
-                                 <React.Fragment key={status}>
-                                     <motion.button
-                                         onClick={() => {
-                                           setProjectsSubTab('pipeline'); if (status === 'draft') setPipelineStatusFilter('draft');
-                                           else if (status === 'quoted') setPipelineStatusFilter('quoted');
-                                           else if (status === 'approved' || status === 'scheduled') setPipelineStatusFilter('active'); else if (status === 'completed') setPipelineStatusFilter('completed');
-                                         }}
-                                         className={`flex-1 flex flex-col items-center py-1.5 px-1 rounded-lg ${config.bgColor} border ${config.borderColor}`}
-                                         whileTap={{ scale: 0.95 }}
-                                     >
-                                         <span className={`text-base font-bold ${config.color}`}>{count}</span>
-                                         <span className={`text-[7px] font-bold uppercase tracking-wide ${config.color}`}>{config.label}</span>
-                                     </motion.button>
-                                     {index < 4 && (
-                                         <ChevronRight className="w-3 h-3 text-gray-700 flex-shrink-0" />
-                                     )}
-                                 </React.Fragment>
-                             );
-                         })}
-                     </div>
-                 </div>
-
-                 {/* Desktop Status Pipeline */}
-                 <div className="hidden md:block mb-6 p-4 bg-[#111] rounded-2xl border border-white/5">
-                     <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                         {(['draft', 'quoted', 'approved', 'scheduled', 'completed'] as ProjectStatus[]).map((status, index) => {
-                             const config = STATUS_CONFIG[status];
-                             const count = statusCounts[status];
-                             return (
-                                 <React.Fragment key={status}>
-                                     <div className={`flex-shrink-0 flex flex-col items-center gap-1 px-5 py-2 rounded-xl ${config.bgColor} border ${config.borderColor} min-w-[90px]`}>
-                                         <span className={`text-2xl font-bold ${config.color}`}>{count}</span>
-                                         <span className={`text-[10px] font-bold uppercase tracking-wider ${config.color}`}>{config.label}</span>
-                                     </div>
-                                     {index < 4 && (
-                                         <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                                     )}
-                                 </React.Fragment>
-                             );
-                         })}
-                     </div>
-                 </div>
 
                  {/* Simplified Navigation: 2 Main Tabs */}
                  <div className="flex items-center gap-2 mb-4">
@@ -4347,6 +4298,16 @@ Notes: ${invoice.notes || 'N/A'}
                              >
                                  Quoted ({statusCounts.quoted})
                              </button>
+                             <button
+                                onClick={() => setPipelineStatusFilter('approved')}
+                                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                    pipelineStatusFilter === 'approved'
+                                        ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/50'
+                                        : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
+                                }`}
+                            >
+                                Approved ({statusCounts.approved})
+                            </button>
                              <button
                                  onClick={() => setPipelineStatusFilter('active')}
                                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
