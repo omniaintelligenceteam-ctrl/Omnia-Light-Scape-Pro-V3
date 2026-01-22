@@ -196,7 +196,7 @@ const App: React.FC = () => {
   const currentYearNum = currentDate.getFullYear();
 
   // Current month metrics
-  const currentMonthRevenue = analytics.thisMonthMetrics?.revenue || 0;
+  const currentMonthRevenue = analytics.thisMonthMetrics?.revenueActual || 0;
   const currentMonthProjects = projects.filter(p =>
     p.status === 'completed' &&
     new Date(p.schedule?.scheduledDate || p.date).getMonth() + 1 === currentMonthNum &&
@@ -237,7 +237,7 @@ const App: React.FC = () => {
   }).length;
 
   // Current year metrics
-  const currentYearRevenue = analytics.thisYearMetrics?.revenue || 0;
+  const currentYearRevenue = analytics.thisYearMetrics?.yearToDateRevenue || 0;
   const currentYearProjects = projects.filter(p =>
     p.status === 'completed' &&
     new Date(p.schedule?.scheduledDate || p.date).getFullYear() === currentYearNum
