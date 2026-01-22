@@ -148,14 +148,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (tokenError) {
       console.error('Token insert error:', tokenError);
-      return res.status(500).json({ error: 'Failed to create portal token' });
+      return res.status(500).json({ error: 'Failed to create portal token. Make sure you have run the database migration.' });
     }
 
-    // Update client portal_enabled flag
-    await supabase
-      .from('clients')
-      .update({ portal_enabled: true })
-      .eq('id', clientId);
+    // Update client portal_enabled flag (optional - may not exist yet)
+    try {
+      await supabase
+        .from('clients')
+        .update({ portal_enabled: true })
+        .eq('id', clientId);
+    } catch {
+      // Column may not exist yet - that's ok
+    }
 
     // Build portal URL
     const baseUrl = process.env.VERCEL_URL

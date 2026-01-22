@@ -72,11 +72,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('id', tokenData.id);
     }
 
-    // Update client's last portal access
-    await supabase
-      .from('clients')
-      .update({ last_portal_access: new Date().toISOString() })
-      .eq('id', client.id);
+    // Update client's last portal access (optional - column may not exist yet)
+    try {
+      await supabase
+        .from('clients')
+        .update({ last_portal_access: new Date().toISOString() })
+        .eq('id', client.id);
+    } catch {
+      // Column may not exist yet - that's ok
+    }
 
     return res.status(200).json({
       success: true,

@@ -79,4 +79,14 @@ export interface SettingsViewProps {
   onCreateTechnician?: (technician: Omit<Technician, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Technician | null>;
   onUpdateTechnician?: (id: string, updates: Partial<Technician>) => Promise<Technician | null>;
   onDeleteTechnician?: (id: string) => Promise<boolean>;
+  // Analytics data for goal progress
+  currentMonthRevenue?: number;
+  currentMonthProjects?: number;
+  currentMonthClients?: number;
+  currentQuarterRevenue?: number;
+  currentQuarterProjects?: number;
+  currentQuarterClients?: number;
+  currentYearRevenue?: number;
+  currentYearProjects?: number;
+  currentYearClients?: number;
 }

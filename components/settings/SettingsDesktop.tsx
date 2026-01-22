@@ -17,6 +17,7 @@ import { AIAssistant } from './AIAssistant';
 import { LocationsSection } from './LocationsSection';
 import { TechniciansSection } from './TechniciansSection';
 import { TeamSection } from './TeamSection';
+import { GoalsSection } from './GoalsSection';
 import { useOrganization } from '../../hooks/useOrganization';
 
 export const SettingsDesktop: React.FC<SettingsViewProps> = ({
@@ -66,7 +67,16 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   techniciansLoading = false,
   onCreateTechnician,
   onUpdateTechnician,
-  onDeleteTechnician
+  onDeleteTechnician,
+  currentMonthRevenue = 0,
+  currentMonthProjects = 0,
+  currentMonthClients = 0,
+  currentQuarterRevenue = 0,
+  currentQuarterProjects = 0,
+  currentQuarterClients = 0,
+  currentYearRevenue = 0,
+  currentYearProjects = 0,
+  currentYearClients = 0
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [showAIChat, setShowAIChat] = useState(false);
@@ -877,102 +887,25 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                   Set business goals to track your performance. Goals help you stay on track with revenue, projects, and client acquisition.
                 </p>
 
-                {/* Monthly Revenue Goal */}
-                <SettingsCard className="p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Monthly Revenue Goal</h3>
-                  <p className="text-sm text-gray-500 mb-4">Set your target monthly revenue to track progress throughout the month.</p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-400">$</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1000}
-                      placeholder="15000"
-                      value={businessGoals?.find(g => g.goalType === 'revenue' && g.periodType === 'monthly' && g.year === new Date().getFullYear() && g.month === new Date().getMonth() + 1)?.targetValue || ''}
-                      onChange={(e) => onBusinessGoalChange?.({
-                        goalType: 'revenue',
-                        periodType: 'monthly',
-                        targetValue: parseInt(e.target.value) || 0,
-                        year: new Date().getFullYear(),
-                        month: new Date().getMonth() + 1
-                      })}
-                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-[#F6B45A]/50 focus:outline-none"
-                    />
-                    <span className="text-sm text-gray-400">per month</span>
-                  </div>
-                </SettingsCard>
-
-                {/* Yearly Revenue Goal */}
-                <SettingsCard className="p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Yearly Revenue Goal</h3>
-                  <p className="text-sm text-gray-500 mb-4">Set your annual revenue target for long-term tracking.</p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-400">$</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={10000}
-                      placeholder="180000"
-                      value={businessGoals?.find(g => g.goalType === 'revenue' && g.periodType === 'yearly' && g.year === new Date().getFullYear())?.targetValue || ''}
-                      onChange={(e) => onBusinessGoalChange?.({
-                        goalType: 'revenue',
-                        periodType: 'yearly',
-                        targetValue: parseInt(e.target.value) || 0,
-                        year: new Date().getFullYear()
-                      })}
-                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-[#F6B45A]/50 focus:outline-none"
-                    />
-                    <span className="text-sm text-gray-400">per year</span>
-                  </div>
-                </SettingsCard>
-
-                {/* Projects Completed Goal */}
-                <SettingsCard className="p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Monthly Projects Goal</h3>
-                  <p className="text-sm text-gray-500 mb-4">Target number of projects to complete each month.</p>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      placeholder="10"
-                      value={businessGoals?.find(g => g.goalType === 'projects_completed' && g.periodType === 'monthly' && g.year === new Date().getFullYear() && g.month === new Date().getMonth() + 1)?.targetValue || ''}
-                      onChange={(e) => onBusinessGoalChange?.({
-                        goalType: 'projects_completed',
-                        periodType: 'monthly',
-                        targetValue: parseInt(e.target.value) || 0,
-                        year: new Date().getFullYear(),
-                        month: new Date().getMonth() + 1
-                      })}
-                      className="w-24 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 text-center focus:border-[#F6B45A]/50 focus:outline-none"
-                    />
-                    <span className="text-sm text-gray-400">projects per month</span>
-                  </div>
-                </SettingsCard>
-
-                {/* New Clients Goal */}
-                <SettingsCard className="p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Monthly New Clients Goal</h3>
-                  <p className="text-sm text-gray-500 mb-4">Target number of new clients to acquire each month.</p>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      placeholder="5"
-                      value={businessGoals?.find(g => g.goalType === 'new_clients' && g.periodType === 'monthly' && g.year === new Date().getFullYear() && g.month === new Date().getMonth() + 1)?.targetValue || ''}
-                      onChange={(e) => onBusinessGoalChange?.({
-                        goalType: 'new_clients',
-                        periodType: 'monthly',
-                        targetValue: parseInt(e.target.value) || 0,
-                        year: new Date().getFullYear(),
-                        month: new Date().getMonth() + 1
-                      })}
-                      className="w-24 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 text-center focus:border-[#F6B45A]/50 focus:outline-none"
-                    />
-                    <span className="text-sm text-gray-400">new clients per month</span>
-                  </div>
-                </SettingsCard>
+                <GoalsSection
+                  businessGoals={businessGoals || []}
+                  onBusinessGoalChange={onBusinessGoalChange!}
+                  currentMonth={{
+                    revenue: currentMonthRevenue,
+                    projects: currentMonthProjects,
+                    clients: currentMonthClients
+                  }}
+                  currentQuarter={{
+                    revenue: currentQuarterRevenue,
+                    projects: currentQuarterProjects,
+                    clients: currentQuarterClients
+                  }}
+                  currentYear={{
+                    revenue: currentYearRevenue,
+                    projects: currentYearProjects,
+                    clients: currentYearClients
+                  }}
+                />
               </motion.div>
             )}
 

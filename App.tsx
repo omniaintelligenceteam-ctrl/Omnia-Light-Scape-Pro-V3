@@ -189,6 +189,63 @@ const App: React.FC = () => {
   const technicianMetrics = useTechnicianMetrics(projects, technicians, locations, 'this_month');
   const companyMetrics = useCompanyMetrics(locationMetrics, technicianMetrics, projects, 'this_month');
 
+  // Calculate current metrics for goal tracking in Settings
+  const currentDate = new Date();
+  const currentMonthNum = currentDate.getMonth() + 1;
+  const currentQuarterNum = Math.floor(currentDate.getMonth() / 3) + 1;
+  const currentYearNum = currentDate.getFullYear();
+
+  // Current month metrics
+  const currentMonthRevenue = analytics.thisMonthMetrics?.revenue || 0;
+  const currentMonthProjects = projects.filter(p =>
+    p.status === 'completed' &&
+    new Date(p.schedule?.scheduledDate || p.date).getMonth() + 1 === currentMonthNum &&
+    new Date(p.schedule?.scheduledDate || p.date).getFullYear() === currentYearNum
+  ).length;
+  const currentMonthClients = clients.filter(c => {
+    const createdDate = new Date(c.createdAt);
+    return createdDate.getMonth() + 1 === currentMonthNum && createdDate.getFullYear() === currentYearNum;
+  }).length;
+
+  // Current quarter metrics
+  const quarterStartMonth = (currentQuarterNum - 1) * 3;
+  const quarterEndMonth = currentQuarterNum * 3;
+  const currentQuarterRevenue = projects.filter(p => {
+    if (!p.invoicePaidAt) return false;
+    const paidDate = new Date(p.invoicePaidAt);
+    const paidMonth = paidDate.getMonth() + 1;
+    return paidDate.getFullYear() === currentYearNum &&
+           paidMonth > quarterStartMonth &&
+           paidMonth <= quarterEndMonth;
+  }).reduce((sum, p) => sum + (p.quote?.total || 0), 0);
+
+  const currentQuarterProjects = projects.filter(p => {
+    const projectDate = new Date(p.schedule?.scheduledDate || p.date);
+    const projectMonth = projectDate.getMonth() + 1;
+    return p.status === 'completed' &&
+           projectDate.getFullYear() === currentYearNum &&
+           projectMonth > quarterStartMonth &&
+           projectMonth <= quarterEndMonth;
+  }).length;
+
+  const currentQuarterClients = clients.filter(c => {
+    const createdDate = new Date(c.createdAt);
+    const createdMonth = createdDate.getMonth() + 1;
+    return createdDate.getFullYear() === currentYearNum &&
+           createdMonth > quarterStartMonth &&
+           createdMonth <= quarterEndMonth;
+  }).length;
+
+  // Current year metrics
+  const currentYearRevenue = analytics.thisYearMetrics?.revenue || 0;
+  const currentYearProjects = projects.filter(p =>
+    p.status === 'completed' &&
+    new Date(p.schedule?.scheduledDate || p.date).getFullYear() === currentYearNum
+  ).length;
+  const currentYearClients = clients.filter(c =>
+    new Date(c.createdAt).getFullYear() === currentYearNum
+  ).length;
+
   // Organization and role management
   const { role, hasPermission } = useOrganization();
 
@@ -6272,6 +6329,16 @@ Notes: ${invoice.notes || 'N/A'}
                 onCreateTechnician={createTechnician}
                 onUpdateTechnician={updateTechnician}
                 onDeleteTechnician={deleteTechnician}
+                // Analytics data for goal progress
+                currentMonthRevenue={currentMonthRevenue}
+                currentMonthProjects={currentMonthProjects}
+                currentMonthClients={currentMonthClients}
+                currentQuarterRevenue={currentQuarterRevenue}
+                currentQuarterProjects={currentQuarterProjects}
+                currentQuarterClients={currentQuarterClients}
+                currentYearRevenue={currentYearRevenue}
+                currentYearProjects={currentYearProjects}
+                currentYearClients={currentYearClients}
              />
              </motion.div>
           )}
