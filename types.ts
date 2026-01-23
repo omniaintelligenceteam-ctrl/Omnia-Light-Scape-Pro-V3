@@ -135,10 +135,12 @@ export interface BOMData {
 }
 
 export interface FixtureCatalogItem {
-  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'coredrill';
+  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'coredrill' | 'custom';
   brand: string;              // User's preferred brand
   sku: string;                // User's SKU
   wattage: number;            // Actual wattage of their fixture
+  customName?: string;        // Custom fixture type name (for custom types)
+  id?: string;                // Unique ID for custom entries
 }
 
 // Invoice Types

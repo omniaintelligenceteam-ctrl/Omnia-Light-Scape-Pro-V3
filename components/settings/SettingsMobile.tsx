@@ -635,6 +635,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
             Configure your preferred brands and SKUs for the BOM.
           </p>
 
+          {/* Standard Fixture Types */}
           {(['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill'] as const).map((type) => {
             const item = fixtureCatalog.find(c => c.fixtureType === type) || {
               fixtureType: type, brand: '', sku: '', wattage: 4
@@ -692,6 +693,96 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
               </div>
             );
           })}
+
+          {/* Custom SKU Entries */}
+          {fixtureCatalog
+            .filter(c => c.fixtureType === 'custom')
+            .map((item) => (
+              <div key={item.id} className="bg-white/[0.03] rounded-2xl p-4 border border-white/5 relative">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-bold text-emerald-400 uppercase bg-emerald-500/10 px-3 py-1 rounded-full">
+                    Custom SKU
+                  </span>
+                  <button
+                    onClick={() => {
+                      const updated = fixtureCatalog.filter(c => c.id !== item.id);
+                      onFixtureCatalogChange?.(updated);
+                    }}
+                    className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <CardInput
+                    label="Name"
+                    value={item.customName || ''}
+                    onChange={(v) => {
+                      const updated = fixtureCatalog.map(c =>
+                        c.id === item.id ? { ...c, customName: v } : c
+                      );
+                      onFixtureCatalogChange?.(updated);
+                    }}
+                    placeholder="Fixture name"
+                  />
+                  <CardInput
+                    label="Brand"
+                    value={item.brand}
+                    onChange={(v) => {
+                      const updated = fixtureCatalog.map(c =>
+                        c.id === item.id ? { ...c, brand: v } : c
+                      );
+                      onFixtureCatalogChange?.(updated);
+                    }}
+                    placeholder="Brand"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <CardInput
+                    label="SKU"
+                    value={item.sku}
+                    onChange={(v) => {
+                      const updated = fixtureCatalog.map(c =>
+                        c.id === item.id ? { ...c, sku: v } : c
+                      );
+                      onFixtureCatalogChange?.(updated);
+                    }}
+                    placeholder="SKU"
+                  />
+                  <CardInput
+                    label="Watts"
+                    value={item.wattage}
+                    onChange={(v) => {
+                      const updated = fixtureCatalog.map(c =>
+                        c.id === item.id ? { ...c, wattage: parseInt(v) || 0 } : c
+                      );
+                      onFixtureCatalogChange?.(updated);
+                    }}
+                    type="number"
+                    suffix="W"
+                  />
+                </div>
+              </div>
+            ))}
+
+          {/* Add SKU Button */}
+          <button
+            onClick={() => {
+              const newItem = {
+                id: `custom-sku-${Date.now()}`,
+                fixtureType: 'custom' as const,
+                customName: '',
+                brand: '',
+                sku: '',
+                wattage: 4
+              };
+              onFixtureCatalogChange?.([...fixtureCatalog, newItem]);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-white/[0.02] border border-dashed border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-white/20 hover:bg-white/[0.03] transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="font-medium">Add SKU</span>
+          </button>
         </div>
       </FullScreenModal>
 

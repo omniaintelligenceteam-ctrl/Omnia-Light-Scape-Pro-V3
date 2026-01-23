@@ -181,7 +181,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="p-8 max-w-3xl">
+        <div className="p-8 pb-24 max-w-3xl">
           <AnimatePresence mode="wait">
             {/* Profile Section */}
             {activeSection === 'profile' && profile && (
@@ -531,6 +531,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 </p>
 
                 <div className="space-y-4">
+                  {/* Standard Fixture Types */}
                   {(['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill'] as const).map((type) => {
                     const item = fixtureCatalog.find(c => c.fixtureType === type) || {
                       fixtureType: type, brand: '', sku: '', wattage: 4
@@ -590,7 +591,95 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                       </SettingsCard>
                     );
                   })}
+
+                  {/* Custom SKU Entries */}
+                  {fixtureCatalog
+                    .filter(c => c.fixtureType === 'custom')
+                    .map((item) => (
+                      <SettingsCard key={item.id} className="p-5 hover:border-white/10 transition-colors relative group">
+                        <div className="flex items-center justify-between gap-2 mb-4">
+                          <span className="text-[10px] font-bold uppercase bg-emerald-500 text-black px-2.5 py-1 rounded-full">
+                            Custom SKU
+                          </span>
+                          <button
+                            onClick={() => {
+                              const updated = fixtureCatalog.filter(c => c.id !== item.id);
+                              onFixtureCatalogChange?.(updated);
+                            }}
+                            className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-4 gap-4">
+                          <CardInput
+                            label="Fixture Name"
+                            value={item.customName || ''}
+                            onChange={(v) => {
+                              const updated = fixtureCatalog.map(c =>
+                                c.id === item.id ? { ...c, customName: v } : c
+                              );
+                              onFixtureCatalogChange?.(updated);
+                            }}
+                            placeholder="e.g., Well Light"
+                          />
+                          <CardInput
+                            label="Brand"
+                            value={item.brand}
+                            onChange={(v) => {
+                              const updated = fixtureCatalog.map(c =>
+                                c.id === item.id ? { ...c, brand: v } : c
+                              );
+                              onFixtureCatalogChange?.(updated);
+                            }}
+                            placeholder="e.g., WAC"
+                          />
+                          <CardInput
+                            label="SKU / Model"
+                            value={item.sku}
+                            onChange={(v) => {
+                              const updated = fixtureCatalog.map(c =>
+                                c.id === item.id ? { ...c, sku: v } : c
+                              );
+                              onFixtureCatalogChange?.(updated);
+                            }}
+                            placeholder="e.g., 5111-30"
+                          />
+                          <CardInput
+                            label="Wattage"
+                            value={item.wattage}
+                            onChange={(v) => {
+                              const updated = fixtureCatalog.map(c =>
+                                c.id === item.id ? { ...c, wattage: parseInt(v) || 0 } : c
+                              );
+                              onFixtureCatalogChange?.(updated);
+                            }}
+                            type="number"
+                            suffix="W"
+                          />
+                        </div>
+                      </SettingsCard>
+                    ))}
                 </div>
+
+                {/* Add SKU Button */}
+                <button
+                  onClick={() => {
+                    const newItem = {
+                      id: `custom-sku-${Date.now()}`,
+                      fixtureType: 'custom' as const,
+                      customName: '',
+                      brand: '',
+                      sku: '',
+                      wattage: 4
+                    };
+                    onFixtureCatalogChange?.([...fixtureCatalog, newItem]);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-4 bg-white/[0.02] border border-dashed border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-white/20 hover:bg-white/[0.03] transition-all"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="font-medium">Add SKU</span>
+                </button>
               </motion.div>
             )}
 
