@@ -63,6 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: List all members of the organization
     if (req.method === 'GET') {
+      // First get all members
       const { data: members, error } = await supabase
         .from('organization_members')
         .select(`
@@ -74,37 +75,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           invited_at,
           accepted_at,
           is_active,
-          created_at,
-          users (
-            id,
-            email,
-            full_name
-          ),
-          locations (
-            id,
-            name
-          )
+          created_at
         `)
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching members:', error);
+        throw error;
+      }
+
+      // Get user details separately to avoid join issues
+      const userIds = [...new Set((members || []).map(m => m.user_id).filter(Boolean))];
+      let usersMap: Record<string, { email?: string; full_name?: string }> = {};
+
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, email, full_name')
+          .in('id', userIds);
+
+        (users || []).forEach((u: any) => {
+          usersMap[u.id] = { email: u.email, full_name: u.full_name };
+        });
+      }
+
+      // Get location details separately
+      const locationIds = [...new Set((members || []).map(m => m.location_id).filter(Boolean))];
+      let locationsMap: Record<string, string> = {};
+
+      if (locationIds.length > 0) {
+        const { data: locations } = await supabase
+          .from('locations')
+          .select('id, name')
+          .in('id', locationIds);
+
+        (locations || []).forEach((l: any) => {
+          locationsMap[l.id] = l.name;
+        });
+      }
 
       // Format response
-      const formattedMembers = (members || []).map((m: any) => ({
-        id: m.id,
-        userId: m.user_id,
-        role: m.role,
-        locationId: m.location_id,
-        locationName: m.locations?.name || null,
-        invitedBy: m.invited_by,
-        invitedAt: m.invited_at,
-        acceptedAt: m.accepted_at,
-        isActive: m.is_active,
-        createdAt: m.created_at,
-        userName: m.users?.full_name || m.users?.email || 'Unknown',
-        userEmail: m.users?.email
-      }));
+      const formattedMembers = (members || []).map((m: any) => {
+        const user = usersMap[m.user_id] || {};
+        return {
+          id: m.id,
+          userId: m.user_id,
+          role: m.role,
+          locationId: m.location_id,
+          locationName: m.location_id ? (locationsMap[m.location_id] || null) : null,
+          invitedBy: m.invited_by,
+          invitedAt: m.invited_at,
+          acceptedAt: m.accepted_at,
+          isActive: m.is_active,
+          createdAt: m.created_at,
+          userName: user.full_name || user.email || 'Unknown',
+          userEmail: user.email || ''
+        };
+      });
 
       return res.status(200).json({ success: true, data: formattedMembers });
     }
