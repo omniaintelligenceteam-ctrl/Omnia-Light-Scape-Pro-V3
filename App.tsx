@@ -2668,37 +2668,33 @@ Notes: ${invoice.notes || 'N/A'}
         </div>
       )}
 
-      {/* Fixture Configuration Modal (Premium Bottom Sheet) */}
+      {/* Fixture Configuration Modal (Full Screen with Image) */}
       <AnimatePresence>
       {activeConfigFixture && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+          <div className="fixed inset-0 z-[100] flex flex-col">
               {/* Backdrop with blur */}
               <motion.div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={() => setActiveConfigFixture(null)}
+                className="absolute inset-0 bg-black/95"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               />
 
-              {/* Modal */}
+              {/* Full Screen Modal */}
               <motion.div
-                className="relative w-full sm:max-w-lg bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 sm:rounded-2xl rounded-t-3xl shadow-2xl shadow-black/50 max-h-[85vh] sm:max-h-[70vh] flex flex-col overflow-hidden"
-                initial={{ opacity: 0, y: 100, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 100, scale: 0.95 }}
+                className="relative w-full h-full flex flex-col overflow-hidden"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
               >
-                  {/* Decorative top line */}
-                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#F6B45A]/50 to-transparent" />
-
-                  {/* Header */}
-                  <div className="p-5 sm:p-6 shrink-0 flex justify-between items-start">
+                  {/* Header with Close Button */}
+                  <div className="shrink-0 flex items-center justify-between p-4 border-b border-white/10 bg-[#0a0a0a]">
                       <div>
-                        <h3 className="text-lg sm:text-xl font-semibold text-white tracking-tight">
+                        <h3 className="text-lg font-semibold text-white tracking-tight">
                             {getActiveFixtureTitle()}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1">Choose placement areas</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Choose placement areas</p>
                       </div>
                       <motion.button
                         onClick={() => setActiveConfigFixture(null)}
@@ -2710,9 +2706,25 @@ Notes: ${invoice.notes || 'N/A'}
                       </motion.button>
                   </div>
 
-                  {/* Scrollable Content */}
-                  <div className="flex-1 px-5 sm:px-6 pb-4 overflow-y-auto">
-                      <div className="space-y-2">
+                  {/* Image Preview - Always Visible at Top */}
+                  {previewUrl && (
+                    <div className="shrink-0 p-4 pb-2 bg-[#0a0a0a]">
+                      <div className="relative w-full h-40 md:h-56 rounded-xl overflow-hidden border border-white/10">
+                        <img
+                          src={previewUrl}
+                          alt="Your photo"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-[10px] text-gray-300">
+                          Reference image
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scrollable Options */}
+                  <div className="flex-1 px-4 py-3 overflow-y-auto bg-gradient-to-b from-[#0a0a0a] to-[#050505]">
+                      <div className="space-y-2 max-w-lg mx-auto">
                           {getCurrentSubOptions().map((opt, index) => {
                               const isSelected = pendingOptions.includes(opt.id);
                               return (
@@ -2765,8 +2777,8 @@ Notes: ${invoice.notes || 'N/A'}
                   </div>
 
                   {/* Footer */}
-                  <div className="p-5 sm:p-6 pt-4 border-t border-white/5 shrink-0 bg-[#0a0a0a]/80 backdrop-blur-sm">
-                      <div className="flex items-center gap-3">
+                  <div className="shrink-0 p-4 border-t border-white/10 bg-[#0a0a0a]" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
+                      <div className="flex items-center gap-3 max-w-lg mx-auto">
                           <motion.button
                             onClick={() => setActiveConfigFixture(null)}
                             className="flex-1 py-3.5 rounded-xl border border-white/10 text-gray-400 font-medium text-sm hover:bg-white/5 hover:text-white transition-all"
@@ -4323,7 +4335,7 @@ Notes: ${invoice.notes || 'N/A'}
                          }`}
                      >
                          <FolderPlus className="w-3 md:w-4 h-3 md:h-4" />
-                         <span className="hidden sm:inline">Pipeline</span>
+                         <span>Pipeline</span>
                      </button>
                      <button
                          onClick={() => setProjectsSubTab('clients')}
@@ -4334,7 +4346,7 @@ Notes: ${invoice.notes || 'N/A'}
                          }`}
                      >
                          <Users className="w-3 md:w-4 h-3 md:h-4" />
-                         <span className="hidden sm:inline">Clients</span>
+                         <span>Clients</span>
                      </button>
 
                 </div>
@@ -6446,7 +6458,7 @@ Notes: ${invoice.notes || 'N/A'}
                animate={{ x: 0 }}
                exit={{ x: tabDirection * -100 + '%' }}
                transition={{ type: 'spring', stiffness: 700, damping: 45 }}
-               className="absolute inset-0"
+               className="absolute inset-0 overflow-y-auto overflow-x-hidden"
              >
              <SettingsView
                 profile={companyProfile}

@@ -198,7 +198,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Menu Items */}
-      <div className="px-4 py-4 space-y-3 pb-48">
+      <div className="px-4 py-4 space-y-3 pb-52" style={{ paddingBottom: 'max(13rem, calc(10rem + env(safe-area-inset-bottom, 0px)))' }}>
 
         {/* Profile & Branding */}
         <MenuButton

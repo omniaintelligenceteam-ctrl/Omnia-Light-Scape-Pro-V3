@@ -1060,13 +1060,14 @@ ${customMessage ? `\n${customMessage}\n` : ''}
       <AnimatePresence>
           {showSendModal && (
             <motion.div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 pt-8 pb-32 bg-black/80 backdrop-blur-sm overflow-y-auto"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                style={{ paddingBottom: 'max(8rem, env(safe-area-inset-bottom, 2rem))' }}
             >
               <motion.div
-                  className="w-full max-w-md bg-gradient-to-b from-[#151515] to-[#0a0a0a] rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden"
+                  className="w-full max-w-md bg-gradient-to-b from-[#151515] to-[#0a0a0a] rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden my-auto md:my-0"
                   initial={{ scale: 0.9, y: 20 }}
                   animate={{ scale: 1, y: 0 }}
                   exit={{ scale: 0.9, y: 20 }}
