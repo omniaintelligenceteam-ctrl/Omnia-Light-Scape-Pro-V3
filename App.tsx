@@ -1003,7 +1003,7 @@ const App: React.FC = () => {
 
   const toggleFixture = (fixtureId: string) => {
     // Fixtures that have sub-option configuration modals
-    if (['up', 'path', 'coredrill', 'gutter', 'soffit', 'hardscape'].includes(fixtureId)) {
+    if (['up', 'path', 'coredrill', 'gutter', 'soffit', 'hardscape', 'well'].includes(fixtureId)) {
         if (selectedFixtures.includes(fixtureId)) {
             // Toggle OFF
             setSelectedFixtures(prev => prev.filter(id => id !== fixtureId));
@@ -1057,6 +1057,7 @@ const App: React.FC = () => {
       if (activeConfigFixture === 'gutter') return 'Gutter Lights';
       if (activeConfigFixture === 'soffit') return 'Soffit Lights';
       if (activeConfigFixture === 'hardscape') return 'Hardscape Lights';
+      if (activeConfigFixture === 'well') return 'Well Lights';
       return 'Fixture';
   };
 
@@ -4261,7 +4262,7 @@ Notes: ${invoice.notes || 'N/A'}
 
                  {/* View Mode Toggle - Only show on pipeline */}
                  {projectsSubTab === 'pipeline' && (
-                     <div className="hidden md:flex items-center justify-end gap-2 mb-4">
+                     <div className="flex items-center justify-end gap-2 mb-4">
                          <span className="text-xs text-gray-500 mr-2">View:</span>
                          <button
                              onClick={() => setPipelineViewMode('grid')}
@@ -4318,8 +4319,8 @@ Notes: ${invoice.notes || 'N/A'}
                              </motion.div>
                          ) : (
                             <>
-                            {/* Mobile Compact List View */}
-                            <div className="md:hidden space-y-3">
+                            {/* Mobile Compact List View - only show when grid mode selected */}
+                            <div className={`${pipelineViewMode === 'grid' ? 'md:hidden' : 'hidden'} space-y-3`}>
                                 {filteredPipelineProjects.map((p, index) => (
                                     <motion.div key={p.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }} className="group bg-[#111] border border-white/5 rounded-xl overflow-hidden">
                                         {/* Main Row - Tap to expand */}
@@ -4431,9 +4432,9 @@ Notes: ${invoice.notes || 'N/A'}
                                     </motion.div>
                                 ))}
                             </div>
-                            {/* Desktop Kanban View */}
+                            {/* Kanban View - visible on all screen sizes when selected */}
                             {pipelineViewMode === 'kanban' && (
-                                <div className="hidden md:block h-[calc(100vh-320px)] min-h-[500px]">
+                                <div className="h-[calc(100vh-320px)] min-h-[500px]">
                                     <KanbanBoard
                                         projects={projects}
                                         statusConfig={STATUS_CONFIG}
