@@ -1,8 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 
 import healthRoutes from './routes/health.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
@@ -13,8 +15,6 @@ import clientPortalRoutes from './routes/client-portal.routes.js';
 import locationsRoutes from './routes/locations.routes.js';
 import techniciansRoutes from './routes/technicians.routes.js';
 import organizationsRoutes from './routes/organizations.routes.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
