@@ -4182,12 +4182,12 @@ Notes: ${invoice.notes || 'N/A'}
                               onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'all')}
                               className="py-2 px-2 border border-white/10 rounded-lg bg-[#111] text-gray-200 text-xs font-mono focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50"
                            >
-                              <option value="all">All</option>
-                              <option value="draft">Draft</option>
-                              <option value="quoted">Quoted</option>
-                              <option value="approved">Approved</option>
-                              <option value="scheduled">Scheduled</option>
-                              <option value="completed">Completed</option>
+                              <option value="all" className="bg-[#1a1a1a] text-white">All</option>
+                              <option value="draft" className="bg-[#1a1a1a] text-white">Draft</option>
+                              <option value="quoted" className="bg-[#1a1a1a] text-white">Quoted</option>
+                              <option value="approved" className="bg-[#1a1a1a] text-white">Approved</option>
+                              <option value="scheduled" className="bg-[#1a1a1a] text-white">Scheduled</option>
+                              <option value="completed" className="bg-[#1a1a1a] text-white">Completed</option>
                            </select>
                         </div>
                      </div>
@@ -4211,12 +4211,12 @@ Notes: ${invoice.notes || 'N/A'}
                            onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'all')}
                            className="py-3 px-4 border border-white/10 rounded-xl bg-[#111] text-gray-200 text-sm font-mono focus:outline-none focus:border-[#F6B45A]/50 focus:ring-1 focus:ring-[#F6B45A]/50 cursor-pointer hover:border-[#F6B45A]/30 transition-colors"
                         >
-                           <option value="all">All Statuses</option>
-                           <option value="draft">Draft</option>
-                           <option value="quoted">Quoted</option>
-                           <option value="approved">Approved</option>
-                           <option value="scheduled">Scheduled</option>
-                           <option value="completed">Completed</option>
+                           <option value="all" className="bg-[#1a1a1a] text-white">All Statuses</option>
+                           <option value="draft" className="bg-[#1a1a1a] text-white">Draft</option>
+                           <option value="quoted" className="bg-[#1a1a1a] text-white">Quoted</option>
+                           <option value="approved" className="bg-[#1a1a1a] text-white">Approved</option>
+                           <option value="scheduled" className="bg-[#1a1a1a] text-white">Scheduled</option>
+                           <option value="completed" className="bg-[#1a1a1a] text-white">Completed</option>
                         </select>
                         {(searchTerm || statusFilter !== 'all') && (
                            <button
@@ -7061,9 +7061,9 @@ Notes: ${invoice.notes || 'N/A'}
                                     onChange={(e) => setEditProjectLocationId(e.target.value || null)}
                                     className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#F6B45A]/50"
                                   >
-                                    <option value="">No Location Assigned</option>
+                                    <option value="" className="bg-[#1a1a1a] text-white">No Location Assigned</option>
                                     {locations.filter(loc => loc.isActive).map(loc => (
-                                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                      <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">{loc.name}</option>
                                     ))}
                                   </select>
                                 </div>
@@ -8057,13 +8057,13 @@ Notes: ${invoice.notes || 'N/A'}
                           onChange={(e) => setEventRecurrence(e.target.value as RecurrencePattern)}
                           className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50"
                         >
-                          <option value="none">Does not repeat</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="biweekly">Every 2 weeks</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Every 3 months</option>
-                          <option value="biannually">Every 6 months</option>
-                          <option value="annually">Annually</option>
+                          <option value="none" className="bg-[#1a1a1a] text-white">Does not repeat</option>
+                          <option value="weekly" className="bg-[#1a1a1a] text-white">Weekly</option>
+                          <option value="biweekly" className="bg-[#1a1a1a] text-white">Every 2 weeks</option>
+                          <option value="monthly" className="bg-[#1a1a1a] text-white">Monthly</option>
+                          <option value="quarterly" className="bg-[#1a1a1a] text-white">Every 3 months</option>
+                          <option value="biannually" className="bg-[#1a1a1a] text-white">Every 6 months</option>
+                          <option value="annually" className="bg-[#1a1a1a] text-white">Annually</option>
                         </select>
                       </div>
 
@@ -8893,15 +8893,15 @@ Notes: ${invoice.notes || 'N/A'}
                     })}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                   >
-                    <option value="">Select source...</option>
-                    <option value="google">Google Ads</option>
-                    <option value="referral">Referral</option>
-                    <option value="angi">Angi/HomeAdvisor</option>
-                    <option value="thumbtack">Thumbtack</option>
-                    <option value="website">Website</option>
-                    <option value="social">Social Media</option>
-                    <option value="yard_sign">Yard Sign</option>
-                    <option value="other">Other</option>
+                    <option value="" className="bg-[#1a1a1a] text-white">Select source...</option>
+                    <option value="google" className="bg-[#1a1a1a] text-white">Google Ads</option>
+                    <option value="referral" className="bg-[#1a1a1a] text-white">Referral</option>
+                    <option value="angi" className="bg-[#1a1a1a] text-white">Angi/HomeAdvisor</option>
+                    <option value="thumbtack" className="bg-[#1a1a1a] text-white">Thumbtack</option>
+                    <option value="website" className="bg-[#1a1a1a] text-white">Website</option>
+                    <option value="social" className="bg-[#1a1a1a] text-white">Social Media</option>
+                    <option value="yard_sign" className="bg-[#1a1a1a] text-white">Yard Sign</option>
+                    <option value="other" className="bg-[#1a1a1a] text-white">Other</option>
                   </select>
                 </div>
 

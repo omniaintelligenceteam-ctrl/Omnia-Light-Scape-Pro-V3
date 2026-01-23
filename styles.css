@@ -580,6 +580,38 @@ body {
     border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
+/* ============================================
+   SELECT/DROPDOWN STYLING FOR DARK MODE
+   Fix native select dropdown option visibility
+   ============================================ */
+
+/* Style select elements in dark mode */
+select {
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+
+/* Style option elements - these need explicit colors */
+select option {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    padding: 8px 12px;
+}
+
+/* Hover state for options (limited browser support) */
+select option:hover,
+select option:focus,
+select option:checked {
+    background-color: #2a2a2a;
+    color: #ffffff;
+}
+
+/* Selected option styling */
+select option:checked {
+    background: linear-gradient(0deg, #F6B45A33 0%, #F6B45A33 100%);
+    color: #F6B45A;
+}
+
 [data-theme="light"] input::placeholder,
 [data-theme="light"] textarea::placeholder {
     color: #6b7280 !important;

@@ -208,9 +208,9 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
           onChange={(e) => setStatusFilter(e.target.value as any)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
         >
-          <option value="all">All Locations</option>
-          <option value="active">Active Only</option>
-          <option value="inactive">Inactive Only</option>
+          <option value="all" className="bg-[#1a1a1a] text-white">All Locations</option>
+          <option value="active" className="bg-[#1a1a1a] text-white">Active Only</option>
+          <option value="inactive" className="bg-[#1a1a1a] text-white">Inactive Only</option>
         </select>
 
         {/* Sort Dropdown */}
@@ -219,10 +219,10 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
           onChange={(e) => setSortBy(e.target.value as any)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
         >
-          <option value="name-asc">Name (A-Z)</option>
-          <option value="name-desc">Name (Z-A)</option>
-          <option value="date-desc">Newest First</option>
-          <option value="date-asc">Oldest First</option>
+          <option value="name-asc" className="bg-[#1a1a1a] text-white">Name (A-Z)</option>
+          <option value="name-desc" className="bg-[#1a1a1a] text-white">Name (Z-A)</option>
+          <option value="date-desc" className="bg-[#1a1a1a] text-white">Newest First</option>
+          <option value="date-asc" className="bg-[#1a1a1a] text-white">Oldest First</option>
         </select>
       </div>
 

@@ -557,9 +557,9 @@ export const BOMView: React.FC<BOMViewProps> = ({
                   className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-[#F6B45A] focus:outline-none transition-colors"
                 >
                   {fixtureCategories.map(cat => (
-                    <option key={cat} value={cat}>{FIXTURE_TYPE_NAMES[cat] || cat}</option>
+                    <option key={cat} value={cat} className="bg-[#1a1a1a] text-white">{FIXTURE_TYPE_NAMES[cat] || cat}</option>
                   ))}
-                  <option value="other">Other</option>
+                  <option value="other" className="bg-[#1a1a1a] text-white">Other</option>
                 </select>
               </div>
 

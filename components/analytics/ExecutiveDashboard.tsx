@@ -209,7 +209,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 rounded-xl focus:outline-none focus:border-[#F6B45A]/50 cursor-pointer"
             >
               {Object.entries(dateRangeLabels).map(([value, label]) => (
-                <option key={value} value={value} className="bg-[#1a1a1a]">
+                <option key={value} value={value} className="bg-[#1a1a1a] text-white">
                   {label}
                 </option>
               ))}

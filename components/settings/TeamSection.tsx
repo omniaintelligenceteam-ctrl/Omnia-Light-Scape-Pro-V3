@@ -333,9 +333,9 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
             onChange={(e) => setStatusFilter(e.target.value as any)}
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
           >
-            <option value="all">All Status</option>
-            <option value="active">Active Members</option>
-            <option value="pending">Pending Invites</option>
+            <option value="all" className="bg-[#1a1a1a] text-white">All Status</option>
+            <option value="active" className="bg-[#1a1a1a] text-white">Active Members</option>
+            <option value="pending" className="bg-[#1a1a1a] text-white">Pending Invites</option>
           </select>
 
           {/* Role Filter */}
@@ -344,11 +344,11 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
             onChange={(e) => setRoleFilter(e.target.value as any)}
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
           >
-            <option value="all">All Roles</option>
-            <option value="admin">Office Manager</option>
-            <option value="salesperson">Salesperson</option>
-            <option value="lead_technician">Lead Technician</option>
-            <option value="technician">Technician</option>
+            <option value="all" className="bg-[#1a1a1a] text-white">All Roles</option>
+            <option value="admin" className="bg-[#1a1a1a] text-white">Office Manager</option>
+            <option value="salesperson" className="bg-[#1a1a1a] text-white">Salesperson</option>
+            <option value="lead_technician" className="bg-[#1a1a1a] text-white">Lead Technician</option>
+            <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
           </select>
 
           {/* Location Filter */}
@@ -357,9 +357,9 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
             onChange={(e) => setLocationFilter(e.target.value)}
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
           >
-            <option value="all">All Locations</option>
-            <option value="all-access">All Locations Access</option>
-            {locations?.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+            <option value="all" className="bg-[#1a1a1a] text-white">All Locations</option>
+            <option value="all-access" className="bg-[#1a1a1a] text-white">All Locations Access</option>
+            {locations?.map(loc => <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">{loc.name}</option>)}
           </select>
         </div>
       </div>
@@ -655,10 +655,10 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
                       className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10
                         text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
                     >
-                      <option value="admin" className="bg-[#1a1a1a]">Office Manager</option>
-                      <option value="salesperson" className="bg-[#1a1a1a]">Salesperson</option>
-                      <option value="lead_technician" className="bg-[#1a1a1a]">Lead Technician</option>
-                      <option value="technician" className="bg-[#1a1a1a]">Technician</option>
+                      <option value="admin" className="bg-[#1a1a1a] text-white">Office Manager</option>
+                      <option value="salesperson" className="bg-[#1a1a1a] text-white">Salesperson</option>
+                      <option value="lead_technician" className="bg-[#1a1a1a] text-white">Lead Technician</option>
+                      <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                   </div>
@@ -677,9 +677,9 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
                         className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10
                           text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
                       >
-                        <option value="" className="bg-[#1a1a1a]">All Locations</option>
+                        <option value="" className="bg-[#1a1a1a] text-white">All Locations</option>
                         {locations.map((loc) => (
-                          <option key={loc.id} value={loc.id} className="bg-[#1a1a1a]">
+                          <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">
                             {loc.name}
                           </option>
                         ))}
@@ -815,10 +815,10 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
                       className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10
                         text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
                     >
-                      <option value="admin" className="bg-[#1a1a1a]">Office Manager</option>
-                      <option value="salesperson" className="bg-[#1a1a1a]">Salesperson</option>
-                      <option value="lead_technician" className="bg-[#1a1a1a]">Lead Technician</option>
-                      <option value="technician" className="bg-[#1a1a1a]">Technician</option>
+                      <option value="admin" className="bg-[#1a1a1a] text-white">Office Manager</option>
+                      <option value="salesperson" className="bg-[#1a1a1a] text-white">Salesperson</option>
+                      <option value="lead_technician" className="bg-[#1a1a1a] text-white">Lead Technician</option>
+                      <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                   </div>
@@ -837,9 +837,9 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
                         className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10
                           text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
                       >
-                        <option value="" className="bg-[#1a1a1a]">All Locations</option>
+                        <option value="" className="bg-[#1a1a1a] text-white">All Locations</option>
                         {locations.map((loc) => (
-                          <option key={loc.id} value={loc.id} className="bg-[#1a1a1a]">
+                          <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">
                             {loc.name}
                           </option>
                         ))}
@@ -1072,10 +1072,10 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onU
                 onChange={(e) => setEditRole(e.target.value as Exclude<OrganizationRole, 'owner'>)}
                 className="px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
               >
-                <option value="admin" className="bg-[#1a1a1a]">Office Manager</option>
-                <option value="salesperson" className="bg-[#1a1a1a]">Salesperson</option>
-                <option value="lead_technician" className="bg-[#1a1a1a]">Lead Technician</option>
-                <option value="technician" className="bg-[#1a1a1a]">Technician</option>
+                <option value="admin" className="bg-[#1a1a1a] text-white">Office Manager</option>
+                <option value="salesperson" className="bg-[#1a1a1a] text-white">Salesperson</option>
+                <option value="lead_technician" className="bg-[#1a1a1a] text-white">Lead Technician</option>
+                <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
               </select>
 
               {/* Location Select (for technicians) */}
@@ -1085,9 +1085,9 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onU
                   onChange={(e) => setEditLocationId(e.target.value)}
                   className="px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
                 >
-                  <option value="" className="bg-[#1a1a1a]">All Locations</option>
+                  <option value="" className="bg-[#1a1a1a] text-white">All Locations</option>
                   {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id} className="bg-[#1a1a1a]">
+                    <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">
                       {loc.name}
                     </option>
                   ))}

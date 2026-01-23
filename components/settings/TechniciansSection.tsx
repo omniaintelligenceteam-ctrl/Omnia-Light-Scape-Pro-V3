@@ -331,9 +331,9 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
               className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 text-white text-sm
                 focus:border-[#F6B45A]/50 focus:outline-none transition-colors"
             >
-              <option value="" className="bg-[#1a1a1a]">Unassigned</option>
+              <option value="" className="bg-[#1a1a1a] text-white">Unassigned</option>
               {locations.map(loc => (
-                <option key={loc.id} value={loc.id} className="bg-[#1a1a1a]">
+                <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">
                   {loc.name}
                 </option>
               ))}
@@ -638,9 +638,9 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
             onChange={(e) => setStatusFilter(e.target.value as any)}
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
           >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="all" className="bg-[#1a1a1a] text-white">All Status</option>
+            <option value="active" className="bg-[#1a1a1a] text-white">Active</option>
+            <option value="inactive" className="bg-[#1a1a1a] text-white">Inactive</option>
           </select>
 
           {/* Role Filter */}
@@ -649,10 +649,10 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
             onChange={(e) => setRoleFilter(e.target.value as any)}
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
           >
-            <option value="all">All Roles</option>
-            <option value="lead">Lead Technician</option>
-            <option value="technician">Technician</option>
-            <option value="apprentice">Apprentice</option>
+            <option value="all" className="bg-[#1a1a1a] text-white">All Roles</option>
+            <option value="lead" className="bg-[#1a1a1a] text-white">Lead Technician</option>
+            <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
+            <option value="apprentice" className="bg-[#1a1a1a] text-white">Apprentice</option>
           </select>
 
           {/* Location Filter */}
@@ -661,9 +661,9 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
             onChange={(e) => setLocationFilter(e.target.value)}
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
           >
-            <option value="all">All Locations</option>
-            {locations?.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
-            <option value="unassigned">Unassigned</option>
+            <option value="all" className="bg-[#1a1a1a] text-white">All Locations</option>
+            {locations?.map(loc => <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">{loc.name}</option>)}
+            <option value="unassigned" className="bg-[#1a1a1a] text-white">Unassigned</option>
           </select>
 
           {/* Skills Filter */}
@@ -673,8 +673,8 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
               onChange={(e) => setSkillsFilter(e.target.value)}
               className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
             >
-              <option value="all">All Skills</option>
-              {uniqueSkills.map(skill => <option key={skill} value={skill}>{skill}</option>)}
+              <option value="all" className="bg-[#1a1a1a] text-white">All Skills</option>
+              {uniqueSkills.map(skill => <option key={skill} value={skill} className="bg-[#1a1a1a] text-white">{skill}</option>)}
             </select>
           )}
 
@@ -684,10 +684,10 @@ export const TechniciansSection: React.FC<TechniciansSectionProps> = ({
             onChange={(e) => setSortBy(e.target.value as any)}
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
           >
-            <option value="name">Name</option>
-            <option value="role">Role</option>
-            <option value="location">Location</option>
-            <option value="date">Date Added</option>
+            <option value="name" className="bg-[#1a1a1a] text-white">Name</option>
+            <option value="role" className="bg-[#1a1a1a] text-white">Role</option>
+            <option value="location" className="bg-[#1a1a1a] text-white">Location</option>
+            <option value="date" className="bg-[#1a1a1a] text-white">Date Added</option>
           </select>
         </div>
       </div>
