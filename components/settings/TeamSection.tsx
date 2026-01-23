@@ -359,7 +359,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
           >
             <option value="all" className="bg-[#1a1a1a] text-white">All Locations</option>
             <option value="all-access" className="bg-[#1a1a1a] text-white">All Locations Access</option>
-            {locations?.map(loc => <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">{loc.name}</option>)}
+            {locations?.map(loc => <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">{loc.name || 'Unnamed'}</option>)}
           </select>
         </div>
       </div>
@@ -535,8 +535,8 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
                 <Shield className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <p className="font-medium text-white">{ownerMember.userName}</p>
-                <p className="text-sm text-gray-500">{ownerMember.userEmail}</p>
+                <p className="font-medium text-white">{ownerMember.userName || 'Unknown'}</p>
+                <p className="text-sm text-gray-500">{ownerMember.userEmail || ''}</p>
               </div>
             </div>
             <span className={`px-3 py-1 rounded-full text-xs font-medium border ${ROLE_COLORS.owner}`}>
@@ -678,9 +678,9 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
                           text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
                       >
                         <option value="" className="bg-[#1a1a1a] text-white">All Locations</option>
-                        {locations.map((loc) => (
+                        {(locations || []).map((loc) => (
                           <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">
-                            {loc.name}
+                            {loc.name || 'Unnamed'}
                           </option>
                         ))}
                       </select>
@@ -838,9 +838,9 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
                           text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
                       >
                         <option value="" className="bg-[#1a1a1a] text-white">All Locations</option>
-                        {locations.map((loc) => (
+                        {(locations || []).map((loc) => (
                           <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">
-                            {loc.name}
+                            {loc.name || 'Unnamed'}
                           </option>
                         ))}
                       </select>
@@ -960,7 +960,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onU
   const [isSaving, setIsSaving] = useState(false);
 
   const locationName = member.locationId
-    ? locations.find(l => l.id === member.locationId)?.name || 'Unknown'
+    ? (locations || []).find(l => l.id === member.locationId)?.name || 'Unknown'
     : 'All Locations';
 
   const handleStartEdit = () => {
@@ -1016,14 +1016,14 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onU
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="font-medium text-white">{member.userName}</p>
+              <p className="font-medium text-white">{member.userName || 'Unknown'}</p>
               {!member.isActive && (
                 <span className="px-2 py-0.5 rounded text-xs bg-gray-500/20 text-gray-400">
                   Inactive
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500">{member.userEmail}</p>
+            <p className="text-sm text-gray-500">{member.userEmail || ''}</p>
           </div>
         </div>
 
@@ -1079,16 +1079,16 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onU
               </select>
 
               {/* Location Select (for technicians) */}
-              {showLocationSelect && locations.length > 0 && (
+              {showLocationSelect && (locations || []).length > 0 && (
                 <select
                   value={editLocationId}
                   onChange={(e) => setEditLocationId(e.target.value)}
                   className="px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
                 >
                   <option value="" className="bg-[#1a1a1a] text-white">All Locations</option>
-                  {locations.map((loc) => (
+                  {(locations || []).map((loc) => (
                     <option key={loc.id} value={loc.id} className="bg-[#1a1a1a] text-white">
-                      {loc.name}
+                      {loc.name || 'Unnamed'}
                     </option>
                   ))}
                 </select>
@@ -1144,7 +1144,7 @@ const InviteCard: React.FC<InviteCardProps> = ({ invite, isOwner, onCancel }) =>
             <Mail className="w-5 h-5 text-gray-500" />
           </div>
           <div>
-            <p className="font-medium text-white">{invite.email}</p>
+            <p className="font-medium text-white">{invite.email || 'Unknown'}</p>
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <Clock className="w-3 h-3" />
               <span>Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>
