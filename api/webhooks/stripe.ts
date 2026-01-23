@@ -172,8 +172,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   from: 'Omnia LightScape <noreply@omnialightscapepro.com>',
                   to: userData.email,
                   subject: `💰 Payment Received! ${clientName} paid for "${project.name}"`,
-                  html
-                });
+                  html,
+                  headers: {
+                    'X-Entity-Ref-ID': Date.now().toString()
+                  }
+                } as any);
                 console.log(`Payment notification sent to ${userData.email}`);
               } catch (emailError) {
                 // Don't fail the webhook if email fails

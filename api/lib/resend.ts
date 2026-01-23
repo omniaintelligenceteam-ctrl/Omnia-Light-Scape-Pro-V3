@@ -72,20 +72,13 @@ export async function sendInviteEmail(params: SendInviteEmailParams): Promise<{ 
                 <strong style="color: #ffffff;">${roleDisplayName}</strong>${locationText}.
               </p>
 
-              <p style="margin: 0 0 30px; color: #6b7280; font-size: 14px; line-height: 1.5; text-align: center;">
-                Click the button below to create your account and get started.
+              <!-- Plain text link (copy/paste friendly, bypasses click tracking) -->
+              <p style="margin: 0 0 30px; color: #9ca3af; font-size: 13px; line-height: 1.6; text-align: center;">
+                Copy and paste this link into your browser:
               </p>
-
-              <!-- CTA Button -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                  <td style="text-align: center;">
-                    <a href="${inviteLink}" target="_blank" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #F6B45A 0%, #e5a24a 100%); color: #000000; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 12px;">
-                      Accept Invite
-                    </a>
-                  </td>
-                </tr>
-              </table>
+              <p style="margin: 0 0 30px; padding: 12px 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); word-break: break-all;">
+                <span style="color: #F6B45A; font-size: 12px; font-family: monospace;">${inviteLink}</span>
+              </p>
             </td>
           </tr>
 
@@ -128,8 +121,11 @@ export async function sendInviteEmail(params: SendInviteEmailParams): Promise<{ 
       from: fromEmail,
       to: to,
       subject: `You've been invited to join ${organizationName} on OmniaLightScape`,
-      html: emailHtml
-    });
+      html: emailHtml,
+      headers: {
+        'X-Entity-Ref-ID': Date.now().toString()
+      }
+    } as any);
 
     if (error) {
       console.error('Resend email error:', error);

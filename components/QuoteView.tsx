@@ -567,13 +567,14 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                     </div>
                 </div>
                 {/* Address Row */}
-                <div className="flex items-start gap-2 bg-white/5 rounded-lg p-2 border border-white/5">
-                    <MapPin className="w-3.5 h-3.5 text-[#F6B45A] shrink-0 mt-0.5" />
-                    <textarea
-                        className="flex-1 bg-transparent text-xs text-gray-300 resize-none h-10 placeholder-gray-500 focus:outline-none"
+                <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2 border border-white/5">
+                    <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                    <input
+                        type="text"
+                        className="flex-1 bg-transparent text-xs text-gray-300 placeholder-gray-500 focus:outline-none min-w-0"
                         value={projectAddress}
                         onChange={(e) => setProjectAddress(e.target.value)}
-                        placeholder="Project Address"
+                        placeholder="Address"
                     />
                 </div>
                 {/* Date */}
@@ -627,6 +628,16 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                                 placeholder="Cell Phone"
                             />
                         </div>
+                        <div className="flex items-center gap-3 text-gray-400 group">
+                            <MapPin className="w-4 h-4 shrink-0 group-hover:text-[#F6B45A] transition-colors print:text-gray-400" />
+                            <input
+                                type="text"
+                                value={projectAddress}
+                                onChange={(e) => setProjectAddress(e.target.value)}
+                                className="w-full bg-transparent border-b border-white/10 group-hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-1 text-sm text-gray-300 placeholder-gray-500 transition-colors print:text-black print:border-none print:p-0"
+                                placeholder="Address"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -660,33 +671,6 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                  <span className="text-[10px] font-mono text-gray-400">QT-{String(Date.now()).slice(-8)}</span>
              </div>
           </header>
-
-          {/* Project Site Info - Desktop only, mobile has it in header */}
-          <div className="hidden md:block mb-12">
-             <motion.div
-                 className="relative bg-gradient-to-br from-white/[0.04] to-transparent p-5 rounded-2xl border border-white/10 overflow-hidden print:border-none print:p-0 print:bg-transparent max-w-md"
-                 whileHover={{ borderColor: 'rgba(246,180,90,0.3)' }}
-             >
-                {/* Section icon */}
-                <div className="absolute -top-2 -right-2 w-12 h-12 bg-[#F6B45A]/10 rounded-full blur-xl print:hidden" />
-
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-[#F6B45A]/10 border border-[#F6B45A]/20">
-                        <MapPin className="w-4 h-4 text-[#F6B45A]" />
-                    </div>
-                    <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em] print:text-gray-800">Project Site</h3>
-                </div>
-
-                <div className="print:text-black">
-                    <textarea
-                        className="w-full bg-transparent border-b border-white/10 hover:border-[#F6B45A]/30 focus:border-[#F6B45A] p-2 text-sm text-gray-300 resize-none h-20 placeholder-gray-500 leading-relaxed transition-colors print:text-black print:border-none print:p-0"
-                        value={projectAddress}
-                        onChange={(e) => setProjectAddress(e.target.value)}
-                        placeholder="Project Address"
-                    />
-                </div>
-             </motion.div>
-          </div>
 
           {/* Line Items Section Header */}
           <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
