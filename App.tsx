@@ -50,7 +50,7 @@ import { KanbanBoard } from './components/pipeline';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
