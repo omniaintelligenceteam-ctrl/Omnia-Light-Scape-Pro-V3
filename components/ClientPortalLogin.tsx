@@ -109,7 +109,7 @@ export const ClientPortalLogin: React.FC<ClientPortalLoginProps> = ({ onRequestA
                 className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2"
               >
                 <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                <span className="text-sm text-red-400">{error}</span>
+                <span className="text-sm text-red-400">{typeof error === 'string' ? error : 'An error occurred'}</span>
               </motion.div>
             )}
 

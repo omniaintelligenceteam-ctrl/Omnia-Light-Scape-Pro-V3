@@ -134,7 +134,7 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
             <XCircle className="w-8 h-8 text-red-400" />
           </div>
           <h1 className="text-xl font-bold text-white mb-2">Unable to Load Quote</h1>
-          <p className="text-gray-400">{error}</p>
+          <p className="text-gray-400">{typeof error === 'string' ? error : 'An error occurred'}</p>
         </motion.div>
       </div>
     );

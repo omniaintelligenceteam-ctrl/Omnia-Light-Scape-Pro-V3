@@ -216,7 +216,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
             <AlertCircle className="w-8 h-8 text-red-400" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-3">Access Error</h2>
-          <p className="text-gray-400 mb-6">{error}</p>
+          <p className="text-gray-400 mb-6">{typeof error === 'string' ? error : 'An error occurred'}</p>
           <button
             onClick={() => {
               setError(null);

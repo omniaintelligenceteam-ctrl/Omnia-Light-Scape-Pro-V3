@@ -171,7 +171,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
             <XCircle className="w-8 h-8 text-red-400" />
           </div>
           <h1 className="text-xl font-bold text-white mb-2">Unable to Load Invoice</h1>
-          <p className="text-gray-400">{error}</p>
+          <p className="text-gray-400">{typeof error === 'string' ? error : 'An error occurred'}</p>
         </motion.div>
       </div>
     );

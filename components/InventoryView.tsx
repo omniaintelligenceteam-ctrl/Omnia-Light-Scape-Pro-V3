@@ -180,7 +180,7 @@ export const InventoryView: React.FC = () => {
             {error && (
                 <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
                     <AlertTriangle className="w-5 h-5 text-red-500" />
-                    <span className="text-red-400 text-sm">{error}</span>
+                    <span className="text-red-400 text-sm">{typeof error === 'string' ? error : 'An error occurred'}</span>
                 </div>
             )}
 

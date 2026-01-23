@@ -305,7 +305,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                 animate={{ opacity: 1, y: 0 }}
                 className="px-8 pb-4"
               >
-                <p className="text-red-400 text-sm text-center bg-red-500/10 border border-red-500/20 rounded-lg py-2">{error}</p>
+                <p className="text-red-400 text-sm text-center bg-red-500/10 border border-red-500/20 rounded-lg py-2">{typeof error === 'string' ? error : 'An error occurred'}</p>
               </motion.div>
             )}
 

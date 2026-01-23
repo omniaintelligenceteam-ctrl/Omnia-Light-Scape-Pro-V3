@@ -133,7 +133,7 @@ export const AcceptInvite: React.FC<AcceptInviteProps> = ({ token }) => {
             <XCircle className="w-8 h-8 text-red-400" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Invalid Invite</h1>
-          <p className="text-gray-400 mb-6">{error}</p>
+          <p className="text-gray-400 mb-6">{typeof error === 'string' ? error : 'An error occurred'}</p>
           <a
             href="/"
             className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
@@ -289,7 +289,7 @@ export const AcceptInvite: React.FC<AcceptInviteProps> = ({ token }) => {
 
                 {error && (
                   <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm mb-4">
-                    {error}
+                    {typeof error === 'string' ? error : 'An error occurred'}
                   </div>
                 )}
 
@@ -342,7 +342,7 @@ export const AcceptInvite: React.FC<AcceptInviteProps> = ({ token }) => {
                 <XCircle className="w-8 h-8 text-red-400" />
               </div>
               <h1 className="text-xl font-bold text-white mb-2">Unable to Accept Invite</h1>
-              <p className="text-gray-400 mb-6">{error}</p>
+              <p className="text-gray-400 mb-6">{typeof error === 'string' ? error : 'An error occurred'}</p>
               <button
                 onClick={() => window.location.href = '/'}
                 className="px-6 py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
