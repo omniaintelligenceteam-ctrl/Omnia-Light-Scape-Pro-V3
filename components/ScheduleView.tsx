@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star, CheckCircle2, DollarSign } from 'lucide-react';
 import { SavedProject, TimeSlot, CalendarEvent, EventType } from '../types';
 
 interface ScheduleViewProps {
@@ -10,6 +10,7 @@ interface ScheduleViewProps {
   onViewProject: (project: SavedProject) => void;
   onReschedule: (project: SavedProject) => void;
   onComplete: (project: SavedProject) => void;
+  onScheduleProject?: (project: SavedProject) => void;
   // Event props
   events?: CalendarEvent[];
   onCreateEvent?: () => void;
@@ -425,6 +426,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   onViewProject,
   onReschedule,
   onComplete,
+  onScheduleProject,
   events = [],
   onCreateEvent,
   onEditEvent,
@@ -435,6 +437,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   // Get all scheduled projects
   const scheduledProjects = useMemo(() => {
     return projects.filter(p => p.status === 'scheduled' && p.schedule);
+  }, [projects]);
+
+  // Get approved projects that need scheduling
+  const approvedProjects = useMemo(() => {
+    return projects.filter(p => p.status === 'approved' && !p.schedule);
   }, [projects]);
 
   // Get set of dates with scheduled jobs or events
@@ -711,6 +718,68 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Approved Projects - Ready to Schedule */}
+      {approvedProjects.length > 0 && (
+        <div className="bg-gradient-to-b from-emerald-500/5 to-[#0a0a0a] border border-emerald-500/20 rounded-2xl p-4 md:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Ready to Schedule</h3>
+                <p className="text-xs text-gray-400">{approvedProjects.length} approved project{approvedProjects.length !== 1 ? 's' : ''} awaiting installation date</p>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {approvedProjects
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map(project => {
+                const clientName = project.quote?.clientDetails?.name || project.clientName || 'Client';
+                const quoteValue = project.quote?.total;
+                return (
+                  <motion.div
+                    key={project.id}
+                    className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-emerald-500/10"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    {project.image ? (
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-black shrink-0">
+                        <img src={project.image} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                        <Home className="w-5 h-5 text-emerald-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{project.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{clientName}</p>
+                      {quoteValue && quoteValue > 0 && (
+                        <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1 mt-0.5">
+                          <DollarSign className="w-3 h-3" />
+                          {quoteValue.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                    <motion.button
+                      onClick={() => onScheduleProject?.(project)}
+                      className="px-3 py-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      Schedule
+                    </motion.button>
+                  </motion.div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* Upcoming Jobs Summary */}
       {scheduledProjects.length > 0 && (

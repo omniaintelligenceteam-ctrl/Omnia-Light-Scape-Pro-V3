@@ -489,10 +489,21 @@ const App: React.FC = () => {
   // Project Detail Modal State (for viewing from Schedule)
   const [showProjectDetailModal, setShowProjectDetailModal] = useState(false);
   const [viewProjectId, setViewProjectId] = useState<string | null>(null);
+  const [isEditingProject, setIsEditingProject] = useState(false);
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editClientName, setEditClientName] = useState('');
+  const [editClientEmail, setEditClientEmail] = useState('');
+  const [editClientPhone, setEditClientPhone] = useState('');
+  const [editClientAddress, setEditClientAddress] = useState('');
+  const [editProjectNotes, setEditProjectNotes] = useState('');
+  const [isSavingProject, setIsSavingProject] = useState(false);
 
   // Client Projects Modal State (for viewing all projects for a client)
   const [showClientProjectsModal, setShowClientProjectsModal] = useState(false);
   const [viewClientId, setViewClientId] = useState<string | null>(null);
+
+  // Completed Jobs Modal State
+  const [showCompletedJobsModal, setShowCompletedJobsModal] = useState(false);
 
   // Calendar Events State (from Supabase)
   const { events: calendarEvents, createEvent, updateEvent: updateCalendarEvent, deleteEvent } = useCalendarEvents();
@@ -4461,6 +4472,13 @@ Notes: ${invoice.notes || 'N/A'}
                                         }}
                                         onEditProject={(p) => {
                                             setViewProjectId(p.id);
+                                            setIsEditingProject(true);
+                                            setEditProjectName(p.name);
+                                            setEditClientName(p.quote?.clientDetails?.name || p.clientName || '');
+                                            setEditClientEmail(p.quote?.clientDetails?.email || '');
+                                            setEditClientPhone(p.quote?.clientDetails?.phone || '');
+                                            setEditClientAddress(p.quote?.clientDetails?.address || '');
+                                            setEditProjectNotes(p.notes || '');
                                             setShowProjectDetailModal(true);
                                         }}
                                     />
@@ -6030,6 +6048,15 @@ Notes: ${invoice.notes || 'N/A'}
                                      />
                                  </div>
                                  <motion.button
+                                     onClick={() => setShowCompletedJobsModal(true)}
+                                     whileHover={{ scale: 1.02 }}
+                                     whileTap={{ scale: 0.98 }}
+                                     className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-emerald-500/20 transition-colors"
+                                 >
+                                     <Check className="w-4 h-4" />
+                                     Completed Jobs
+                                 </motion.button>
+                                 <motion.button
                                      onClick={() => {
                                          setClientImportData(null);
                                          setClientImportProgress(null);
@@ -6216,6 +6243,16 @@ Notes: ${invoice.notes || 'N/A'}
                       // Open project detail modal to show quote and photo
                       setViewProjectId(project.id);
                       setShowProjectDetailModal(true);
+                    }}
+                    onScheduleProject={(project) => {
+                      // Open schedule modal for approved project
+                      setScheduleProjectId(project.id);
+                      setScheduleDate(new Date());
+                      setScheduleTimeSlot('morning');
+                      setScheduleCustomTime('09:00');
+                      setScheduleDuration(4);
+                      setScheduleNotes('');
+                      setShowScheduleModal(true);
                     }}
                     onReschedule={(project) => {
                       // Open schedule modal with existing data
@@ -6709,6 +6746,7 @@ Notes: ${invoice.notes || 'N/A'}
                       if (autoGenerateInvoice) {
                         const project = projects.find(p => p.id === completionProjectId);
                         if (project) {
+                          handleTabChange('projects');
                           handleGenerateInvoice(project);
                         }
                       }
@@ -6755,23 +6793,57 @@ Notes: ${invoice.notes || 'N/A'}
                 <div className="flex items-center justify-between p-4 border-b border-white/10 sticky top-0 bg-[#111]/95 backdrop-blur-sm z-10">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#F6B45A]/20 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-[#F6B45A]" />
+                      {isEditingProject ? <Edit3 className="w-5 h-5 text-[#F6B45A]" /> : <FileText className="w-5 h-5 text-[#F6B45A]" />}
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white">{project.name}</h3>
+                      {isEditingProject ? (
+                        <input
+                          type="text"
+                          value={editProjectName}
+                          onChange={(e) => setEditProjectName(e.target.value)}
+                          className="text-lg font-semibold text-white bg-white/5 border border-white/10 rounded-lg px-3 py-1 focus:outline-none focus:border-[#F6B45A]/50"
+                          placeholder="Project name"
+                        />
+                      ) : (
+                        <h3 className="text-lg font-semibold text-white">{project.name}</h3>
+                      )}
                       <p className="text-xs text-gray-400">
-                        {project.quote?.clientDetails?.name || 'No client info'}
+                        {isEditingProject ? 'Editing project details' : (project.quote?.clientDetails?.name || 'No client info')}
                       </p>
                     </div>
                   </div>
-                  <motion.button
-                    onClick={() => setShowProjectDetailModal(false)}
-                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <X className="w-5 h-5 text-gray-400" />
-                  </motion.button>
+                  <div className="flex items-center gap-2">
+                    {!isEditingProject && (
+                      <motion.button
+                        onClick={() => {
+                          setIsEditingProject(true);
+                          setEditProjectName(project.name);
+                          setEditClientName(project.quote?.clientDetails?.name || project.clientName || '');
+                          setEditClientEmail(project.quote?.clientDetails?.email || '');
+                          setEditClientPhone(project.quote?.clientDetails?.phone || '');
+                          setEditClientAddress(project.quote?.clientDetails?.address || '');
+                          setEditProjectNotes(project.notes || '');
+                        }}
+                        className="p-2 rounded-lg bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 transition-colors"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        title="Edit project"
+                      >
+                        <Edit3 className="w-5 h-5 text-[#F6B45A]" />
+                      </motion.button>
+                    )}
+                    <motion.button
+                      onClick={() => {
+                        setShowProjectDetailModal(false);
+                        setIsEditingProject(false);
+                      }}
+                      className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <X className="w-5 h-5 text-gray-400" />
+                    </motion.button>
+                  </div>
                 </div>
 
                 {/* Modal Content */}
@@ -6841,28 +6913,85 @@ Notes: ${invoice.notes || 'N/A'}
 
                       {/* Client Details */}
                       <div className="bg-white/5 rounded-xl p-4 space-y-3">
-                        <div className="flex items-start gap-3">
-                          <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                          <div className="flex-1 space-y-1">
-                            <p className="text-white font-medium">{project.quote.clientDetails.name}</p>
-                            <p className="text-sm text-gray-400 flex items-center gap-2">
-                              <Mail className="w-4 h-4" />
-                              {project.quote.clientDetails.email}
-                            </p>
-                            {project.quote.clientDetails.phone && (
-                              <p className="text-sm text-gray-400 flex items-center gap-2">
-                                <Phone className="w-4 h-4" />
-                                {project.quote.clientDetails.phone}
-                              </p>
-                            )}
-                            {project.quote.clientDetails.address && (
-                              <p className="text-sm text-gray-400 flex items-center gap-2">
-                                <MapPin className="w-4 h-4" />
-                                {project.quote.clientDetails.address}
-                              </p>
-                            )}
+                        {isEditingProject ? (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Client Name</label>
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-gray-500" />
+                                <input
+                                  type="text"
+                                  value={editClientName}
+                                  onChange={(e) => setEditClientName(e.target.value)}
+                                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#F6B45A]/50"
+                                  placeholder="Client name"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Email</label>
+                              <div className="flex items-center gap-2">
+                                <Mail className="w-4 h-4 text-gray-500" />
+                                <input
+                                  type="email"
+                                  value={editClientEmail}
+                                  onChange={(e) => setEditClientEmail(e.target.value)}
+                                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#F6B45A]/50"
+                                  placeholder="client@email.com"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Phone</label>
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4 text-gray-500" />
+                                <input
+                                  type="tel"
+                                  value={editClientPhone}
+                                  onChange={(e) => setEditClientPhone(e.target.value)}
+                                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#F6B45A]/50"
+                                  placeholder="(555) 123-4567"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Address</label>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-gray-500" />
+                                <input
+                                  type="text"
+                                  value={editClientAddress}
+                                  onChange={(e) => setEditClientAddress(e.target.value)}
+                                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#F6B45A]/50"
+                                  placeholder="123 Main St, City, ST 12345"
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex items-start gap-3">
+                            <User className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div className="flex-1 space-y-1">
+                              <p className="text-white font-medium">{project.quote.clientDetails.name}</p>
+                              <p className="text-sm text-gray-400 flex items-center gap-2">
+                                <Mail className="w-4 h-4" />
+                                {project.quote.clientDetails.email}
+                              </p>
+                              {project.quote.clientDetails.phone && (
+                                <p className="text-sm text-gray-400 flex items-center gap-2">
+                                  <Phone className="w-4 h-4" />
+                                  {project.quote.clientDetails.phone}
+                                </p>
+                              )}
+                              {project.quote.clientDetails.address && (
+                                <p className="text-sm text-gray-400 flex items-center gap-2">
+                                  <MapPin className="w-4 h-4" />
+                                  {project.quote.clientDetails.address}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Line Items */}
@@ -6939,18 +7068,118 @@ Notes: ${invoice.notes || 'N/A'}
                       </div>
                     </div>
                   )}
+
+                  {/* Notes Section - Only in edit mode or if notes exist */}
+                  {(isEditingProject || project.notes) && (
+                    <div className="space-y-2">
+                      <h4 className="text-white font-semibold text-lg flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-gray-400" />
+                        Project Notes
+                      </h4>
+                      {isEditingProject ? (
+                        <textarea
+                          value={editProjectNotes}
+                          onChange={(e) => setEditProjectNotes(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#F6B45A]/50 resize-none"
+                          rows={4}
+                          placeholder="Add notes about this project..."
+                        />
+                      ) : (
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-gray-300 text-sm whitespace-pre-wrap">{project.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Modal Footer */}
                 <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10 sticky bottom-0 bg-[#111]/95 backdrop-blur-sm">
-                  <motion.button
-                    onClick={() => setShowProjectDetailModal(false)}
-                    className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Close
-                  </motion.button>
+                  {isEditingProject ? (
+                    <>
+                      <motion.button
+                        onClick={() => {
+                          setIsEditingProject(false);
+                          setEditProjectName('');
+                          setEditClientName('');
+                          setEditClientEmail('');
+                          setEditClientPhone('');
+                          setEditClientAddress('');
+                          setEditProjectNotes('');
+                        }}
+                        className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={isSavingProject}
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        onClick={async () => {
+                          if (!viewProjectId) return;
+                          setIsSavingProject(true);
+                          try {
+                            const updatedQuote = project.quote ? {
+                              ...project.quote,
+                              clientDetails: {
+                                name: editClientName,
+                                email: editClientEmail,
+                                phone: editClientPhone,
+                                address: editClientAddress,
+                              }
+                            } : undefined;
+
+                            const success = await updateProject(viewProjectId, {
+                              name: editProjectName,
+                              clientName: editClientName,
+                              quote: updatedQuote,
+                              notes: editProjectNotes,
+                            });
+
+                            if (success) {
+                              showToast('success', 'Project updated successfully!');
+                              setIsEditingProject(false);
+                            } else {
+                              showToast('error', 'Failed to update project');
+                            }
+                          } catch (error) {
+                            console.error('Error updating project:', error);
+                            showToast('error', 'Failed to update project');
+                          } finally {
+                            setIsSavingProject(false);
+                          }
+                        }}
+                        className="px-6 py-2 bg-[#F6B45A] hover:bg-[#f6c45a] text-black font-medium rounded-xl transition-colors flex items-center gap-2"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={isSavingProject}
+                      >
+                        {isSavingProject ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Save Changes
+                          </>
+                        )}
+                      </motion.button>
+                    </>
+                  ) : (
+                    <motion.button
+                      onClick={() => {
+                        setShowProjectDetailModal(false);
+                        setIsEditingProject(false);
+                      }}
+                      className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Close
+                    </motion.button>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -7131,6 +7360,163 @@ Notes: ${invoice.notes || 'N/A'}
                 <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10 sticky bottom-0 bg-[#111]/95 backdrop-blur-sm">
                   <motion.button
                     onClick={() => setShowClientProjectsModal(false)}
+                    className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Close
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Completed Jobs Modal */}
+      <AnimatePresence>
+        {showCompletedJobsModal && (() => {
+          const completedProjects = projects
+            .filter(p => p.status === 'completed')
+            .sort((a, b) => {
+              // Sort by completion date (schedule date) descending, most recent first
+              const dateA = a.schedule?.scheduledDate ? new Date(a.schedule.scheduledDate).getTime() : new Date(a.date).getTime();
+              const dateB = b.schedule?.scheduledDate ? new Date(b.schedule.scheduledDate).getTime() : new Date(b.date).getTime();
+              return dateB - dateA;
+            });
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowCompletedJobsModal(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-4 border-b border-white/10 sticky top-0 bg-[#111]/95 backdrop-blur-sm z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Completed Jobs</h3>
+                      <p className="text-xs text-gray-400">
+                        {completedProjects.length} completed project{completedProjects.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={() => setShowCompletedJobsModal(false)}
+                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-5 h-5 text-gray-400" />
+                  </motion.button>
+                </div>
+
+                {/* Modal Content - Completed Projects List */}
+                <div className="p-4">
+                  {completedProjects.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="w-16 h-16 rounded-full bg-gray-500/10 flex items-center justify-center mb-4 border border-gray-500/20">
+                        <Check className="w-7 h-7 text-gray-400/60" />
+                      </div>
+                      <p className="font-bold text-lg text-white font-serif mb-2">No Completed Jobs Yet</p>
+                      <p className="text-sm text-gray-400">Completed projects will appear here.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {completedProjects.map((project, index) => {
+                        const client = clients.find(c => c.id === project.clientId);
+                        const primaryImage = project.images && project.images.length > 0 ? project.images[0].url : project.image;
+                        const completionDate = project.schedule?.scheduledDate
+                          ? new Date(project.schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                          : new Date(project.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                        return (
+                          <motion.div
+                            key={project.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                            onClick={() => {
+                              setShowCompletedJobsModal(false);
+                              setViewProjectId(project.id);
+                              setShowProjectDetailModal(true);
+                            }}
+                            className="group flex items-center gap-4 p-4 bg-gradient-to-r from-[#151515] to-[#111] border border-white/5 rounded-xl cursor-pointer hover:border-emerald-500/30 transition-all"
+                          >
+                            {/* Project Image */}
+                            <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-emerald-500/10">
+                              {primaryImage ? (
+                                <img
+                                  src={primaryImage}
+                                  alt={project.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Check className="w-6 h-6 text-emerald-400/40" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Project Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-semibold text-white truncate group-hover:text-emerald-300 transition-colors">
+                                  {project.name}
+                                </h4>
+                                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-bold uppercase shrink-0">
+                                  Completed
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs text-gray-400">
+                                {client && (
+                                  <div className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    <span className="truncate">{client.name}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>{completionDate}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Quote Total */}
+                            {project.quote && (
+                              <div className="text-right shrink-0">
+                                <p className="text-[#F6B45A] font-bold">${project.quote.total.toLocaleString()}</p>
+                                {project.invoicePaidAt && (
+                                  <p className="text-[10px] text-emerald-400 font-medium">PAID</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Arrow */}
+                            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-emerald-400 transition-colors shrink-0" />
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10 sticky bottom-0 bg-[#111]/95 backdrop-blur-sm">
+                  <motion.button
+                    onClick={() => setShowCompletedJobsModal(false)}
                     className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
