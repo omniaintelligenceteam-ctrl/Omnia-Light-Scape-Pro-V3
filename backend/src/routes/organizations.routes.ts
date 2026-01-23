@@ -23,6 +23,196 @@ async function getUserOrganization(clerkUserId: string) {
 }
 
 // ============================================
+// BASE ORGANIZATION ENDPOINTS
+// ============================================
+
+// GET /api/organizations - Get current user's organization
+router.get('/', async (req: Request, res: Response) => {
+  const { userId: clerkUserId } = req.query;
+
+  if (!clerkUserId || typeof clerkUserId !== 'string') {
+    return res.status(400).json({ error: 'Missing userId parameter' });
+  }
+
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
+  try {
+    // Get user data
+    const { data: userData } = await supabase
+      .from('users')
+      .select('id, organization_id')
+      .eq('clerk_user_id', clerkUserId)
+      .single();
+
+    if (!userData) {
+      return res.status(200).json({ success: true, data: null, role: null });
+    }
+
+    if (!userData.organization_id) {
+      return res.status(200).json({ success: true, data: null, role: null });
+    }
+
+    // Get organization
+    const { data: orgData, error: orgError } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', userData.organization_id)
+      .single();
+
+    if (orgError || !orgData) {
+      return res.status(200).json({ success: true, data: null, role: null });
+    }
+
+    // Get user's role in the organization
+    const { data: memberData } = await supabase
+      .from('organization_members')
+      .select('role, location_id')
+      .eq('organization_id', userData.organization_id)
+      .eq('user_id', userData.id)
+      .eq('is_active', true)
+      .single();
+
+    return res.status(200).json({
+      success: true,
+      data: orgData,
+      role: memberData?.role || null,
+      locationId: memberData?.location_id || null
+    });
+  } catch (error: any) {
+    console.error('Organization GET error:', error);
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
+});
+
+// POST /api/organizations - Create organization for current user
+router.post('/', async (req: Request, res: Response) => {
+  const { userId: clerkUserId } = req.query;
+  const { name } = req.body;
+
+  if (!clerkUserId || typeof clerkUserId !== 'string') {
+    return res.status(400).json({ error: 'Missing userId parameter' });
+  }
+
+  if (!name) {
+    return res.status(400).json({ error: 'Organization name is required' });
+  }
+
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
+  try {
+    // Get user data
+    const { data: userData } = await supabase
+      .from('users')
+      .select('id, organization_id')
+      .eq('clerk_user_id', clerkUserId)
+      .single();
+
+    if (!userData) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (userData.organization_id) {
+      return res.status(400).json({ error: 'User already belongs to an organization' });
+    }
+
+    // Create organization
+    const { data: orgData, error: orgError } = await supabase
+      .from('organizations')
+      .insert({
+        name,
+        owner_user_id: userData.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (orgError) throw orgError;
+
+    // Update user with organization_id
+    await supabase
+      .from('users')
+      .update({ organization_id: orgData.id })
+      .eq('id', userData.id);
+
+    // Add user as owner member
+    await supabase
+      .from('organization_members')
+      .insert({
+        organization_id: orgData.id,
+        user_id: userData.id,
+        role: 'owner',
+        invited_by: userData.id,
+        accepted_at: new Date().toISOString(),
+        is_active: true,
+        created_at: new Date().toISOString()
+      });
+
+    return res.status(201).json({
+      success: true,
+      data: orgData,
+      role: 'owner'
+    });
+  } catch (error: any) {
+    console.error('Organization POST error:', error);
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
+});
+
+// PATCH /api/organizations - Update current user's organization
+router.patch('/', async (req: Request, res: Response) => {
+  const { userId: clerkUserId } = req.query;
+  const { name, stripe_customer_id } = req.body;
+
+  if (!clerkUserId || typeof clerkUserId !== 'string') {
+    return res.status(400).json({ error: 'Missing userId parameter' });
+  }
+
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database not configured' });
+  }
+
+  try {
+    const userOrg = await getUserOrganization(clerkUserId);
+    if (!userOrg || !userOrg.organizationId) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    // Check if user is owner
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('owner_user_id')
+      .eq('id', userOrg.organizationId)
+      .single();
+
+    if (!orgData || orgData.owner_user_id !== userOrg.supabaseUserId) {
+      return res.status(403).json({ error: 'Not authorized to update organization' });
+    }
+
+    const updates: any = { updated_at: new Date().toISOString() };
+    if (name !== undefined) updates.name = name;
+    if (stripe_customer_id !== undefined) updates.stripe_customer_id = stripe_customer_id;
+
+    const { data, error } = await supabase
+      .from('organizations')
+      .update(updates)
+      .eq('id', userOrg.organizationId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return res.status(200).json({ success: true, data });
+  } catch (error: any) {
+    console.error('Organization PATCH error:', error);
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
+});
+
+// ============================================
 // MEMBERS ENDPOINTS
 // ============================================
 
