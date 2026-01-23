@@ -7539,8 +7539,8 @@ Notes: ${invoice.notes || 'N/A'}
                     </>
                   ) : (
                     <>
-                      {/* Send Quote Button - only show if project has a quote */}
-                      {project.quote && (
+                      {/* Send Quote Button - only show for quoted status */}
+                      {project.quote && project.status === 'quoted' && (
                         <motion.button
                           onClick={() => handleSendQuoteToPortal(project)}
                           disabled={isSendingQuote}
@@ -7561,8 +7561,29 @@ Notes: ${invoice.notes || 'N/A'}
                           )}
                         </motion.button>
                       )}
-                      {/* Generate Quote Button - only show if project does NOT have a quote */}
-                      {!project.quote && (
+                      {/* Schedule Button - show for approved projects */}
+                      {project.status === 'approved' && (
+                        <motion.button
+                          onClick={() => {
+                            setShowProjectDetailModal(false);
+                            setScheduleProjectId(project.id);
+                            setScheduleDate(new Date());
+                            setScheduleTimeSlot('morning');
+                            setScheduleCustomTime('09:00');
+                            setScheduleDuration(2);
+                            setScheduleNotes('');
+                            setShowScheduleModal(true);
+                          }}
+                          className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Schedule
+                        </motion.button>
+                      )}
+                      {/* Generate Quote Button - show for draft status */}
+                      {project.status === 'draft' && (
                         <motion.button
                           onClick={() => {
                             setShowProjectDetailModal(false);
@@ -7577,6 +7598,27 @@ Notes: ${invoice.notes || 'N/A'}
                         >
                           <FileText className="w-4 h-4" />
                           Generate Quote
+                        </motion.button>
+                      )}
+                      {/* Reschedule Button - show for scheduled projects */}
+                      {project.status === 'scheduled' && (
+                        <motion.button
+                          onClick={() => {
+                            setShowProjectDetailModal(false);
+                            setScheduleProjectId(project.id);
+                            setScheduleDate(project.schedule?.scheduledDate ? new Date(project.schedule.scheduledDate) : new Date());
+                            setScheduleTimeSlot(project.schedule?.timeSlot || 'morning');
+                            setScheduleCustomTime(project.schedule?.customTime || '09:00');
+                            setScheduleDuration(project.schedule?.estimatedDuration || 2);
+                            setScheduleNotes(project.schedule?.installationNotes || '');
+                            setShowScheduleModal(true);
+                          }}
+                          className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Reschedule
                         </motion.button>
                       )}
                       {/* Complete Button - only show for scheduled projects */}

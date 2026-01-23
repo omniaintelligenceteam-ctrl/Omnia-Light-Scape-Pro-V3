@@ -81,8 +81,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
     >
       {/* Action Buttons */}
       <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Generate Quote button - show when no quote exists */}
-        {onGenerateQuote && !project.quote && (
+        {/* Generate Quote button - show for draft projects (whether or not they have a quote) */}
+        {onGenerateQuote && project.status === 'draft' && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -94,8 +94,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             <FileText className="w-3.5 h-3.5" />
           </button>
         )}
-        {/* Send Quote button - show when quote exists */}
-        {onSendQuote && project.quote && (
+        {/* Send Quote button - show when quote exists and status is quoted */}
+        {onSendQuote && project.quote && project.status === 'quoted' && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -107,8 +107,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             <Send className="w-3.5 h-3.5" />
           </button>
         )}
-        {/* Schedule button - show for approved projects without a schedule */}
-        {onScheduleProject && project.status === 'approved' && !project.schedule && (
+        {/* Schedule button - show for approved projects */}
+        {onScheduleProject && project.status === 'approved' && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -116,6 +116,19 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             }}
             className="p-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors"
             title="Schedule installation"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {/* Reschedule button - show for scheduled projects */}
+        {onScheduleProject && project.status === 'scheduled' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onScheduleProject(project);
+            }}
+            className="p-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-colors"
+            title="Reschedule"
           >
             <Calendar className="w-3.5 h-3.5" />
           </button>
