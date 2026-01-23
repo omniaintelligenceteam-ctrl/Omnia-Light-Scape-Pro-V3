@@ -46,10 +46,11 @@ import { useTeamMembers } from './hooks/useTeamMembers';
 import { TechnicianDashboard } from './components/TechnicianDashboard';
 import { AssignmentDropdown } from './components/AssignmentDropdown';
 import { SaveImageModal } from './components/SaveImageModal';
+import { KanbanBoard } from './components/pipeline';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
@@ -425,6 +426,7 @@ const App: React.FC = () => {
   // Projects Sub-Tab State - Simplified to 2 main views
   const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing'>('pipeline');
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'approved' | 'scheduled' | 'completed'>('all');
+  const [pipelineViewMode, setPipelineViewMode] = useState<'grid' | 'kanban'>('grid');
 
   // Advanced Analytics State
   const [analyticsDateRange, setAnalyticsDateRange] = useState({
@@ -4257,6 +4259,35 @@ Notes: ${invoice.notes || 'N/A'}
                      />
                  )}
 
+                 {/* View Mode Toggle - Only show on pipeline */}
+                 {projectsSubTab === 'pipeline' && (
+                     <div className="hidden md:flex items-center justify-end gap-2 mb-4">
+                         <span className="text-xs text-gray-500 mr-2">View:</span>
+                         <button
+                             onClick={() => setPipelineViewMode('grid')}
+                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                 pipelineViewMode === 'grid'
+                                     ? 'bg-[#F6B45A]/20 text-[#F6B45A] ring-1 ring-[#F6B45A]/30'
+                                     : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                             }`}
+                         >
+                             <LayoutGrid className="w-3.5 h-3.5" />
+                             Grid
+                         </button>
+                         <button
+                             onClick={() => setPipelineViewMode('kanban')}
+                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                 pipelineViewMode === 'kanban'
+                                     ? 'bg-[#F6B45A]/20 text-[#F6B45A] ring-1 ring-[#F6B45A]/30'
+                                     : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                             }`}
+                         >
+                             <Columns className="w-3.5 h-3.5" />
+                             Kanban
+                         </button>
+                     </div>
+                 )}
+
                  {/* SUB-TAB: PIPELINE (All Projects) */}
                  {projectsSubTab === 'pipeline' && (
                      <>
@@ -4400,8 +4431,31 @@ Notes: ${invoice.notes || 'N/A'}
                                     </motion.div>
                                 ))}
                             </div>
+                            {/* Desktop Kanban View */}
+                            {pipelineViewMode === 'kanban' && (
+                                <div className="hidden md:block h-[calc(100vh-320px)] min-h-[500px]">
+                                    <KanbanBoard
+                                        projects={projects}
+                                        statusConfig={STATUS_CONFIG}
+                                        onStatusChange={async (projectId, newStatus) => {
+                                            const success = await updateProjectStatus(projectId, newStatus);
+                                            if (success) {
+                                                showToast('success', `Project moved to ${STATUS_CONFIG[newStatus].label}`);
+                                            } else {
+                                                showToast('error', 'Failed to update project status');
+                                            }
+                                            return success;
+                                        }}
+                                        onProjectClick={(p) => {
+                                            setViewProjectId(p.id);
+                                            setShowProjectDetailModal(true);
+                                        }}
+                                    />
+                                </div>
+                            )}
+
                             {/* Desktop Card Grid View */}
-                            <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                            <div className={`hidden ${pipelineViewMode === 'grid' ? 'md:grid' : ''} grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8`}>
                                 {filteredPipelineProjects.map((p, index) => (
                                     <motion.div
                                       key={p.id}
