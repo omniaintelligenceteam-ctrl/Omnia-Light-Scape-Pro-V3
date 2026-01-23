@@ -54,7 +54,8 @@ export function useTeamMembers(): UseTeamMembersResult {
       }
     } catch (err: any) {
       console.error('Error fetching team members:', err);
-      setError(err.message || 'Failed to load team members');
+      const errorMessage = typeof err?.message === 'string' ? err.message : 'Failed to load team members';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +124,7 @@ export function useTeamMembers(): UseTeamMembersResult {
       return true;
     } catch (err: any) {
       console.error('Error updating member:', err);
-      setError(err.message);
+      setError(typeof err?.message === 'string' ? err.message : 'Failed to update member');
       return false;
     }
   };
@@ -147,7 +148,7 @@ export function useTeamMembers(): UseTeamMembersResult {
       return true;
     } catch (err: any) {
       console.error('Error removing member:', err);
-      setError(err.message);
+      setError(typeof err?.message === 'string' ? err.message : 'Failed to remove member');
       return false;
     }
   };
@@ -183,7 +184,7 @@ export function useTeamMembers(): UseTeamMembersResult {
       return { invite: null, inviteLink: null };
     } catch (err: any) {
       console.error('Error sending invite:', err);
-      setError(err.message);
+      setError(typeof err?.message === 'string' ? err.message : 'Failed to send invite');
       return { invite: null, inviteLink: null };
     }
   };
@@ -206,7 +207,7 @@ export function useTeamMembers(): UseTeamMembersResult {
       return true;
     } catch (err: any) {
       console.error('Error cancelling invite:', err);
-      setError(err.message);
+      setError(typeof err?.message === 'string' ? err.message : 'Failed to cancel invite');
       return false;
     }
   };
