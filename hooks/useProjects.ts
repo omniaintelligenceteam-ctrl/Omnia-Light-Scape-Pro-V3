@@ -40,7 +40,8 @@ export function useProjects() {
             schedule: p.prompt_config?.schedule || undefined,
             invoicePaidAt: p.invoice_paid_at || undefined,
             clientId: p.client_id || undefined,
-            clientName: p.prompt_config?.clientName || undefined
+            clientName: p.prompt_config?.clientName || undefined,
+            location_id: p.location_id || undefined
           }));
           setProjects(loadedProjects);
         }
@@ -62,7 +63,8 @@ export function useProjects() {
     quote: QuoteData | null = null,
     bom: BOMData | null = null,
     clientId?: string,
-    clientName?: string
+    clientName?: string,
+    locationId?: string | null
   ): Promise<SavedProject | null> => {
     if (!user) {
       setError('User not logged in');
@@ -98,7 +100,8 @@ export function useProjects() {
           name,
           generated_image_url: imageUrl,
           prompt_config: promptConfig,
-          client_id: clientId || null
+          client_id: clientId || null,
+          location_id: locationId || null
         }),
       });
 
@@ -124,7 +127,8 @@ export function useProjects() {
           bom: data.data.prompt_config?.bom || null,
           status: 'draft',
           clientId: data.data.client_id || undefined,
-          clientName: data.data.prompt_config?.clientName || undefined
+          clientName: data.data.prompt_config?.clientName || undefined,
+          location_id: data.data.location_id || undefined
         };
 
         setProjects(prev => [newProject, ...prev]);

@@ -111,7 +111,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [showAIChat, setShowAIChat] = useState(false);
-  const { isOwner } = useOrganization();
+  const { isOwner, isAdmin } = useOrganization();
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onProfileChange && profile) {
@@ -1205,7 +1205,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 exit="exit"
                 transition={{ duration: 0.2 }}
               >
-                <TeamSection isOwner={isOwner} />
+                <TeamSection isOwner={isOwner} isAdmin={isAdmin} />
               </motion.div>
             )}
 

@@ -50,9 +50,12 @@ const ROLE_COLORS: Record<OrganizationRole, string> = {
 
 interface TeamSectionProps {
   isOwner: boolean;
+  isAdmin?: boolean;
 }
 
-export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
+export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = false }) => {
+  // Both owners and admins can manage team members
+  // Note: canManageTeam is computed below after ownerMember is known
   const { members, invites, isLoading, error, sendInvite, cancelInvite, updateMember, removeMember } = useTeamMembers();
   const { locations } = useLocations();
 
@@ -94,6 +97,17 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
   // Filter out owner from editable members
   const editableMembers = useMemo(() => (members || []).filter(m => m.role !== 'owner'), [members]);
   const ownerMember = useMemo(() => (members || []).find(m => m.role === 'owner'), [members]);
+
+  // Both owners and admins can manage team members
+  // Also allow if no owner is detected in members list (handles data inconsistency)
+  const canManageTeam = useMemo(() => {
+    // If user is owner or admin, they can manage
+    if (isOwner || isAdmin) return true;
+    // Fallback: if no owner member exists in the list, allow management (data inconsistency case)
+    // This handles the case where user created org but wasn't added to organization_members
+    if (!ownerMember && (members || []).length === 0) return true;
+    return false;
+  }, [isOwner, isAdmin, ownerMember, members]);
 
   // Team capacity calculations
   const teamStats = useMemo(() => {
@@ -282,7 +296,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
           </div>
         </div>
 
-        {isOwner && (
+        {canManageTeam && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowBulkInvite(true)}
@@ -556,7 +570,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
               key={member.id}
               member={member}
               locations={locations}
-              isOwner={isOwner}
+              canManageTeam={canManageTeam}
               onUpdate={updateMember}
               onRemove={() => handleRemoveMember(member)}
             />
@@ -572,7 +586,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
             <InviteCard
               key={invite.id}
               invite={invite}
-              isOwner={isOwner}
+              canManageTeam={canManageTeam}
               onCancel={() => handleCancelInvite(invite)}
             />
           ))}
@@ -584,7 +598,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
         <div className="text-center py-8">
           <Users className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <p className="text-gray-400">No team members yet</p>
-          {isOwner && (
+          {canManageTeam && (
             <p className="text-sm text-gray-500 mt-1">Invite your first team member to get started</p>
           )}
         </div>
@@ -949,12 +963,12 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
 interface MemberCardProps {
   member: OrganizationMember;
   locations: { id: string; name: string }[];
-  isOwner: boolean;
+  canManageTeam: boolean;
   onUpdate: (memberId: string, updates: { role?: OrganizationRole; locationId?: string | null; isActive?: boolean }) => Promise<boolean>;
   onRemove: () => void;
 }
 
-const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onUpdate, onRemove }) => {
+const MemberCard: React.FC<MemberCardProps> = ({ member, locations, canManageTeam, onUpdate, onRemove }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editRole, setEditRole] = useState<Exclude<OrganizationRole, 'owner'>>(member.role as Exclude<OrganizationRole, 'owner'>);
   const [editLocationId, setEditLocationId] = useState<string>(member.locationId || '');
@@ -1045,7 +1059,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onU
               </span>
 
               {/* Edit button */}
-              {isOwner && (
+              {canManageTeam && (
                 <button
                   onClick={handleStartEdit}
                   className="p-2 rounded-lg hover:bg-blue-500/20 text-gray-400 hover:text-blue-400 transition-colors"
@@ -1056,7 +1070,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onU
               )}
 
               {/* Remove button */}
-              {isOwner && (
+              {canManageTeam && (
                 <button
                   onClick={onRemove}
                   className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
@@ -1129,11 +1143,11 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, isOwner, onU
 // Invite Card Component
 interface InviteCardProps {
   invite: OrganizationInvite;
-  isOwner: boolean;
+  canManageTeam: boolean;
   onCancel: () => void;
 }
 
-const InviteCard: React.FC<InviteCardProps> = ({ invite, isOwner, onCancel }) => {
+const InviteCard: React.FC<InviteCardProps> = ({ invite, canManageTeam, onCancel }) => {
   const expiresAt = new Date(invite.expiresAt);
   const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
@@ -1158,7 +1172,7 @@ const InviteCard: React.FC<InviteCardProps> = ({ invite, isOwner, onCancel }) =>
             {ROLE_LABELS[invite.role]}
           </span>
 
-          {isOwner && (
+          {canManageTeam && (
             <button
               onClick={onCancel}
               className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"

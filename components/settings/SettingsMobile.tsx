@@ -154,7 +154,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
 }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [showAIChat, setShowAIChat] = useState(false);
-  const { isOwner } = useOrganization();
+  const { isOwner, isAdmin } = useOrganization();
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onProfileChange && profile) {
@@ -1232,7 +1232,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           onClose={() => setActiveModal(null)}
           title="Team"
         >
-          <TeamSection isOwner={isOwner} />
+          <TeamSection isOwner={isOwner} isAdmin={isAdmin} />
         </FullScreenModal>
       )}
 

@@ -1680,7 +1680,7 @@ const App: React.FC = () => {
       const projectName = `Night Scene ${projects.length + 1}`;
       // Generate quote based on selected fixtures so it saves with the project
       const quoteData = generateQuoteFromSelections();
-      const result = await saveProject(projectName, generatedImage, quoteData);
+      const result = await saveProject(projectName, generatedImage, quoteData, null, undefined, undefined, selectedLocationId);
       if (result) {
         // Track this project ID so subsequent quote saves update it instead of creating duplicates
         setCurrentProjectId(result.id);
@@ -1703,7 +1703,7 @@ const App: React.FC = () => {
     try {
       const projectName = `Draft ${projects.length + 1}`;
       const quoteData = generateQuoteFromSelections();
-      const result = await saveProject(projectName, generatedImage, quoteData);
+      const result = await saveProject(projectName, generatedImage, quoteData, null, undefined, undefined, selectedLocationId);
       if (result) {
         setCurrentProjectId(result.id);
         setCurrentQuote(quoteData);
@@ -1743,10 +1743,10 @@ const App: React.FC = () => {
         return;
       }
 
-      // Now save the project with the client ID
+      // Now save the project with the client ID and current location
       const projectName = clientData.name;
       const quoteData = generateQuoteFromSelections();
-      const result = await saveProject(projectName, generatedImage, quoteData, null, newClient.id, newClient.name);
+      const result = await saveProject(projectName, generatedImage, quoteData, null, newClient.id, newClient.name, selectedLocationId);
 
       if (result) {
         setCurrentProjectId(result.id);
@@ -2376,26 +2376,26 @@ Notes: ${invoice.notes || 'N/A'}
     completed: { label: 'Completed', color: 'text-[#F6B45A]', bgColor: 'bg-[#F6B45A]/10', borderColor: 'border-[#F6B45A]/30' }
   };
 
-  // Count projects by status
+  // Count projects by status - filtered by selected location
   const statusCounts = useMemo(() => {
     const counts: Record<ProjectStatus, number> = { draft: 0, quoted: 0, approved: 0, scheduled: 0, completed: 0 };
-    projects.forEach(p => {
+    filteredProjectsByLocation.forEach(p => {
       counts[p.status] = (counts[p.status] || 0) + 1;
     });
     return counts;
-  }, [projects]);
+  }, [filteredProjectsByLocation]);
 
-  // Pipeline Analytics - Conversion metrics, revenue, overdue invoices
+  // Pipeline Analytics - Conversion metrics, revenue, overdue invoices (filtered by selected location)
   const pipelineAnalytics = useMemo(() => {
     const now = new Date();
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
 
-    // Conversion rates
-    const totalProjects = projects.length;
-    const quotedOrBeyond = projects.filter(p => p.status !== 'draft').length;
-    const approvedOrBeyond = projects.filter(p => ['approved', 'scheduled', 'completed'].includes(p.status)).length;
-    const completedCount = projects.filter(p => p.status === 'completed').length;
+    // Conversion rates - use location-filtered projects
+    const totalProjects = filteredProjectsByLocation.length;
+    const quotedOrBeyond = filteredProjectsByLocation.filter(p => p.status !== 'draft').length;
+    const approvedOrBeyond = filteredProjectsByLocation.filter(p => ['approved', 'scheduled', 'completed'].includes(p.status)).length;
+    const completedCount = filteredProjectsByLocation.filter(p => p.status === 'completed').length;
 
     const draftToQuotedRate = totalProjects > 0 ? Math.round((quotedOrBeyond / totalProjects) * 100) : 0;
     const quotedToApprovedRate = quotedOrBeyond > 0 ? Math.round((approvedOrBeyond / quotedOrBeyond) * 100) : 0;
@@ -2411,7 +2411,7 @@ Notes: ${invoice.notes || 'N/A'}
     let totalQuoteValue = 0;
     let quoteCount = 0;
 
-    projects.forEach(p => {
+    filteredProjectsByLocation.forEach(p => {
       const quoteTotal = p.quote?.total || 0;
 
       // Count quote values for average
@@ -2469,7 +2469,7 @@ Notes: ${invoice.notes || 'N/A'}
       totalProjects,
       activeProjects: statusCounts.approved + statusCounts.scheduled
     };
-  }, [projects, statusCounts]);
+  }, [filteredProjectsByLocation, statusCounts]);
 
   // Memoized filtered project lists (includes search and status filtering)
   const filteredUnapprovedProjects = useMemo(() =>
