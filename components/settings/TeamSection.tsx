@@ -90,6 +90,79 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
       .filter(email => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
   }, [bulkEmails]);
 
+  // IMPORTANT: All hooks must be called before any early returns
+  // Filter out owner from editable members
+  const editableMembers = useMemo(() => (members || []).filter(m => m.role !== 'owner'), [members]);
+  const ownerMember = useMemo(() => (members || []).find(m => m.role === 'owner'), [members]);
+
+  // Team capacity calculations
+  const teamStats = useMemo(() => {
+    const membersList = members || [];
+    const invitesList = invites || [];
+    const activeMembers = membersList.filter(m => m.isActive);
+    const roleBreakdown = {
+      admin: activeMembers.filter(m => m.role === 'admin').length,
+      salesperson: activeMembers.filter(m => m.role === 'salesperson').length,
+      lead_technician: activeMembers.filter(m => m.role === 'lead_technician').length,
+      technician: activeMembers.filter(m => m.role === 'technician').length
+    };
+
+    const locationsWithMembers = new Set(
+      activeMembers.filter(m => m.locationId).map(m => m.locationId)
+    ).size;
+
+    return {
+      totalActive: activeMembers.length,
+      pendingInvites: invitesList.length,
+      locationsWithMembers,
+      totalLocations: locations?.length || 0,
+      roleBreakdown
+    };
+  }, [members, invites, locations]);
+
+  // Filtered Members
+  const filteredMembers = useMemo(() => {
+    let filtered = editableMembers || [];
+
+    if (searchQuery) {
+      filtered = filtered.filter(m =>
+        m.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.userEmail?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (roleFilter !== 'all') filtered = filtered.filter(m => m.role === roleFilter);
+
+    if (locationFilter === 'all-access') {
+      filtered = filtered.filter(m => !m.locationId);
+    } else if (locationFilter !== 'all') {
+      filtered = filtered.filter(m => m.locationId === locationFilter);
+    }
+
+    return filtered.sort((a, b) => a.userName?.localeCompare(b.userName || '') || 0);
+  }, [editableMembers, searchQuery, roleFilter, locationFilter]);
+
+  // Filtered Invites
+  const filteredInvites = useMemo(() => {
+    let filtered = invites || [];
+
+    if (searchQuery) {
+      filtered = filtered.filter(inv =>
+        inv.email.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (roleFilter !== 'all') filtered = filtered.filter(inv => inv.role === roleFilter);
+
+    if (locationFilter === 'all-access') {
+      filtered = filtered.filter(inv => !inv.locationId);
+    } else if (locationFilter !== 'all') {
+      filtered = filtered.filter(inv => inv.locationId === locationFilter);
+    }
+
+    return filtered;
+  }, [invites, searchQuery, roleFilter, locationFilter]);
+
   const handleBulkInvite = async () => {
     if (parsedEmails.length === 0) return;
 
@@ -194,78 +267,6 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner }) => {
       </div>
     );
   }
-
-  // Filter out owner from editable members
-  const editableMembers = (members || []).filter(m => m.role !== 'owner');
-  const ownerMember = (members || []).find(m => m.role === 'owner');
-
-  // Team capacity calculations
-  const teamStats = useMemo(() => {
-    const membersList = members || [];
-    const invitesList = invites || [];
-    const activeMembers = membersList.filter(m => m.isActive);
-    const roleBreakdown = {
-      admin: activeMembers.filter(m => m.role === 'admin').length,
-      salesperson: activeMembers.filter(m => m.role === 'salesperson').length,
-      lead_technician: activeMembers.filter(m => m.role === 'lead_technician').length,
-      technician: activeMembers.filter(m => m.role === 'technician').length
-    };
-
-    const locationsWithMembers = new Set(
-      activeMembers.filter(m => m.locationId).map(m => m.locationId)
-    ).size;
-
-    return {
-      totalActive: activeMembers.length,
-      pendingInvites: invitesList.length,
-      locationsWithMembers,
-      totalLocations: locations?.length || 0,
-      roleBreakdown
-    };
-  }, [members, invites, locations]);
-
-  // Filtered Members
-  const filteredMembers = useMemo(() => {
-    let filtered = editableMembers || [];
-
-    if (searchQuery) {
-      filtered = filtered.filter(m =>
-        m.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.userEmail?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (roleFilter !== 'all') filtered = filtered.filter(m => m.role === roleFilter);
-
-    if (locationFilter === 'all-access') {
-      filtered = filtered.filter(m => !m.locationId);
-    } else if (locationFilter !== 'all') {
-      filtered = filtered.filter(m => m.locationId === locationFilter);
-    }
-
-    return filtered.sort((a, b) => a.userName?.localeCompare(b.userName || '') || 0);
-  }, [editableMembers, searchQuery, roleFilter, locationFilter]);
-
-  // Filtered Invites
-  const filteredInvites = useMemo(() => {
-    let filtered = invites || [];
-
-    if (searchQuery) {
-      filtered = filtered.filter(inv =>
-        inv.email.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (roleFilter !== 'all') filtered = filtered.filter(inv => inv.role === roleFilter);
-
-    if (locationFilter === 'all-access') {
-      filtered = filtered.filter(inv => !inv.locationId);
-    } else if (locationFilter !== 'all') {
-      filtered = filtered.filter(inv => inv.locationId === locationFilter);
-    }
-
-    return filtered;
-  }, [invites, searchQuery, roleFilter, locationFilter]);
 
   return (
     <div className="space-y-6">
