@@ -26,7 +26,7 @@ import { OrganizationMember, OrganizationInvite, OrganizationRole } from '../../
 
 const ROLE_LABELS: Record<OrganizationRole, string> = {
   owner: 'Owner',
-  admin: 'Office Manager',
+  admin: 'Admin',
   salesperson: 'Salesperson',
   lead_technician: 'Lead Technician',
   technician: 'Technician'
@@ -34,7 +34,7 @@ const ROLE_LABELS: Record<OrganizationRole, string> = {
 
 const ROLE_DESCRIPTIONS: Record<OrganizationRole, string> = {
   owner: 'Full access to everything',
-  admin: 'Manage operations, no billing access',
+  admin: 'Full access except billing, can manage team',
   salesperson: 'Create quotes, manage assigned clients',
   lead_technician: 'Manage crew, view location analytics',
   technician: 'View assigned jobs only'
@@ -360,7 +360,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
           >
             <option value="all" className="bg-[#1a1a1a] text-white">All Roles</option>
-            <option value="admin" className="bg-[#1a1a1a] text-white">Office Manager</option>
+            <option value="admin" className="bg-[#1a1a1a] text-white">Admin</option>
             <option value="salesperson" className="bg-[#1a1a1a] text-white">Salesperson</option>
             <option value="lead_technician" className="bg-[#1a1a1a] text-white">Lead Technician</option>
             <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
@@ -436,7 +436,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
           {teamStats.roleBreakdown.admin > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-lg">
               <div className="w-2 h-2 rounded-full bg-purple-400" />
-              <span className="text-xs text-gray-300">Office Managers: {teamStats.roleBreakdown.admin}</span>
+              <span className="text-xs text-gray-300">Admins: {teamStats.roleBreakdown.admin}</span>
             </div>
           )}
           {teamStats.roleBreakdown.salesperson > 0 && (
@@ -670,7 +670,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
                       className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10
                         text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
                     >
-                      <option value="admin" className="bg-[#1a1a1a] text-white">Office Manager</option>
+                      <option value="admin" className="bg-[#1a1a1a] text-white">Admin</option>
                       <option value="salesperson" className="bg-[#1a1a1a] text-white">Salesperson</option>
                       <option value="lead_technician" className="bg-[#1a1a1a] text-white">Lead Technician</option>
                       <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
@@ -830,7 +830,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
                       className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10
                         text-white appearance-none cursor-pointer focus:outline-none focus:border-[#F6B45A]/50"
                     >
-                      <option value="admin" className="bg-[#1a1a1a] text-white">Office Manager</option>
+                      <option value="admin" className="bg-[#1a1a1a] text-white">Admin</option>
                       <option value="salesperson" className="bg-[#1a1a1a] text-white">Salesperson</option>
                       <option value="lead_technician" className="bg-[#1a1a1a] text-white">Lead Technician</option>
                       <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
@@ -1087,7 +1087,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ member, locations, canManageTea
                 onChange={(e) => setEditRole(e.target.value as Exclude<OrganizationRole, 'owner'>)}
                 className="px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F6B45A]/50"
               >
-                <option value="admin" className="bg-[#1a1a1a] text-white">Office Manager</option>
+                <option value="admin" className="bg-[#1a1a1a] text-white">Admin</option>
                 <option value="salesperson" className="bg-[#1a1a1a] text-white">Salesperson</option>
                 <option value="lead_technician" className="bg-[#1a1a1a] text-white">Lead Technician</option>
                 <option value="technician" className="bg-[#1a1a1a] text-white">Technician</option>
