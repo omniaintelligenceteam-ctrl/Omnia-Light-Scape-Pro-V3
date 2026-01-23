@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Sparkles } from 'lucide-react';
+import { LocationSwitcher } from './LocationSwitcher';
+import { Location } from '../types';
 
 // Premium Animated Penrose Triangle (Impossible Triangle) Logo with High-End Effects
 const PenroseTriangle: React.FC<{ className?: string }> = ({ className = "w-6 h-6 md:w-10 md:h-10" }) => (
@@ -248,9 +250,22 @@ interface HeaderProps {
       isLoading: boolean;
     };
     hideLogoForAnimation?: boolean;
+    // Location switcher props
+    locations?: Location[];
+    selectedLocationId?: string | null;
+    onLocationChange?: (locationId: string | null) => void;
+    locationsLoading?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionStatus, hideLogoForAnimation }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onRequestUpgrade,
+  subscriptionStatus,
+  hideLogoForAnimation,
+  locations = [],
+  selectedLocationId = null,
+  onLocationChange,
+  locationsLoading = false,
+}) => {
   const showTrialBadge = subscriptionStatus && !subscriptionStatus.isLoading && !subscriptionStatus.hasActiveSubscription;
   const showProBadge = subscriptionStatus?.hasActiveSubscription;
 
@@ -317,8 +332,32 @@ export const Header: React.FC<HeaderProps> = ({ onRequestUpgrade, subscriptionSt
           </div>
         </motion.div>
 
+        {/* Location Switcher - Shows when there are multiple locations */}
+        {locations.length > 0 && onLocationChange && (
+          <div className="hidden md:block">
+            <LocationSwitcher
+              locations={locations}
+              selectedLocationId={selectedLocationId ?? null}
+              onLocationChange={onLocationChange}
+              isLoading={locationsLoading}
+            />
+          </div>
+        )}
+
         {/* Right Actions */}
         <div className="flex items-center gap-2 md:gap-4">
+
+          {/* Mobile Location Switcher */}
+          {locations.length > 0 && onLocationChange && (
+            <div className="md:hidden">
+              <LocationSwitcher
+                locations={locations}
+                selectedLocationId={selectedLocationId ?? null}
+                onLocationChange={onLocationChange}
+                isLoading={locationsLoading}
+              />
+            </div>
+          )}
 
           {/* Mobile Trial Counter - Always visible on mobile */}
           {showTrialBadge && (

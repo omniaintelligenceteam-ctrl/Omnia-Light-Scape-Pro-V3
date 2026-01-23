@@ -101,6 +101,7 @@ export interface SavedProject {
   actual_hours?: number;          // Actual hours spent on project (for technician tracking)
   clientId?: string;              // ID of client this project belongs to
   clientName?: string;            // Client name (denormalized for display)
+  notes?: string;                 // Project notes
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';

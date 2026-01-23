@@ -225,12 +225,15 @@ const JobCard: React.FC<{
   const clientName = project.quote?.clientDetails?.name || 'Client';
   const clientPhone = project.quote?.clientDetails?.phone;
   const clientAddress = project.quote?.clientDetails?.address || '';
+  const isApproved = project.status === 'approved';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border border-white/10 rounded-xl p-4 space-y-3"
+      className={`bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border rounded-xl p-4 space-y-3 ${
+        isApproved ? 'border-emerald-500/20' : 'border-white/10'
+      }`}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -242,15 +245,22 @@ const JobCard: React.FC<{
           )}
           <div>
             <h4 className="font-semibold text-white flex items-center gap-2">
-              <Home className="w-4 h-4 text-blue-400" />
+              <Home className={`w-4 h-4 ${isApproved ? 'text-emerald-400' : 'text-blue-400'}`} />
               {project.name}
+              {isApproved && (
+                <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-500/20 text-emerald-400 rounded border border-emerald-500/30">
+                  Approved
+                </span>
+              )}
             </h4>
             <p className="text-sm text-gray-400">~{schedule.estimatedDuration} hrs</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${
+          isApproved ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-blue-500/10 border border-blue-500/20'
+        }`}>
           {timeSlotInfo.icon}
-          <span className="text-xs text-blue-400 font-medium">{timeSlotInfo.time}</span>
+          <span className={`text-xs font-medium ${isApproved ? 'text-emerald-400' : 'text-blue-400'}`}>{timeSlotInfo.time}</span>
         </div>
       </div>
 
@@ -279,7 +289,9 @@ const JobCard: React.FC<{
 
       {/* Notes */}
       {schedule.installationNotes && (
-        <div className="text-sm text-gray-400 bg-white/5 rounded-lg p-2 border-l-2 border-blue-500/50">
+        <div className={`text-sm text-gray-400 bg-white/5 rounded-lg p-2 border-l-2 ${
+          isApproved ? 'border-emerald-500/50' : 'border-blue-500/50'
+        }`}>
           {schedule.installationNotes}
         </div>
       )}
@@ -296,20 +308,26 @@ const JobCard: React.FC<{
         </motion.button>
         <motion.button
           onClick={onReschedule}
-          className="flex-1 px-3 py-2 text-sm font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg transition-colors"
+          className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            isApproved
+              ? 'text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+              : 'text-blue-400 bg-blue-500/10 hover:bg-blue-500/20'
+          }`}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
           Reschedule
         </motion.button>
-        <motion.button
-          onClick={onComplete}
-          className="flex-1 px-3 py-2 text-sm font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          Complete
-        </motion.button>
+        {!isApproved && (
+          <motion.button
+            onClick={onComplete}
+            className="flex-1 px-3 py-2 text-sm font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Complete
+          </motion.button>
+        )}
       </div>
     </motion.div>
   );
@@ -434,12 +452,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 }) => {
   const [currentMonth, setCurrentMonth] = React.useState(new Date(selectedDate));
 
-  // Get all scheduled projects
+  // Get all scheduled projects (including approved projects that have a schedule)
   const scheduledProjects = useMemo(() => {
-    return projects.filter(p => p.status === 'scheduled' && p.schedule);
+    return projects.filter(p => (p.status === 'scheduled' || p.status === 'approved') && p.schedule);
   }, [projects]);
 
-  // Get approved projects that need scheduling
+  // Get approved projects that need scheduling (no schedule set yet)
   const approvedProjects = useMemo(() => {
     return projects.filter(p => p.status === 'approved' && !p.schedule);
   }, [projects]);

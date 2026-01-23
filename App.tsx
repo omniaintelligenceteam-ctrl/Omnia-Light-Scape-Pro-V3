@@ -50,9 +50,9 @@ import { KanbanBoard } from './components/pipeline';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2 } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -204,13 +204,28 @@ const App: React.FC = () => {
     deleteTechnician
   } = useTechnicians();
 
+  // Selected location filter - null means "All Locations"
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+
+  // Filter projects by selected location
+  const filteredProjectsByLocation = useMemo(() => {
+    if (!selectedLocationId) return projects;
+    return projects.filter(p => p.location_id === selectedLocationId);
+  }, [projects, selectedLocationId]);
+
+  // Filter technicians by selected location
+  const filteredTechniciansByLocation = useMemo(() => {
+    if (!selectedLocationId) return technicians;
+    return technicians.filter(t => t.locationId === selectedLocationId);
+  }, [technicians, selectedLocationId]);
+
   // Date range for Executive Dashboard
   const [dashboardDateRange, setDashboardDateRange] = useState<'today' | 'this_week' | 'this_month' | 'this_quarter' | 'this_year'>('this_month');
 
-  // Calculate real metrics for Executive Dashboard
-  const locationMetrics = useLocationMetrics(projects, locations, dashboardDateRange);
-  const technicianMetrics = useTechnicianMetrics(projects, technicians, locations, dashboardDateRange);
-  const companyMetrics = useCompanyMetrics(locationMetrics, technicianMetrics, projects, dashboardDateRange);
+  // Calculate real metrics for Executive Dashboard - use filtered data when location is selected
+  const locationMetrics = useLocationMetrics(filteredProjectsByLocation, locations, dashboardDateRange);
+  const technicianMetrics = useTechnicianMetrics(filteredProjectsByLocation, filteredTechniciansByLocation, locations, dashboardDateRange);
+  const companyMetrics = useCompanyMetrics(locationMetrics, technicianMetrics, filteredProjectsByLocation, dashboardDateRange);
 
   // New Advanced Analytics Hooks
   const businessHealthData = useBusinessHealthScore({ projects, goals: businessGoals });
@@ -496,6 +511,9 @@ const App: React.FC = () => {
   const [editClientPhone, setEditClientPhone] = useState('');
   const [editClientAddress, setEditClientAddress] = useState('');
   const [editProjectNotes, setEditProjectNotes] = useState('');
+  const [editLineItems, setEditLineItems] = useState<LineItem[]>([]);
+  const [editProjectLocationId, setEditProjectLocationId] = useState<string | null>(null);
+  const [showAddItemDropdown, setShowAddItemDropdown] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
 
   // Client Projects Modal State (for viewing all projects for a client)
@@ -504,6 +522,11 @@ const App: React.FC = () => {
 
   // Completed Jobs Modal State
   const [showCompletedJobsModal, setShowCompletedJobsModal] = useState(false);
+
+  // Next Step Modal State (workflow prompts)
+  const [showNextStepModal, setShowNextStepModal] = useState(false);
+  const [nextStepType, setNextStepType] = useState<'quote' | 'schedule' | 'invoice' | 'payment' | null>(null);
+  const [nextStepProjectId, setNextStepProjectId] = useState<string | null>(null);
 
   // Calendar Events State (from Supabase)
   const { events: calendarEvents, createEvent, updateEvent: updateCalendarEvent, deleteEvent } = useCalendarEvents();
@@ -1685,6 +1708,10 @@ const App: React.FC = () => {
         setShowSaveImageModal(false);
         handleTabChange('projects');
         showToast('success', 'Saved to drafts!');
+        // Show next step prompt
+        setNextStepProjectId(result.id);
+        setNextStepType('quote');
+        setShowNextStepModal(true);
       } else {
         showToast('error', 'Failed to save');
       }
@@ -1725,6 +1752,10 @@ const App: React.FC = () => {
         setShowSaveImageModal(false);
         handleTabChange('projects');
         showToast('success', `Saved to ${newClient.name}!`);
+        // Show next step prompt
+        setNextStepProjectId(result.id);
+        setNextStepType('quote');
+        setShowNextStepModal(true);
       } else {
         showToast('error', 'Failed to save project');
       }
@@ -1750,6 +1781,10 @@ const App: React.FC = () => {
         setShowSaveImageModal(false);
         handleTabChange('projects');
         showToast('success', `Saved to ${clientName}!`);
+        // Show next step prompt
+        setNextStepProjectId(result.id);
+        setNextStepType('quote');
+        setShowNextStepModal(true);
       } else {
         showToast('error', 'Failed to save project');
       }
@@ -1816,9 +1851,16 @@ const App: React.FC = () => {
   // Approve a project
   const handleApproveProject = async (projectId: string) => {
       await updateProjectStatus(projectId, 'approved');
-      setProjectsSubTab('pipeline');
-      setPipelineStatusFilter('approved');
       showToast('success', 'Project approved!');
+
+      // Open schedule modal immediately after approval
+      setScheduleProjectId(projectId);
+      setScheduleDate(new Date());
+      setScheduleTimeSlot('morning');
+      setScheduleCustomTime('09:00');
+      setScheduleDuration(4);
+      setScheduleNotes('');
+      setShowScheduleModal(true);
   };
 
   // Change project status
@@ -2235,6 +2277,12 @@ Notes: ${invoice.notes || 'N/A'}
               setShowInvoiceEmailModal(false);
               setInvoiceEmailSent(false);
               setInvoiceEmailMessage('');
+              // Show payment options next step
+              if (currentInvoice.projectId) {
+                setNextStepProjectId(currentInvoice.projectId);
+                setNextStepType('payment');
+                setShowNextStepModal(true);
+              }
           }, 2000);
       } catch (err: any) {
           console.error('Error sending invoice email:', err);
@@ -2389,8 +2437,9 @@ Notes: ${invoice.notes || 'N/A'}
 
   // Unified pipeline filter for the new simplified navigation
   // Includes role-based filtering: salespeople only see their assigned projects
+  // Also filters by selected location
   const filteredPipelineProjects = useMemo(() =>
-      projects.filter(p => {
+      filteredProjectsByLocation.filter(p => {
           // Role-based filtering: salespeople only see their assigned projects
           if (role === 'salesperson' && user?.id) {
               // If project has assignments, check if current user is assigned
@@ -2425,7 +2474,7 @@ Notes: ${invoice.notes || 'N/A'}
               p.quote?.clientDetails?.phone?.includes(searchTerm)
           );
       }),
-      [projects, searchTerm, pipelineStatusFilter, role, user?.id]
+      [filteredProjectsByLocation, searchTerm, pipelineStatusFilter, role, user?.id]
   );
 
   // Authentication is now handled by AuthWrapper
@@ -2504,6 +2553,10 @@ Notes: ${invoice.notes || 'N/A'}
           isLoading: subscription.isLoading,
         }}
         hideLogoForAnimation={isLoading}
+        locations={locations}
+        selectedLocationId={selectedLocationId}
+        onLocationChange={setSelectedLocationId}
+        locationsLoading={locationsLoading}
       />
       
       {/* Hidden PDF Generation Container */}
@@ -4479,6 +4532,8 @@ Notes: ${invoice.notes || 'N/A'}
                                             setEditClientPhone(p.quote?.clientDetails?.phone || '');
                                             setEditClientAddress(p.quote?.clientDetails?.address || '');
                                             setEditProjectNotes(p.notes || '');
+                                            setEditLineItems(p.quote?.lineItems || []);
+                                            setEditProjectLocationId(p.location_id || null);
                                             setShowProjectDetailModal(true);
                                         }}
                                     />
@@ -6236,7 +6291,7 @@ Notes: ${invoice.notes || 'N/A'}
               ) : (
                 <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
                   <ScheduleView
-                    projects={projects}
+                    projects={filteredProjectsByLocation}
                     selectedDate={selectedCalendarDate}
                     onDateSelect={setSelectedCalendarDate}
                     onViewProject={(project) => {
@@ -6580,68 +6635,87 @@ Notes: ${invoice.notes || 'N/A'}
               </div>
 
               {/* Modal Footer */}
-              <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
+              <div className="flex items-center justify-between p-4 border-t border-white/10">
                 <motion.button
-                  onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Cancel
-                </motion.button>
-                <motion.button
-                  onClick={async () => {
-                    if (!scheduleProjectId) return;
-                    const project = projects.find(p => p.id === scheduleProjectId);
-                    const scheduleData: ScheduleData = {
-                      scheduledDate: scheduleDate.toISOString().split('T')[0],
-                      timeSlot: scheduleTimeSlot,
-                      customTime: scheduleTimeSlot === 'custom' ? scheduleCustomTime : undefined,
-                      estimatedDuration: scheduleDuration,
-                      installationNotes: scheduleNotes || undefined,
-                    };
-                    const success = await scheduleProject(scheduleProjectId, scheduleData);
-                    if (success) {
-                      showToast('success', 'Job scheduled successfully!');
-                      setShowScheduleModal(false);
-                      setScheduleProjectId(null);
-                      setScheduleNotes('');
-
-                      // Send scheduling confirmation email to client
-                      if (project?.quote?.clientDetails?.email) {
-                        try {
-                          await fetch('/api/send-schedule-confirmation', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              clientEmail: project.quote.clientDetails.email,
-                              clientName: project.quote.clientDetails.name || 'Valued Customer',
-                              projectName: project.name,
-                              companyName: companyProfile.name,
-                              companyEmail: companyProfile.email,
-                              companyPhone: companyProfile.phone,
-                              scheduledDate: scheduleData.scheduledDate,
-                              timeSlot: scheduleData.timeSlot,
-                              customTime: scheduleData.customTime,
-                              installationNotes: scheduleData.installationNotes,
-                              address: project.quote.clientDetails.address
-                            })
-                          });
-                          showToast('success', 'Confirmation email sent to client');
-                        } catch (emailErr) {
-                          console.error('Failed to send schedule confirmation:', emailErr);
-                        }
-                      }
-                    } else {
-                      showToast('error', 'Failed to schedule job');
-                    }
+                  onClick={() => {
+                    setShowScheduleModal(false);
+                    setScheduleProjectId(null);
+                    setScheduleNotes('');
+                    showToast('info', 'You can schedule this job later from the Schedule tab');
                   }}
-                  className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition-colors"
+                  className="px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  Schedule Job
+                  Schedule Later
                 </motion.button>
+                <div className="flex items-center gap-3">
+                  <motion.button
+                    onClick={() => setShowScheduleModal(false)}
+                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    onClick={async () => {
+                      if (!scheduleProjectId) return;
+                      const project = projects.find(p => p.id === scheduleProjectId);
+                      const scheduleData: ScheduleData = {
+                        scheduledDate: scheduleDate.toISOString().split('T')[0],
+                        timeSlot: scheduleTimeSlot,
+                        customTime: scheduleTimeSlot === 'custom' ? scheduleCustomTime : undefined,
+                        estimatedDuration: scheduleDuration,
+                        installationNotes: scheduleNotes || undefined,
+                      };
+                      const success = await scheduleProject(scheduleProjectId, scheduleData);
+                      if (success) {
+                        showToast('success', 'Job scheduled successfully!');
+                        setShowScheduleModal(false);
+                        // Show next step prompt
+                        setNextStepProjectId(scheduleProjectId);
+                        setNextStepType('schedule');
+                        setShowNextStepModal(true);
+                        setScheduleProjectId(null);
+                        setScheduleNotes('');
+
+                        // Send scheduling confirmation email to client
+                        if (project?.quote?.clientDetails?.email) {
+                          try {
+                            await fetch('/api/send-schedule-confirmation', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                clientEmail: project.quote.clientDetails.email,
+                                clientName: project.quote.clientDetails.name || 'Valued Customer',
+                                projectName: project.name,
+                                companyName: companyProfile.name,
+                                companyEmail: companyProfile.email,
+                                companyPhone: companyProfile.phone,
+                                scheduledDate: scheduleData.scheduledDate,
+                                timeSlot: scheduleData.timeSlot,
+                                customTime: scheduleData.customTime,
+                                installationNotes: scheduleData.installationNotes,
+                                address: project.quote.clientDetails.address
+                              })
+                            });
+                            showToast('success', 'Confirmation email sent to client');
+                          } catch (emailErr) {
+                            console.error('Failed to send schedule confirmation:', emailErr);
+                          }
+                        }
+                      } else {
+                        showToast('error', 'Failed to schedule job');
+                      }
+                    }}
+                    className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Schedule Job
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -6739,8 +6813,6 @@ Notes: ${invoice.notes || 'N/A'}
                     if (success) {
                       showToast('success', 'Job marked as complete!');
                       setShowCompletionModal(false);
-                      setCompletionProjectId(null);
-                      setCompletionNotes('');
 
                       // Auto-generate invoice if checked
                       if (autoGenerateInvoice) {
@@ -6749,7 +6821,15 @@ Notes: ${invoice.notes || 'N/A'}
                           handleTabChange('projects');
                           handleGenerateInvoice(project);
                         }
+                      } else {
+                        // Show next step prompt for invoice
+                        setNextStepProjectId(completionProjectId);
+                        setNextStepType('invoice');
+                        setShowNextStepModal(true);
                       }
+
+                      setCompletionProjectId(null);
+                      setCompletionNotes('');
                     } else {
                       showToast('error', 'Failed to complete job');
                     }
@@ -6823,6 +6903,8 @@ Notes: ${invoice.notes || 'N/A'}
                           setEditClientPhone(project.quote?.clientDetails?.phone || '');
                           setEditClientAddress(project.quote?.clientDetails?.address || '');
                           setEditProjectNotes(project.notes || '');
+                          setEditLineItems(project.quote?.lineItems || []);
+                          setEditProjectLocationId(project.location_id || null);
                         }}
                         className="p-2 rounded-lg bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 transition-colors"
                         whileHover={{ scale: 1.05 }}
@@ -6836,6 +6918,9 @@ Notes: ${invoice.notes || 'N/A'}
                       onClick={() => {
                         setShowProjectDetailModal(false);
                         setIsEditingProject(false);
+                        setEditLineItems([]);
+                        setEditProjectLocationId(null);
+                        setShowAddItemDropdown(false);
                       }}
                       className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                       whileHover={{ scale: 1.1 }}
@@ -6967,6 +7052,25 @@ Notes: ${invoice.notes || 'N/A'}
                                 />
                               </div>
                             </div>
+                            {/* Location Assignment */}
+                            {locations.length > 0 && (
+                              <div>
+                                <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Assigned Location</label>
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="w-4 h-4 text-gray-500" />
+                                  <select
+                                    value={editProjectLocationId || ''}
+                                    onChange={(e) => setEditProjectLocationId(e.target.value || null)}
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#F6B45A]/50"
+                                  >
+                                    <option value="">No Location Assigned</option>
+                                    {locations.filter(loc => loc.isActive).map(loc => (
+                                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="flex items-start gap-3">
@@ -6989,41 +7093,165 @@ Notes: ${invoice.notes || 'N/A'}
                                   {project.quote.clientDetails.address}
                                 </p>
                               )}
+                              {project.location_id && (
+                                <p className="text-sm text-gray-400 flex items-center gap-2">
+                                  <Building2 className="w-4 h-4" />
+                                  {locations.find(l => l.id === project.location_id)?.name || 'Unknown Location'}
+                                </p>
+                              )}
                             </div>
                           </div>
                         )}
                       </div>
 
                       {/* Line Items */}
-                      {project.quote.lineItems && project.quote.lineItems.length > 0 && (
+                      {isEditingProject ? (
                         <div className="space-y-2">
-                          <p className="text-sm text-gray-400 font-medium">Line Items</p>
-                          <div className="bg-white/5 rounded-xl overflow-hidden border border-white/10">
-                            {project.quote.lineItems.map((item, idx) => (
-                              <div
-                                key={item.id}
-                                className={`p-3 flex items-center justify-between ${
-                                  idx !== project.quote!.lineItems.length - 1 ? 'border-b border-white/5' : ''
-                                }`}
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-400 font-medium">Line Items</p>
+                            <div className="relative">
+                              <motion.button
+                                onClick={() => setShowAddItemDropdown(!showAddItemDropdown)}
+                                className="px-3 py-1.5 bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 text-[#F6B45A] text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                               >
-                                <div className="flex-1">
-                                  <p className="text-white text-sm font-medium">{item.name}</p>
-                                  {item.description && (
-                                    <p className="text-xs text-gray-400 mt-0.5">{item.description}</p>
-                                  )}
+                                <Plus className="w-3.5 h-3.5" />
+                                Add Item
+                              </motion.button>
+                              {showAddItemDropdown && (
+                                <div className="absolute right-0 mt-1 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
+                                  {pricing.map((fixture) => (
+                                    <button
+                                      key={fixture.id}
+                                      onClick={() => {
+                                        const newItem: LineItem = {
+                                          id: `${fixture.fixtureType}_${Date.now()}`,
+                                          name: fixture.name,
+                                          description: fixture.description,
+                                          quantity: 1,
+                                          unitPrice: fixture.unitPrice,
+                                        };
+                                        setEditLineItems([...editLineItems, newItem]);
+                                        setShowAddItemDropdown(false);
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
+                                    >
+                                      <p className="text-white text-sm font-medium truncate">{fixture.name}</p>
+                                      <p className="text-xs text-gray-500">${fixture.unitPrice.toFixed(2)} each</p>
+                                    </button>
+                                  ))}
                                 </div>
-                                <div className="text-right ml-4">
-                                  <p className="text-white text-sm">
-                                    {item.quantity} × ${item.unitPrice.toFixed(2)}
-                                  </p>
-                                  <p className="text-xs text-gray-400">
-                                    ${(item.quantity * item.unitPrice).toFixed(2)}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
+                              )}
+                            </div>
                           </div>
+                          {editLineItems.length > 0 ? (
+                            <div className="bg-white/5 rounded-xl overflow-hidden border border-white/10">
+                              {editLineItems.map((item, idx) => (
+                                <div
+                                  key={item.id}
+                                  className={`p-3 flex items-center gap-3 ${
+                                    idx !== editLineItems.length - 1 ? 'border-b border-white/5' : ''
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-white text-sm font-medium truncate">{item.name}</p>
+                                    <p className="text-xs text-gray-500">${item.unitPrice.toFixed(2)} each</p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <motion.button
+                                      onClick={() => {
+                                        if (item.quantity > 1) {
+                                          setEditLineItems(editLineItems.map(li =>
+                                            li.id === item.id ? { ...li, quantity: li.quantity - 1 } : li
+                                          ));
+                                        }
+                                      }}
+                                      className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                    >
+                                      <Minus className="w-3.5 h-3.5" />
+                                    </motion.button>
+                                    <input
+                                      type="number"
+                                      value={item.quantity}
+                                      onChange={(e) => {
+                                        const qty = Math.max(1, parseInt(e.target.value) || 1);
+                                        setEditLineItems(editLineItems.map(li =>
+                                          li.id === item.id ? { ...li, quantity: qty } : li
+                                        ));
+                                      }}
+                                      className="w-12 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-center text-sm focus:outline-none focus:border-[#F6B45A]/50"
+                                    />
+                                    <motion.button
+                                      onClick={() => {
+                                        setEditLineItems(editLineItems.map(li =>
+                                          li.id === item.id ? { ...li, quantity: li.quantity + 1 } : li
+                                        ));
+                                      }}
+                                      className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                    </motion.button>
+                                  </div>
+                                  <div className="text-right w-20">
+                                    <p className="text-[#F6B45A] text-sm font-medium">
+                                      ${(item.quantity * item.unitPrice).toFixed(2)}
+                                    </p>
+                                  </div>
+                                  <motion.button
+                                    onClick={() => {
+                                      setEditLineItems(editLineItems.filter(li => li.id !== item.id));
+                                    }}
+                                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </motion.button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="bg-white/5 rounded-xl p-4 text-center">
+                              <p className="text-gray-500 text-sm">No items added yet. Click "Add Item" to add fixtures.</p>
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        project.quote.lineItems && project.quote.lineItems.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm text-gray-400 font-medium">Line Items</p>
+                            <div className="bg-white/5 rounded-xl overflow-hidden border border-white/10">
+                              {project.quote.lineItems.map((item, idx) => (
+                                <div
+                                  key={item.id}
+                                  className={`p-3 flex items-center justify-between ${
+                                    idx !== project.quote!.lineItems.length - 1 ? 'border-b border-white/5' : ''
+                                  }`}
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-white text-sm font-medium">{item.name}</p>
+                                    {item.description && (
+                                      <p className="text-xs text-gray-400 mt-0.5">{item.description}</p>
+                                    )}
+                                  </div>
+                                  <div className="text-right ml-4">
+                                    <p className="text-white text-sm">
+                                      {item.quantity} × ${item.unitPrice.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      ${(item.quantity * item.unitPrice).toFixed(2)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
                       )}
 
                       {/* Quote Summary */}
@@ -7106,6 +7334,9 @@ Notes: ${invoice.notes || 'N/A'}
                           setEditClientPhone('');
                           setEditClientAddress('');
                           setEditProjectNotes('');
+                          setEditLineItems([]);
+                          setEditProjectLocationId(null);
+                          setShowAddItemDropdown(false);
                         }}
                         className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
                         whileHover={{ scale: 1.02 }}
@@ -7119,8 +7350,16 @@ Notes: ${invoice.notes || 'N/A'}
                           if (!viewProjectId) return;
                           setIsSavingProject(true);
                           try {
+                            // Calculate new subtotal and total from edited line items
+                            const subtotal = editLineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+                            const taxRate = project.quote?.taxRate || 0;
+                            const discount = project.quote?.discount || 0;
+                            const newTotal = (subtotal - discount) * (1 + taxRate / 100);
+
                             const updatedQuote = project.quote ? {
                               ...project.quote,
+                              lineItems: editLineItems,
+                              total: newTotal,
                               clientDetails: {
                                 name: editClientName,
                                 email: editClientEmail,
@@ -7134,11 +7373,13 @@ Notes: ${invoice.notes || 'N/A'}
                               clientName: editClientName,
                               quote: updatedQuote,
                               notes: editProjectNotes,
+                              location_id: editProjectLocationId,
                             });
 
                             if (success) {
                               showToast('success', 'Project updated successfully!');
                               setIsEditingProject(false);
+                              setShowAddItemDropdown(false);
                             } else {
                               showToast('error', 'Failed to update project');
                             }
@@ -7172,6 +7413,9 @@ Notes: ${invoice.notes || 'N/A'}
                       onClick={() => {
                         setShowProjectDetailModal(false);
                         setIsEditingProject(false);
+                        setEditLineItems([]);
+                        setEditProjectLocationId(null);
+                        setShowAddItemDropdown(false);
                       }}
                       className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
                       whileHover={{ scale: 1.02 }}
@@ -7528,6 +7772,177 @@ Notes: ${invoice.notes || 'N/A'}
             </motion.div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* Next Step Modal - Workflow Prompts */}
+      <AnimatePresence>
+        {showNextStepModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowNextStepModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Quote Next Step */}
+              {nextStepType === 'quote' && (
+                <>
+                  <div className="p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-8 h-8 text-purple-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">Project Saved!</h3>
+                    <p className="text-gray-400">Would you like to create a quote for this project?</p>
+                  </div>
+                  <div className="flex border-t border-white/10">
+                    <motion.button
+                      onClick={() => setShowNextStepModal(false)}
+                      className="flex-1 px-6 py-4 text-gray-400 hover:text-white hover:bg-white/5 transition-colors font-medium"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Later
+                    </motion.button>
+                    <motion.button
+                      onClick={() => {
+                        setShowNextStepModal(false);
+                        if (nextStepProjectId) {
+                          setCurrentProjectId(nextStepProjectId);
+                          const project = projects.find(p => p.id === nextStepProjectId);
+                          if (project?.image) setGeneratedImage(project.image);
+                          setProjectsSubTab('quotes');
+                          handleTabChange('projects');
+                        }
+                      }}
+                      className="flex-1 px-6 py-4 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 transition-colors font-bold border-l border-white/10"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Create Quote
+                    </motion.button>
+                  </div>
+                </>
+              )}
+
+              {/* Schedule Complete Next Step */}
+              {nextStepType === 'schedule' && (
+                <>
+                  <div className="p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="w-8 h-8 text-blue-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">Job Scheduled!</h3>
+                    <p className="text-gray-400">What would you like to do next?</p>
+                  </div>
+                  <div className="p-4 pt-0 space-y-2">
+                    <motion.button
+                      onClick={() => {
+                        setShowNextStepModal(false);
+                        handleTabChange('schedule');
+                      }}
+                      className="w-full px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl text-blue-400 font-medium transition-colors flex items-center justify-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <CalendarDays className="w-5 h-5" />
+                      View on Calendar
+                    </motion.button>
+                    <motion.button
+                      onClick={() => setShowNextStepModal(false)}
+                      className="w-full px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 font-medium transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Done
+                    </motion.button>
+                  </div>
+                </>
+              )}
+
+              {/* Invoice Next Step */}
+              {nextStepType === 'invoice' && (
+                <>
+                  <div className="p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">Job Completed!</h3>
+                    <p className="text-gray-400">Ready to invoice the client?</p>
+                  </div>
+                  <div className="flex border-t border-white/10">
+                    <motion.button
+                      onClick={() => setShowNextStepModal(false)}
+                      className="flex-1 px-6 py-4 text-gray-400 hover:text-white hover:bg-white/5 transition-colors font-medium"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Later
+                    </motion.button>
+                    <motion.button
+                      onClick={() => {
+                        setShowNextStepModal(false);
+                        if (nextStepProjectId) {
+                          const project = projects.find(p => p.id === nextStepProjectId);
+                          if (project) handleGenerateInvoice(project);
+                        }
+                      }}
+                      className="flex-1 px-6 py-4 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors font-bold border-l border-white/10 flex items-center justify-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Receipt className="w-5 h-5" />
+                      Generate Invoice
+                    </motion.button>
+                  </div>
+                </>
+              )}
+
+              {/* Payment Options Next Step */}
+              {nextStepType === 'payment' && (
+                <>
+                  <div className="p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-[#F6B45A]/20 flex items-center justify-center mx-auto mb-4">
+                      <Mail className="w-8 h-8 text-[#F6B45A]" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">Invoice Sent!</h3>
+                    <p className="text-gray-400">Help your client pay quickly</p>
+                  </div>
+                  <div className="p-4 pt-0 space-y-2">
+                    <motion.button
+                      onClick={() => {
+                        if (currentInvoice) {
+                          handleGenerateInvoiceShareLink();
+                        }
+                        setShowNextStepModal(false);
+                      }}
+                      className="w-full px-4 py-3 bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 border border-[#F6B45A]/30 rounded-xl text-[#F6B45A] font-medium transition-colors flex items-center justify-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                      Copy Payment Portal Link
+                    </motion.button>
+                    <motion.button
+                      onClick={() => setShowNextStepModal(false)}
+                      className="w-full px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 font-medium transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Done
+                    </motion.button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Event Modal */}

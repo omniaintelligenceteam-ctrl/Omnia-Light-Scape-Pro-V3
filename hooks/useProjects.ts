@@ -167,7 +167,7 @@ export function useProjects() {
   // Update a project
   const updateProject = useCallback(async (
     projectId: string,
-    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData; images?: ProjectImage[]; assignedTo?: string[]; assignedTechnicianId?: string }
+    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData; images?: ProjectImage[]; assignedTo?: string[]; assignedTechnicianId?: string; clientName?: string; notes?: string; location_id?: string | null }
   ): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
@@ -189,6 +189,8 @@ export function useProjects() {
       if (currentProject?.images) promptConfig.images = currentProject.images;
       if (currentProject?.assignedTo) promptConfig.assignedTo = currentProject.assignedTo;
       if (currentProject?.assignedTechnicianId) promptConfig.assignedTechnicianId = currentProject.assignedTechnicianId;
+      if (currentProject?.clientName) promptConfig.clientName = currentProject.clientName;
+      if (currentProject?.notes) promptConfig.notes = currentProject.notes;
 
       // Apply updates (overwrite specific fields)
       if (updates.quote !== undefined) promptConfig.quote = updates.quote;
@@ -198,6 +200,8 @@ export function useProjects() {
       if (updates.images !== undefined) promptConfig.images = updates.images;
       if (updates.assignedTo !== undefined) promptConfig.assignedTo = updates.assignedTo;
       if (updates.assignedTechnicianId !== undefined) promptConfig.assignedTechnicianId = updates.assignedTechnicianId;
+      if (updates.clientName !== undefined) promptConfig.clientName = updates.clientName;
+      if (updates.notes !== undefined) promptConfig.notes = updates.notes;
 
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'PATCH',
@@ -206,6 +210,7 @@ export function useProjects() {
         },
         body: JSON.stringify({
           name: updates.name,
+          location_id: updates.location_id,
           prompt_config: Object.keys(promptConfig).length > 0 ? promptConfig : undefined
         }),
       });
@@ -225,7 +230,10 @@ export function useProjects() {
             bom: updates.bom !== undefined ? updates.bom : p.bom,
             status: updates.status !== undefined ? updates.status : p.status,
             schedule: updates.schedule !== undefined ? updates.schedule : p.schedule,
-            images: updates.images !== undefined ? updates.images : p.images
+            images: updates.images !== undefined ? updates.images : p.images,
+            clientName: updates.clientName !== undefined ? updates.clientName : p.clientName,
+            notes: updates.notes !== undefined ? updates.notes : p.notes,
+            location_id: updates.location_id !== undefined ? (updates.location_id || undefined) : p.location_id
           };
         }
         return p;
