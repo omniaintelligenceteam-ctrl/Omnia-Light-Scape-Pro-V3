@@ -70,18 +70,23 @@ router.get('/members', async (req: Request, res: Response) => {
     if (error) throw error;
 
     // Transform to expected format (TeamSection expects userName, userEmail)
-    const members = (data || []).map((m: any) => ({
-      id: m.id,
-      userId: m.user_id,
-      userEmail: m.users?.email,
-      userName: m.users?.full_name || m.users?.email,
-      avatarUrl: m.users?.avatar_url,
-      role: m.role,
-      locationId: m.location_id,
-      locationName: m.locations?.name,
-      isActive: m.is_active,
-      createdAt: m.created_at
-    }));
+    // Handle Supabase join which may return object or array depending on relationship
+    const members = (data || []).map((m: any) => {
+      const user = Array.isArray(m.users) ? m.users[0] : m.users;
+      const location = Array.isArray(m.locations) ? m.locations[0] : m.locations;
+      return {
+        id: m.id,
+        userId: m.user_id,
+        userEmail: user?.email || '',
+        userName: user?.full_name || user?.email || 'Unknown',
+        avatarUrl: user?.avatar_url || null,
+        role: m.role,
+        locationId: m.location_id,
+        locationName: location?.name || null,
+        isActive: m.is_active,
+        createdAt: m.created_at
+      };
+    });
 
     return res.status(200).json({ success: true, data: members });
   } catch (error: any) {
