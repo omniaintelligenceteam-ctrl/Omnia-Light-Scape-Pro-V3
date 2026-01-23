@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { GripVertical, Wand2 } from 'lucide-react';
+import { GripVertical, Wand2, Edit3 } from 'lucide-react';
 import { SavedProject, ProjectStatus } from '../../types';
 
 interface StatusConfig {
@@ -14,6 +14,7 @@ interface KanbanCardProps {
   project: SavedProject;
   statusConfig: Record<ProjectStatus, StatusConfig>;
   onProjectClick: (project: SavedProject) => void;
+  onEditProject?: (project: SavedProject) => void;
   isDragging?: boolean;
 }
 
@@ -21,6 +22,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   project,
   statusConfig,
   onProjectClick,
+  onEditProject,
   isDragging = false,
 }) => {
   const config = statusConfig[project.status];
@@ -67,8 +69,20 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         ${isDragging ? 'border-[#F6B45A]/60 z-50' : ''}
       `}
     >
-      {/* Drag Handle */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Action Buttons */}
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onEditProject && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditProject(project);
+            }}
+            className="p-1 rounded-md bg-white/10 hover:bg-[#F6B45A]/20 text-gray-400 hover:text-[#F6B45A] transition-colors"
+            title="Edit project"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+        )}
         <GripVertical className="w-4 h-4 text-gray-600" />
       </div>
 

@@ -9,7 +9,7 @@ export interface ColorTemperature {
 
 export interface FixturePricing {
   id: string;
-  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'transformer' | 'coredrill' | 'well';
+  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'transformer' | 'coredrill' | 'well' | 'holiday';
   name: string;
   description: string;
   unitPrice: number;
@@ -135,7 +135,7 @@ export interface BOMData {
 }
 
 export interface FixtureCatalogItem {
-  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'coredrill' | 'well' | 'custom';
+  fixtureType: 'up' | 'path' | 'gutter' | 'soffit' | 'hardscape' | 'coredrill' | 'well' | 'holiday' | 'custom';
   brand: string;              // User's preferred brand
   sku: string;                // User's SKU
   wattage: number;            // Actual wattage of their fixture

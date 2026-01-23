@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   projects: SavedProject[];
   statusConfig: Record<ProjectStatus, StatusConfig>;
   onProjectClick: (project: SavedProject) => void;
+  onEditProject?: (project: SavedProject) => void;
   onDropProject: (projectId: string, newStatus: ProjectStatus) => void;
 }
 
@@ -23,6 +24,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   projects,
   statusConfig,
   onProjectClick,
+  onEditProject,
   onDropProject,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -105,6 +107,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 project={project}
                 statusConfig={statusConfig}
                 onProjectClick={onProjectClick}
+                onEditProject={onEditProject}
               />
             ))}
           </AnimatePresence>

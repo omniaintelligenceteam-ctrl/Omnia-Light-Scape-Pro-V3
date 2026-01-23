@@ -636,7 +636,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           </p>
 
           {/* Standard Fixture Types */}
-          {(['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill', 'well'] as const).map((type) => {
+          {(['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill', 'well', 'holiday'] as const).map((type) => {
             const item = fixtureCatalog.find(c => c.fixtureType === type) || {
               fixtureType: type, brand: '', sku: '', wattage: 4
             };

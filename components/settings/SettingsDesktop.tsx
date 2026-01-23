@@ -532,7 +532,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
 
                 <div className="space-y-4">
                   {/* Standard Fixture Types */}
-                  {(['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill', 'well'] as const).map((type) => {
+                  {(['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill', 'well', 'holiday'] as const).map((type) => {
                     const item = fixtureCatalog.find(c => c.fixtureType === type) || {
                       fixtureType: type, brand: '', sku: '', wattage: 4
                     };

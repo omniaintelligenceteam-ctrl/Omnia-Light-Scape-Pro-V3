@@ -1878,6 +1878,227 @@ STRICT EXCLUSION ZONES:
         negativePrompt: `ABSOLUTE PROHIBITION (WELL ARCHITECTURAL): Do NOT place far from wall face. Do NOT aim at windows. Close placement required for grazing effect.`
       }
     ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERMANENT HOLIDAY LIGHTS - RGB/RGBW track lighting on rooflines
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: 'holiday',
+    label: 'Permanent Holiday',
+    description: 'RGB roofline accent lighting',
+    positivePrompt: `CATEGORY ENABLED: Permanent Holiday Lighting (RGB/RGBW Track Lights).
+FIXTURE STYLE: Linear RGB or RGBW LED track/channel system, mounted along rooflines, eaves, and architectural trim. Individually addressable LEDs capable of any color or pattern.
+INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement and color schemes. These are permanent installations that can display any color year-round.`,
+    negativePrompt: `HARD RULE: Do NOT generate any permanent holiday lighting. No RGB strips on rooflines. No colored accent lights on eaves, fascia, or architectural trim. Rooflines must remain unlit by colored LEDs.`,
+    subOptions: [
+      {
+        id: 'roofline',
+        label: 'Roofline',
+        description: 'Along eaves and fascia boards',
+        prompt: `TARGET: ROOFLINE -- PERMANENT RGB LED TRACK ALONG EAVES AND FASCIA
+
+IDENTIFICATION:
+- Locate ALL horizontal eave lines and fascia boards
+- Include: front eaves, side eaves, garage eaves, porch overhangs
+- Identify soffit/fascia junction where track mounts
+
+FIXTURE SPECIFICATIONS:
+- Type: linear RGB/RGBW LED track or channel system
+- Housing: aluminum channel with diffuser lens
+- Installation: mounted on fascia board, under soffit lip, or in J-channel
+- LED type: individually addressable RGB or RGBW
+- Spacing: continuous run along entire eave length
+
+PLACEMENT GEOMETRY:
+- Install track along FULL LENGTH of each horizontal eave
+- Mount at fascia/soffit junction for clean appearance
+- Continuous runs - no gaps between sections
+- Corner connectors at direction changes
+- Follow exact contour of roofline
+
+LIGHT BEHAVIOR:
+- LEDs illuminate DOWNWARD from track
+- Creates glowing outline effect on roofline
+- Color can be any RGB value or white
+- Can display static colors, fades, chases, or patterns
+- Even illumination along entire run
+
+COLOR OPTIONS FOR VISUALIZATION:
+- Warm white (everyday elegant)
+- Cool white (modern/crisp)
+- Single color accent (any RGB)
+- Multi-color patterns (holiday themes)
+- Subtle color temperature shifts
+
+MOUNTING DETAILS:
+- Track hidden from ground view when possible
+- Clean, professional installation
+- Weatherproof connections
+- Controller/driver concealed in attic or soffit
+
+STRICT EXCLUSION ZONES:
+- Do NOT install on sloped roof surfaces
+- Do NOT install on vertical walls (use peaks/gables preset)
+- Do NOT leave gaps in continuous runs
+- Horizontal eaves and fascia ONLY`,
+        negativePrompt: `ABSOLUTE PROHIBITION (HOLIDAY ROOFLINE): Do NOT install on sloped roof surfaces. Do NOT install on vertical walls. Horizontal eaves and fascia only. No gaps in runs.`
+      },
+      {
+        id: 'peaks',
+        label: 'Peaks & Gables',
+        description: 'Outlining roof peaks and gable edges',
+        prompt: `TARGET: PEAKS & GABLES -- PERMANENT RGB LED TRACK OUTLINING ROOF PEAKS
+
+IDENTIFICATION:
+- Locate ALL roof peaks, gables, and dormers
+- Identify sloped rake edges (diagonal rooflines)
+- Include: front gables, side gables, dormer peaks
+
+FIXTURE SPECIFICATIONS:
+- Type: linear RGB/RGBW LED track or channel system
+- Housing: aluminum channel with diffuser lens
+- Installation: mounted along rake boards (diagonal trim)
+- LED type: individually addressable RGB or RGBW
+
+PLACEMENT GEOMETRY:
+- Install track along BOTH SLOPED EDGES of each gable
+- Start at lower corners, meet at apex
+- Creates inverted V or triangle outline
+- Continuous runs from eave to peak
+- Connect to horizontal eave runs at corners
+
+LIGHT BEHAVIOR:
+- LEDs illuminate outward from rake edge
+- Outlines the triangular gable shape
+- Apex becomes focal point where lines meet
+- Color synchronized with roofline track
+- Can create chase effects running to peak
+
+PEAK CONFIGURATIONS:
+- SIMPLE GABLE: two runs meeting at apex
+- DORMER: outline dormer face and roof edges
+- MULTIPLE PEAKS: each peak outlined individually
+- CROSS GABLES: outline all visible edges
+
+MOUNTING DETAILS:
+- Track mounted on rake board face or under rake trim
+- Weatherproof connections at apex
+- Continuous with horizontal eave runs for seamless look
+
+STRICT EXCLUSION ZONES:
+- Do NOT outline windows (separate preset if needed)
+- Do NOT skip peaks - outline all prominent gables
+- Do NOT leave apex unconnected
+- Both sloped edges MUST be lit for symmetry`,
+        negativePrompt: `ABSOLUTE PROHIBITION (HOLIDAY PEAKS): Do NOT outline windows. Do NOT skip prominent peaks. Both sloped edges must be lit. Apex must be connected.`
+      },
+      {
+        id: 'windows',
+        label: 'Window Outlines',
+        description: 'Framing windows with light',
+        prompt: `TARGET: WINDOWS -- PERMANENT RGB LED TRACK OUTLINING WINDOW FRAMES
+
+IDENTIFICATION:
+- Locate feature windows to outline (NOT all windows)
+- Best candidates: large picture windows, arched windows, bay windows
+- Consider front-facing, prominent windows
+- Typically 1-3 windows maximum for tasteful effect
+
+FIXTURE SPECIFICATIONS:
+- Type: linear RGB/RGBW LED track or slim channel
+- Housing: low-profile aluminum channel
+- Installation: mounted on window trim or casing
+- LED type: individually addressable RGB or RGBW
+
+PLACEMENT GEOMETRY:
+- Install track around FULL PERIMETER of window
+- Follow window trim/casing exactly
+- Create complete rectangle or arch outline
+- Corners: use corner connectors or flexible channel
+- Continuous run - no gaps
+
+LIGHT BEHAVIOR:
+- LEDs illuminate outward from window frame
+- Creates glowing picture frame effect
+- Window becomes dramatic focal point
+- Color can complement or contrast with roofline
+- Typically static color or slow fade
+
+WINDOW SELECTION GUIDELINES:
+- SELECT: large picture windows, arched windows, Palladian windows
+- SELECT: transom windows above doors
+- AVOID: small bathroom windows
+- AVOID: side/rear windows not visible from front
+- Less is more - 1-3 feature windows maximum
+
+MOUNTING DETAILS:
+- Track mounted on exterior trim face
+- Hidden mounting preferred
+- Connections concealed behind trim where possible
+
+STRICT EXCLUSION ZONES:
+- Do NOT outline every window on the house
+- Do NOT outline windows without prominent trim
+- Do NOT create cluttered appearance
+- Feature windows only - selective application`,
+        negativePrompt: `ABSOLUTE PROHIBITION (HOLIDAY WINDOWS): Do NOT outline every window. Do NOT create cluttered look. Feature windows only - 1-3 maximum. Selective, tasteful application.`
+      },
+      {
+        id: 'architectural',
+        label: 'Architectural Details',
+        description: 'Columns, railings, and trim accents',
+        prompt: `TARGET: ARCHITECTURAL DETAILS -- PERMANENT RGB LED ACCENTS ON COLUMNS AND TRIM
+
+IDENTIFICATION:
+- Locate architectural features to accent
+- Include: porch columns, railings, decorative trim, pergolas
+- Identify vertical and horizontal accent opportunities
+- Consider entry features and focal points
+
+FIXTURE SPECIFICATIONS:
+- Type: linear RGB/RGBW LED track or flexible strip
+- Housing: slim channel or direct-mount strip
+- Installation: varies by feature (wrapped, linear, concealed)
+- LED type: individually addressable RGB or RGBW
+
+PLACEMENT OPTIONS:
+
+COLUMNS:
+- Wrap base or capital of columns
+- Vertical run up column shaft
+- Under-cap lighting (like hardscape)
+
+RAILINGS:
+- Under handrail (concealed downlight)
+- Along baluster line
+- Post cap accents
+
+TRIM & DETAILS:
+- Along decorative trim bands
+- Under porch ceiling perimeter
+- Pergola beam underlighting
+
+LIGHT BEHAVIOR:
+- Accent and highlight architectural features
+- Can match or complement roofline colors
+- Typically more subtle than roofline
+- Creates depth and dimension
+
+DESIGN PRINCIPLES:
+- Enhance existing architecture
+- Don't overwhelm - accent only
+- Coordinate with roofline lighting
+- Professional, integrated appearance
+
+STRICT EXCLUSION ZONES:
+- Do NOT overlight - less is more
+- Do NOT create carnival appearance
+- Do NOT compete with roofline as primary
+- Accent/complement only`,
+        negativePrompt: `ABSOLUTE PROHIBITION (HOLIDAY ARCHITECTURAL): Do NOT overlight. Do NOT create carnival appearance. Accent and complement only - roofline is primary.`
+      }
+    ]
   }
 ];
 
@@ -1992,6 +2213,14 @@ export const DEFAULT_PRICING: FixturePricing[] = [
     unitPrice: 245.0,
   },
   {
+    id: "default_holiday",
+    fixtureType: "holiday",
+    name: "Permanent Holiday Lighting (per linear foot): COMPLETELY INSTALLED PRICE",
+    description:
+      "RGB/RGBW LED track system for year-round accent lighting.\nSpecs: Aluminum Channel, Individually Addressable LEDs, IP67 Rated.\nIncludes: Controller, app connectivity, professional installation.\nBest for: Rooflines, gables, architectural accents.",
+    unitPrice: 25.0,
+  },
+  {
     id: "default_transformer",
     fixtureType: "transformer",
     name: "Professional Low Voltage Transformer (300W)",
@@ -2050,7 +2279,8 @@ export const DEFAULT_FIXTURE_WATTAGES: Record<string, number> = {
   soffit: 3,
   hardscape: 3,
   coredrill: 4,
-  well: 5
+  well: 5,
+  holiday: 3
 };
 
 // BOM - Transformer sizing options
@@ -2070,7 +2300,8 @@ export const DEFAULT_FIXTURE_CATALOG = [
   { fixtureType: 'soffit', brand: '', sku: '', wattage: 3 },
   { fixtureType: 'hardscape', brand: '', sku: '', wattage: 3 },
   { fixtureType: 'coredrill', brand: '', sku: '', wattage: 4 },
-  { fixtureType: 'well', brand: '', sku: '', wattage: 5 }
+  { fixtureType: 'well', brand: '', sku: '', wattage: 5 },
+  { fixtureType: 'holiday', brand: '', sku: '', wattage: 3 }
 ];
 
 // BOM - Fixture type display names
@@ -2081,7 +2312,8 @@ export const FIXTURE_TYPE_NAMES: Record<string, string> = {
   soffit: 'Soffit Light',
   hardscape: 'Hardscape Light',
   coredrill: 'Core Drill Light',
-  well: 'Well Light'
+  well: 'Well Light',
+  holiday: 'Permanent Holiday'
 };
 
 // Theme - Accent color configurations
