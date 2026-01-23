@@ -234,36 +234,51 @@ router.get('/members', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
-    const { data, error } = await supabase
+    // First get members
+    const { data: membersData, error: membersError } = await supabase
       .from('organization_members')
-      .select(`
-        id,
-        user_id,
-        role,
-        location_id,
-        is_active,
-        created_at,
-        users:user_id (
-          id,
-          email,
-          full_name,
-          avatar_url
-        ),
-        locations:location_id (
-          id,
-          name
-        )
-      `)
+      .select('id, user_id, role, location_id, is_active, created_at')
       .eq('organization_id', userOrg.organizationId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (membersError) throw membersError;
 
-    // Transform to expected format (TeamSection expects userName, userEmail)
-    // Handle Supabase join which may return object or array depending on relationship
-    const members = (data || []).map((m: any) => {
-      const user = Array.isArray(m.users) ? m.users[0] : m.users;
-      const location = Array.isArray(m.locations) ? m.locations[0] : m.locations;
+    // Get unique user IDs and location IDs
+    const userIds = [...new Set((membersData || []).map(m => m.user_id).filter(Boolean))];
+    const locationIds = [...new Set((membersData || []).map(m => m.location_id).filter(Boolean))];
+
+    // Fetch users separately
+    let usersMap: Record<string, any> = {};
+    if (userIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, email, full_name, avatar_url')
+        .in('id', userIds);
+
+      usersMap = (usersData || []).reduce((acc: Record<string, any>, u: any) => {
+        acc[u.id] = u;
+        return acc;
+      }, {});
+    }
+
+    // Fetch locations separately
+    let locationsMap: Record<string, any> = {};
+    if (locationIds.length > 0) {
+      const { data: locationsData } = await supabase
+        .from('locations')
+        .select('id, name')
+        .in('id', locationIds);
+
+      locationsMap = (locationsData || []).reduce((acc: Record<string, any>, l: any) => {
+        acc[l.id] = l;
+        return acc;
+      }, {});
+    }
+
+    // Transform to expected format
+    const members = (membersData || []).map((m: any) => {
+      const user = usersMap[m.user_id];
+      const location = m.location_id ? locationsMap[m.location_id] : null;
       return {
         id: m.id,
         userId: m.user_id,
