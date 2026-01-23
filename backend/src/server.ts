@@ -15,6 +15,11 @@ import clientPortalRoutes from './routes/client-portal.routes.js';
 import locationsRoutes from './routes/locations.routes.js';
 import techniciansRoutes from './routes/technicians.routes.js';
 import organizationsRoutes from './routes/organizations.routes.js';
+import clientsRoutes from './routes/clients.routes.js';
+import eventsRoutes from './routes/events.routes.js';
+import goalsRoutes from './routes/goals.routes.js';
+import feedbackRoutes from './routes/feedback.routes.js';
+import authRoutes from './routes/auth.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,6 +40,11 @@ app.use('/api/client-portal', clientPortalRoutes);
 app.use('/api/locations', locationsRoutes);
 app.use('/api/technicians', techniciansRoutes);
 app.use('/api/organizations', organizationsRoutes);
+app.use('/api/clients', clientsRoutes);
+app.use('/api/events', eventsRoutes);
+app.use('/api/goals', goalsRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/auth', authRoutes);
 
 // Start
 app.listen(PORT, () => {

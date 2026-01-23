@@ -24,6 +24,11 @@ import { ExecutiveDashboard } from '../analytics/ExecutiveDashboard';
 import { AnalyticsDashboard } from '../analytics/AnalyticsDashboard';
 import { LeadSourceROIDashboard } from '../analytics/LeadSourceROIDashboard';
 import { CashFlowDashboard } from '../analytics/CashFlowDashboard';
+import { BusinessHealthScore } from '../analytics/BusinessHealthScore';
+import { PipelineForecast } from '../analytics/PipelineForecast';
+import { TeamPerformanceMatrix } from '../analytics/TeamPerformanceMatrix';
+import { CapacityDashboard } from '../analytics/CapacityDashboard';
+import { ChevronRight } from 'lucide-react';
 
 export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   profile,
@@ -93,7 +98,14 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   onAnalyticsDateRangeChange,
   analyticsComparisonView,
   onAnalyticsComparisonViewChange,
-  onExportAnalytics
+  onExportAnalytics,
+  // Advanced Analytics (formerly in Projects section)
+  pipelineAnalytics,
+  businessHealthData,
+  pipelineForecastData,
+  teamPerformanceData,
+  capacityPlanningData,
+  onViewProject
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [showAIChat, setShowAIChat] = useState(false);
@@ -1118,6 +1130,74 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 <p className="text-sm text-gray-400 mb-6">
                   View comprehensive analytics, metrics, and insights for your business.
                 </p>
+
+                {/* Pipeline Stats Grid */}
+                {pipelineAnalytics && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {/* Revenue This Month */}
+                      <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+                        <p className="text-[10px] uppercase tracking-wider text-emerald-500/70 mb-1">Paid This Month</p>
+                        <p className="text-xl font-bold text-emerald-400">${pipelineAnalytics.revenueThisMonth.toLocaleString()}</p>
+                      </div>
+
+                      {/* Pending Revenue */}
+                      <div className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                        <p className="text-[10px] uppercase tracking-wider text-blue-500/70 mb-1">Pending</p>
+                        <p className="text-xl font-bold text-blue-400">${pipelineAnalytics.pendingRevenue.toLocaleString()}</p>
+                      </div>
+
+                      {/* Overdue */}
+                      <div className={`p-3 rounded-xl border ${pipelineAnalytics.overdueRevenue > 0 ? 'bg-red-500/5 border-red-500/10' : 'bg-white/[0.02] border-white/5'}`}>
+                        <p className={`text-[10px] uppercase tracking-wider mb-1 ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-500/70' : 'text-gray-500'}`}>Overdue</p>
+                        <p className={`text-xl font-bold ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-400' : 'text-gray-600'}`}>${pipelineAnalytics.overdueRevenue.toLocaleString()}</p>
+                      </div>
+
+                      {/* Avg Quote Value */}
+                      <div className="p-3 bg-[#F6B45A]/5 rounded-xl border border-[#F6B45A]/10">
+                        <p className="text-[10px] uppercase tracking-wider text-[#F6B45A]/70 mb-1">Avg Quote</p>
+                        <p className="text-xl font-bold text-[#F6B45A]">${pipelineAnalytics.avgQuoteValue.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    {/* Conversion Funnel */}
+                    <div className="flex items-center justify-center gap-2 p-3 bg-white/[0.02] rounded-xl border border-white/5">
+                      <span className="text-[10px] uppercase tracking-wider text-gray-500 mr-2">Conversion:</span>
+                      <span className="text-xs text-gray-400">Draft</span>
+                      <span className="text-sm font-bold text-purple-400">{pipelineAnalytics.draftToQuotedRate}%</span>
+                      <ChevronRight className="w-3 h-3 text-gray-600" />
+                      <span className="text-xs text-gray-400">Quoted</span>
+                      <span className="text-sm font-bold text-emerald-400">{pipelineAnalytics.quotedToApprovedRate}%</span>
+                      <ChevronRight className="w-3 h-3 text-gray-600" />
+                      <span className="text-xs text-gray-400">Approved</span>
+                      <span className="text-sm font-bold text-[#F6B45A]">{pipelineAnalytics.approvedToCompletedRate}%</span>
+                      <ChevronRight className="w-3 h-3 text-gray-600" />
+                      <span className="text-xs text-gray-400">Done</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Business Health & Pipeline Forecast */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {businessHealthData && <BusinessHealthScore healthData={businessHealthData} />}
+                  {pipelineForecastData && (
+                    <PipelineForecast
+                      data={pipelineForecastData}
+                      onViewProject={onViewProject}
+                    />
+                  )}
+                </div>
+
+                {/* Team Performance & Capacity */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {teamPerformanceData && <TeamPerformanceMatrix data={teamPerformanceData} />}
+                  {capacityPlanningData && (
+                    <CapacityDashboard
+                      data={capacityPlanningData}
+                      onViewJob={onViewProject}
+                    />
+                  )}
+                </div>
 
                 {/* Dashboard Selection: Executive vs Standard */}
                 {locationMetrics && locationMetrics.locations?.length > 1 ? (

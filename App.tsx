@@ -49,7 +49,7 @@ import { SaveImageModal } from './components/SaveImageModal';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink, BarChart3 } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Save, Upload, Share2, Link2, Copy, ExternalLink } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
@@ -422,10 +422,9 @@ const App: React.FC = () => {
   const [currentBOM, setCurrentBOM] = useState<BOMData | null>(null);
   const [fixtureCatalog, setFixtureCatalog] = useState<FixtureCatalogItem[]>([]);
 
-  // Projects Sub-Tab State - Simplified to 2 main views + Analytics
-  const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing' | 'analytics'>('pipeline');
+  // Projects Sub-Tab State - Simplified to 2 main views
+  const [projectsSubTab, setProjectsSubTab] = useState<'pipeline' | 'clients' | 'quotes' | 'invoicing'>('pipeline');
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState<'all' | 'draft' | 'quoted' | 'approved' | 'scheduled' | 'completed'>('all');
-  const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
   // Advanced Analytics State
   const [analyticsDateRange, setAnalyticsDateRange] = useState({
@@ -4185,95 +4184,8 @@ Notes: ${invoice.notes || 'N/A'}
                          <Users className="w-3 md:w-4 h-3 md:h-4" />
                          <span className="hidden sm:inline">Clients</span>
                      </button>
-                     <button
-                         onClick={() => setShowAnalyticsDropdown(!showAnalyticsDropdown)}
-                         className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                             showAnalyticsDropdown
-                                 ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                 : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
-                         }`}
-                     >
-                         <BarChart3 className="w-3 md:w-4 h-3 md:h-4" />
-                         <span className="hidden sm:inline">Analytics</span>
-                         <ChevronDown className={`w-3 h-3 transition-transform ${showAnalyticsDropdown ? 'rotate-180' : ''}`} />
-                     </button>
 
                 </div>
-                 {/* Pipeline Analytics Dashboard - Only show when analytics dropdown is open */}
-                 {showAnalyticsDropdown && (projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
-                     <div className="mb-4">
-                         {/* Stats Grid */}
-                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                             {/* Revenue This Month */}
-                             <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
-                                 <p className="text-[10px] uppercase tracking-wider text-emerald-500/70 mb-1">Paid This Month</p>
-                                 <p className="text-xl font-bold text-emerald-400">${pipelineAnalytics.revenueThisMonth.toLocaleString()}</p>
-                             </div>
-
-                             {/* Pending Revenue */}
-                             <div className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/10">
-                                 <p className="text-[10px] uppercase tracking-wider text-blue-500/70 mb-1">Pending</p>
-                                 <p className="text-xl font-bold text-blue-400">${pipelineAnalytics.pendingRevenue.toLocaleString()}</p>
-                             </div>
-
-                             {/* Overdue */}
-                             <div className={`p-3 rounded-xl border ${pipelineAnalytics.overdueRevenue > 0 ? 'bg-red-500/5 border-red-500/10' : 'bg-white/[0.02] border-white/5'}`}>
-                                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-500/70' : 'text-gray-500'}`}>Overdue</p>
-                                 <p className={`text-xl font-bold ${pipelineAnalytics.overdueRevenue > 0 ? 'text-red-400' : 'text-gray-600'}`}>${pipelineAnalytics.overdueRevenue.toLocaleString()}</p>
-                             </div>
-
-                             {/* Avg Quote Value */}
-                             <div className="p-3 bg-[#F6B45A]/5 rounded-xl border border-[#F6B45A]/10">
-                                 <p className="text-[10px] uppercase tracking-wider text-[#F6B45A]/70 mb-1">Avg Quote</p>
-                                 <p className="text-xl font-bold text-[#F6B45A]">${pipelineAnalytics.avgQuoteValue.toLocaleString()}</p>
-                             </div>
-                         </div>
-
-                         {/* Conversion Funnel */}
-                         <div className="flex items-center justify-center gap-2 p-3 bg-white/[0.02] rounded-xl border border-white/5 mb-4">
-                             <span className="text-[10px] uppercase tracking-wider text-gray-500 mr-2">Conversion:</span>
-                             <span className="text-xs text-gray-400">Draft</span>
-                             <span className="text-sm font-bold text-purple-400">{pipelineAnalytics.draftToQuotedRate}%</span>
-                             <ChevronRight className="w-3 h-3 text-gray-600" />
-                             <span className="text-xs text-gray-400">Quoted</span>
-                             <span className="text-sm font-bold text-emerald-400">{pipelineAnalytics.quotedToApprovedRate}%</span>
-                             <ChevronRight className="w-3 h-3 text-gray-600" />
-                             <span className="text-xs text-gray-400">Approved</span>
-                             <span className="text-sm font-bold text-[#F6B45A]">{pipelineAnalytics.approvedToCompletedRate}%</span>
-                             <ChevronRight className="w-3 h-3 text-gray-600" />
-                             <span className="text-xs text-gray-400">Done</span>
-                         </div>
-
-                         {/* Advanced Analytics Grid - For Owners & Lead Technicians */}
-                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                             {/* Business Health Score */}
-                             <BusinessHealthScore healthData={businessHealthData} />
-
-                             {/* Sales Pipeline Forecast */}
-                             <PipelineForecast
-                                 data={pipelineForecastData}
-                                 onViewProject={(projectId) => {
-                                     setViewProjectId(projectId);
-                                     setShowProjectDetailModal(true);
-                                 }}
-                             />
-                         </div>
-
-                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                             {/* Team Performance Matrix */}
-                             <TeamPerformanceMatrix data={teamPerformanceData} />
-
-                             {/* Capacity Dashboard */}
-                             <CapacityDashboard
-                                 data={capacityPlanningData}
-                                 onViewJob={(jobId) => {
-                                     setViewProjectId(jobId);
-                                     setShowProjectDetailModal(true);
-                                 }}
-                             />
-                         </div>
-                     </div>
-                 )}
 
                  {/* Pipeline Status Bar - Only show when on pipeline view */}
                  {(projectsSubTab === 'pipeline' || projectsSubTab === 'quotes' || projectsSubTab === 'invoicing') && (
@@ -6366,6 +6278,16 @@ Notes: ${invoice.notes || 'N/A'}
                 onExportAnalytics={(format) => {
                   // Export logic can be implemented here
                   console.log(`Exporting analytics as ${format}`);
+                }}
+                // Advanced Analytics (formerly in Projects section)
+                pipelineAnalytics={pipelineAnalytics}
+                businessHealthData={businessHealthData}
+                pipelineForecastData={pipelineForecastData}
+                teamPerformanceData={teamPerformanceData}
+                capacityPlanningData={capacityPlanningData}
+                onViewProject={(projectId) => {
+                  setViewProjectId(projectId);
+                  setShowProjectDetailModal(true);
                 }}
              />
              </motion.div>

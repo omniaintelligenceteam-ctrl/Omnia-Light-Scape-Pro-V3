@@ -103,4 +103,19 @@ export interface SettingsViewProps {
   onAnalyticsComparisonViewChange?: (enabled: boolean) => void;
   // Analytics actions
   onExportAnalytics?: (format: 'pdf' | 'csv') => void;
+  // Advanced Analytics (formerly in Projects section)
+  pipelineAnalytics?: {
+    revenueThisMonth: number;
+    pendingRevenue: number;
+    overdueRevenue: number;
+    avgQuoteValue: number;
+    draftToQuotedRate: number;
+    quotedToApprovedRate: number;
+    approvedToCompletedRate: number;
+  };
+  businessHealthData?: any;
+  pipelineForecastData?: any;
+  teamPerformanceData?: any;
+  capacityPlanningData?: any;
+  onViewProject?: (projectId: string) => void;
 }
