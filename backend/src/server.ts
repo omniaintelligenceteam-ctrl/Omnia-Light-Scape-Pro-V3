@@ -11,6 +11,8 @@ import usageRoutes from './routes/usage.routes.js';
 import projectsRoutes from './routes/projects.routes.js';
 import clientPortalRoutes from './routes/client-portal.routes.js';
 import locationsRoutes from './routes/locations.routes.js';
+import techniciansRoutes from './routes/technicians.routes.js';
+import organizationsRoutes from './routes/organizations.routes.js';
 
 dotenv.config();
 
@@ -31,6 +33,8 @@ app.use('/api/usage', usageRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/client-portal', clientPortalRoutes);
 app.use('/api/locations', locationsRoutes);
+app.use('/api/technicians', techniciansRoutes);
+app.use('/api/organizations', organizationsRoutes);
 
 // Start
 app.listen(PORT, () => {
