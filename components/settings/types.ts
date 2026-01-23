@@ -73,6 +73,9 @@ export interface SettingsViewProps {
   onCreateLocation?: (location: Omit<Location, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Location | null>;
   onUpdateLocation?: (id: string, updates: Partial<Location>) => Promise<Location | null>;
   onDeleteLocation?: (id: string) => Promise<boolean>;
+  // Location switcher state
+  selectedLocationId?: string | null;
+  onLocationChange?: (locationId: string | null) => void;
   // Technicians
   technicians?: Technician[];
   techniciansLoading?: boolean;

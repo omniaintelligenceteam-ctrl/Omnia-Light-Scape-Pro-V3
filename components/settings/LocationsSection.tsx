@@ -2,12 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Plus, Trash2, Edit2, Check, X, Building2, Mail, User, Loader2, Search,
-  TrendingUp, TrendingDown, DollarSign, Briefcase, Target, BarChart3, ChevronDown, ChevronUp
+  TrendingUp, TrendingDown, DollarSign, Briefcase, Target, BarChart3, ChevronDown, ChevronUp, Globe
 } from 'lucide-react';
 import { Location, LocationMetrics } from '../../types';
 import { SettingsCard } from './ui/SettingsCard';
 import { CardInput } from './ui/PremiumInput';
 import { ToggleRow } from './ui/SettingsToggle';
+import { LocationSwitcher } from '../LocationSwitcher';
 
 interface LocationsSectionProps {
   locations: Location[];
@@ -16,6 +17,9 @@ interface LocationsSectionProps {
   onCreateLocation: (location: Omit<Location, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Location | null>;
   onUpdateLocation: (id: string, updates: Partial<Location>) => Promise<Location | null>;
   onDeleteLocation: (id: string) => Promise<boolean>;
+  // Location switcher props
+  selectedLocationId: string | null;
+  onLocationChange: (locationId: string | null) => void;
 }
 
 export const LocationsSection: React.FC<LocationsSectionProps> = ({
@@ -24,7 +28,9 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
   isLoading,
   onCreateLocation,
   onUpdateLocation,
-  onDeleteLocation
+  onDeleteLocation,
+  selectedLocationId,
+  onLocationChange
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -147,6 +153,29 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Active Location Switcher */}
+      {locations.filter(loc => loc.isActive).length > 0 && (
+        <SettingsCard className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#F6B45A]/10">
+                <Globe className="w-5 h-5 text-[#F6B45A]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Active Location Filter</h3>
+                <p className="text-xs text-gray-500">Switch between locations to filter all data</p>
+              </div>
+            </div>
+            <LocationSwitcher
+              locations={locations}
+              selectedLocationId={selectedLocationId}
+              onLocationChange={onLocationChange}
+              isLoading={isLoading}
+            />
+          </div>
+        </SettingsCard>
+      )}
+
       <p className="text-sm text-gray-400 mb-6">
         Manage your business locations. Each location can have its own manager and track metrics separately.
       </p>

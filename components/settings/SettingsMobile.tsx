@@ -144,6 +144,8 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   onCreateLocation,
   onUpdateLocation,
   onDeleteLocation,
+  selectedLocationId = null,
+  onLocationChange,
   technicians = [],
   techniciansLoading = false,
   onCreateTechnician,
@@ -1199,6 +1201,8 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
             onCreateLocation={onCreateLocation}
             onUpdateLocation={onUpdateLocation}
             onDeleteLocation={onDeleteLocation}
+            selectedLocationId={selectedLocationId}
+            onLocationChange={onLocationChange!}
           />
         </FullScreenModal>
       )}

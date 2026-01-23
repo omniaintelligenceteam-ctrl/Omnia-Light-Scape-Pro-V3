@@ -2553,10 +2553,6 @@ Notes: ${invoice.notes || 'N/A'}
           isLoading: subscription.isLoading,
         }}
         hideLogoForAnimation={isLoading}
-        locations={locations}
-        selectedLocationId={selectedLocationId}
-        onLocationChange={setSelectedLocationId}
-        locationsLoading={locationsLoading}
       />
       
       {/* Hidden PDF Generation Container */}
@@ -6402,6 +6398,8 @@ Notes: ${invoice.notes || 'N/A'}
                 onCreateLocation={createLocation}
                 onUpdateLocation={updateLocation}
                 onDeleteLocation={deleteLocation}
+                selectedLocationId={selectedLocationId}
+                onLocationChange={setSelectedLocationId}
                 technicians={technicians}
                 techniciansLoading={techniciansLoading}
                 onCreateTechnician={createTechnician}

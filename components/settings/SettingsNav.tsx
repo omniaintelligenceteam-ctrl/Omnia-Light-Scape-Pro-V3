@@ -71,7 +71,7 @@ export const SettingsNav: React.FC<SettingsNavProps> = ({
         <h2 className="text-xl font-bold text-white">Settings</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4 px-3">
+      <div className="flex-1 overflow-y-auto py-4 px-3 pb-24">
         {Object.entries(groups).map(([groupName, items]) => (
           <div key={groupName} className="mb-6">
             <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">
@@ -111,8 +111,8 @@ export const SettingsNav: React.FC<SettingsNavProps> = ({
         ))}
       </div>
 
-      {/* Sign Out - Always visible */}
-      <div className="p-3 border-t border-white/5">
+      {/* Sign Out - Always visible, positioned above the bottom navigation */}
+      <div className="p-3 border-t border-white/5 mb-24">
         <button
           onClick={onSignOut}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/5 transition-all group"
