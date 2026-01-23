@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getSupabase } from '../lib/supabase.js';
+import { sendInviteEmail } from '../lib/resend.js';
 import crypto from 'crypto';
 
 // Generate a secure random token
@@ -199,15 +200,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) throw error;
 
-      // TODO: Send email with invite link
-      // For now, return the token so it can be shared
-      const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${inviteToken}`;
+      const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'}/invite/${inviteToken}`;
+
+      // Get inviter's name for the email
+      const { data: inviterData } = await supabase
+        .from('users')
+        .select('full_name, email')
+        .eq('id', supabaseUserId)
+        .single();
+
+      const inviterName = inviterData?.full_name || inviterData?.email || 'Your team';
+
+      // Get location name if provided
+      let locationName: string | undefined;
+      if (locationId) {
+        const { data: locationData } = await supabase
+          .from('locations')
+          .select('name')
+          .eq('id', locationId)
+          .single();
+        locationName = locationData?.name;
+      }
+
+      // Send invite email (don't fail the request if email fails)
+      try {
+        const emailResult = await sendInviteEmail({
+          to: email,
+          inviterName,
+          organizationName: organizationName || 'Your Organization',
+          role,
+          inviteLink,
+          locationName
+        });
+
+        if (!emailResult.success) {
+          console.warn('Failed to send invite email:', emailResult.error);
+        }
+      } catch (emailError) {
+        console.error('Error sending invite email:', emailError);
+        // Continue - don't fail the invite creation
+      }
 
       return res.status(201).json({
         success: true,
         data: invite,
         inviteLink,
-        organizationName
+        organizationName,
+        emailSent: true
       });
     }
 

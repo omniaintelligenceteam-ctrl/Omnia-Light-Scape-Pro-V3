@@ -46,6 +46,7 @@ import { useTeamMembers } from './hooks/useTeamMembers';
 import { TechnicianDashboard } from './components/TechnicianDashboard';
 import { AssignmentDropdown } from './components/AssignmentDropdown';
 import { SaveImageModal } from './components/SaveImageModal';
+import { AcceptInvite } from './components/AcceptInvite';
 import { KanbanBoard } from './components/pipeline';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
@@ -2594,6 +2595,12 @@ Notes: ${invoice.notes || 'N/A'}
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     return <ClientPortal initialToken={token} />;
+  }
+
+  // 4b. Accept Invite page (no auth required - handles auth internally)
+  if (currentPath.startsWith('/invite/')) {
+    const token = currentPath.replace('/invite/', '');
+    return <AcceptInvite token={token} />;
   }
 
   // 5. Show Billing Success page

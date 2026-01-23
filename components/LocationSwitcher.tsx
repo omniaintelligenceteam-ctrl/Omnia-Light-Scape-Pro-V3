@@ -88,7 +88,7 @@ export const LocationSwitcher: React.FC<LocationSwitcherProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 mt-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] overflow-hidden"
+            className="absolute top-full left-0 mt-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100]"
           >
             {/* "All Locations" option */}
             <button
@@ -126,7 +126,7 @@ export const LocationSwitcher: React.FC<LocationSwitcherProps> = ({
             )}
 
             {/* Location list */}
-            <div className="max-h-64 overflow-y-auto">
+            <div className="max-h-80 overflow-y-auto">
               {activeLocations.map((location) => {
                 const isSelected = selectedLocationId === location.id;
                 return (
