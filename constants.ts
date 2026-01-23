@@ -1751,6 +1751,133 @@ STRICT EXCLUSION ZONES:
         negativePrompt: `ABSOLUTE PROHIBITION (STEPS): Do NOT place on columns/pillars. Do NOT place on retaining walls. Under-tread mounting only. Do NOT create trip hazards.`
       }
     ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WELL LIGHTS - In-ground recessed accent lights
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: 'well',
+    label: 'Well Lights',
+    description: 'In-ground recessed accent lights',
+    positivePrompt: `CATEGORY ENABLED: Well Lights (In-Ground Recessed Accent Lights).
+FIXTURE STYLE: Flush-mounted in-ground well light, brass or composite housing, tempered glass lens, IP67+ rated, completely flush with grade, zero protrusion.
+INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement. Only illuminate the specific targets specified by active sub-options.`,
+    negativePrompt: `HARD RULE: Do NOT generate any in-ground well lights. No flush-mounted ground fixtures. Tree bases, statues, and architectural features must remain dark at ground level. No uplighting from recessed ground fixtures.`,
+    subOptions: [
+      {
+        id: 'trees',
+        label: 'Trees',
+        description: 'In-ground uplighting at tree bases',
+        prompt: `TARGET: TREES -- IN-GROUND WELL LIGHTS FOR TREE UPLIGHTING
+
+IDENTIFICATION:
+- Locate significant trees: specimen trees, focal point trees, tree groupings
+- Identify trunk base and canopy spread
+- Consider tree height and canopy density
+
+FIXTURE SPECIFICATIONS:
+- Type: in-ground well light (recessed)
+- Housing: brass or composite with tempered glass lens
+- Installation: flush with grade at tree base
+- Protrusion: ZERO
+- Beam spread: narrow (10-15°) for tall trees, medium (25-35°) for spreading canopies
+
+PLACEMENT GEOMETRY:
+- Place 1-3 fixtures per tree depending on trunk size and canopy
+- SMALL TREE (trunk <8"): 1 fixture, offset 12-18" from trunk
+- MEDIUM TREE (trunk 8-18"): 2 fixtures, opposing sides, 18-24" from trunk
+- LARGE TREE (trunk >18"): 2-3 fixtures, triangulated, 24-36" from trunk
+- Angle beams to illuminate trunk AND canopy
+
+LIGHT PHYSICS:
+- Beam originates at ground level, projects upward through canopy
+- Reveals bark texture on trunk
+- Creates dramatic shadows in foliage
+- Moonlight filtering effect through leaves
+- Natural falloff at canopy edge
+
+STRICT EXCLUSION ZONES:
+- Do NOT place in lawn areas (landscape bed only)
+- Do NOT place on hardscape surfaces
+- Do NOT aim at windows or neighboring properties`,
+        negativePrompt: `ABSOLUTE PROHIBITION (WELL TREES): Do NOT place in lawn areas. Do NOT place on hardscape. Do NOT aim at windows. Landscape bed placement only at tree bases.`
+      },
+      {
+        id: 'statues',
+        label: 'Statues & Focal Points',
+        description: 'Accent lighting for sculptures and features',
+        prompt: `TARGET: STATUES & FOCAL POINTS -- IN-GROUND WELL LIGHTS FOR SCULPTURAL ACCENT
+
+IDENTIFICATION:
+- Locate garden statues, sculptures, fountains, decorative urns
+- Identify water features, birdbaths, art installations
+- Consider viewing angles and primary approach
+
+FIXTURE SPECIFICATIONS:
+- Type: in-ground well light (recessed)
+- Housing: brass or composite with tempered glass lens
+- Installation: flush with grade
+- Protrusion: ZERO
+- Beam spread: narrow to medium (15-25°) for focused accent
+
+PLACEMENT GEOMETRY:
+- Place 1-2 fixtures per focal point
+- Distance from object: 12-24" depending on height
+- Primary fixture at 30-45° angle to main viewing direction
+- Secondary fixture (if used) for fill or dramatic shadow
+- Cross-lighting for 3D sculptural effect
+
+LIGHT PHYSICS:
+- Dramatic uplighting reveals form and texture
+- Creates strong shadows for depth
+- Highlights material (bronze, stone, ceramic)
+- Silhouette effect against dark background
+
+STRICT EXCLUSION ZONES:
+- Do NOT create glare toward viewing positions
+- Do NOT overlight - maintain drama
+- Do NOT place in water (unless rated)`,
+        negativePrompt: `ABSOLUTE PROHIBITION (WELL STATUES): Do NOT create glare toward viewers. Do NOT overlight focal points. Do NOT place in water unless specifically rated.`
+      },
+      {
+        id: 'architectural',
+        label: 'Architectural Features',
+        description: 'Wall and column grazing from ground level',
+        prompt: `TARGET: ARCHITECTURAL FEATURES -- IN-GROUND WELL LIGHTS FOR WALL/COLUMN GRAZING
+
+IDENTIFICATION:
+- Locate stone walls, textured surfaces, garden columns
+- Identify architectural elements: chimneys, wing walls, pilasters
+- Consider surface material and texture depth
+
+FIXTURE SPECIFICATIONS:
+- Type: in-ground well light (recessed)
+- Housing: brass or composite with tempered glass lens
+- Installation: flush with grade at feature base
+- Protrusion: ZERO
+- Beam spread: narrow (10-20°) for wall grazing
+
+PLACEMENT GEOMETRY:
+- Place fixtures 6-12" from wall face for grazing effect
+- One fixture per 4-6 feet of wall length
+- Center fixtures on columns/pilasters
+- Stagger placement for natural rhythm
+
+LIGHT PHYSICS:
+- WALL GRAZING technique: close placement reveals texture
+- Light travels vertically up surface
+- Emphasizes stone coursing, mortar joints, brick pattern
+- Creates dramatic shadows from surface irregularities
+- Natural intensity falloff toward top
+
+STRICT EXCLUSION ZONES:
+- Do NOT place far from wall (grazing requires proximity)
+- Do NOT aim at windows
+- Do NOT use for smooth/flat surfaces (no texture to reveal)`,
+        negativePrompt: `ABSOLUTE PROHIBITION (WELL ARCHITECTURAL): Do NOT place far from wall face. Do NOT aim at windows. Close placement required for grazing effect.`
+      }
+    ]
   }
 ];
 
@@ -1857,6 +1984,14 @@ export const DEFAULT_PRICING: FixturePricing[] = [
     unitPrice: 195.0,
   },
   {
+    id: "default_well",
+    fixtureType: "well",
+    name: "In-Ground Well Light: COMPLETELY INSTALLED PRICE",
+    description:
+      "Flush-mounted in-ground accent light.\nSpecs: Brass/Composite Housing, Tempered Glass Lens, IP67 Waterproof.\nBest for: Tree uplighting, statues, architectural features.\nNote: Includes excavation and drainage considerations.",
+    unitPrice: 245.0,
+  },
+  {
     id: "default_transformer",
     fixtureType: "transformer",
     name: "Professional Low Voltage Transformer (300W)",
@@ -1914,7 +2049,8 @@ export const DEFAULT_FIXTURE_WATTAGES: Record<string, number> = {
   gutter: 4,
   soffit: 3,
   hardscape: 3,
-  coredrill: 4
+  coredrill: 4,
+  well: 5
 };
 
 // BOM - Transformer sizing options
@@ -1933,7 +2069,8 @@ export const DEFAULT_FIXTURE_CATALOG = [
   { fixtureType: 'gutter', brand: '', sku: '', wattage: 4 },
   { fixtureType: 'soffit', brand: '', sku: '', wattage: 3 },
   { fixtureType: 'hardscape', brand: '', sku: '', wattage: 3 },
-  { fixtureType: 'coredrill', brand: '', sku: '', wattage: 4 }
+  { fixtureType: 'coredrill', brand: '', sku: '', wattage: 4 },
+  { fixtureType: 'well', brand: '', sku: '', wattage: 5 }
 ];
 
 // BOM - Fixture type display names
@@ -1943,7 +2080,8 @@ export const FIXTURE_TYPE_NAMES: Record<string, string> = {
   gutter: 'Gutter Light',
   soffit: 'Soffit Light',
   hardscape: 'Hardscape Light',
-  coredrill: 'Core Drill Light'
+  coredrill: 'Core Drill Light',
+  well: 'Well Light'
 };
 
 // Theme - Accent color configurations
