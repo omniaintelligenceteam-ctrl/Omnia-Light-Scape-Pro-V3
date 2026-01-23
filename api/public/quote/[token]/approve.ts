@@ -171,7 +171,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from('projects')
       .update({
         quote_approved_at: approvedAt,
-        // Update prompt_config.status to 'approved'
+        status: 'approved'
       })
       .eq('id', shareToken.project_id);
 

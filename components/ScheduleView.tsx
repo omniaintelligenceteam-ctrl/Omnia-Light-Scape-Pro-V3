@@ -457,9 +457,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     return projects.filter(p => (p.status === 'scheduled' || p.status === 'approved') && p.schedule);
   }, [projects]);
 
-  // Get approved projects that need scheduling (no schedule set yet)
+  // Get projects ready to schedule (approved or quoted, no schedule set yet)
   const approvedProjects = useMemo(() => {
-    return projects.filter(p => p.status === 'approved' && !p.schedule);
+    return projects.filter(p => (p.status === 'approved' || p.status === 'quoted') && !p.schedule);
   }, [projects]);
 
   // Get set of dates with scheduled jobs or events
@@ -585,15 +585,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               className="bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border border-white/10 rounded-2xl p-6"
             >
               {approvedProjects.length > 0 ? (
-                // Show approved jobs that need scheduling
+                // Show quotes/approved jobs that need scheduling
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     </div>
                     <div>
-                      <p className="text-white font-medium">Approved Jobs</p>
-                      <p className="text-xs text-gray-500">{approvedProjects.length} job{approvedProjects.length !== 1 ? 's' : ''} ready to schedule</p>
+                      <p className="text-white font-medium">Ready to Schedule</p>
+                      <p className="text-xs text-gray-500">{approvedProjects.length} quote{approvedProjects.length !== 1 ? 's' : ''} waiting for installation date</p>
                     </div>
                   </div>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -602,27 +602,43 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                       .map(project => {
                         const clientName = project.quote?.clientDetails?.name || project.clientName || 'Client';
                         const quoteValue = project.quote?.total;
+                        const isApproved = project.status === 'approved';
                         return (
                           <motion.div
                             key={project.id}
-                            className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-emerald-500/10"
+                            className={`flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border ${
+                              isApproved ? 'border-emerald-500/20' : 'border-[#F6B45A]/20'
+                            }`}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                           >
                             {project.image ? (
-                              <div className="w-10 h-10 rounded-lg overflow-hidden bg-black shrink-0">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-black shrink-0">
                                 <img src={project.image} alt="" className="w-full h-full object-cover" />
                               </div>
                             ) : (
-                              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-                                <Home className="w-4 h-4 text-emerald-400" />
+                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
+                                isApproved ? 'bg-emerald-500/10' : 'bg-[#F6B45A]/10'
+                              }`}>
+                                <Home className={`w-5 h-5 ${isApproved ? 'text-emerald-400' : 'text-[#F6B45A]'}`} />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{project.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-white truncate">{project.name}</p>
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                  isApproved
+                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                    : 'bg-[#F6B45A]/20 text-[#F6B45A]'
+                                }`}>
+                                  {isApproved ? 'Approved' : 'Quoted'}
+                                </span>
+                              </div>
                               <p className="text-xs text-gray-400 truncate">{clientName}</p>
                               {quoteValue && quoteValue > 0 && (
-                                <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1 mt-0.5">
+                                <p className={`text-xs font-semibold flex items-center gap-1 mt-0.5 ${
+                                  isApproved ? 'text-emerald-400' : 'text-[#F6B45A]'
+                                }`}>
                                   <DollarSign className="w-3 h-3" />
                                   {quoteValue.toLocaleString()}
                                 </p>
@@ -630,7 +646,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                             </div>
                             <motion.button
                               onClick={() => onScheduleProject?.(project)}
-                              className="px-3 py-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+                              className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shrink-0 ${
+                                isApproved
+                                  ? 'text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                                  : 'text-[#F6B45A] bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20'
+                              }`}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -643,15 +663,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   </div>
                 </div>
               ) : (
-                // Empty state - no approved jobs
-                <div className="text-center py-4">
+                // Empty state - no quotes to schedule
+                <div className="text-center py-6">
                   <motion.div
                     animate={{ y: [0, -8, 0] }}
                     transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                    className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4 animate-empty-glow-pulse"
-                    style={{ '--tw-shadow-color': 'rgba(59,130,246,0.3)' } as React.CSSProperties}
+                    className="w-16 h-16 rounded-full bg-[#F6B45A]/10 flex items-center justify-center mx-auto mb-4"
                   >
-                    <Calendar className="w-7 h-7 text-blue-400" />
+                    <CheckCircle2 className="w-7 h-7 text-[#F6B45A]" />
                   </motion.div>
                   <motion.p
                     initial={{ opacity: 0 }}
@@ -659,30 +678,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     transition={{ delay: 0.1 }}
                     className="text-gray-300 font-medium"
                   >
-                    Nothing scheduled for this day
+                    No quotes ready to schedule
                   </motion.p>
                   <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="text-sm text-gray-500 mt-1"
+                    className="text-sm text-gray-500 mt-1 max-w-xs mx-auto"
                   >
-                    No approved jobs waiting to be scheduled
+                    Quotes will appear here once they're sent or approved by clients
                   </motion.p>
-                  {onCreateEvent && (
-                    <motion.button
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      onClick={onCreateEvent}
-                      className="mt-4 flex items-center gap-2 px-4 py-2 mx-auto bg-purple-500/20 text-purple-400 font-medium rounded-lg hover:bg-purple-500/30 transition-colors"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Plus className="w-4 h-4" />
-                      Create Event
-                    </motion.button>
-                  )}
                 </div>
               )}
             </motion.div>
@@ -800,17 +805,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </div>
       </div>
 
-      {/* Approved Projects - Ready to Schedule */}
+      {/* Quotes Ready to Schedule */}
       {approvedProjects.length > 0 && (
-        <div className="bg-gradient-to-b from-emerald-500/5 to-[#0a0a0a] border border-emerald-500/20 rounded-2xl p-4 md:p-6">
+        <div className="bg-gradient-to-b from-[#F6B45A]/5 to-[#0a0a0a] border border-[#F6B45A]/20 rounded-2xl p-4 md:p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <div className="w-8 h-8 rounded-lg bg-[#F6B45A]/20 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 text-[#F6B45A]" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">Ready to Schedule</h3>
-                <p className="text-xs text-gray-400">{approvedProjects.length} approved project{approvedProjects.length !== 1 ? 's' : ''} awaiting installation date</p>
+                <p className="text-xs text-gray-400">{approvedProjects.length} quote{approvedProjects.length !== 1 ? 's' : ''} awaiting installation date</p>
               </div>
             </div>
           </div>
@@ -820,10 +825,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               .map(project => {
                 const clientName = project.quote?.clientDetails?.name || project.clientName || 'Client';
                 const quoteValue = project.quote?.total;
+                const isApproved = project.status === 'approved';
                 return (
                   <motion.div
                     key={project.id}
-                    className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-emerald-500/10"
+                    className={`flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border ${
+                      isApproved ? 'border-emerald-500/20' : 'border-[#F6B45A]/20'
+                    }`}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                   >
@@ -832,15 +840,28 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                         <img src={project.image} alt="" className="w-full h-full object-cover" />
                       </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-                        <Home className="w-5 h-5 text-emerald-400" />
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
+                        isApproved ? 'bg-emerald-500/10' : 'bg-[#F6B45A]/10'
+                      }`}>
+                        <Home className={`w-5 h-5 ${isApproved ? 'text-emerald-400' : 'text-[#F6B45A]'}`} />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{project.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-white truncate">{project.name}</p>
+                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                          isApproved
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : 'bg-[#F6B45A]/20 text-[#F6B45A]'
+                        }`}>
+                          {isApproved ? 'Approved' : 'Quoted'}
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-400 truncate">{clientName}</p>
                       {quoteValue && quoteValue > 0 && (
-                        <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1 mt-0.5">
+                        <p className={`text-xs font-semibold flex items-center gap-1 mt-0.5 ${
+                          isApproved ? 'text-emerald-400' : 'text-[#F6B45A]'
+                        }`}>
                           <DollarSign className="w-3 h-3" />
                           {quoteValue.toLocaleString()}
                         </p>
@@ -848,7 +869,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     </div>
                     <motion.button
                       onClick={() => onScheduleProject?.(project)}
-                      className="px-3 py-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+                      className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shrink-0 ${
+                        isApproved
+                          ? 'text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                          : 'text-[#F6B45A] bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20'
+                      }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >

@@ -25,6 +25,7 @@ interface QuoteEmailRequest {
   total: number;
   projectImageUrl?: string;
   customMessage?: string;
+  approveLink?: string;
 }
 
 function generateQuoteHtml(data: QuoteEmailRequest): string {
@@ -132,7 +133,7 @@ function generateQuoteHtml(data: QuoteEmailRequest): string {
           </tr>
           <tr>
             <td style="padding: 16px 0 0; color: #1a1a1a; font-size: 18px; font-weight: 700;">Total</td>
-            <td style="padding: 16px 0 0; text-align: right; color: #D4A04A; font-size: 26px; font-weight: 700;">$${data.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td style="padding: 16px 0 0; text-align: right; color: #1a1a1a; font-size: 26px; font-weight: 700;">$${data.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
           </tr>
         </table>
       </div>
@@ -142,10 +143,17 @@ function generateQuoteHtml(data: QuoteEmailRequest): string {
         <p style="margin: 0 0 20px; color: #555; font-size: 15px;">
           Ready to move forward with your project?
         </p>
-        <a href="mailto:${data.companyEmail}?subject=Re: Quote for ${encodeURIComponent(data.projectName)}" style="display: inline-block; background: linear-gradient(135deg, #1a1a1a 0%, #333 100%); color: #ffffff; font-weight: 600; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-size: 14px;">
-          Reply to This Quote
-        </a>
-        ${data.companyPhone ? `<p style="margin: 16px 0 0; color: #888; font-size: 14px;">Or call us at <a href="tel:${data.companyPhone}" style="color: #D4A04A; text-decoration: none; font-weight: 600;">${data.companyPhone}</a></p>` : ''}
+        <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+          ${data.approveLink ? `
+          <a href="${data.approveLink}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 600; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-size: 14px;">
+            ✓ Approve Quote
+          </a>
+          ` : ''}
+          <a href="mailto:${data.companyEmail}?subject=Re: Quote for ${encodeURIComponent(data.projectName)}" style="display: inline-block; background: linear-gradient(135deg, #1a1a1a 0%, #333 100%); color: #ffffff; font-weight: 600; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-size: 14px;">
+            Reply to This Quote
+          </a>
+        </div>
+        ${data.companyPhone ? `<p style="margin: 16px 0 0; color: #888; font-size: 14px;">Or call us at <a href="tel:${data.companyPhone}" style="color: #1a1a1a; text-decoration: none; font-weight: 600;">${data.companyPhone}</a></p>` : ''}
       </div>
 
       <!-- Divider -->

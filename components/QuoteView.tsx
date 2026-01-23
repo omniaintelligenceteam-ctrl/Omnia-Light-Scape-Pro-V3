@@ -212,6 +212,24 @@ ${customMessage ? `\n${customMessage}\n` : ''}
         }
       }
 
+      // Generate approve link if project is saved
+      let approveLink: string | undefined;
+      if (projectId && userId) {
+        try {
+          const shareResponse = await fetch(`/api/projects/${projectId}/share?userId=${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'quote', expiresInDays: 30 })
+          });
+          const shareData = await shareResponse.json();
+          if (shareResponse.ok && shareData.data?.shareUrl) {
+            approveLink = shareData.data.shareUrl;
+          }
+        } catch (err) {
+          console.warn('Failed to generate approve link, sending without it:', err);
+        }
+      }
+
       const response = await fetch('/api/send-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,7 +255,8 @@ ${customMessage ? `\n${customMessage}\n` : ''}
           discount,
           total,
           projectImageUrl: imageUrl,
-          customMessage: customMessage || undefined
+          customMessage: customMessage || undefined,
+          approveLink
         })
       });
 
