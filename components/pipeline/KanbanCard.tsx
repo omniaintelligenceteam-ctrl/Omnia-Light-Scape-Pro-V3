@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { GripVertical, Wand2, Edit3 } from 'lucide-react';
+import { GripVertical, Wand2, Edit3, Send, FileText, Calendar, CheckCircle2, Receipt } from 'lucide-react';
 import { SavedProject, ProjectStatus } from '../../types';
 
 interface StatusConfig {
@@ -15,6 +15,11 @@ interface KanbanCardProps {
   statusConfig: Record<ProjectStatus, StatusConfig>;
   onProjectClick: (project: SavedProject) => void;
   onEditProject?: (project: SavedProject) => void;
+  onSendQuote?: (project: SavedProject) => void;
+  onGenerateQuote?: (project: SavedProject) => void;
+  onScheduleProject?: (project: SavedProject) => void;
+  onCompleteProject?: (project: SavedProject) => void;
+  onGenerateInvoice?: (project: SavedProject) => void;
   isDragging?: boolean;
 }
 
@@ -23,6 +28,11 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   statusConfig,
   onProjectClick,
   onEditProject,
+  onSendQuote,
+  onGenerateQuote,
+  onScheduleProject,
+  onCompleteProject,
+  onGenerateInvoice,
   isDragging = false,
 }) => {
   const config = statusConfig[project.status];
@@ -71,6 +81,71 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
     >
       {/* Action Buttons */}
       <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Generate Quote button - show when no quote exists */}
+        {onGenerateQuote && !project.quote && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onGenerateQuote(project);
+            }}
+            className="p-1 rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors"
+            title="Generate quote"
+          >
+            <FileText className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {/* Send Quote button - show when quote exists */}
+        {onSendQuote && project.quote && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSendQuote(project);
+            }}
+            className="p-1 rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors"
+            title="Send quote to client"
+          >
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {/* Schedule button - show for approved projects without a schedule */}
+        {onScheduleProject && project.status === 'approved' && !project.schedule && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onScheduleProject(project);
+            }}
+            className="p-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors"
+            title="Schedule installation"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {/* Complete button - show for scheduled projects */}
+        {onCompleteProject && project.status === 'scheduled' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompleteProject(project);
+            }}
+            className="p-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors"
+            title="Mark as complete"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {/* Generate Invoice button - show for scheduled or completed projects */}
+        {onGenerateInvoice && (project.status === 'scheduled' || project.status === 'completed') && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onGenerateInvoice(project);
+            }}
+            className="p-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-colors"
+            title="Generate invoice"
+          >
+            <Receipt className="w-3.5 h-3.5" />
+          </button>
+        )}
         {onEditProject && (
           <button
             onClick={(e) => {

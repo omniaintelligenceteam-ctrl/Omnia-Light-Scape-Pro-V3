@@ -16,6 +16,11 @@ interface KanbanColumnProps {
   statusConfig: Record<ProjectStatus, StatusConfig>;
   onProjectClick: (project: SavedProject) => void;
   onEditProject?: (project: SavedProject) => void;
+  onSendQuote?: (project: SavedProject) => void;
+  onGenerateQuote?: (project: SavedProject) => void;
+  onScheduleProject?: (project: SavedProject) => void;
+  onCompleteProject?: (project: SavedProject) => void;
+  onGenerateInvoice?: (project: SavedProject) => void;
   onDropProject: (projectId: string, newStatus: ProjectStatus) => void;
 }
 
@@ -25,6 +30,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   statusConfig,
   onProjectClick,
   onEditProject,
+  onSendQuote,
+  onGenerateQuote,
+  onScheduleProject,
+  onCompleteProject,
+  onGenerateInvoice,
   onDropProject,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -108,6 +118,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 statusConfig={statusConfig}
                 onProjectClick={onProjectClick}
                 onEditProject={onEditProject}
+                onSendQuote={onSendQuote}
+                onGenerateQuote={onGenerateQuote}
+                onScheduleProject={onScheduleProject}
+                onCompleteProject={onCompleteProject}
+                onGenerateInvoice={onGenerateInvoice}
               />
             ))}
           </AnimatePresence>

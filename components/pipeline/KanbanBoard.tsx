@@ -16,6 +16,11 @@ interface KanbanBoardProps {
   onStatusChange: (projectId: string, newStatus: ProjectStatus) => Promise<boolean>;
   onProjectClick: (project: SavedProject) => void;
   onEditProject?: (project: SavedProject) => void;
+  onSendQuote?: (project: SavedProject) => void;
+  onGenerateQuote?: (project: SavedProject) => void;
+  onScheduleProject?: (project: SavedProject) => void;
+  onCompleteProject?: (project: SavedProject) => void;
+  onGenerateInvoice?: (project: SavedProject) => void;
 }
 
 // Define the order of columns
@@ -27,6 +32,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onStatusChange,
   onProjectClick,
   onEditProject,
+  onSendQuote,
+  onGenerateQuote,
+  onScheduleProject,
+  onCompleteProject,
+  onGenerateInvoice,
 }) => {
   const [pendingMove, setPendingMove] = useState<string | null>(null);
 
@@ -128,6 +138,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 statusConfig={statusConfig}
                 onProjectClick={onProjectClick}
                 onEditProject={onEditProject}
+                onSendQuote={onSendQuote}
+                onGenerateQuote={onGenerateQuote}
+                onScheduleProject={onScheduleProject}
+                onCompleteProject={onCompleteProject}
+                onGenerateInvoice={onGenerateInvoice}
                 onDropProject={handleDropProject}
               />
             </motion.div>

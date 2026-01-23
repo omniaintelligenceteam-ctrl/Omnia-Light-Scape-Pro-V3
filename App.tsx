@@ -515,6 +515,7 @@ const App: React.FC = () => {
   const [editProjectLocationId, setEditProjectLocationId] = useState<string | null>(null);
   const [showAddItemDropdown, setShowAddItemDropdown] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const [isSendingQuote, setIsSendingQuote] = useState(false);
 
   // Client Projects Modal State (for viewing all projects for a client)
   const [showClientProjectsModal, setShowClientProjectsModal] = useState(false);
@@ -1912,6 +1913,87 @@ const App: React.FC = () => {
       setCurrentInvoice(newInvoice);
       setInvoices(prev => [...prev, newInvoice]);
       setProjectsSubTab('invoicing');
+  };
+
+  // Send quote to client portal
+  const handleSendQuoteToPortal = async (project: SavedProject) => {
+    if (!project.quote || !user?.id) {
+      showToast('error', 'Unable to send quote. Project must have a quote saved.');
+      return;
+    }
+
+    const clientEmail = project.quote.clientDetails?.email;
+    if (!clientEmail) {
+      showToast('error', 'Please add a client email before sending the quote.');
+      return;
+    }
+
+    setIsSendingQuote(true);
+
+    try {
+      // First generate the share link
+      const shareResponse = await fetch(`/api/projects/${project.id}/share?userId=${user.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'quote', expiresInDays: 30 })
+      });
+
+      const shareData = await shareResponse.json();
+      if (!shareResponse.ok) {
+        throw new Error(shareData.error || 'Failed to generate share link');
+      }
+
+      const shareUrl = shareData.data.shareUrl;
+
+      // Now send the quote email with the portal link
+      const response = await fetch('/api/send-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientEmail: clientEmail,
+          clientName: project.quote.clientDetails?.name || 'Valued Customer',
+          projectName: project.name,
+          companyName: companyProfile.name,
+          companyEmail: companyProfile.email,
+          companyPhone: companyProfile.phone,
+          companyAddress: companyProfile.address,
+          companyLogo: companyProfile.logo,
+          lineItems: project.quote.lineItems.filter(item => item.quantity > 0).map(item => ({
+            name: item.name,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.quantity * item.unitPrice
+          })),
+          subtotal: project.quote.total / (1 + project.quote.taxRate / 100),
+          taxRate: project.quote.taxRate,
+          taxAmount: project.quote.total - (project.quote.total / (1 + project.quote.taxRate / 100)),
+          discount: project.quote.discount || 0,
+          total: project.quote.total,
+          projectImageUrl: project.image?.startsWith('http') ? project.image : undefined,
+          portalLink: shareUrl
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send quote email');
+      }
+
+      // Update project status to quoted if it was a draft
+      if (project.status === 'draft') {
+        await updateProject(project.id, { status: 'quoted' });
+      }
+
+      showToast('success', 'Quote sent to client!');
+      setShowProjectDetailModal(false);
+    } catch (err: any) {
+      console.error('Error sending quote:', err);
+      showToast('error', err.message || 'Failed to send quote');
+    } finally {
+      setIsSendingQuote(false);
+    }
   };
 
   // === CALENDAR EVENT HANDLERS ===
@@ -4532,6 +4614,29 @@ Notes: ${invoice.notes || 'N/A'}
                                             setEditProjectLocationId(p.location_id || null);
                                             setShowProjectDetailModal(true);
                                         }}
+                                        onSendQuote={handleSendQuoteToPortal}
+                                        onGenerateQuote={(p) => {
+                                            setCurrentProjectId(p.id);
+                                            if (p.image) setGeneratedImage(p.image);
+                                            setCurrentQuote(p.quote || null);
+                                            setProjectsSubTab('quotes');
+                                        }}
+                                        onScheduleProject={(p) => {
+                                            setScheduleProjectId(p.id);
+                                            setScheduleDate(new Date());
+                                            setScheduleTimeSlot('morning');
+                                            setScheduleCustomTime('09:00');
+                                            setScheduleDuration(2);
+                                            setScheduleNotes('');
+                                            setShowScheduleModal(true);
+                                        }}
+                                        onCompleteProject={(p) => {
+                                            setCompletionProjectId(p.id);
+                                            setCompletionNotes('');
+                                            setAutoGenerateInvoice(false);
+                                            setShowCompletionModal(true);
+                                        }}
+                                        onGenerateInvoice={handleGenerateInvoice}
                                     />
                                 </div>
                             )}
@@ -6986,6 +7091,32 @@ Notes: ${invoice.notes || 'N/A'}
                     </div>
                   )}
 
+                  {/* Schedule Job Button - for approved projects without schedule */}
+                  {project.status === 'approved' && !project.schedule && (
+                    <motion.button
+                      onClick={() => {
+                        setScheduleProjectId(project.id);
+                        setScheduleDate(new Date());
+                        setScheduleTimeSlot('morning');
+                        setScheduleCustomTime('09:00');
+                        setScheduleDuration(2);
+                        setScheduleNotes('');
+                        setShowScheduleModal(true);
+                      }}
+                      className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center justify-center gap-3 hover:bg-emerald-500/20 transition-colors"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-emerald-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-emerald-400 font-semibold">Schedule Job</p>
+                        <p className="text-xs text-gray-500">Set installation date and time</p>
+                      </div>
+                    </motion.button>
+                  )}
+
                   {/* Quote Details */}
                   {project.quote && (
                     <div className="space-y-4">
@@ -7407,20 +7538,95 @@ Notes: ${invoice.notes || 'N/A'}
                       </motion.button>
                     </>
                   ) : (
-                    <motion.button
-                      onClick={() => {
-                        setShowProjectDetailModal(false);
-                        setIsEditingProject(false);
-                        setEditLineItems([]);
-                        setEditProjectLocationId(null);
-                        setShowAddItemDropdown(false);
-                      }}
-                      className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Close
-                    </motion.button>
+                    <>
+                      {/* Send Quote Button - only show if project has a quote */}
+                      {project.quote && (
+                        <motion.button
+                          onClick={() => handleSendQuoteToPortal(project)}
+                          disabled={isSendingQuote}
+                          className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {isSendingQuote ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="w-4 h-4" />
+                              Send Quote
+                            </>
+                          )}
+                        </motion.button>
+                      )}
+                      {/* Generate Quote Button - only show if project does NOT have a quote */}
+                      {!project.quote && (
+                        <motion.button
+                          onClick={() => {
+                            setShowProjectDetailModal(false);
+                            setCurrentProjectId(project.id);
+                            if (project.image) setGeneratedImage(project.image);
+                            setCurrentQuote(null);
+                            setProjectsSubTab('quotes');
+                          }}
+                          className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <FileText className="w-4 h-4" />
+                          Generate Quote
+                        </motion.button>
+                      )}
+                      {/* Complete Button - only show for scheduled projects */}
+                      {project.status === 'scheduled' && (
+                        <motion.button
+                          onClick={() => {
+                            setShowProjectDetailModal(false);
+                            setCompletionProjectId(project.id);
+                            setCompletionNotes('');
+                            setAutoGenerateInvoice(false);
+                            setShowCompletionModal(true);
+                          }}
+                          className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          Complete
+                        </motion.button>
+                      )}
+                      {/* Generate Invoice Button - show for scheduled or completed projects */}
+                      {(project.status === 'scheduled' || project.status === 'completed') && (
+                        <motion.button
+                          onClick={() => {
+                            setShowProjectDetailModal(false);
+                            handleGenerateInvoice(project);
+                          }}
+                          className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Receipt className="w-4 h-4" />
+                          Generate Invoice
+                        </motion.button>
+                      )}
+                      <motion.button
+                        onClick={() => {
+                          setShowProjectDetailModal(false);
+                          setIsEditingProject(false);
+                          setEditLineItems([]);
+                          setEditProjectLocationId(null);
+                          setShowAddItemDropdown(false);
+                        }}
+                        className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Close
+                      </motion.button>
+                    </>
                   )}
                 </div>
               </motion.div>
