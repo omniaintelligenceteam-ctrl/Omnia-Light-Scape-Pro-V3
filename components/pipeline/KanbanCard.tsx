@@ -120,7 +120,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             <Calendar className="w-3.5 h-3.5" />
           </button>
         )}
-        {/* Reschedule button - show for scheduled projects */}
+        {/* Schedule button - show for scheduled projects */}
         {onScheduleProject && project.status === 'scheduled' && (
           <button
             onClick={(e) => {
@@ -128,7 +128,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
               onScheduleProject(project);
             }}
             className="p-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-colors"
-            title="Reschedule"
+            title="Schedule"
           >
             <Calendar className="w-3.5 h-3.5" />
           </button>

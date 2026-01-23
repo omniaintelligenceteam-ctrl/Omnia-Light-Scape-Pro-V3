@@ -1852,16 +1852,7 @@ const App: React.FC = () => {
   // Approve a project
   const handleApproveProject = async (projectId: string) => {
       await updateProjectStatus(projectId, 'approved');
-      showToast('success', 'Project approved!');
-
-      // Open schedule modal immediately after approval
-      setScheduleProjectId(projectId);
-      setScheduleDate(new Date());
-      setScheduleTimeSlot('morning');
-      setScheduleCustomTime('09:00');
-      setScheduleDuration(4);
-      setScheduleNotes('');
-      setShowScheduleModal(true);
+      showToast('success', 'Project approved! Ready to schedule.');
   };
 
   // Change project status
@@ -3918,7 +3909,7 @@ Notes: ${invoice.notes || 'N/A'}
                                 <div className="relative bg-gradient-to-b from-white/[0.03] to-black/30 rounded-2xl border border-white/10 group-focus-within:border-[#F6B45A]/30 transition-all duration-300 overflow-hidden shadow-lg shadow-black/20">
                                     <textarea
                                         className="w-full h-14 md:h-16 bg-transparent p-4 md:p-5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none resize-none"
-                                        placeholder="Focus lighting on the oak tree, highlight the pathway..."
+                                        placeholder="Add fixture types and number of fixtures for it to be auto generated in the quote."
                                         value={prompt}
                                         onChange={(e) => setPrompt(e.target.value)}
                                         maxLength={500}
