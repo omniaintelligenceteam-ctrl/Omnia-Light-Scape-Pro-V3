@@ -159,10 +159,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: true, data });
     }
 
-    // DELETE: Remove a member (owner only)
+    // DELETE: Remove a member (owner or admin)
     if (req.method === 'DELETE') {
-      if (userRole !== 'owner') {
-        return res.status(403).json({ error: 'Only owner can remove members' });
+      if (userRole !== 'owner' && userRole !== 'admin') {
+        return res.status(403).json({ error: 'Only owner or admin can remove members' });
       }
 
       const { memberId } = req.body;
@@ -185,6 +185,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (targetMember.role === 'owner') {
         return res.status(403).json({ error: 'Cannot remove organization owner' });
+      }
+
+      // Admin cannot remove other admins
+      if (userRole === 'admin' && targetMember.role === 'admin') {
+        return res.status(403).json({ error: 'Admin cannot remove other admins' });
       }
 
       const { error } = await supabase

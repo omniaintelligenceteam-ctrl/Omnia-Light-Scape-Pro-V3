@@ -18,10 +18,12 @@ import {
   Save,
   UserCheck,
   Building2,
-  TrendingUp
+  TrendingUp,
+  Plus
 } from 'lucide-react';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { useLocations } from '../../hooks/useLocations';
+import { useOrganization } from '../../hooks/useOrganization';
 import { OrganizationMember, OrganizationInvite, OrganizationRole } from '../../types';
 
 const ROLE_LABELS: Record<OrganizationRole, string> = {
@@ -56,8 +58,15 @@ interface TeamSectionProps {
 export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = false }) => {
   // Both owners and admins can manage team members
   // Note: canManageTeam is computed below after ownerMember is known
-  const { members, invites, isLoading, error, sendInvite, cancelInvite, updateMember, removeMember } = useTeamMembers();
+  const { members, invites, isLoading, error, sendInvite, cancelInvite, updateMember, removeMember, refetch: refetchMembers } = useTeamMembers();
   const { locations } = useLocations();
+  const { organization, createOrganization, isLoading: orgLoading, refetch: refetchOrg } = useOrganization();
+
+  // Organization creation state
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
+  const [orgName, setOrgName] = useState('');
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [createOrgError, setCreateOrgError] = useState<string | null>(null);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -263,7 +272,31 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
     }
   };
 
-  if (isLoading) {
+  const handleCreateOrganization = async () => {
+    if (!orgName.trim()) return;
+
+    setIsCreatingOrg(true);
+    setCreateOrgError(null);
+
+    try {
+      const newOrg = await createOrganization(orgName.trim());
+      if (newOrg) {
+        setShowCreateOrg(false);
+        setOrgName('');
+        // Refresh organization and team members data
+        await refetchOrg();
+        await refetchMembers();
+      } else {
+        setCreateOrgError('Failed to create organization');
+      }
+    } catch (err: any) {
+      setCreateOrgError(typeof err?.message === 'string' ? err.message : 'Failed to create organization');
+    } finally {
+      setIsCreatingOrg(false);
+    }
+  };
+
+  if (isLoading || orgLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#F6B45A] border-t-transparent" />
@@ -278,6 +311,110 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
           <AlertCircle className="w-5 h-5" />
           <span>{typeof error === 'string' ? error : 'An error occurred'}</span>
         </div>
+      </div>
+    );
+  }
+
+  // Show create organization prompt if no organization exists
+  if (!organization) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-[#F6B45A]/20">
+            <Building2 className="w-5 h-5 text-[#F6B45A]" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Create Your Organization</h3>
+            <p className="text-sm text-gray-500">Set up your organization to start adding team members</p>
+          </div>
+        </div>
+
+        {!showCreateOrg ? (
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-[#F6B45A]/10 to-amber-500/5 border border-[#F6B45A]/20">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-[#F6B45A]/20 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-[#F6B45A]" />
+              </div>
+              <h4 className="text-lg font-semibold text-white mb-2">No Organization Yet</h4>
+              <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                Create your organization to invite team members, manage roles, and collaborate on projects.
+              </p>
+              <button
+                onClick={() => setShowCreateOrg(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#F6B45A] text-black font-medium
+                  hover:bg-[#f6c45a] transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Create Organization</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+            <h4 className="text-base font-semibold text-white mb-4">Organization Details</h4>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Organization Name</label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    placeholder="My Company Name"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10
+                      text-white placeholder-gray-500 focus:outline-none focus:border-[#F6B45A]/50"
+                    autoFocus
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  This is your company or team name. You can change it later.
+                </p>
+              </div>
+
+              {createOrgError && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                  {createOrgError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleCreateOrganization}
+                  disabled={!orgName.trim() || isCreatingOrg}
+                  className="flex-1 py-3 rounded-xl bg-[#F6B45A] text-black font-medium
+                    hover:bg-[#f6c45a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+                    flex items-center justify-center gap-2"
+                >
+                  {isCreatingOrg ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-black/30 border-t-black" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Create Organization</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCreateOrg(false);
+                    setOrgName('');
+                    setCreateOrgError(null);
+                  }}
+                  className="px-6 py-3 rounded-xl bg-white/10 text-white font-medium
+                    hover:bg-white/20 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

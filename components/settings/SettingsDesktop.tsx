@@ -183,7 +183,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="p-8 pb-24 max-w-3xl">
+        <div className={`p-8 pb-24 ${activeSection === 'analytics' ? 'max-w-7xl' : 'max-w-3xl'}`}>
           <AnimatePresence mode="wait">
             {/* Profile Section */}
             {activeSection === 'profile' && profile && (

@@ -85,10 +85,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'User does not belong to an organization' });
     }
 
-    // GET: List pending invites (owner only)
+    // GET: List pending invites (owner or admin)
     if (req.method === 'GET') {
-      if (userRole !== 'owner') {
-        return res.status(403).json({ error: 'Only owner can view invites' });
+      if (userRole !== 'owner' && userRole !== 'admin') {
+        return res.status(403).json({ error: 'Only owner or admin can view invites' });
       }
 
       const { data: invites, error } = await supabase
@@ -129,10 +129,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: true, data: formattedInvites });
     }
 
-    // POST: Create a new invite (owner only)
+    // POST: Create a new invite (owner or admin)
     if (req.method === 'POST') {
-      if (userRole !== 'owner') {
-        return res.status(403).json({ error: 'Only owner can send invites' });
+      if (userRole !== 'owner' && userRole !== 'admin') {
+        return res.status(403).json({ error: 'Only owner or admin can send invites' });
       }
 
       const { email, role, locationId } = req.body;
@@ -250,10 +250,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // DELETE: Cancel an invite (owner only)
+    // DELETE: Cancel an invite (owner or admin)
     if (req.method === 'DELETE') {
-      if (userRole !== 'owner') {
-        return res.status(403).json({ error: 'Only owner can cancel invites' });
+      if (userRole !== 'owner' && userRole !== 'admin') {
+        return res.status(403).json({ error: 'Only owner or admin can cancel invites' });
       }
 
       const { inviteId } = req.body;
