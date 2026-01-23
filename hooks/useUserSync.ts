@@ -1,12 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useUser } from '@clerk/clerk-react';
 
 export function useUserSync() {
   const { user, isLoaded } = useUser();
+  const syncingRef = useRef(false);
+  const syncedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     async function syncUser() {
       if (!isLoaded || !user) return;
+
+      // Prevent duplicate syncs for the same user
+      if (syncingRef.current || syncedUserIdRef.current === user.id) return;
+
+      syncingRef.current = true;
 
       try {
         const response = await fetch('/api/auth/sync-user', {
@@ -24,9 +31,12 @@ export function useUserSync() {
           console.error('Failed to sync user:', await response.text());
         } else {
           console.log('User synced to database');
+          syncedUserIdRef.current = user.id;
         }
       } catch (error) {
         console.error('Error syncing user:', error);
+      } finally {
+        syncingRef.current = false;
       }
     }
 

@@ -91,21 +91,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: 'Only owner or admin can view invites' });
       }
 
+      // Use separate queries to avoid ambiguous foreign key joins
       const { data: invites, error } = await supabase
         .from('organization_invites')
-        .select(`
-          id,
-          email,
-          role,
-          location_id,
-          invited_by,
-          token,
-          expires_at,
-          accepted_at,
-          created_at,
-          locations (name),
-          users!organization_invites_invited_by_fkey (full_name, email)
-        `)
+        .select('id, email, role, location_id, invited_by, token, expires_at, accepted_at, created_at')
         .eq('organization_id', organizationId)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())
@@ -113,14 +102,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) throw error;
 
+      // Get location names separately
+      const locationIds = [...new Set((invites || []).map(i => i.location_id).filter(Boolean))];
+      let locationsMap: Record<string, string> = {};
+      if (locationIds.length > 0) {
+        const { data: locations } = await supabase
+          .from('locations')
+          .select('id, name')
+          .in('id', locationIds);
+        (locations || []).forEach((l: any) => {
+          locationsMap[l.id] = l.name;
+        });
+      }
+
+      // Get inviter details separately
+      const inviterIds = [...new Set((invites || []).map(i => i.invited_by).filter(Boolean))];
+      let invitersMap: Record<string, { full_name?: string; email?: string }> = {};
+      if (inviterIds.length > 0) {
+        const { data: inviters } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .in('id', inviterIds);
+        (inviters || []).forEach((u: any) => {
+          invitersMap[u.id] = { full_name: u.full_name, email: u.email };
+        });
+      }
+
       const formattedInvites = (invites || []).map((i: any) => ({
         id: i.id,
         email: i.email,
         role: i.role,
         locationId: i.location_id,
-        locationName: i.locations?.name || null,
+        locationName: i.location_id ? locationsMap[i.location_id] || null : null,
         invitedBy: i.invited_by,
-        invitedByName: i.users?.full_name || i.users?.email,
+        invitedByName: i.invited_by ? (invitersMap[i.invited_by]?.full_name || invitersMap[i.invited_by]?.email) : null,
         token: i.token,
         expiresAt: i.expires_at,
         createdAt: i.created_at
@@ -200,7 +215,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) throw error;
 
-      const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'}/invite/${inviteToken}`;
+      const inviteLink = `${process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173'}/invite/${inviteToken}`;
 
       // Get inviter's name for the email
       const { data: inviterData } = await supabase
@@ -400,10 +415,14 @@ async function handleAcceptInvite(supabase: any, token: string, body: any, res: 
     if (memberError) throw memberError;
 
     // Mark invite as accepted
-    await supabase
+    const { error: acceptError } = await supabase
       .from('organization_invites')
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invite.id);
+
+    if (acceptError) {
+      console.error('Failed to mark invite as accepted:', acceptError);
+    }
 
     return res.status(200).json({
       success: true,

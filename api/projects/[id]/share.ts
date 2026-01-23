@@ -65,10 +65,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // If this is an invoice share, save the invoice data to the project
       if (type === 'invoice' && invoiceData) {
-        await supabase
+        const { error: invoiceError } = await supabase
           .from('projects')
           .update({ invoice_data: invoiceData })
           .eq('id', projectId);
+
+        if (invoiceError) {
+          console.error('Failed to save invoice data:', invoiceError);
+        }
       }
 
       // Check for existing active token of this type
@@ -118,10 +122,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Update project with quote_sent_at or invoice_sent_at
       const updateField = type === 'quote' ? 'quote_sent_at' : 'invoice_sent_at';
-      await supabase
+      const { error: timestampError } = await supabase
         .from('projects')
         .update({ [updateField]: new Date().toISOString() })
         .eq('id', projectId);
+
+      if (timestampError) {
+        console.error('Failed to update share timestamp:', timestampError);
+      }
 
       const baseUrl = process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`

@@ -57,7 +57,7 @@ async function handleStatus(req: VercelRequest, res: VercelResponse, supabase: S
             .select('status, plan_id, monthly_limit')
             .eq('user_id', userData.id)
             .eq('status', 'active')
-            .single();
+            .maybeSingle();
 
         const hasActiveSubscription = !!subData;
         const generationCount = userData.generation_count || 0;
@@ -86,7 +86,7 @@ async function handleStatus(req: VercelRequest, res: VercelResponse, supabase: S
             canGenerate = remainingFreeGenerations > 0;
         }
 
-        res.json({
+        return res.json({
             hasActiveSubscription,
             generationCount,
             freeTrialLimit: FREE_TRIAL_LIMIT,
@@ -97,7 +97,7 @@ async function handleStatus(req: VercelRequest, res: VercelResponse, supabase: S
         });
     } catch (err) {
         console.error('Usage status error:', err);
-        res.status(500).json({ error: 'Failed to get usage status' });
+        return res.status(500).json({ error: 'Failed to get usage status' });
     }
 }
 
@@ -154,19 +154,19 @@ async function handleIncrement(req: VercelRequest, res: VercelResponse, supabase
             .select('status')
             .eq('user_id', updatedUser.id)
             .eq('status', 'active')
-            .single();
+            .maybeSingle();
 
         const generationCount = updatedUser.generation_count || 0;
         const remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
 
-        res.json({
+        return res.json({
             generationCount,
             remainingFreeGenerations,
             hasActiveSubscription: !!subData
         });
     } catch (err) {
         console.error('Usage increment error:', err);
-        res.status(500).json({ error: 'Failed to increment usage' });
+        return res.status(500).json({ error: 'Failed to increment usage' });
     }
 }
 
@@ -200,7 +200,7 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supaba
             .select('status, plan_id, monthly_limit')
             .eq('user_id', userData.id)
             .eq('status', 'active')
-            .single();
+            .maybeSingle();
 
         const hasActiveSubscription = !!subData;
         const generationCount = userData.generation_count || 0;
@@ -246,7 +246,7 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supaba
             });
         }
 
-        res.json({
+        return res.json({
             canGenerate: true,
             hasActiveSubscription,
             generationCount,
@@ -255,6 +255,6 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supaba
         });
     } catch (err) {
         console.error('Can generate check error:', err);
-        res.status(500).json({ error: 'Failed to check generation status' });
+        return res.status(500).json({ error: 'Failed to check generation status' });
     }
 }

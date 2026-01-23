@@ -24,13 +24,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Database not configured' });
     }
 
+    // First, look up the user's internal ID from Clerk ID
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('clerk_user_id', userId)
+      .single();
+
+    if (userError || !userData) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const internalUserId = userData.id;
+
     // Check if user has active subscription
     const { data: subscription, error: subError } = await supabase
       .from('subscriptions')
       .select('status')
-      .eq('user_id', userId)
+      .eq('user_id', internalUserId)
       .eq('status', 'active')
-      .single();
+      .maybeSingle();
 
     if (subError || !subscription) {
       return res.status(403).json({
@@ -44,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { count, error: countError } = await supabase
       .from('render_logs')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
+      .eq('user_id', internalUserId)
       .gte('created_at', tenMinutesAgo);
 
     if (countError) {
@@ -75,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Log the render
     await supabase.from('render_logs').insert({
-      user_id: userId,
+      user_id: internalUserId,
       prompt_length: prompt.length,
       generation_time_ms: generationTime,
       success: true,
@@ -91,16 +104,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error: any) {
     console.error('Generation error:', error);
 
-    // Log failed render
+    // Log failed render - need to look up internal user ID
     if (req.body?.userId) {
       try {
         const db = getSupabase();
-        await db.from('render_logs').insert({
-          user_id: req.body.userId,
-          success: false,
-          error_message: error.message,
-          created_at: new Date().toISOString()
-        });
+        const { data: userForLog } = await db
+          .from('users')
+          .select('id')
+          .eq('clerk_user_id', req.body.userId)
+          .single();
+
+        if (userForLog) {
+          await db.from('render_logs').insert({
+            user_id: userForLog.id,
+            success: false,
+            error_message: error.message,
+            created_at: new Date().toISOString()
+          });
+        }
       } catch {
         // Ignore logging errors
       }

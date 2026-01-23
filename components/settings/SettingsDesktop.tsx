@@ -167,17 +167,6 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                   {isSaving ? 'Saving...' : 'Save Changes'}
                 </motion.button>
               )}
-              {onSignOut && (
-                <motion.button
-                  onClick={onSignOut}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-gray-300 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 rounded-xl font-medium text-sm transition-all"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </motion.button>
-              )}
             </div>
           </div>
         </div>

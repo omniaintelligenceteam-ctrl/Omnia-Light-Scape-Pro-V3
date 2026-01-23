@@ -198,7 +198,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Menu Items */}
-      <div className="px-4 py-4 space-y-3 pb-32">
+      <div className="px-4 py-4 space-y-3 pb-48">
 
         {/* Profile & Branding */}
         <MenuButton

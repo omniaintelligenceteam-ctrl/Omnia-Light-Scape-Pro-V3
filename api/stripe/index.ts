@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { getSupabase } from '../lib/supabase.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2025-12-15.clover'
+    apiVersion: '2024-11-20.acacia' as Stripe.LatestApiVersion
 });
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://omnialightscape.vercel.app';
@@ -85,10 +85,10 @@ async function handleCheckout(req: VercelRequest, res: VercelResponse) {
             }
         });
 
-        res.json({ url: session.url });
+        return res.json({ url: session.url });
     } catch (err) {
         console.error('Stripe checkout error:', err);
-        res.status(500).json({ error: 'Failed to create checkout session' });
+        return res.status(500).json({ error: 'Failed to create checkout session' });
     }
 }
 
@@ -139,9 +139,9 @@ async function handlePortal(req: VercelRequest, res: VercelResponse) {
             return_url: `${FRONTEND_URL}/settings`,
         });
 
-        res.json({ url: session.url });
+        return res.json({ url: session.url });
     } catch (err) {
         console.error('Stripe portal error:', err);
-        res.status(500).json({ error: 'Failed to create portal session' });
+        return res.status(500).json({ error: 'Failed to create portal session' });
     }
 }

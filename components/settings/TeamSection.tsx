@@ -7,7 +7,6 @@ import {
   Shield,
   MapPin,
   Trash2,
-  Copy,
   Check,
   Clock,
   AlertCircle,
@@ -73,7 +72,6 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
   const [inviteRole, setInviteRole] = useState<Exclude<OrganizationRole, 'owner'>>('salesperson');
   const [inviteLocationId, setInviteLocationId] = useState<string>('');
   const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -240,14 +238,6 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
       setInviteLink(result.inviteLink);
     } else {
       setInviteError('Failed to send invite. Please try again.');
-    }
-  };
-
-  const handleCopyLink = async () => {
-    if (inviteLink) {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -872,32 +862,12 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                   <div className="flex items-center gap-2 text-emerald-400 mb-2">
                     <Check className="w-5 h-5" />
-                    <span className="font-medium">Invite Created!</span>
+                    <span className="font-medium">Invitation Sent!</span>
                   </div>
                   <p className="text-sm text-gray-400">
-                    Share this link with {inviteEmail} to join your team.
+                    We've sent an invitation email to <span className="text-white">{inviteEmail}</span>.
+                    They can click the link in the email to create their account and join your team.
                   </p>
-                </div>
-
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={inviteLink}
-                    readOnly
-                    className="w-full pr-12 pl-4 py-3 rounded-xl bg-white/5 border border-white/10
-                      text-white text-sm focus:outline-none"
-                  />
-                  <button
-                    onClick={handleCopyLink}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg
-                      hover:bg-white/10 transition-colors"
-                  >
-                    {copiedLink ? (
-                      <Check className="w-4 h-4 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-gray-400" />
-                    )}
-                  </button>
                 </div>
 
                 <p className="text-xs text-gray-500 text-center">
@@ -906,8 +876,8 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ isOwner, isAdmin = fal
 
                 <button
                   onClick={handleCloseInviteModal}
-                  className="w-full py-3 rounded-xl bg-white/10 text-white font-medium
-                    hover:bg-white/20 transition-colors"
+                  className="w-full py-3 rounded-xl bg-[#F6B45A] text-black font-medium
+                    hover:bg-[#f6c45a] transition-colors"
                 >
                   Done
                 </button>
