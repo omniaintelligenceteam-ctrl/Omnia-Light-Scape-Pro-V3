@@ -1182,6 +1182,16 @@ STRICT EXCLUSION ZONES:
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
 HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
+
+MOUNTING PHYSICS - CRITICAL:
+- Fixture MUST be mounted against the INNER GUTTER WALL (the wall closest to the house/fascia)
+- The fixture sits INSIDE the gutter channel, braced against the inner wall
+- Light beam projects UPWARD at an angle to reach the target (dormer, gable, or facade)
+- The beam MUST reach its target NO MATTER THE DISTANCE from the gutter
+- For distant targets: use higher wattage, narrower beam angles
+- For close targets: use lower wattage, wider beam angles
+- The light ALWAYS reaches and illuminates the intended target fully - never falls short
+
 INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement. Only illuminate the specific upper-story features specified (dormers, gables, second story facade). Do not light the entire roofline.`,
     negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting or downlighting from gutter or fascia level.`,
     subOptions: [
@@ -1230,6 +1240,13 @@ LIGHT PHYSICS:
 - Light grazes dormer siding texture
 - Reveals architectural trim and details
 - Subtle spillover onto dormer roof edges
+
+TARGET REACH - MANDATORY:
+- Light beam MUST reach and illuminate the dormer face completely
+- Fixture mounts against INNER GUTTER WALL, beam travels up to dormer
+- Distance from gutter to dormer is typically 10-25 feet - beam MUST span this distance
+- The dormer face should be visibly illuminated, not just the space between
+- Light must fully wash the dormer - never fall short of the target
 
 WIRING:
 - Wires concealed in gutter trough or routed through downspout
@@ -1298,6 +1315,14 @@ LIGHT PHYSICS:
 - Illuminates gable vent, decorative trim, or accent features
 - Light travels from gutter line to apex with natural falloff
 - Creates dramatic triangular illumination
+
+TARGET REACH - MANDATORY:
+- Light beam MUST travel from INNER GUTTER WALL all the way to the gable APEX
+- Fixture mounts against inner gutter wall, beam projects upward along gable face
+- Gable heights vary from 8-30+ feet - beam MUST span the full height
+- The entire triangular gable face should show wall grazing effect
+- Light intensity at apex should still be visible (with natural falloff)
+- Light must reach the peak - never fall short of the apex
 
 GABLE HIERARCHY (if budget limited):
 - Priority 1: MAIN FRONT-FACING GABLE (most prominent)
@@ -1392,6 +1417,14 @@ SIDING & WALL COVERAGE:
 - Reveal architectural texture and material variations
 - Create smooth gradient traveling upward
 - Avoid harsh hot spots -- aim for gentle wash effect
+
+TARGET REACH - MANDATORY:
+- Light beam MUST travel from first story INNER GUTTER WALL to illuminate the FULL second story height
+- Fixture mounts against inner gutter wall, beam projects upward to 2nd story facade
+- Typical 2nd story height: 8-12 feet above first story gutter line
+- Light should reach up to the roofline/soffit of the second story
+- Even coverage across the entire second story wall surface
+- Light must illuminate the full 2nd story - never fall short
 
 FIXTURE VISIBILITY:
 - Daytime: subtle fixtures along first story gutter line -- discreet
