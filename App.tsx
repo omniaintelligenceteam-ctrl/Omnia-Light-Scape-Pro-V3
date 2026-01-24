@@ -4958,25 +4958,16 @@ Notes: ${invoice.notes || 'N/A'}
                                                     <div className="text-[9px] text-[#F6B45A] font-mono mb-1">ID: PRJ-{p.id.substring(0,6).toUpperCase()}</div>
                                                     <h3 className="font-bold text-lg text-white font-serif tracking-tight truncate">{p.name}</h3>
                                                 </div>
-                                                <div className="flex items-center gap-1 ml-2">
-                                                    {p.quote?.clientDetails?.phone && (
-                                                        <a
-                                                            href={`tel:${p.quote.clientDetails.phone}`}
-                                                            className="p-2 text-gray-400 hover:text-[#F6B45A] hover:bg-white/5 rounded-full transition-colors"
-                                                            title={`Call ${p.quote.clientDetails.phone}`}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        >
-                                                            <Phone className="w-4 h-4" />
-                                                        </a>
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleDeleteProject(p.id)}
-                                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-full transition-colors"
-                                                        title="Delete"
+                                                {p.quote?.clientDetails?.phone && (
+                                                    <a
+                                                        href={`tel:${p.quote.clientDetails.phone}`}
+                                                        className="p-2 text-gray-400 hover:text-[#F6B45A] hover:bg-white/5 rounded-full transition-colors ml-2"
+                                                        title={`Call ${p.quote.clientDetails.phone}`}
+                                                        onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                                        <Phone className="w-4 h-4" />
+                                                    </a>
+                                                )}
                                             </div>
 
                                             {/* Client Info */}
@@ -5307,6 +5298,21 @@ Notes: ${invoice.notes || 'N/A'}
                                                         </button>
                                                     </div>
                                                 )}
+
+                                                {/* Delete Project Button - Bottom Left */}
+                                                <div className="mt-3 pt-3 border-t border-white/5 flex justify-start">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteProject(p.id);
+                                                        }}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase font-bold tracking-wider text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/20"
+                                                        title="Delete Project"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                        Delete
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </motion.div>
