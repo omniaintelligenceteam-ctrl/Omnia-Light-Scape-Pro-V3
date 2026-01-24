@@ -1181,8 +1181,8 @@ STRICT EXCLUSION ZONES:
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts on gutter lip, inside gutter trough, or on fascia board.
-INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement. Only illuminate the specific upper-story features specified (dormers, gables). Do not light the entire roofline.`,
-    negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, and upper roofline features must remain dark. No uplighting from gutter or fascia level.`,
+INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement. Only illuminate the specific upper-story features specified (dormers, gables, second story facade). Do not light the entire roofline.`,
+    negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting or downlighting from gutter or fascia level.`,
     subOptions: [
       {
         id: 'dormers',
@@ -1320,6 +1320,82 @@ STRICT EXCLUSION ZONES:
 - ONE fixture per peak -- no doubling up
 - Do NOT leave gaps in gable lighting -- maintain consistent illumination across facade`,
         negativePrompt: `ABSOLUTE PROHIBITION (PEAKS & GABLES): Do NOT mount at the apex. Do NOT use for dormers. Do NOT place off-center. Base-mounted, centered under apex, upward projection only.`
+      },
+      {
+        id: 'secondStoryFacade',
+        label: '2nd Story Facade',
+        description: 'Upper facade windows & siding',
+        prompt: `TARGET: 2ND STORY FACADE -- GUTTER-MOUNTED UPLIGHTS FOR UPPER FACADE ILLUMINATION
+
+IDENTIFICATION:
+- Locate ALL second story sections of the home's facade
+- Identify: upper-level windows, siding sections between windows, decorative trim, shutters
+- Focus on areas directly below the gutter line that can be washed with uplight
+- Note window positions, spacing, and architectural features at the second story level
+
+FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
+- Type: SMALL compact brass bullet or mini flood up light with gutter-mount bracket
+- Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
+- Size: SMALL/COMPACT fixture - NOT large floodlights
+- Profile: LOW-PROFILE design that sits discreetly in/on gutter
+- Mounting: on gutter lip, inside gutter trough, or on fascia board
+- Beam spread: medium to wide -- soft wall wash coverage
+
+PLACEMENT GEOMETRY:
+- Space fixtures evenly along the gutter line to provide uniform facade wash
+- Typical spacing: 4-6 feet apart depending on beam spread and facade width
+- Position to illuminate BOTH windows AND the siding/wall areas around them
+- Adjust placement to highlight architectural features (shutters, trim, decorative elements)
+
+MOUNTING OPTIONS:
+- INSIDE GUTTER TROUGH: fixture in gutter, aims downward at facade below
+- ON GUTTER LIP: fixture clips to gutter edge, projects onto wall
+- ON FASCIA: fixture on fascia board adjacent to gutter
+
+ALIGNMENT:
+- HORIZONTAL: evenly distributed across facade width
+- VERTICAL: at gutter/fascia line, projecting light onto second story wall below
+
+LIGHT PHYSICS:
+- Beam projects DOWNWARD and OUTWARD from gutter line onto facade
+- WALL WASHING technique for broad, even illumination
+- Light WILL fall on windows -- this is expected and acceptable
+- Illuminates window frames, muntins, and trim details
+- Reveals siding texture (lap siding, board and batten, shingles, brick, stone)
+- Creates warm glow on upper facade visible from street level
+- Soft light on window glass adds warmth and architectural interest
+
+WINDOW ILLUMINATION GUIDANCE:
+- Light falling on windows IS ACCEPTABLE for this application
+- The goal is overall facade illumination, not window avoidance
+- Light on window glass creates reflective warmth at night
+- Window frames and trim will be highlighted by the wash
+- In most cases, light will naturally fall on windows -- this is intentional
+
+SIDING & WALL COVERAGE:
+- Prioritize even coverage across the second story wall surface
+- Reveal architectural texture and material variations
+- Create smooth gradient from gutter line downward
+- Avoid harsh hot spots -- aim for gentle wash effect
+
+FIXTURE VISIBILITY:
+- Daytime: subtle fixtures along gutter line -- discreet
+- Nighttime: upper facade glows warmly; fixtures hidden from ground view
+
+ARCHITECTURAL EMPHASIS:
+- Gutter mounting creates ideal angle for second story illumination
+- Brings life to often-neglected upper portions of home
+- Balances with ground-level lighting for complete facade treatment
+- Creates welcoming, finished appearance from curb
+
+STRICT EXCLUSION ZONES:
+- Do NOT confuse with DORMER lighting (separate preset for dormers only)
+- Do NOT confuse with PEAKS & GABLES lighting (separate preset for gable triangles)
+- Do NOT mount on sloped roof surface
+- Do NOT aim fixtures upward -- DOWNWARD onto facade only
+- Do NOT create harsh shadows or uneven coverage
+- Do NOT over-space fixtures leaving dark gaps between pools of light`,
+        negativePrompt: `ABSOLUTE PROHIBITION (2ND STORY FACADE): Do NOT illuminate second story facade areas. Do NOT wash upper walls or windows from gutter level. Upper facade must remain dark. No gutter-mounted downlighting on second story siding or windows.`
       }
     ]
   },
