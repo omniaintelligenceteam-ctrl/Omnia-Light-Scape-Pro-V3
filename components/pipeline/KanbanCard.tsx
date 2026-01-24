@@ -210,8 +210,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-white truncate pr-4">
+        <div className="flex-1 min-w-0 pr-16">
+          <h4 className="text-sm font-semibold text-white truncate">
             {project.name}
           </h4>
 

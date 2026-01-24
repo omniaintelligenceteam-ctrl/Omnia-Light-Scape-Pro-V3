@@ -4082,7 +4082,7 @@ Notes: ${invoice.notes || 'N/A'}
                             </div>
 
                             {/* Fixture Grid - Premium minimal buttons */}
-                            <div className="flex flex-wrap gap-2 md:gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                                 {FIXTURE_TYPES.map((ft) => {
                                     const isSelected = selectedFixtures.includes(ft.id);
                                     const subOpts = fixtureSubOptions[ft.id];
@@ -4096,7 +4096,7 @@ Notes: ${invoice.notes || 'N/A'}
                                         <motion.button
                                             key={ft.id}
                                             onClick={() => toggleFixture(ft.id)}
-                                            className={`group relative overflow-visible rounded-full transition-all duration-300 ${
+                                            className={`group relative overflow-visible rounded-xl transition-all duration-300 ${
                                                 isSelected
                                                     ? 'bg-[#F6B45A]'
                                                     : 'bg-[#0d0d0d] hover:bg-[#F6B45A]/10 active:bg-[#F6B45A]'
@@ -4131,7 +4131,7 @@ Notes: ${invoice.notes || 'N/A'}
                                             </AnimatePresence>
 
                                             {/* Border with hover color change */}
-                                            <div className={`absolute inset-0 rounded-full border transition-all duration-200 ${
+                                            <div className={`absolute inset-0 rounded-xl border transition-all duration-200 ${
                                                 isSelected
                                                     ? 'border-[#F6B45A]'
                                                     : 'border-white/10 group-hover:border-[#F6B45A]/50 group-active:border-[#F6B45A]'
@@ -4168,7 +4168,7 @@ Notes: ${invoice.notes || 'N/A'}
                                             </AnimatePresence>
 
                                             {/* Content */}
-                                            <div className="relative z-10 flex items-center gap-2 py-2.5 px-5 md:py-3 md:px-6">
+                                            <div className="relative z-10 flex items-center justify-center gap-2 py-2.5 px-4 md:py-3 md:px-5">
                                                 {/* Label with hover color change */}
                                                 <span className={`text-xs md:text-sm font-semibold tracking-wide transition-colors duration-200 whitespace-nowrap ${
                                                     isSelected
