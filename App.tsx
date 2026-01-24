@@ -422,6 +422,7 @@ const App: React.FC = () => {
   // Project State (projects loaded from useProjects hook above)
   const [currentQuote, setCurrentQuote] = useState<QuoteData | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null); // Track which project is being edited
+  const [currentProjectInternalNotes, setCurrentProjectInternalNotes] = useState<string>(''); // Internal notes - never shared with clients
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
 
@@ -1797,6 +1798,38 @@ const App: React.FC = () => {
   };
 
   const handleSaveProjectFromQuote = async (quoteData: QuoteData) => {
+      // Sync client data to clients table if we have client details
+      const { name, email, phone, address } = quoteData.clientDetails;
+      if (name && name.trim()) {
+        try {
+          // Check if a client with this email already exists
+          const existingClient = email ? clients.find(c => c.email?.toLowerCase() === email.toLowerCase()) : null;
+
+          if (existingClient) {
+            // Update existing client with any new info
+            const updates: Partial<Client> = {};
+            if (name && name !== existingClient.name) updates.name = name;
+            if (phone && phone !== existingClient.phone) updates.phone = phone;
+            if (address && address !== existingClient.address) updates.address = address;
+
+            if (Object.keys(updates).length > 0) {
+              await updateClient(existingClient.id, updates);
+            }
+          } else {
+            // Create a new client
+            await createClient({
+              name: name.trim(),
+              email: email || undefined,
+              phone: phone || undefined,
+              address: address || undefined
+            });
+          }
+        } catch (err) {
+          console.error('Failed to sync client data:', err);
+          // Don't block the quote save if client sync fails
+        }
+      }
+
       // If we have a current project ID, update that project instead of creating a new one
       if (currentProjectId) {
         const success = await updateProject(currentProjectId, {
@@ -1823,6 +1856,15 @@ const App: React.FC = () => {
           showToast('error', 'Failed to save project');
         }
       }
+  };
+
+  // Handle internal notes change - debounced auto-save
+  const handleInternalNotesChange = async (notes: string) => {
+    setCurrentProjectInternalNotes(notes);
+    // Auto-save internal notes to the project
+    if (currentProjectId) {
+      await updateProject(currentProjectId, { internalNotes: notes });
+    }
   };
 
   const handleDeleteProject = async (id: string) => {
@@ -4421,6 +4463,8 @@ Notes: ${invoice.notes || 'N/A'}
                         projectImage={generatedImage}
                         userId={user?.id}
                         projectId={currentProjectId || undefined}
+                        internalNotes={currentProjectInternalNotes}
+                        onInternalNotesChange={handleInternalNotesChange}
                      />
                  )}
 
@@ -4591,7 +4635,11 @@ Notes: ${invoice.notes || 'N/A'}
                                         <div className="flex items-center border-t border-white/5 divide-x divide-white/5">
                                             <button onClick={(e) => { e.stopPropagation(); handleDownloadImage(p); }} disabled={!p.image} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-gray-400 active:text-white active:bg-white/5 flex items-center justify-center gap-1.5 disabled:opacity-30"><ImageIcon className="w-3.5 h-3.5" />Save</button>
                                             <button onClick={(e) => { e.stopPropagation(); setCurrentProjectId(p.id); if (p.image) setGeneratedImage(p.image); if (p.quote) setCurrentQuote(p.quote); else setCurrentQuote(null); setProjectsSubTab('quotes'); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-purple-400 active:text-purple-300 active:bg-purple-500/10 flex items-center justify-center gap-1.5"><FileText className="w-3.5 h-3.5" />Quote</button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleApproveProject(p.id); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-emerald-500 active:text-emerald-400 active:bg-emerald-500/10 flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />Approve</button>
+                                            {p.status === 'approved' ? (
+                                                <button onClick={(e) => { e.stopPropagation(); setScheduleProjectId(p.id); setScheduleDate(new Date()); setScheduleTimeSlot('morning'); setScheduleCustomTime('09:00'); setScheduleDuration(2); setScheduleNotes(''); setShowScheduleModal(true); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-blue-400 active:text-blue-300 active:bg-blue-500/10 flex items-center justify-center gap-1.5"><Calendar className="w-3.5 h-3.5" />Schedule</button>
+                                            ) : (
+                                                <button onClick={(e) => { e.stopPropagation(); handleApproveProject(p.id); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-emerald-500 active:text-emerald-400 active:bg-emerald-500/10 flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />Approve</button>
+                                            )}
                                         </div>
                                     </motion.div>
                                 ))}
@@ -4654,6 +4702,8 @@ Notes: ${invoice.notes || 'N/A'}
                                             }
 
                                             setCurrentQuote(quoteToUse);
+                                            // Load internal notes for this project
+                                            setCurrentProjectInternalNotes(p.internalNotes || '');
                                             setProjectsSubTab('quotes');
                                         }}
                                         onScheduleProject={(p) => {
@@ -6215,8 +6265,8 @@ Notes: ${invoice.notes || 'N/A'}
                  {/* SUB-TAB: CLIENTS */}
                  {projectsSubTab === 'clients' && (
                      <>
-                         {/* Clients Header */}
-                         <div className="flex items-center justify-between mb-6">
+                         {/* Clients Header - Desktop */}
+                         <div className="hidden md:flex items-center justify-between mb-6">
                              <div className="flex items-center gap-4">
                                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 flex items-center justify-center">
                                      <Users className="w-6 h-6 text-purple-400" />
@@ -6269,6 +6319,66 @@ Notes: ${invoice.notes || 'N/A'}
                                  >
                                      <Plus className="w-4 h-4" />
                                      Add Client
+                                 </motion.button>
+                             </div>
+                         </div>
+
+                         {/* Clients Header - Mobile */}
+                         <div className="md:hidden mb-4 space-y-3">
+                             {/* Title Row */}
+                             <div className="flex items-center justify-between">
+                                 <div className="flex items-center gap-3">
+                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 flex items-center justify-center">
+                                         <Users className="w-5 h-5 text-purple-400" />
+                                     </div>
+                                     <div>
+                                         <h3 className="text-lg font-bold text-white font-serif">Clients</h3>
+                                         <p className="text-xs text-gray-400">{clients.length} clients</p>
+                                     </div>
+                                 </div>
+                                 <motion.button
+                                     onClick={() => handleOpenClientModal()}
+                                     whileTap={{ scale: 0.95 }}
+                                     className="p-2.5 bg-purple-500 text-white rounded-xl"
+                                 >
+                                     <Plus className="w-5 h-5" />
+                                 </motion.button>
+                             </div>
+
+                             {/* Search Row */}
+                             <div className="relative">
+                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                 <input
+                                     type="text"
+                                     value={clientSearchTerm}
+                                     onChange={(e) => setClientSearchTerm(e.target.value)}
+                                     placeholder="Search clients..."
+                                     className="w-full pl-10 pr-4 py-2.5 bg-[#111] border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+                                 />
+                             </div>
+
+                             {/* Action Buttons Row */}
+                             <div className="flex items-center gap-2">
+                                 <motion.button
+                                     onClick={() => setShowCompletedJobsModal(true)}
+                                     whileTap={{ scale: 0.95 }}
+                                     className="flex-1 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5"
+                                 >
+                                     <Check className="w-4 h-4" />
+                                     Completed
+                                 </motion.button>
+                                 <motion.button
+                                     onClick={() => {
+                                         setClientImportData(null);
+                                         setClientImportProgress(null);
+                                         setClientImportResult(null);
+                                         setShowClientImportModal(true);
+                                     }}
+                                     whileTap={{ scale: 0.95 }}
+                                     className="flex-1 py-2.5 bg-white/5 border border-white/10 text-gray-300 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5"
+                                 >
+                                     <Upload className="w-4 h-4" />
+                                     Import
                                  </motion.button>
                              </div>
                          </div>

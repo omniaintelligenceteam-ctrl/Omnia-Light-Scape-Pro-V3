@@ -18,6 +18,8 @@ interface QuoteViewProps {
     projectImage?: string | null;
     userId?: string;
     projectId?: string;
+    internalNotes?: string;
+    onInternalNotesChange?: (notes: string) => void;
 }
 
 export const QuoteView: React.FC<QuoteViewProps> = ({
@@ -32,7 +34,9 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     hideToolbar = false,
     projectImage = null,
     userId,
-    projectId
+    projectId,
+    internalNotes = '',
+    onInternalNotesChange
 }) => {
   // Helper to find pricing by type
   const getPrice = (type: string) => defaultPricing.find(p => p.fixtureType === type) || DEFAULT_PRICING.find(p => p.fixtureType === type)!;
@@ -263,7 +267,9 @@ ${customMessage ? `\n${customMessage}\n` : ''}
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send email');
+        // Show more detailed error message
+        const errorMsg = data.message || data.error || 'Failed to send email';
+        throw new Error(errorMsg);
       }
 
       setEmailSent(true);
@@ -489,12 +495,31 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         )}
 
                         <motion.button
-                            onClick={() => setShowSendModal(true)}
-                            className="bg-white/5 text-gray-300 p-2 rounded-lg border border-white/10"
-                            whileTap={{ scale: 0.95 }}
-                            title="Send"
+                            onClick={() => {
+                                if (clientEmail) {
+                                    handleSendEmail();
+                                } else {
+                                    setShowSendModal(true);
+                                }
+                            }}
+                            disabled={isSendingEmail}
+                            className={`p-2 rounded-lg border ${
+                                emailSent
+                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                    : emailError
+                                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                        : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                            }`}
+                            whileTap={!isSendingEmail ? { scale: 0.95 } : {}}
+                            title={emailSent ? "Sent!" : emailError ? "Failed - tap to retry" : "Send Quote"}
                         >
-                            <Send className="w-4 h-4" />
+                            {isSendingEmail ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : emailSent ? (
+                                <Check className="w-4 h-4" />
+                            ) : (
+                                <Mail className="w-4 h-4" />
+                            )}
                         </motion.button>
 
                         <motion.button
@@ -1074,6 +1099,37 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 
         </motion.div>
       </div>
+
+      {/* Internal Notes Section - NEVER shared with clients */}
+      {onInternalNotesChange && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-6 bg-gradient-to-b from-amber-500/5 to-transparent border border-amber-500/20 rounded-xl md:rounded-2xl p-4 md:p-6 print:hidden"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <MessageSquare className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-400">Internal Notes</h4>
+              <p className="text-[10px] text-amber-400/60 uppercase tracking-wider">Team only • Never shared with clients</p>
+            </div>
+          </div>
+          <textarea
+            value={internalNotes}
+            onChange={(e) => onInternalNotesChange(e.target.value)}
+            placeholder="Add internal notes about this project/client (e.g., site access details, client preferences, follow-up reminders)..."
+            className="w-full bg-black/30 border border-amber-500/10 rounded-xl p-3 md:p-4 text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-amber-500/30 resize-none min-h-[100px] md:min-h-[120px]"
+            rows={4}
+          />
+          <p className="mt-2 text-[10px] text-gray-500 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500/50" />
+            These notes are private and will not appear in quotes, emails, PDFs, or the client portal.
+          </p>
+        </motion.div>
+      )}
 
       {/* Send Quote Modal */}
       <AnimatePresence>

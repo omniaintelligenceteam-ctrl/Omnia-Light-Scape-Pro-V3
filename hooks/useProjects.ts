@@ -41,7 +41,9 @@ export function useProjects() {
             invoicePaidAt: p.invoice_paid_at || undefined,
             clientId: p.client_id || undefined,
             clientName: p.prompt_config?.clientName || undefined,
-            location_id: p.location_id || undefined
+            location_id: p.location_id || undefined,
+            notes: p.prompt_config?.notes || undefined,
+            internalNotes: p.prompt_config?.internalNotes || undefined
           }));
           setProjects(loadedProjects);
         }
@@ -171,7 +173,7 @@ export function useProjects() {
   // Update a project
   const updateProject = useCallback(async (
     projectId: string,
-    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData; images?: ProjectImage[]; assignedTo?: string[]; assignedTechnicianId?: string; clientName?: string; notes?: string; location_id?: string | null }
+    updates: { name?: string; quote?: QuoteData; bom?: BOMData; status?: ProjectStatus; schedule?: ScheduleData; images?: ProjectImage[]; assignedTo?: string[]; assignedTechnicianId?: string; clientName?: string; notes?: string; internalNotes?: string; location_id?: string | null }
   ): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
@@ -195,6 +197,7 @@ export function useProjects() {
       if (currentProject?.assignedTechnicianId) promptConfig.assignedTechnicianId = currentProject.assignedTechnicianId;
       if (currentProject?.clientName) promptConfig.clientName = currentProject.clientName;
       if (currentProject?.notes) promptConfig.notes = currentProject.notes;
+      if (currentProject?.internalNotes) promptConfig.internalNotes = currentProject.internalNotes;
 
       // Apply updates (overwrite specific fields)
       if (updates.quote !== undefined) promptConfig.quote = updates.quote;
@@ -206,6 +209,7 @@ export function useProjects() {
       if (updates.assignedTechnicianId !== undefined) promptConfig.assignedTechnicianId = updates.assignedTechnicianId;
       if (updates.clientName !== undefined) promptConfig.clientName = updates.clientName;
       if (updates.notes !== undefined) promptConfig.notes = updates.notes;
+      if (updates.internalNotes !== undefined) promptConfig.internalNotes = updates.internalNotes;
 
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'PATCH',

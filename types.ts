@@ -102,6 +102,7 @@ export interface SavedProject {
   clientId?: string;              // ID of client this project belongs to
   clientName?: string;            // Client name (denormalized for display)
   notes?: string;                 // Project notes
+  internalNotes?: string;         // Internal team notes - NEVER shared with clients
 }
 
 export type SubscriptionPlan = 'pro_monthly' | 'pro_yearly';

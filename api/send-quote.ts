@@ -205,6 +205,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing required fields: clientEmail, clientName, companyName' });
     }
 
+    // Validate and sanitize line items to prevent toLocaleString errors
+    if (data.lineItems && Array.isArray(data.lineItems)) {
+      data.lineItems = data.lineItems.map(item => ({
+        ...item,
+        quantity: typeof item.quantity === 'number' ? item.quantity : 0,
+        unitPrice: typeof item.unitPrice === 'number' ? item.unitPrice : 0,
+        name: item.name || 'Item',
+        description: item.description || ''
+      }));
+    }
+
+    // Sanitize numeric fields
+    data.subtotal = typeof data.subtotal === 'number' ? data.subtotal : 0;
+    data.taxRate = typeof data.taxRate === 'number' ? data.taxRate : 0;
+    data.taxAmount = typeof data.taxAmount === 'number' ? data.taxAmount : 0;
+    data.discount = typeof data.discount === 'number' ? data.discount : 0;
+    data.total = typeof data.total === 'number' ? data.total : 0;
+
     const html = generateQuoteHtml(data);
 
     // Use verified custom domain with company name
@@ -228,6 +246,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     console.error('Send quote error:', error);
-    return res.status(500).json({ error: 'Internal server error', message: error.message });
+    console.error('Error stack:', error.stack);
+
+    // Return more specific error for debugging
+    const errorMessage = error.message || 'Unknown error';
+    const errorName = error.name || 'Error';
+
+    return res.status(500).json({
+      error: 'Failed to send quote',
+      message: errorMessage,
+      type: errorName
+    });
   }
 }
