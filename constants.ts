@@ -383,7 +383,7 @@ TEXTURE REVELATION BY MATERIAL:
 - SHAKE/SHINGLE: layered shadow pattern
 
 REALISM REQUIREMENTS:
-- Warm, soft glow characteristic of low-voltage LED landscape lighting
+- Characteristic of low-voltage LED landscape lighting
 - Slight light spill onto adjacent surfaces (not perfectly contained beams)
 - Fixtures appear as small dark brass cylinders, nearly invisible at night
 - Light appears natural, not theatrical or over-saturated
@@ -1180,7 +1180,8 @@ STRICT EXCLUSION ZONES:
     label: 'Gutter Up Lights',
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
-FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts on gutter lip, inside gutter trough, or on fascia board.
+FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
+HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
 INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement. Only illuminate the specific upper-story features specified (dormers, gables, second story facade). Do not light the entire roofline.`,
     negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting or downlighting from gutter or fascia level.`,
     subOptions: [
@@ -1207,14 +1208,14 @@ FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
 PLACEMENT GEOMETRY (STRICT RULE - CRITICAL):
 *** EXACTLY ONE (1) FIXTURE PER DORMER - THIS IS MANDATORY ***
 - Each dormer receives ONE and ONLY ONE gutter-mounted up light
-- The fixture MUST be placed INSIDE the gutter trough directly BELOW the dormer
+- The fixture MUST be placed INSIDE the gutter inner wall directly BELOW the dormer
 - The fixture MUST be CENTERED horizontally under the dormer (aligned with the dormer's vertical centerline)
 - The fixture sits INSIDE the horizontal gutter channel/trough - NOT on the lip, NOT on fascia
 - COUNT RULE: If the house has 2 dormers, place exactly 2 lights. If 3 dormers, exactly 3 lights.
 - FORBIDDEN: Multiple lights per dormer, lights placed between dormers, lights on roof shingles, lights on gutter lip
 
 MOUNTING LOCATION (STRICT):
-- INSIDE GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims up at dormer
+- INSIDE GUTTER TROUGH ONLY: fixture sits IN the inner gutter channel, aims up at dormer
 - The fixture is small enough to fit inside the gutter without blocking water flow
 - FORBIDDEN: On gutter lip, on fascia board, on roof surface
 
@@ -1236,7 +1237,7 @@ WIRING:
 
 RATIONALE -- WHY GUTTER MOUNTING:
 - Dormers are 15-25+ feet above ground -- too high for effective ground uplighting
-- Gutter mounting places light source 3-6 feet from dormer face
+- Gutter mounting places light source inside the gutter inner wall below from dormer face
 - Prevents "black hole" effect of unlit dormers
 - Creates glowing dormer against dark roofline
 
@@ -1251,7 +1252,7 @@ STRICT EXCLUSION ZONES:
 - Do NOT use one fixture for multiple dormers -- one fixture per dormer
 - Do NOT skip dormers -- all dormers should be lit for balance
 - Ensure SYMMETRIC placement for balanced facade`,
-        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE VERY SMALL DARK BRONZE light per dormer - no more, no less. Fixture must be TINY and sit INSIDE the gutter trough, CENTERED directly below dormer. Do NOT use large fixtures. Do NOT use brass or silver fixtures. Do NOT mount on gutter lip or fascia. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`
+        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE VERY SMALL DARK BRONZE light per dormer - no more, no less. Fixture must be TINY and mount INSIDE the gutter inner wall , CENTERED directly below dormer. Do NOT use large fixtures. Do NOT use brass or silver fixtures. Do NOT mount on gutter lip or fascia. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`
       },
       {
         id: 'peaks',
@@ -1269,19 +1270,22 @@ FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
 - Type: SMALL compact brass bullet or mini flood up light with gutter-mount bracket
 - Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
 - Size: SMALL/COMPACT fixture - NOT large floodlights
-- Profile: LOW-PROFILE design that sits discreetly in/on gutter
-- Mounting: on gutter lip, inside gutter trough, or on fascia board
+- Profile: LOW-PROFILE design that sits discreetly INSIDE the gutter trough
+- Mounting: INSIDE the gutter trough ONLY - fixture sits IN the gutter channel
 - Beam spread: narrow to medium -- focused vertical emphasis
+
+HARD RULE - MANDATORY:
+- Fixture MUST be placed INSIDE the gutter trough - NOT on roof, NOT on shingles, NOT on gutter lip
+- The fixture sits IN the gutter channel itself, aiming upward
+- FORBIDDEN: Placing fixture on roof surface, on shingles, on gutter edge/lip, or anywhere outside the gutter
 
 PLACEMENT GEOMETRY:
 - Place ONE fixture per gable peak
-- Mount on the HORIZONTAL GUTTER LINE at the BASE of the gable triangle
+- Mount INSIDE the gutter trough at the BASE of the gable triangle
 - Center fixture on the gable's VERTICAL CENTERLINE (directly under the apex)
 
-MOUNTING OPTIONS:
-- INSIDE GUTTER TROUGH: fixture in gutter, aims straight up toward apex
-- ON GUTTER LIP: fixture clips to gutter edge
-- ON FASCIA: fixture on fascia adjacent to gutter
+MOUNTING (ONLY OPTION):
+- INSIDE GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims straight up toward apex
 
 ALIGNMENT:
 - HORIZONTAL: centered on gable width (aligned with apex above)
@@ -1319,7 +1323,7 @@ STRICT EXCLUSION ZONES:
 - Do NOT place off-center from gable vertical axis
 - ONE fixture per peak -- no doubling up
 - Do NOT leave gaps in gable lighting -- maintain consistent illumination across facade`,
-        negativePrompt: `ABSOLUTE PROHIBITION (PEAKS & GABLES): Do NOT mount at the apex. Do NOT use for dormers. Do NOT place off-center. Base-mounted, centered under apex, upward projection only.`
+        negativePrompt: `ABSOLUTE PROHIBITION (PEAKS & GABLES): Fixture must be INSIDE the gutter trough ONLY. Do NOT mount on roof surface or shingles. Do NOT mount on gutter lip or edge. Do NOT mount at the apex. Do NOT use for dormers. Do NOT place off-center. Base-mounted INSIDE GUTTER, centered under apex, upward projection only.`
       },
       {
         id: 'secondStoryFacade',
@@ -1342,21 +1346,24 @@ FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
 - Type: SMALL compact brass bullet or mini flood UP LIGHT with gutter-mount bracket
 - Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
 - Size: SMALL/COMPACT fixture - NOT large floodlights
-- Profile: LOW-PROFILE design that sits discreetly in/on the FIRST STORY gutter
-- Mounting: on first story gutter lip, inside first story gutter trough, or on first story fascia board
+- Profile: LOW-PROFILE design that sits discreetly INSIDE the first story gutter trough
+- Mounting: INSIDE the first story gutter trough ONLY - fixture sits IN the gutter channel
 - Beam spread: medium to wide -- soft wall wash coverage projecting UPWARD
 
+HARD RULE - MANDATORY:
+- Fixture MUST be placed INSIDE the gutter trough - NOT on roof, NOT on shingles, NOT on gutter lip
+- The fixture sits IN the gutter channel itself, aiming upward
+- FORBIDDEN: Placing fixture on roof surface, on shingles, on gutter edge/lip, or anywhere outside the gutter
+
 PLACEMENT GEOMETRY:
-- Mount fixtures in the FIRST STORY GUTTER (NOT the roofline gutter)
+- Mount fixtures INSIDE the FIRST STORY GUTTER TROUGH (NOT the roofline gutter)
 - Space fixtures evenly along the first story gutter line
 - Typical spacing: 4-6 feet apart depending on beam spread and facade width
 - Position to illuminate the second story wall ABOVE the fixtures
 - Aim to wash BOTH windows AND the siding/wall areas around them on the 2nd story
 
-MOUNTING LOCATION (STRICT - FIRST STORY GUTTER ONLY):
-- INSIDE FIRST STORY GUTTER TROUGH: fixture in gutter, aims UPWARD at 2nd story facade above
-- ON FIRST STORY GUTTER LIP: fixture clips to gutter edge, projects UPWARD onto wall above
-- ON FIRST STORY FASCIA: fixture on fascia board, aims UPWARD
+MOUNTING LOCATION (ONLY OPTION - FIRST STORY GUTTER TROUGH ONLY):
+- INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims UPWARD at 2nd story facade above
 
 ALIGNMENT:
 - HORIZONTAL: evenly distributed across facade width along the first story gutter
@@ -1398,6 +1405,8 @@ ARCHITECTURAL EMPHASIS:
 
 STRICT EXCLUSION ZONES:
 - Do NOT mount in the ROOFLINE gutter (top of house) -- FIRST STORY GUTTER ONLY
+- Do NOT mount on roof surface or shingles -- INSIDE GUTTER TROUGH ONLY
+- Do NOT mount on gutter lip or edge -- INSIDE the gutter channel ONLY
 - Do NOT aim fixtures DOWNWARD -- UPWARD PROJECTION ONLY
 - Do NOT confuse with DORMER lighting (separate preset for dormers only)
 - Do NOT confuse with PEAKS & GABLES lighting (separate preset for gable triangles)
