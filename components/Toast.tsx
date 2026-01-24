@@ -99,7 +99,11 @@ interface ToastContainerProps {
 
 const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismiss }) => {
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 max-w-sm">
+    <div
+      className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 max-w-sm"
+      aria-live="polite"
+      aria-label="Notifications"
+    >
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
@@ -193,7 +197,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
     >
       <div className="flex items-start gap-3 p-4">
         {/* Icon */}
-        <div className={`w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0`}>
+        <div className={`w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0`} aria-hidden="true">
           {icon}
         </div>
 

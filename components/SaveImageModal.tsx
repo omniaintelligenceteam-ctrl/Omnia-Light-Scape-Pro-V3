@@ -122,8 +122,12 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         onClick={onClose}
+        role="presentation"
       >
         <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="save-modal-title"
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -139,11 +143,12 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                  aria-label="Go back to options"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </motion.button>
               )}
-              <h3 className="text-lg font-bold text-white">
+              <h3 id="save-modal-title" className="text-lg font-bold text-white">
                 {view === 'options' && 'Save Generated Image'}
                 {view === 'new-client' && 'New Client'}
                 {view === 'existing-client' && 'Select Client'}
@@ -154,8 +159,9 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+              aria-label="Close modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" aria-hidden="true" />
             </motion.button>
           </div>
 

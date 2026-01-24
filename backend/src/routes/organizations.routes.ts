@@ -509,8 +509,8 @@ router.post('/invites', async (req: Request, res: Response) => {
 
     if (error) throw error;
 
-    // Generate invite link
-    const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/invite/${token}`;
+    // Generate invite link - prefer APP_URL for production domain
+    const inviteLink = `${process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173'}/invite/${token}`;
 
     return res.status(201).json({
       success: true,

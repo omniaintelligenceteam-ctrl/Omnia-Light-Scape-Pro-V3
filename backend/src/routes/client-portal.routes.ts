@@ -161,8 +161,8 @@ router.post('/send-invite', async (req: Request, res: Response) => {
       // Column may not exist yet
     }
 
-    // Build portal URL
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    // Build portal URL - prefer APP_URL for production domain
+    const baseUrl = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
     const portalUrl = `${baseUrl}/portal?token=${token}`;
 
     // For local dev, we'll skip email and just return the URL

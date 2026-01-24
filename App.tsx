@@ -324,6 +324,9 @@ const App: React.FC = () => {
   const lastGenerateTime = useRef<number>(0);
   const GENERATE_COOLDOWN_MS = 3000; // 3 seconds between generations
 
+  // Cancellation support for generation
+  const generationCancelledRef = useRef<boolean>(false);
+
   const [activeTab, setActiveTab] = useState<string>('editor');
   const [tabDirection, setTabDirection] = useState<number>(0); // -1 for left, 1 for right
 
@@ -406,6 +409,12 @@ const App: React.FC = () => {
     };
   }
   const [generationHistory, setGenerationHistory] = useState<GenerationHistoryEntry[]>([]);
+
+  // History tooltip expansion state for mobile
+  const [expandedHistoryTooltip, setExpandedHistoryTooltip] = useState<string | null>(null);
+
+  // Touch gesture tracking for swipe navigation
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // Full Screen State
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
@@ -823,6 +832,96 @@ const App: React.FC = () => {
     localStorage.setItem('omnia_fixture_presets', JSON.stringify(fixturePresets));
   }, [fixturePresets]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in input fields
+      const target = e.target as HTMLElement;
+      const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+      // Escape key - close modals
+      if (e.key === 'Escape') {
+        if (isFullScreen) {
+          setIsFullScreen(false);
+          return;
+        }
+        if (showFeedback) {
+          setShowFeedback(false);
+          return;
+        }
+        if (showSaveImageModal) {
+          setShowSaveImageModal(false);
+          return;
+        }
+        if (showSavePresetModal) {
+          setShowSavePresetModal(false);
+          return;
+        }
+        if (activeConfigFixture) {
+          setActiveConfigFixture(null);
+          return;
+        }
+        if (expandedHistoryTooltip) {
+          setExpandedHistoryTooltip(null);
+          return;
+        }
+      }
+
+      // Enter key - generate design (only in editor tab, with image, not loading, not in input)
+      if (e.key === 'Enter' && !isInputField && activeTab === 'editor' && file && previewUrl && !isLoading && !generatedImage) {
+        e.preventDefault();
+        handleGenerate();
+        return;
+      }
+
+      // G key - quick generate (when not in input field)
+      if (e.key === 'g' && !isInputField && activeTab === 'editor' && file && previewUrl && !isLoading && !generatedImage) {
+        e.preventDefault();
+        handleGenerate();
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullScreen, showFeedback, showSaveImageModal, showSavePresetModal, activeConfigFixture, expandedHistoryTooltip, activeTab, file, previewUrl, isLoading, generatedImage]);
+
+  // Touch gesture handlers for swipe navigation through history
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current || generationHistory.length <= 1) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+    const deltaTime = Date.now() - touchStartRef.current.time;
+
+    // Require horizontal swipe with minimal vertical movement, within 300ms
+    const minSwipeDistance = 50;
+    const maxVerticalMovement = 100;
+    const maxSwipeTime = 300;
+
+    if (Math.abs(deltaX) > minSwipeDistance && deltaY < maxVerticalMovement && deltaTime < maxSwipeTime) {
+      const currentIndex = generationHistory.findIndex(entry => entry.image === generatedImage);
+
+      if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right - go to previous image
+        setGeneratedImage(generationHistory[currentIndex - 1].image);
+        setExpandedHistoryTooltip(null);
+      } else if (deltaX < 0 && currentIndex < generationHistory.length - 1) {
+        // Swipe left - go to next image
+        setGeneratedImage(generationHistory[currentIndex + 1].image);
+        setExpandedHistoryTooltip(null);
+      }
+    }
+
+    touchStartRef.current = null;
+  }, [generationHistory, generatedImage]);
+
   // Preset handlers
   const handleSavePreset = () => {
     if (!newPresetName.trim()) return;
@@ -855,6 +954,36 @@ const App: React.FC = () => {
     setFixturePresets(prev => prev.filter(p => p.id !== presetId));
     showToast('info', 'Preset deleted');
   };
+
+  // Detect if current settings match any preset
+  const matchingPreset = useMemo(() => {
+    if (selectedFixtures.length === 0) return null;
+
+    return fixturePresets.find(preset => {
+      // Check if fixtures match
+      if (preset.selectedFixtures.length !== selectedFixtures.length) return false;
+      if (!preset.selectedFixtures.every(f => selectedFixtures.includes(f))) return false;
+
+      // Check if sub-options match
+      const presetSubOptKeys = Object.keys(preset.fixtureSubOptions);
+      const currentSubOptKeys = Object.keys(fixtureSubOptions);
+      if (presetSubOptKeys.length !== currentSubOptKeys.length) return false;
+
+      for (const key of presetSubOptKeys) {
+        const presetOpts = preset.fixtureSubOptions[key] || [];
+        const currentOpts = fixtureSubOptions[key] || [];
+        if (presetOpts.length !== currentOpts.length) return false;
+        if (!presetOpts.every(o => currentOpts.includes(o))) return false;
+      }
+
+      // Check other settings
+      if (preset.colorTemp !== colorTemp) return false;
+      if (preset.lightIntensity !== lightIntensity) return false;
+      if (preset.beamAngle !== beamAngle) return false;
+
+      return true;
+    }) || null;
+  }, [fixturePresets, selectedFixtures, fixtureSubOptions, colorTemp, lightIntensity, beamAngle]);
 
   // Client management handlers
   const handleOpenClientModal = (client?: Client) => {
@@ -1124,6 +1253,15 @@ const App: React.FC = () => {
     setCurrentPath('/');
   };
 
+  // Cancel generation handler
+  const handleCancelGeneration = () => {
+    generationCancelledRef.current = true;
+    setIsLoading(false);
+    setShowLoadingCelebration(false);
+    setStatusMessageIndex(0);
+    showToast('info', 'Generation cancelled');
+  };
+
   const handleGenerate = async () => {
     if (!file || !previewUrl) return;
 
@@ -1134,6 +1272,9 @@ const App: React.FC = () => {
       return;
     }
     lastGenerateTime.current = now;
+
+    // Reset cancellation flag at start of new generation
+    generationCancelledRef.current = false;
 
     // Show loading immediately for better UX
     setIsLoading(true);
@@ -1406,6 +1547,12 @@ const App: React.FC = () => {
     try {
       const base64 = await fileToBase64(file);
       let result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt, userPreferences);
+
+      // Check if generation was cancelled while waiting for API
+      if (generationCancelledRef.current) {
+        generationCancelledRef.current = false;
+        return;
+      }
 
       setGeneratedImage(result);
 
@@ -2710,20 +2857,34 @@ Notes: ${invoice.notes || 'N/A'}
           )}
       </div>
 
-      {/* Full Screen Image Modal */}
+      {/* Full Screen Image Modal - with swipe gesture support */}
       {isFullScreen && generatedImage && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center animate-in fade-in duration-200">
-          <button 
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center animate-in fade-in duration-200"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full screen image view. Swipe left or right to navigate history."
+        >
+          <button
             onClick={() => setIsFullScreen(false)}
             className="absolute top-4 right-4 md:top-8 md:right-8 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 hover:scale-110 transition-all z-[101]"
+            aria-label="Close full screen view"
           >
-            <X className="w-6 h-6 md:w-8 md:h-8" />
+            <X className="w-6 h-6 md:w-8 md:h-8" aria-hidden="true" />
           </button>
-          <img 
-            src={generatedImage} 
-            alt="Full Screen Result" 
+          <img
+            src={generatedImage}
+            alt="Full Screen Result"
             className="w-full h-full object-contain p-4 select-none"
           />
+          {/* Swipe hint for mobile */}
+          {generationHistory.length > 1 && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 md:hidden">
+              <p className="text-white/40 text-xs text-center">Swipe left or right to navigate</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -2909,8 +3070,12 @@ Notes: ${invoice.notes || 'N/A'}
                         </motion.button>
                     </div>
 
-                    {/* Main Image */}
-                    <div className="flex-1 relative flex items-center justify-center bg-[#030303] overflow-hidden group">
+                    {/* Main Image - with swipe gesture support */}
+                    <div
+                        className="flex-1 relative flex items-center justify-center bg-[#030303] overflow-hidden group"
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                    >
                         <img
                             src={generatedImage}
                             alt="Generated Result"
@@ -2932,11 +3097,14 @@ Notes: ${invoice.notes || 'N/A'}
                         {/* Feedback / Loading Overlay */}
                         {isLoading && (
                             <motion.div
+                                role="status"
+                                aria-live="polite"
+                                aria-label="Generating lighting design"
                                 className="absolute inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col items-center justify-center text-white"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                             >
-                                <div className="w-16 h-16 border-3 border-[#F6B45A]/20 border-t-[#F6B45A] rounded-full animate-spin mb-6" />
+                                <div className="w-16 h-16 border-3 border-[#F6B45A]/20 border-t-[#F6B45A] rounded-full animate-spin mb-6" aria-hidden="true" />
                                 <p className="font-semibold text-sm text-[#F6B45A] tracking-wide">Creating your vision...</p>
                                 <p className="text-xs text-gray-500 mt-2">Analyzing lighting paths</p>
                             </motion.div>
@@ -2949,31 +3117,75 @@ Notes: ${invoice.notes || 'N/A'}
                             <div className="flex items-center justify-center gap-2 overflow-x-auto py-2 px-3 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 mx-auto max-w-fit">
                                 {generationHistory.map((entry, index) => {
                                     const isCurrentImage = entry.image === generatedImage;
+                                    const isTooltipExpanded = expandedHistoryTooltip === entry.id;
                                     return (
                                         <div key={entry.id} className="relative group">
                                             <button
-                                                onClick={() => setGeneratedImage(entry.image)}
+                                                onClick={() => {
+                                                    // On tap: if tooltip is open, select image; if closed, open tooltip on mobile
+                                                    if (isTooltipExpanded) {
+                                                        setExpandedHistoryTooltip(null);
+                                                        setGeneratedImage(entry.image);
+                                                    } else if (window.innerWidth < 768 && entry.settings) {
+                                                        // Mobile: show tooltip on first tap
+                                                        setExpandedHistoryTooltip(entry.id);
+                                                    } else {
+                                                        // Desktop: select image immediately
+                                                        setGeneratedImage(entry.image);
+                                                    }
+                                                }}
+                                                onDoubleClick={() => {
+                                                    // Double tap always selects the image
+                                                    setExpandedHistoryTooltip(null);
+                                                    setGeneratedImage(entry.image);
+                                                }}
                                                 className={`relative shrink-0 w-12 h-12 rounded-lg overflow-hidden transition-all duration-200 ${
                                                     isCurrentImage
                                                         ? 'ring-2 ring-[#F6B45A] scale-110'
-                                                        : 'ring-1 ring-white/20 hover:ring-white/40 opacity-60 hover:opacity-100'
+                                                        : isTooltipExpanded
+                                                            ? 'ring-2 ring-white/60 opacity-100'
+                                                            : 'ring-1 ring-white/20 hover:ring-white/40 opacity-60 hover:opacity-100'
                                                 }`}
                                                 title={`Generation ${index + 1}`}
+                                                aria-label={`${isCurrentImage ? 'Currently viewing: ' : ''}Generation ${index + 1}${entry.settings ? ` with ${entry.settings.selectedFixtures.join(', ')}` : ''}`}
+                                                aria-current={isCurrentImage ? 'true' : undefined}
                                             >
                                                 <img
                                                     src={entry.image}
-                                                    alt={`Generation ${index + 1}`}
+                                                    alt={`Generated lighting design ${index + 1}`}
                                                     className="w-full h-full object-cover"
                                                 />
                                                 <span className="absolute bottom-0.5 right-0.5 text-[8px] font-bold bg-black/70 text-white px-1 rounded">
                                                     {index + 1}
                                                 </span>
+                                                {/* Info indicator for mobile */}
+                                                {entry.settings && (
+                                                    <span className="absolute top-0.5 left-0.5 md:hidden">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#F6B45A] block" />
+                                                    </span>
+                                                )}
                                             </button>
-                                            {/* Settings Tooltip on Hover */}
+                                            {/* Settings Tooltip - visible on hover (desktop) or tap (mobile) */}
                                             {entry.settings && (
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto z-50">
+                                                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 transition-opacity duration-200 z-50 ${
+                                                    isTooltipExpanded
+                                                        ? 'opacity-100 pointer-events-auto'
+                                                        : 'opacity-0 md:group-hover:opacity-100 pointer-events-none md:group-hover:pointer-events-auto'
+                                                }`}>
                                                     <div className="bg-[#111] border border-white/20 rounded-xl p-3 shadow-2xl min-w-[200px] text-left">
-                                                        <div className="text-[10px] font-bold text-[#F6B45A] uppercase tracking-wider mb-2">Settings Used</div>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="text-[10px] font-bold text-[#F6B45A] uppercase tracking-wider">Settings Used</div>
+                                                            {/* Close button for mobile */}
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setExpandedHistoryTooltip(null);
+                                                                }}
+                                                                className="md:hidden p-1 -mr-1 -mt-1 hover:bg-white/10 rounded text-gray-400"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
                                                         <div className="space-y-1 text-[10px]">
                                                             <div className="flex justify-between">
                                                                 <span className="text-gray-400">Color Temp:</span>
@@ -3002,11 +3214,23 @@ Notes: ${invoice.notes || 'N/A'}
                                                                 setLightIntensity(entry.settings!.lightIntensity);
                                                                 setBeamAngle(entry.settings!.beamAngle);
                                                                 if (entry.settings!.prompt) setPrompt(entry.settings!.prompt);
+                                                                setExpandedHistoryTooltip(null);
                                                                 showToast('success', 'Settings applied from history!');
                                                             }}
                                                             className="mt-2 w-full py-1.5 bg-[#F6B45A]/20 border border-[#F6B45A]/30 rounded-lg text-[#F6B45A] text-[10px] font-bold hover:bg-[#F6B45A]/30 transition-colors"
                                                         >
                                                             Apply These Settings
+                                                        </button>
+                                                        {/* Select image button for mobile */}
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setExpandedHistoryTooltip(null);
+                                                                setGeneratedImage(entry.image);
+                                                            }}
+                                                            className="md:hidden mt-2 w-full py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-[10px] font-bold hover:bg-white/20 transition-colors"
+                                                        >
+                                                            Select This Image
                                                         </button>
                                                     </div>
                                                 </div>
@@ -3101,6 +3325,9 @@ Notes: ${invoice.notes || 'N/A'}
                 {isLoading ? (
                     <motion.div
                         key="loading-screen"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="Generating your lighting design. Press Escape to cancel."
                         className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black overflow-hidden"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -3603,6 +3830,22 @@ Notes: ${invoice.notes || 'N/A'}
                             />
                         </motion.div>
 
+                        {/* Cancel Generation Button */}
+                        {!showLoadingCelebration && (
+                            <motion.button
+                                onClick={handleCancelGeneration}
+                                className="mt-6 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-gray-400 hover:text-white text-sm font-medium transition-all flex items-center gap-2"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 1 }}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <X className="w-4 h-4" />
+                                Cancel
+                            </motion.button>
+                        )}
+
                         {/* === CELEBRATION OVERLAY - Shown when generation completes === */}
                         <AnimatePresence>
                             {showLoadingCelebration && (
@@ -3800,22 +4043,30 @@ Notes: ${invoice.notes || 'N/A'}
                                     {fixturePresets.length > 0 && (
                                         <div className="flex items-center gap-1 flex-wrap">
                                             <span className="text-[10px] text-gray-500 uppercase tracking-wider mr-1">Presets:</span>
-                                            {fixturePresets.map(preset => (
-                                                <div key={preset.id} className="relative group">
-                                                    <button
-                                                        onClick={() => handleApplyPreset(preset)}
-                                                        className="px-2.5 py-1 text-[10px] font-medium bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full hover:bg-purple-500/20 hover:border-purple-500/40 transition-all"
-                                                    >
-                                                        {preset.name}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeletePreset(preset.id)}
-                                                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        <X className="w-2.5 h-2.5 text-white" />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                            {fixturePresets.map(preset => {
+                                                const isMatching = matchingPreset?.id === preset.id;
+                                                return (
+                                                    <div key={preset.id} className="relative group">
+                                                        <button
+                                                            onClick={() => handleApplyPreset(preset)}
+                                                            className={`px-2.5 py-1 text-[10px] font-medium rounded-full transition-all flex items-center gap-1 ${
+                                                                isMatching
+                                                                    ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+                                                                    : 'bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 hover:border-purple-500/40'
+                                                            }`}
+                                                        >
+                                                            {isMatching && <Check className="w-3 h-3" />}
+                                                            {preset.name}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeletePreset(preset.id)}
+                                                            className="absolute -top-1 -right-1 w-4 h-4 bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X className="w-2.5 h-2.5 text-white" />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                     {selectedFixtures.length > 0 && (
@@ -4013,12 +4264,14 @@ Notes: ${invoice.notes || 'N/A'}
                         <AnimatePresence>
                             {error && (
                                 <motion.div
+                                    role="alert"
+                                    aria-live="assertive"
                                     className="p-4 bg-gradient-to-r from-red-900/20 to-red-900/10 border border-red-500/30 rounded-xl flex items-center gap-3"
                                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                 >
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 shrink-0">
+                                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 shrink-0" aria-hidden="true">
                                         <AlertCircle className="w-4 h-4 text-red-400" />
                                     </div>
                                     <p className="text-xs text-red-300 font-medium">{error}</p>
@@ -4039,6 +4292,8 @@ Notes: ${invoice.notes || 'N/A'}
                                 handleGenerate();
                             }}
                             disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
+                            aria-label={isLoading ? 'Generating lighting design, please wait' : generationComplete ? 'Generation complete' : 'Generate lighting scene design'}
+                            aria-busy={isLoading}
                             className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2"
                             whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.02, y: -4 } : {}}
                             whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.97 } : {}}

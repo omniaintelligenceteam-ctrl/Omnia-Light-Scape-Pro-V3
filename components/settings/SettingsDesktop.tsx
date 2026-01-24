@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, Check, Moon, Mail, MessageCircle, Sparkles,
-  Volume2, VolumeX, ExternalLink, Loader2, Save, Plus, Trash2, Phone, LogOut, Download, FileJson
+  Volume2, VolumeX, ExternalLink, Loader2, Save, Plus, Trash2, Phone, LogOut, Download, FileJson,
+  DollarSign, Package
 } from 'lucide-react';
+import { useSuccessToast, useErrorToast } from '../Toast';
+import { SkeletonSection } from '../ui/Skeleton';
 import { SettingsNav, SettingsSection } from './SettingsNav';
 import { SettingsCard } from './ui/SettingsCard';
 import { ToggleRow } from './ui/SettingsToggle';
@@ -112,6 +115,14 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [showAIChat, setShowAIChat] = useState(false);
   const { isOwner, isAdmin } = useOrganization();
+
+  // Toast notifications
+  const successToast = useSuccessToast();
+  const errorToast = useErrorToast();
+
+  // Form validation state
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onProfileChange && profile) {
@@ -451,8 +462,10 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                         </span>
                         <button
                           onClick={() => {
+                            if (!confirm('Delete this custom pricing item? This cannot be undone.')) return;
                             const updated = customPricing.filter(c => c.id !== item.id);
                             onCustomPricingChange?.(updated);
+                            successToast('Pricing item deleted');
                           }}
                           className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                         >

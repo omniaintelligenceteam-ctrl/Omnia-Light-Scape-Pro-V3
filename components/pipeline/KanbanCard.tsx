@@ -73,106 +73,120 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
       onDragStart={handleDragStart as any}
       onDragEnd={handleDragEnd as any}
       onClick={() => onProjectClick(project)}
+      role="article"
+      aria-label={`Project: ${clientName || 'Unnamed'}, Status: ${config.label}${quoteValue ? `, Value: $${quoteValue.toLocaleString()}` : ''}`}
       className={`
         group relative bg-[#1a1a1a] border border-white/10 rounded-xl p-3 cursor-grab
         hover:border-[#F6B45A]/40 hover:bg-[#1f1f1f] transition-all duration-200
         ${isDragging ? 'border-[#F6B45A]/60 z-50' : ''}
       `}
     >
-      {/* Action Buttons */}
-      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Generate Quote button - show for draft projects (whether or not they have a quote) */}
-        {onGenerateQuote && project.status === 'draft' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onGenerateQuote(project);
-            }}
-            className="p-1 rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors"
-            title="Generate quote"
-          >
-            <FileText className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {/* Send Quote button - show when quote exists and status is quoted */}
-        {onSendQuote && project.quote && project.status === 'quoted' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSendQuote(project);
-            }}
-            className="p-1 rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors"
-            title="Send quote to client"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {/* Schedule button - show for approved projects */}
-        {onScheduleProject && project.status === 'approved' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onScheduleProject(project);
-            }}
-            className="p-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors"
-            title="Schedule installation"
-          >
-            <Calendar className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {/* Schedule button - show for scheduled projects */}
-        {onScheduleProject && project.status === 'scheduled' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onScheduleProject(project);
-            }}
-            className="p-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-colors"
-            title="Schedule"
-          >
-            <Calendar className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {/* Complete button - show for scheduled projects */}
-        {onCompleteProject && project.status === 'scheduled' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCompleteProject(project);
-            }}
-            className="p-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors"
-            title="Mark as complete"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {/* Generate Invoice button - show for scheduled or completed projects */}
-        {onGenerateInvoice && (project.status === 'scheduled' || project.status === 'completed') && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onGenerateInvoice(project);
-            }}
-            className="p-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-colors"
-            title="Generate invoice"
-          >
-            <Receipt className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onEditProject && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditProject(project);
-            }}
-            className="p-1 rounded-md bg-white/10 hover:bg-[#F6B45A]/20 text-gray-400 hover:text-[#F6B45A] transition-colors"
-            title="Edit project"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-          </button>
-        )}
-        <GripVertical className="w-4 h-4 text-gray-600" />
-      </div>
+      {/* Primary Action Button - Always visible based on status */}
+      {(() => {
+        // Determine the primary action based on project status
+        let primaryAction = null;
+
+        if (project.status === 'draft' && onGenerateQuote) {
+          primaryAction = (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onGenerateQuote(project);
+              }}
+              className="px-2 py-1 rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors text-[10px] font-medium flex items-center gap-1"
+              title="Generate quote"
+              aria-label="Generate quote for this project"
+            >
+              <FileText className="w-3 h-3" aria-hidden="true" />
+              <span className="hidden sm:inline">Quote</span>
+            </button>
+          );
+        } else if (project.status === 'quoted' && onSendQuote && project.quote) {
+          primaryAction = (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSendQuote(project);
+              }}
+              className="px-2 py-1 rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors text-[10px] font-medium flex items-center gap-1"
+              title="Send quote to client"
+              aria-label="Send quote to client"
+            >
+              <Send className="w-3 h-3" aria-hidden="true" />
+              <span className="hidden sm:inline">Send</span>
+            </button>
+          );
+        } else if (project.status === 'approved' && onScheduleProject) {
+          primaryAction = (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onScheduleProject(project);
+              }}
+              className="px-2 py-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors text-[10px] font-medium flex items-center gap-1"
+              title="Schedule installation"
+              aria-label="Schedule installation for this project"
+            >
+              <Calendar className="w-3 h-3" aria-hidden="true" />
+              <span className="hidden sm:inline">Schedule</span>
+            </button>
+          );
+        } else if (project.status === 'scheduled' && onCompleteProject) {
+          primaryAction = (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCompleteProject(project);
+              }}
+              className="px-2 py-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors text-[10px] font-medium flex items-center gap-1"
+              title="Mark as complete"
+              aria-label="Mark this project as complete"
+            >
+              <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
+              <span className="hidden sm:inline">Complete</span>
+            </button>
+          );
+        } else if (project.status === 'completed' && onGenerateInvoice) {
+          primaryAction = (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onGenerateInvoice(project);
+              }}
+              className="px-2 py-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-colors text-[10px] font-medium flex items-center gap-1"
+              title="Generate invoice"
+              aria-label="Generate invoice for this project"
+            >
+              <Receipt className="w-3 h-3" aria-hidden="true" />
+              <span className="hidden sm:inline">Invoice</span>
+            </button>
+          );
+        }
+
+        return primaryAction ? (
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            {primaryAction}
+            <GripVertical className="w-4 h-4 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+          </div>
+        ) : (
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onEditProject && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditProject(project);
+                }}
+                className="p-1 rounded-md bg-white/10 hover:bg-[#F6B45A]/20 text-gray-400 hover:text-[#F6B45A] transition-colors"
+                title="Edit project"
+                aria-label="Edit this project"
+              >
+                <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            )}
+            <GripVertical className="w-4 h-4 text-gray-600" aria-hidden="true" />
+          </div>
+        );
+      })()}
 
       <div className="flex gap-3">
         {/* Thumbnail */}
