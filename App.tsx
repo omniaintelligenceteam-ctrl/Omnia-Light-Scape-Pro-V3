@@ -1731,16 +1731,23 @@ const App: React.FC = () => {
     setIsSavingImage(true);
     try {
       // First create the client
-      const newClient = await createClient({
-        name: clientData.name,
-        email: clientData.email || '',
-        phone: clientData.phone || '',
-        address: clientData.address || '',
-        notes: clientData.notes || ''
-      });
+      let newClient;
+      try {
+        newClient = await createClient({
+          name: clientData.name,
+          email: clientData.email || '',
+          phone: clientData.phone || '',
+          address: clientData.address || '',
+          notes: clientData.notes || ''
+        });
+      } catch (clientError: any) {
+        console.error('Client creation failed:', clientError);
+        showToast('error', clientError.message || 'Failed to create client');
+        return;
+      }
 
       if (!newClient) {
-        showToast('error', 'Failed to create client');
+        showToast('error', 'Failed to create client - please try again');
         return;
       }
 
@@ -4457,6 +4464,11 @@ Notes: ${invoice.notes || 'N/A'}
                         onGenerateBOM={handleGenerateBOM}
                         onClose={() => setProjectsSubTab('pipeline')}
                         onEditDesign={() => handleTabChange('editor')}
+                        onDeleteProject={currentProjectId ? async () => {
+                          await handleDeleteProject(currentProjectId);
+                          setCurrentProjectId(null);
+                          setProjectsSubTab('pipeline');
+                        } : undefined}
                         initialData={currentQuote}
                         companyProfile={companyProfile}
                         defaultPricing={pricing}
@@ -7571,23 +7583,26 @@ Notes: ${invoice.notes || 'N/A'}
                     </div>
                   )}
 
-                  {/* Notes Section - Only in edit mode or if notes exist */}
+                  {/* Internal Notes Section - Only in edit mode or if notes exist */}
                   {(isEditingProject || project.notes) && (
                     <div className="space-y-2">
-                      <h4 className="text-white font-semibold text-lg flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-gray-400" />
-                        Project Notes
-                      </h4>
+                      <div>
+                        <h4 className="text-amber-400 font-semibold text-lg flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-amber-400" />
+                          Internal Notes
+                        </h4>
+                        <p className="text-[10px] text-amber-400/60 uppercase tracking-wider ml-7">Team only • Never shared with clients</p>
+                      </div>
                       {isEditingProject ? (
                         <textarea
                           value={editProjectNotes}
                           onChange={(e) => setEditProjectNotes(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#F6B45A]/50 resize-none"
+                          className="w-full bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500/50 resize-none"
                           rows={4}
-                          placeholder="Add notes about this project..."
+                          placeholder="Add internal notes about this project (site access, client preferences, reminders)..."
                         />
                       ) : (
-                        <div className="bg-white/5 rounded-xl p-4">
+                        <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4">
                           <p className="text-gray-300 text-sm whitespace-pre-wrap">{project.notes}</p>
                         </div>
                       )}

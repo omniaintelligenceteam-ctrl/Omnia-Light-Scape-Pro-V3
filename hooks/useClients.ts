@@ -152,11 +152,13 @@ export function useClients() {
         body: JSON.stringify(clientData),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create client');
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        // Show more specific error message
+        const errorMsg = data.message || data.error || 'Failed to create client';
+        throw new Error(errorMsg);
+      }
 
       if (data.success && data.data) {
         const newClient: Client = {
@@ -177,7 +179,8 @@ export function useClients() {
     } catch (err: any) {
       console.error('Error creating client:', err);
       setError(err.message);
-      return null;
+      // Re-throw so caller can handle
+      throw err;
     }
   }, [user]);
 

@@ -59,12 +59,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           address: address || null,
           notes: notes || null,
           lead_source: leadSource || null,
-          marketing_cost: marketingCost || 0
+          marketing_cost: marketingCost !== undefined ? marketingCost : null
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Client creation error:', error);
+        throw error;
+      }
       return res.status(201).json({ success: true, data });
     }
 
@@ -72,6 +75,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     console.error('Clients API error:', error);
-    return res.status(500).json({ error: 'Internal server error', message: error.message });
+    console.error('Error details:', error.details || 'No details');
+    console.error('Error hint:', error.hint || 'No hint');
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      details: error.details || undefined,
+      hint: error.hint || undefined
+    });
   }
 }

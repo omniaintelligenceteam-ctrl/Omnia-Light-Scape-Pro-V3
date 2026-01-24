@@ -10,6 +10,7 @@ interface QuoteViewProps {
     onGenerateBOM?: (data: QuoteData) => void;
     onClose?: () => void;
     onEditDesign?: () => void;
+    onDeleteProject?: () => void;
     initialData?: QuoteData | null;
     companyProfile?: CompanyProfile;
     defaultPricing?: FixturePricing[];
@@ -27,6 +28,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     onGenerateBOM,
     onClose,
     onEditDesign,
+    onDeleteProject,
     initialData,
     companyProfile = { name: 'Omnia Light Scape Pro', email: '', address: '123 Landscape Lane\nDesign District, CA 90210', logo: null },
     defaultPricing = DEFAULT_PRICING,
@@ -63,6 +65,9 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+
+  // Delete Confirmation Modal State
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
   // Client Details State (Controlled) - empty defaults
   const [clientName, setClientName] = useState(initialData?.clientDetails.name || "");
@@ -370,16 +375,32 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 
                 {/* Desktop Layout */}
                 <div className="hidden md:flex items-center justify-between gap-3">
-                    {/* Save Button - Primary Action */}
-                    <motion.button
-                        onClick={handleSaveClick}
-                        className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        <Save className="w-4 h-4" />
-                        Save
-                    </motion.button>
+                    {/* Save & Delete Buttons */}
+                    <div className="flex items-center gap-2">
+                        <motion.button
+                            onClick={handleSaveClick}
+                            className="relative overflow-hidden bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-[0_4px_20px_rgba(246,180,90,0.3)]"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <Save className="w-4 h-4" />
+                            Save
+                        </motion.button>
+
+                        {/* Delete Project Button */}
+                        {onDeleteProject && (
+                            <motion.button
+                                onClick={() => setShowDeleteConfirmModal(true)}
+                                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-red-500/20 hover:border-red-500/40 transition-all"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                title="Delete Project"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                            </motion.button>
+                        )}
+                    </div>
 
                     {/* Action Buttons Group */}
                     <div className="flex items-center gap-1.5">
@@ -460,15 +481,29 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 
                 {/* Mobile Layout - Clean compact row */}
                 <div className="flex md:hidden items-center justify-between gap-1.5">
-                    {/* Save Button */}
-                    <motion.button
-                        onClick={handleSaveClick}
-                        className="bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] p-2 rounded-lg"
-                        whileTap={{ scale: 0.95 }}
-                        title="Save"
-                    >
-                        <Save className="w-4 h-4" />
-                    </motion.button>
+                    {/* Save & Delete Buttons */}
+                    <div className="flex items-center gap-1">
+                        <motion.button
+                            onClick={handleSaveClick}
+                            className="bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-[#111] p-2 rounded-lg"
+                            whileTap={{ scale: 0.95 }}
+                            title="Save"
+                        >
+                            <Save className="w-4 h-4" />
+                        </motion.button>
+
+                        {/* Delete Project Button - Mobile */}
+                        {onDeleteProject && (
+                            <motion.button
+                                onClick={() => setShowDeleteConfirmModal(true)}
+                                className="bg-red-500/10 text-red-400 p-2 rounded-lg border border-red-500/20"
+                                whileTap={{ scale: 0.95 }}
+                                title="Delete"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </motion.button>
+                        )}
+                    </div>
 
                     {/* Icon Buttons Group */}
                     <div className="flex items-center gap-1">
@@ -1391,6 +1426,79 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                   >
                     Close
                   </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+          {showDeleteConfirmModal && (
+            <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+            >
+              <motion.div
+                  className="w-full max-w-sm bg-gradient-to-b from-[#151515] to-[#0a0a0a] rounded-2xl border border-red-500/20 shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden"
+                  initial={{ scale: 0.9, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.9, y: 20 }}
+              >
+                {/* Modal Header */}
+                <div className="relative flex items-center justify-between p-5 border-b border-white/10">
+                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20">
+                      <Trash2 className="w-5 h-5 text-red-400" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg text-white font-serif">Delete Project</h3>
+                        <p className="text-[10px] text-gray-500">This action cannot be undone</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={() => setShowDeleteConfirmModal(false)}
+                    className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-5">
+                  <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 mb-5">
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      Are you sure you want to delete this project? All associated data including the design, quote, and internal notes will be permanently removed.
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <motion.button
+                      onClick={() => setShowDeleteConfirmModal(false)}
+                      className="flex-1 py-3 rounded-xl font-bold text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      onClick={() => {
+                        setShowDeleteConfirmModal(false);
+                        onDeleteProject?.();
+                      }}
+                      className="flex-1 py-3 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-all"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </motion.button>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
