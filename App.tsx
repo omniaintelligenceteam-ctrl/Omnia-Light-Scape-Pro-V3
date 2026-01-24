@@ -1793,6 +1793,12 @@ const App: React.FC = () => {
              return { ...def, quantity: 0 };
          }
 
+         // Priority 0 (HIGHEST): Use user-specified counts from fixture count UI
+         const userSpecifiedCount = fixtureCounts[def.fixtureType];
+         if (userSpecifiedCount !== null && userSpecifiedCount !== undefined && selectedFixtures.includes(def.fixtureType)) {
+             return { ...def, quantity: userSpecifiedCount };
+         }
+
          // Priority 1: Use explicit counts from custom notes if provided
          if (hasParsedCounts && parsedCounts[def.id]) {
              return { ...def, quantity: parsedCounts[def.id] };

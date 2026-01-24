@@ -2098,42 +2098,92 @@ export const COLOR_TEMPERATURES: ColorTemperature[] = [
     kelvin: "2700K",
     color: "#FFB46B",
     description: "Warm White",
-    prompt: "Use Warm White (2700K) for all lights. The light should be very warm, cozy, and golden."
+    prompt: `Use Warm White (2700K) for all lights.
+    VISUAL RENDERING REQUIREMENTS:
+    - Color: Deep amber/golden yellow (hex #FFB347)
+    - Similar to: Candlelight, sunset glow, incandescent bulbs
+    - Render surfaces with warm orange/amber tint where light hits
+    - Shadows appear soft and inviting with warm undertones
+    - Creates cozy, intimate, romantic atmosphere
+    - Green foliage appears more olive/brown under this light
+    - White surfaces appear creamy/warm yellow
+    - This is the WARMEST option - noticeably amber/orange`
   },
   {
     id: "3000k",
     kelvin: "3000K",
     color: "#FFD18E",
     description: "Soft White",
-    prompt: "Use Soft White (3000K) for all lights. This is the standard professional landscape lighting color."
+    prompt: `Use Soft White (3000K) for all lights.
+    VISUAL RENDERING REQUIREMENTS:
+    - Color: Warm white with slight yellow tint (hex #FFF4E0)
+    - Industry standard for professional landscape lighting
+    - Balanced warm tone that flatters most materials
+    - Brick appears warmer, stone maintains natural color
+    - Shadows have moderate warmth
+    - Green foliage retains natural color with warm highlights
+    - White surfaces appear slightly warm but not yellow
+    - This is the DEFAULT professional choice - warm but natural`
   },
   {
     id: "4000k",
     kelvin: "4000K",
     color: "#FFF2D7",
     description: "Cool White",
-    prompt: "Use Cool White (4000K) for all lights. The light should be crisp and neutral."
+    prompt: `Use Cool White (4000K) for all lights.
+    VISUAL RENDERING REQUIREMENTS:
+    - Color: Neutral white, very slight warm tint (hex #FFFAF0)
+    - Crisp, clean, modern appearance
+    - Materials appear close to their true daylight colors
+    - Excellent color rendering for architectural details
+    - Shadows are neutral with minimal color cast
+    - Green foliage appears vibrant and true
+    - White surfaces appear clean white
+    - Best for: Contemporary architecture, modern landscapes`
   },
   {
     id: "5000k",
     kelvin: "5000K",
     color: "#E3F2FD",
     description: "Daylight",
-    prompt: "Use Daylight (5000K) for all lights. The light should be bright white, mimicking noon daylight."
+    prompt: `Use Daylight (5000K) for all lights.
+    VISUAL RENDERING REQUIREMENTS:
+    - Color: Bright white with slight blue tint (hex #F5FBFF)
+    - Mimics natural noon daylight
+    - Very high contrast, crisp shadows
+    - Colors appear most vibrant and saturated
+    - Can appear slightly clinical/cool
+    - Green foliage appears very vivid
+    - White surfaces appear bright pure white
+    - Best for: Security lighting, commercial, high-visibility needs`
   },
   {
     id: "christmas",
     kelvin: "Festive",
     color: "#D32F2F",
     description: "Christmas",
-    prompt: "Use Red and Green colors for all lights for a festive Christmas look. Alternate colors or group them by section." 
+    prompt: `Use Red and Green colors for all lights for a festive Christmas look.
+    VISUAL RENDERING REQUIREMENTS:
+    - Alternate RED (#D32F2F) and GREEN (#2E7D32) lights
+    - Group colors by section OR alternate per fixture
+    - Red lights cast warm red glow on nearby surfaces
+    - Green lights cast cool green tint on foliage
+    - Creates cheerful, festive holiday atmosphere
+    - Can add white (#FFFDE7) accents sparingly`
   },
-  { 
-    id: "halloween", 
+  {
+    id: "halloween",
     kelvin: "Spooky",
     color: "#9C27B0",
     description: "Halloween",
-    prompt: "Use Orange and Purple colors for all lights for a spooky Halloween look. Create a haunting atmosphere." 
+    prompt: `Use Orange and Purple colors for all lights for a spooky Halloween look.
+    VISUAL RENDERING REQUIREMENTS:
+    - Primary: Deep PURPLE (#9C27B0) and bright ORANGE (#FF6D00)
+    - Purple creates eerie, mysterious shadows
+    - Orange adds warmth and pumpkin-like glow
+    - Creates haunting, spooky atmosphere
+    - Shadows should appear deeper and more dramatic
+    - Can add touches of GREEN (#76FF03) for extra creepy effect`
   }
 ];
 

@@ -83,18 +83,58 @@ export const generateNightScene = async (
   // Initialization: The API key is obtained from environment variable
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
-  // Map sliders (0-100) to descriptive prompt instructions
+  // Map sliders (0-100) to descriptive prompt instructions with height-based wattage guidance
   const getIntensityPrompt = (val: number) => {
-    if (val < 30) return "Lighting Intensity: SUBTLE, SOFT, DIM. The lights should be faint accents.";
-    if (val > 70) return "Lighting Intensity: BRIGHT, HIGH LUMEN, INTENSE. High contrast.";
-    return "Lighting Intensity: BALANCED, STANDARD professional levels.";
+    if (val < 25) return `Lighting Intensity: SUBTLE (2-3W LED equivalent).
+    - Faint accent glow, minimal brightness
+    - Light barely reaches first story soffit
+    - Soft pools of light at fixture base
+    - Best for: Ambient mood, pathway marking`;
+
+    if (val < 50) return `Lighting Intensity: MODERATE (4-5W LED equivalent).
+    - Standard 1st story reach (8-12 ft walls)
+    - Light reaches soffit with gentle falloff
+    - Visible wall grazing without hot spots
+    - Best for: Single-story homes, accent features`;
+
+    if (val < 75) return `Lighting Intensity: BRIGHT (6-8W LED equivalent).
+    - 2nd story reach (18-25 ft walls)
+    - Strong wall grazing to higher soffits
+    - More pronounced beam visibility
+    - Best for: Two-story facades, tall trees`;
+
+    return `Lighting Intensity: HIGH POWER (10-15W LED equivalent).
+    - Full 2-3 story reach (25+ ft walls)
+    - Intense beams reaching tall soffits
+    - Maximum wall coverage
+    - Best for: Tall facades, commercial, dramatic effect`;
   };
 
   const getBeamAnglePrompt = (angle: number) => {
-    if (angle <= 15) return "Beam Angle: 15 DEGREES (NARROW SPOT). Tight columns of light.";
-    if (angle <= 30) return "Beam Angle: 30 DEGREES (SPOT). Focused beams with defined edges.";
-    if (angle >= 60) return "Beam Angle: 60 DEGREES (WIDE FLOOD). Broad soft wash.";
-    return "Beam Angle: 45 DEGREES (FLOOD). Standard spread.";
+    if (angle <= 15) return `Beam Angle: 15 DEGREES (NARROW SPOT).
+    - Tight, focused columns of light with sharp edges
+    - Creates dramatic accent lighting on narrow targets
+    - Light cone spreads ~2.5 feet at 10 feet distance
+    - Hot spot visible at center, rapid falloff at edges
+    - Best for: Architectural columns, narrow trees, specific focal points`;
+
+    if (angle <= 30) return `Beam Angle: 30 DEGREES (SPOT).
+    - Defined beam with moderate spread
+    - Light cone spreads ~5 feet at 10 feet distance
+    - Visible beam edges with gradual falloff
+    - Best for: Accent lighting on facades, medium trees, entry features`;
+
+    if (angle >= 60) return `Beam Angle: 60 DEGREES (WIDE FLOOD).
+    - Broad, even wash of light
+    - Light cone spreads ~11 feet at 10 feet distance
+    - Soft edges, gradual transitions, no harsh shadows
+    - Best for: Wall washing, large facades, area lighting`;
+
+    return `Beam Angle: 45 DEGREES (FLOOD).
+    - Standard professional landscape spread
+    - Light cone spreads ~8 feet at 10 feet distance
+    - Balanced between accent and wash
+    - Best for: General facade lighting, medium wall areas`;
   };
 
   // Build user preference context (if available)
@@ -153,6 +193,13 @@ ${preferenceContext}
     - **Intensity**: ${getIntensityPrompt(lightIntensity)}
     - **Beam**: ${getBeamAnglePrompt(beamAngle)}
     - **FIXTURE QUANTITIES**: When the DESIGN REQUEST specifies an EXACT count for a fixture type (e.g., "EXACTLY 8 up lights"), you MUST place that EXACT number. Count your fixtures before finalizing. Do not add more, do not add fewer.
+    - **SOFFIT REACH RULE**: Up lights MUST reach the soffit/eave line. The light beam should:
+      * Start bright at the fixture (avoid hot spot by angling back 15-20 degrees from wall)
+      * Travel UP the wall surface (wall grazing effect)
+      * Fade gradually as it approaches the soffit
+      * The soffit itself receives subtle reflected glow, NOT direct illumination
+      * Taller walls require more intensity to reach the soffit
+      * The beam should be visible traveling up the wall, not just illuminating a spot
 
     # YOUR ONLY PERMITTED MODIFICATIONS:
     1. Darken the overall scene to simulate nighttime
