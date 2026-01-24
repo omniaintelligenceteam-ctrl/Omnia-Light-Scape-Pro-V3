@@ -1325,77 +1325,86 @@ STRICT EXCLUSION ZONES:
         id: 'secondStoryFacade',
         label: '2nd Story Facade',
         description: 'Upper facade windows & siding',
-        prompt: `TARGET: 2ND STORY FACADE -- GUTTER-MOUNTED UPLIGHTS FOR UPPER FACADE ILLUMINATION
+        prompt: `TARGET: 2ND STORY FACADE -- FIRST-STORY GUTTER-MOUNTED UPLIGHTS FOR UPPER FACADE ILLUMINATION
+
+HARD RULE - CRITICAL MOUNTING REQUIREMENT:
+*** FIXTURES MUST BE MOUNTED IN THE FIRST STORY GUTTER ***
+*** FIXTURES MUST AIM UPWARD TO ILLUMINATE THE SECOND STORY ABOVE ***
+*** FIXTURES MUST NEVER AIM DOWNWARD ***
 
 IDENTIFICATION:
-- Locate ALL second story sections of the home's facade
-- Identify: upper-level windows, siding sections between windows, decorative trim, shutters
-- Focus on areas directly below the gutter line that can be washed with uplight
-- Note window positions, spacing, and architectural features at the second story level
+- Locate the FIRST STORY GUTTER LINE (the gutter between 1st and 2nd floors)
+- Identify the second story facade ABOVE this gutter line
+- Note: upper-level windows, siding sections, decorative trim, shutters on the 2nd story
+- Focus on second story areas that can be washed with uplight FROM BELOW
 
 FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
-- Type: SMALL compact brass bullet or mini flood up light with gutter-mount bracket
+- Type: SMALL compact brass bullet or mini flood UP LIGHT with gutter-mount bracket
 - Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
 - Size: SMALL/COMPACT fixture - NOT large floodlights
-- Profile: LOW-PROFILE design that sits discreetly in/on gutter
-- Mounting: on gutter lip, inside gutter trough, or on fascia board
-- Beam spread: medium to wide -- soft wall wash coverage
+- Profile: LOW-PROFILE design that sits discreetly in/on the FIRST STORY gutter
+- Mounting: on first story gutter lip, inside first story gutter trough, or on first story fascia board
+- Beam spread: medium to wide -- soft wall wash coverage projecting UPWARD
 
 PLACEMENT GEOMETRY:
-- Space fixtures evenly along the gutter line to provide uniform facade wash
+- Mount fixtures in the FIRST STORY GUTTER (NOT the roofline gutter)
+- Space fixtures evenly along the first story gutter line
 - Typical spacing: 4-6 feet apart depending on beam spread and facade width
-- Position to illuminate BOTH windows AND the siding/wall areas around them
-- Adjust placement to highlight architectural features (shutters, trim, decorative elements)
+- Position to illuminate the second story wall ABOVE the fixtures
+- Aim to wash BOTH windows AND the siding/wall areas around them on the 2nd story
 
-MOUNTING OPTIONS:
-- INSIDE GUTTER TROUGH: fixture in gutter, aims downward at facade below
-- ON GUTTER LIP: fixture clips to gutter edge, projects onto wall
-- ON FASCIA: fixture on fascia board adjacent to gutter
+MOUNTING LOCATION (STRICT - FIRST STORY GUTTER ONLY):
+- INSIDE FIRST STORY GUTTER TROUGH: fixture in gutter, aims UPWARD at 2nd story facade above
+- ON FIRST STORY GUTTER LIP: fixture clips to gutter edge, projects UPWARD onto wall above
+- ON FIRST STORY FASCIA: fixture on fascia board, aims UPWARD
 
 ALIGNMENT:
-- HORIZONTAL: evenly distributed across facade width
-- VERTICAL: at gutter/fascia line, projecting light onto second story wall below
+- HORIZONTAL: evenly distributed across facade width along the first story gutter
+- VERTICAL: mounted at the first story gutter/fascia line, projecting light UPWARD onto second story wall
 
 LIGHT PHYSICS:
-- Beam projects DOWNWARD and OUTWARD from gutter line onto facade
-- WALL WASHING technique for broad, even illumination
-- Light WILL fall on windows -- this is expected and acceptable
-- Illuminates window frames, muntins, and trim details
-- Reveals siding texture (lap siding, board and batten, shingles, brick, stone)
+- Beam projects UPWARD from first story gutter line onto second story facade
+- WALL GRAZING/WASHING technique for broad, even upward illumination
+- Light travels UP from first story gutter to illuminate 2nd story above
+- Light WILL fall on second story windows -- this is expected and acceptable
+- Illuminates second story window frames, muntins, and trim details
+- Reveals siding texture on 2nd story (lap siding, board and batten, shingles, brick, stone)
 - Creates warm glow on upper facade visible from street level
 - Soft light on window glass adds warmth and architectural interest
 
 WINDOW ILLUMINATION GUIDANCE:
-- Light falling on windows IS ACCEPTABLE for this application
-- The goal is overall facade illumination, not window avoidance
+- Light falling on second story windows IS ACCEPTABLE for this application
+- The goal is overall second story facade illumination, not window avoidance
 - Light on window glass creates reflective warmth at night
-- Window frames and trim will be highlighted by the wash
+- Window frames and trim will be highlighted by the upward wash
 - In most cases, light will naturally fall on windows -- this is intentional
 
 SIDING & WALL COVERAGE:
 - Prioritize even coverage across the second story wall surface
+- Light washes UPWARD from first story gutter to second story roofline
 - Reveal architectural texture and material variations
-- Create smooth gradient from gutter line downward
+- Create smooth gradient traveling upward
 - Avoid harsh hot spots -- aim for gentle wash effect
 
 FIXTURE VISIBILITY:
-- Daytime: subtle fixtures along gutter line -- discreet
-- Nighttime: upper facade glows warmly; fixtures hidden from ground view
+- Daytime: subtle fixtures along first story gutter line -- discreet
+- Nighttime: second story facade glows warmly; fixtures hidden at lower level
 
 ARCHITECTURAL EMPHASIS:
-- Gutter mounting creates ideal angle for second story illumination
+- First story gutter mounting creates ideal upward angle for second story illumination
 - Brings life to often-neglected upper portions of home
 - Balances with ground-level lighting for complete facade treatment
 - Creates welcoming, finished appearance from curb
 
 STRICT EXCLUSION ZONES:
+- Do NOT mount in the ROOFLINE gutter (top of house) -- FIRST STORY GUTTER ONLY
+- Do NOT aim fixtures DOWNWARD -- UPWARD PROJECTION ONLY
 - Do NOT confuse with DORMER lighting (separate preset for dormers only)
 - Do NOT confuse with PEAKS & GABLES lighting (separate preset for gable triangles)
 - Do NOT mount on sloped roof surface
-- Do NOT aim fixtures upward -- DOWNWARD onto facade only
 - Do NOT create harsh shadows or uneven coverage
 - Do NOT over-space fixtures leaving dark gaps between pools of light`,
-        negativePrompt: `ABSOLUTE PROHIBITION (2ND STORY FACADE): Do NOT illuminate second story facade areas. Do NOT wash upper walls or windows from gutter level. Upper facade must remain dark. No gutter-mounted downlighting on second story siding or windows.`
+        negativePrompt: `ABSOLUTE PROHIBITION (2ND STORY FACADE): Do NOT illuminate second story facade from first story gutter. Do NOT mount uplights in first story gutter. Do NOT wash upper walls or windows with upward light. Second story facade must remain dark. No gutter-mounted uplighting on second story siding or windows.`
       }
     ]
   },
