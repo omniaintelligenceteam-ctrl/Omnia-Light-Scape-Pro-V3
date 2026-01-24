@@ -29,162 +29,93 @@ interface QuoteEmailRequest {
 }
 
 function generateQuoteHtml(data: QuoteEmailRequest): string {
+  // Compact item rows to reduce email size
   const itemRows = data.lineItems.map(item => `
     <tr>
-      <td style="padding: 20px 24px; border-bottom: 1px solid #f0f0f0; vertical-align: top;">
-        <div style="font-weight: 600; color: #1a1a1a; font-size: 15px; margin-bottom: 6px;">${item.name}</div>
-        <div style="font-size: 12px; color: #888; line-height: 1.5;">${item.description}</div>
+      <td style="padding:20px;border-bottom:1px solid #eee;vertical-align:top">
+        <b style="color:#1a1a1a;font-size:15px">${item.name}</b>
+        <div style="font-size:12px;color:#888;margin-top:6px;line-height:1.5">${item.description.replace(/\n/g, ' · ')}</div>
       </td>
-      <td style="padding: 20px 16px; border-bottom: 1px solid #f0f0f0; text-align: center; color: #1a1a1a; font-weight: 600; font-size: 15px; vertical-align: top;">${item.quantity}</td>
-      <td style="padding: 20px 16px; border-bottom: 1px solid #f0f0f0; text-align: right; color: #666; font-size: 14px; vertical-align: top;">$${item.unitPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-      <td style="padding: 20px 24px; border-bottom: 1px solid #f0f0f0; text-align: right; font-weight: 700; color: #1a1a1a; font-size: 15px; vertical-align: top;">$${(item.quantity * item.unitPrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+      <td style="padding:20px 12px;border-bottom:1px solid #eee;text-align:center;vertical-align:middle">
+        <span style="background:#f3f4f6;padding:4px 12px;border-radius:12px;font-weight:700;font-size:14px">${item.quantity}</span>
+      </td>
+      <td style="padding:20px 12px;border-bottom:1px solid #eee;text-align:right;color:#666;font-size:14px;vertical-align:middle">$${item.unitPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+      <td style="padding:20px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:#1a1a1a;font-size:15px;vertical-align:middle">$${(item.quantity * item.unitPrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
     </tr>
   `).join('');
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quote from ${data.companyName}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa; -webkit-font-smoothing: antialiased;">
-  <div style="max-width: 640px; margin: 0 auto; padding: 40px 20px;">
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#111">
+<div style="max-width:640px;margin:0 auto;padding:32px 16px">
 
-    <!-- Header Card -->
-    <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 16px 16px 0 0; padding: 40px 32px; text-align: center; position: relative;">
-      <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #D4A04A, transparent);"></div>
+<!-- Header -->
+<div style="background:#1a1a1a;border-radius:20px 20px 0 0;padding:40px 32px;text-align:center">
+<div style="width:80px;height:3px;background:linear-gradient(90deg,#D4A04A,#F6B45A);margin:0 auto 24px;border-radius:2px"></div>
+${data.companyLogo ? `<img src="${data.companyLogo}" alt="${data.companyName}" style="max-height:60px;max-width:180px;margin-bottom:16px">` : ''}
+<h1 style="margin:0;color:#fff;font-size:28px;font-weight:700">${data.companyName}</h1>
+<p style="margin:12px 0 0;color:#D4A04A;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase">Professional Lighting Quote</p>
+</div>
 
-      ${data.companyLogo ? `
-      <img src="${data.companyLogo}" alt="${data.companyName}" style="max-height: 60px; max-width: 180px; margin-bottom: 16px; display: inline-block;" />
-      ` : ''}
+<!-- Content -->
+<div style="background:#fff;padding:32px;border-radius:0 0 20px 20px">
 
-      <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">${data.companyName}</h1>
-      <p style="margin: 10px 0 0; color: #D4A04A; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;">Professional Lighting Quote</p>
-    </div>
+<!-- Greeting -->
+<p style="margin:0;color:#999;font-size:12px;text-transform:uppercase;letter-spacing:1px">Prepared For</p>
+<h2 style="margin:8px 0 20px;color:#1a1a1a;font-size:24px;font-weight:700">${data.clientName}</h2>
+<p style="margin:0 0 28px;color:#555;font-size:15px;line-height:1.7">Thank you for your interest in our lighting services. Here is your detailed quote for <b>${data.projectName}</b>.</p>
 
-    <!-- Main Content Card -->
-    <div style="background: #ffffff; padding: 40px 32px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);">
+${data.customMessage ? `<div style="background:#FEF9E7;border-left:3px solid #D4A04A;padding:16px 20px;margin:0 0 28px;border-radius:0 8px 8px 0"><p style="margin:0;color:#78350f;font-size:14px;line-height:1.6">${data.customMessage}</p></div>` : ''}
 
-      <!-- Greeting -->
-      <p style="margin: 0 0 16px; color: #1a1a1a; font-size: 17px; font-weight: 600;">
-        Hi ${data.clientName},
-      </p>
-      <p style="margin: 0 0 28px; color: #555; font-size: 15px; line-height: 1.7;">
-        Thank you for considering us for your lighting project. Below is your detailed quote for <strong style="color: #1a1a1a;">${data.projectName}</strong>.
-      </p>
+${data.projectImageUrl ? `
+<p style="margin:0 0 12px;color:#1a1a1a;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px">◆ Your Lighting Design</p>
+<img src="${data.projectImageUrl}" alt="Design" style="width:100%;border-radius:12px;margin-bottom:28px;border:1px solid #eee">
+` : ''}
 
-      ${data.customMessage ? `
-      <div style="background: #FFF9E6; border-left: 3px solid #F6B45A; padding: 20px; margin: 0 0 28px; border-radius: 0 8px 8px 0;">
-        <p style="margin: 0; color: #8B6914; font-size: 14px; line-height: 1.6; white-space: pre-line;">${data.customMessage}</p>
-      </div>
-      ` : ''}
+<!-- Items Table -->
+<p style="margin:0 0 16px;color:#1a1a1a;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px">◆ Quote Details</p>
+<table style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
+<thead><tr style="background:#1a1a1a">
+<th style="padding:14px 20px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px">Item</th>
+<th style="padding:14px 12px;text-align:center;font-size:11px;color:#888;text-transform:uppercase">Qty</th>
+<th style="padding:14px 12px;text-align:right;font-size:11px;color:#888;text-transform:uppercase">Price</th>
+<th style="padding:14px 20px;text-align:right;font-size:11px;color:#888;text-transform:uppercase">Total</th>
+</tr></thead>
+<tbody>${itemRows}</tbody>
+</table>
 
-      ${data.projectImageUrl ? `
-      <!-- Project Image -->
-      <div style="margin: 0 0 32px;">
-        <p style="margin: 0 0 12px; color: #1a1a1a; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Your Lighting Design</p>
-        <a href="${data.projectImageUrl}" target="_blank" rel="noopener noreferrer" style="display: block; border-radius: 12px; overflow: hidden; border: 1px solid #e8e8e8;">
-          <img src="${data.projectImageUrl}" alt="Lighting Design Preview" style="width: 100%; display: block;">
-        </a>
-      </div>
-      ` : ''}
+<!-- Totals -->
+<div style="background:#1a1a1a;border-radius:12px;padding:24px;margin:24px 0">
+<table style="width:100%;border-collapse:collapse">
+<tr><td style="padding:8px 0;color:#888;font-size:14px">Subtotal</td><td style="padding:8px 0;text-align:right;color:#fff;font-size:15px;font-weight:600">$${data.subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>
+${data.discount > 0 ? `<tr><td style="padding:8px 0;color:#888;font-size:14px">Discount</td><td style="padding:8px 0;text-align:right;color:#10b981;font-size:15px;font-weight:600">-$${data.discount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>` : ''}
+<tr><td style="padding:8px 0;color:#888;font-size:14px">Tax (${(data.taxRate * 100).toFixed(1)}%)</td><td style="padding:8px 0;text-align:right;color:#fff;font-size:15px;font-weight:600">$${data.taxAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>
+<tr><td colspan="2" style="padding:12px 0 0"><div style="border-top:1px solid #333"></div></td></tr>
+<tr><td style="padding:16px 0 0;color:#fff;font-size:16px;font-weight:600">Total</td><td style="padding:16px 0 0;text-align:right"><span style="color:#D4A04A;font-size:32px;font-weight:800">$${data.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></td></tr>
+</table>
+</div>
 
-      <!-- Line Items -->
-      <div style="margin: 0 0 24px;">
-        <p style="margin: 0 0 16px; color: #1a1a1a; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Quote Details</p>
-        <div style="border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background: #fafafa;">
-                <th style="padding: 14px 24px; text-align: left; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e8e8e8;">Item</th>
-                <th style="padding: 14px 16px; text-align: center; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e8e8e8;">Qty</th>
-                <th style="padding: 14px 16px; text-align: right; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e8e8e8;">Price</th>
-                <th style="padding: 14px 24px; text-align: right; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e8e8e8;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemRows}
-            </tbody>
-          </table>
-        </div>
-      </div>
+<!-- CTA -->
+<div style="text-align:center;padding:20px 0">
+<p style="margin:0 0 20px;color:#1a1a1a;font-size:18px;font-weight:700">Ready to get started?</p>
+<table style="margin:0 auto" cellpadding="0" cellspacing="8"><tr>
+${data.approveLink ? `<td><a href="${data.approveLink}" style="display:inline-block;background:#10b981;color:#fff;font-weight:700;padding:14px 28px;border-radius:10px;text-decoration:none;font-size:14px">✓ Approve Quote</a></td>` : ''}
+<td><a href="mailto:${data.companyEmail}?subject=Re: Quote for ${encodeURIComponent(data.projectName)}" style="display:inline-block;background:#1a1a1a;color:#fff;font-weight:700;padding:14px 28px;border-radius:10px;text-decoration:none;font-size:14px">Reply</a></td>
+</tr></table>
+${data.companyPhone ? `<p style="margin:20px 0 0;color:#666;font-size:14px">Or call <a href="tel:${data.companyPhone}" style="color:#D4A04A;text-decoration:none;font-weight:700">${data.companyPhone}</a></p>` : ''}
+</div>
 
-      <!-- Totals Card -->
-      <div style="background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%); border-radius: 12px; padding: 24px; margin: 0 0 32px; border: 1px solid #e8e8e8;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 8px 0; color: #666; font-size: 14px;">Subtotal</td>
-            <td style="padding: 8px 0; text-align: right; color: #1a1a1a; font-size: 15px; font-weight: 600;">$${data.subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          </tr>
-          ${data.discount > 0 ? `
-          <tr>
-            <td style="padding: 8px 0; color: #666; font-size: 14px;">Discount</td>
-            <td style="padding: 8px 0; text-align: right; color: #059669; font-size: 15px; font-weight: 600;">-$${data.discount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          </tr>
-          ` : ''}
-          <tr>
-            <td style="padding: 8px 0; color: #666; font-size: 14px;">Tax (${(data.taxRate * 100).toFixed(1)}%)</td>
-            <td style="padding: 8px 0; text-align: right; color: #1a1a1a; font-size: 15px; font-weight: 600;">$${data.taxAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          </tr>
-          <tr>
-            <td colspan="2" style="padding: 16px 0 0;"><div style="border-top: 2px solid #e0e0e0;"></div></td>
-          </tr>
-          <tr>
-            <td style="padding: 16px 0 0; color: #1a1a1a; font-size: 18px; font-weight: 700;">Total</td>
-            <td style="padding: 16px 0 0; text-align: right; color: #1a1a1a; font-size: 26px; font-weight: 700;">$${data.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          </tr>
-        </table>
-      </div>
+<!-- Footer -->
+<div style="border-top:1px solid #eee;padding:24px 0 0;margin-top:16px;text-align:center">
+<p style="margin:0 0 4px;font-weight:700;color:#1a1a1a;font-size:14px">${data.companyName}</p>
+<p style="margin:0;color:#888;font-size:13px">${data.companyEmail}${data.companyPhone ? ` · ${data.companyPhone}` : ''}</p>
+<p style="margin:8px 0 0;color:#aaa;font-size:12px">${data.companyAddress.replace(/\n/g, ' · ')}</p>
+</div>
 
-      <!-- CTA -->
-      <div style="text-align: center; margin: 32px 0;">
-        <p style="margin: 0 0 20px; color: #555; font-size: 15px;">
-          Ready to move forward with your project?
-        </p>
-        <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-          ${data.approveLink ? `
-          <a href="${data.approveLink}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 600; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-size: 14px;">
-            ✓ Approve Quote
-          </a>
-          ` : ''}
-          <a href="mailto:${data.companyEmail}?subject=Re: Quote for ${encodeURIComponent(data.projectName)}" style="display: inline-block; background: linear-gradient(135deg, #1a1a1a 0%, #333 100%); color: #ffffff; font-weight: 600; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-size: 14px;">
-            Reply to This Quote
-          </a>
-        </div>
-        ${data.companyPhone ? `<p style="margin: 16px 0 0; color: #888; font-size: 14px;">Or call us at <a href="tel:${data.companyPhone}" style="color: #1a1a1a; text-decoration: none; font-weight: 600;">${data.companyPhone}</a></p>` : ''}
-      </div>
+</div>
 
-      <!-- Divider -->
-      <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
-
-      <!-- Company Info -->
-      <div style="text-align: center;">
-        <p style="margin: 0 0 4px; font-weight: 600; color: #1a1a1a; font-size: 14px;">${data.companyName}</p>
-        <p style="margin: 0; color: #888; font-size: 13px; line-height: 1.6;">
-          <a href="mailto:${data.companyEmail}" style="color: #888; text-decoration: none;">${data.companyEmail}</a>
-          ${data.companyPhone ? ` · <a href="tel:${data.companyPhone}" style="color: #888; text-decoration: none;">${data.companyPhone}</a>` : ''}
-        </p>
-        <p style="margin: 8px 0 0; color: #aaa; font-size: 12px; white-space: pre-line;">${data.companyAddress}</p>
-      </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div style="text-align: center; margin-top: 24px; padding: 0 20px;">
-      <p style="margin: 0; color: #999; font-size: 11px; line-height: 1.6;">
-        This quote was sent by ${data.companyName}. Please contact them directly with any questions.
-      </p>
-      <p style="margin: 8px 0 0; color: #bbb; font-size: 10px;">
-        Powered by Omnia LightScape
-      </p>
-    </div>
-
-  </div>
-</body>
-</html>
-  `;
+<p style="text-align:center;margin:24px 0 0;color:#666;font-size:11px">Powered by <span style="color:#D4A04A">Omnia LightScape</span></p>
+</div>
+</body></html>`;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -238,7 +169,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (emailError) {
       console.error('Resend error:', emailError);
-      return res.status(500).json({ error: 'Failed to send email', details: emailError.message });
+      return res.status(500).json({
+        error: 'Failed to send email',
+        message: emailError.message,
+        details: JSON.stringify(emailError)
+      });
     }
 
     console.log('Email sent successfully:', emailData);

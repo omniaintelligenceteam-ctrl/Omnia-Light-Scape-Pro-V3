@@ -283,7 +283,10 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 
       if (!response.ok) {
         // Show more detailed error message
-        const errorMsg = data.message || data.error || 'Failed to send email';
+        let errorMsg = data.message || data.error || 'Failed to send email';
+        if (data.details) {
+          errorMsg += ` - ${data.details}`;
+        }
         throw new Error(errorMsg);
       }
 
