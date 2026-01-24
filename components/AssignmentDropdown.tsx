@@ -242,7 +242,7 @@ export const AssignmentDropdown: React.FC<AssignmentDropdownProps> = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute z-50 mt-2 w-full p-2 rounded-xl bg-[#1a1a1a] border border-white/10 shadow-xl max-h-64 overflow-y-auto"
+            className="absolute z-50 mt-2 w-full p-2 rounded-xl bg-[#1a1a1a] border border-white/10 shadow-xl max-h-[calc(100vh-200px)] overflow-y-auto"
           >
             {membersLoading ? (
               <div className="flex items-center justify-center py-8">

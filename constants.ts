@@ -486,7 +486,7 @@ OBSTRUCTION OVERRIDE PROTOCOL:
 - Do NOT relocate fixture off-center to avoid plants
 
 REALISM REQUIREMENTS:
-- Warm, soft glow characteristic of low-voltage LED landscape lighting
+- Characteristic of low-voltage LED landscape lighting
 - Window frame and trim softly illuminated, not harshly lit
 - Glass appears to glow from reflected/ambient light, not direct beam
 - Slight spill onto wall areas immediately adjacent to window
@@ -495,7 +495,7 @@ REALISM REQUIREMENTS:
 FIXTURE COUNT RULE:
 - ONE fixture per window unit -- no exceptions
 - Double window = ONE fixture (on mullion)
-- Triple window = ONE fixture (centered)
+- Triple window = ONE fixture (centered middle window)
 - Do NOT use multiple fixtures for a single window assembly
 
 HOT SPOT AVOIDANCE & WATTAGE:
@@ -508,7 +508,7 @@ HOT SPOT AVOIDANCE & WATTAGE:
 - Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
 
 STRICT EXCLUSION ZONES:
-- Do NOT place fixtures directly under SHUTTERS (stay centered on window glass)
+- Do NOT place fixtures directly under SHUTTERS
 - Do NOT place fixtures on BLANK SIDING or wall piers between windows
 - Do NOT place fixtures on concrete, pavers, driveways, or walkways
 - Do NOT aim beam directly AT the glass surface

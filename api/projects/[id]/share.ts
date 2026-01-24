@@ -86,9 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // If active token exists, update invoice data if provided and return the token
       if (existingToken) {
-        const baseUrl = process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : 'http://localhost:5173';
+        const baseUrl = process.env.APP_URL || process.env.FRONTEND_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173');
 
         return res.status(200).json({
           success: true,
@@ -131,9 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('Failed to update share timestamp:', timestampError);
       }
 
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:5173';
+      const baseUrl = process.env.APP_URL || process.env.FRONTEND_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173');
 
       return res.status(201).json({
         success: true,

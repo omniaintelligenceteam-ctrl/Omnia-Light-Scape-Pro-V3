@@ -210,7 +210,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                             transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 1.5 }}
                           >
                             <FolderOpen
-                              className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
+                              className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
                               strokeWidth={2.5}
                             />
                           </motion.div>
@@ -219,7 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'projects' ? (
                     <FolderClosed
-                      className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
+                      className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Schedule - Calendar check animation */
@@ -231,13 +231,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 1 }}
                     >
                       <CalendarCheck
-                        className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
+                        className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : item.id === 'schedule' ? (
                     <Calendar
-                      className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
+                      className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Settings - Gear rotation animation */
@@ -249,13 +249,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
                       <Settings
-                        className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
+                        className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : (
                     <Icon
-                      className={`w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-all duration-300 ${
+                      className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-all duration-300 ${
                         isActive
                           ? 'text-[#1a1a1a] drop-shadow-sm'
                           : 'text-gray-400'

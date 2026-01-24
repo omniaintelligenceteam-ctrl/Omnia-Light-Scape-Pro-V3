@@ -2425,6 +2425,16 @@ Notes: ${invoice.notes || 'N/A'}
     completed: { label: 'Completed', color: 'text-[#F6B45A]', bgColor: 'bg-[#F6B45A]/10', borderColor: 'border-[#F6B45A]/30' }
   };
 
+  // Empty state configuration for contextual messages
+  const EMPTY_STATE_CONFIG: Record<'all' | ProjectStatus, { title: string; message: string; actionLabel: string; actionTab: string }> = {
+    all: { title: 'No Projects Yet', message: 'Create your first lighting design to get started.', actionLabel: 'Open Editor', actionTab: 'editor' },
+    draft: { title: 'No Draft Projects', message: 'All designs have been quoted or create a new one.', actionLabel: 'Open Editor', actionTab: 'editor' },
+    quoted: { title: 'No Quoted Projects', message: 'Send quotes to clients to move projects forward.', actionLabel: 'View Drafts', actionTab: 'pipeline' },
+    approved: { title: 'No Approved Projects', message: 'Follow up with clients on pending quotes.', actionLabel: 'View Quoted', actionTab: 'pipeline' },
+    scheduled: { title: 'No Scheduled Jobs', message: 'Schedule approved projects for installation.', actionLabel: 'View Approved', actionTab: 'pipeline' },
+    completed: { title: 'No Completed Projects', message: 'Complete scheduled jobs to see them here.', actionLabel: 'View Scheduled', actionTab: 'pipeline' }
+  };
+
   // Count projects by status - filtered by selected location
   const statusCounts = useMemo(() => {
     const counts: Record<ProjectStatus, number> = { draft: 0, quoted: 0, approved: 0, scheduled: 0, completed: 0 };
@@ -4526,15 +4536,28 @@ Notes: ${invoice.notes || 'N/A'}
                                  >
                                     <FolderPlus className="w-8 h-8 text-[#F6B45A]/60" />
                                  </motion.div>
-                                 <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">No Pending Projects</p>
-                                 <p className="text-sm text-gray-400 mt-1 max-w-[280px] text-center">All projects have been approved or create a new design in the Editor.</p>
+                                 <p className="font-bold text-lg text-white font-serif tracking-wide mb-2">{EMPTY_STATE_CONFIG[pipelineStatusFilter].title}</p>
+                                 <p className="text-sm text-gray-400 mt-1 max-w-[280px] text-center">{EMPTY_STATE_CONFIG[pipelineStatusFilter].message}</p>
                                  <motion.button
                                    whileHover={{ scale: 1.02 }}
                                    whileTap={{ scale: 0.98 }}
-                                   onClick={() => handleTabChange('editor')}
+                                   onClick={() => {
+                                    const config = EMPTY_STATE_CONFIG[pipelineStatusFilter];
+                                    if (config.actionTab === 'editor') {
+                                      handleTabChange('editor');
+                                    } else {
+                                      const statusOrder: ('draft' | 'quoted' | 'approved' | 'scheduled')[] = ['draft', 'quoted', 'approved', 'scheduled'];
+                                      const currentIndex = statusOrder.indexOf(pipelineStatusFilter as any);
+                                      if (currentIndex > 0) {
+                                        setPipelineStatusFilter(statusOrder[currentIndex - 1]);
+                                      } else {
+                                        setPipelineStatusFilter('all');
+                                      }
+                                    }
+                                  }}
                                    className="mt-6 px-5 py-2.5 bg-[#F6B45A]/10 border border-[#F6B45A]/30 rounded-xl text-[#F6B45A] text-sm font-bold hover:bg-[#F6B45A]/20 transition-colors relative z-10"
                                  >
-                                   Open Editor
+                                   {EMPTY_STATE_CONFIG[pipelineStatusFilter].actionLabel}
                                  </motion.button>
                              </motion.div>
                          ) : (

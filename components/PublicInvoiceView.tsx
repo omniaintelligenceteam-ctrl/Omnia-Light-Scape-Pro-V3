@@ -358,7 +358,31 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
                 <DollarSign className="w-5 h-5 text-blue-500" />
                 Invoice Items
               </h2>
-              <div className="overflow-x-auto">
+              {/* Mobile Card Layout */}
+              <div className="md:hidden space-y-3">
+                {invoiceData.lineItems.map((item) => (
+                  <div key={item.id} className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <p className="font-medium text-white mb-3">{item.description}</p>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div>
+                        <p className="text-gray-500 text-xs mb-1">Qty</p>
+                        <p className="text-gray-300">{item.quantity}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs mb-1">Unit Price</p>
+                        <p className="text-gray-300">{formatCurrency(item.unitPrice)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-gray-500 text-xs mb-1">Total</p>
+                        <p className="font-medium text-white">{formatCurrency(item.total)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table Layout */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-sm text-gray-400 border-b border-white/10">

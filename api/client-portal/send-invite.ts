@@ -172,10 +172,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Column may not exist yet - that's ok
     }
 
-    // Build portal URL
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:5173';
+    // Build portal URL - prefer APP_URL for production domain
+    const baseUrl = process.env.APP_URL || process.env.FRONTEND_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173');
     const portalUrl = `${baseUrl}/portal?token=${token}`;
 
     // Send email with premium template

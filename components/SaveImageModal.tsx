@@ -128,7 +128,7 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-[#111] rounded-2xl border border-white/10 w-full max-w-md overflow-hidden shadow-2xl"
+          className="bg-[#111] rounded-2xl border border-white/10 w-full max-w-md overflow-y-auto max-h-[90vh] shadow-2xl"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-white/10">
@@ -239,8 +239,10 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
                     value={newClientData.name}
                     onChange={(e) => setNewClientData({ ...newClientData, name: e.target.value })}
                     placeholder="Client name"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-base"
                     autoFocus
+                    autoCapitalize="words"
+                    autoCorrect="off"
                   />
                 </div>
 
@@ -253,7 +255,10 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
                     value={newClientData.email}
                     onChange={(e) => setNewClientData({ ...newClientData, email: e.target.value })}
                     placeholder="client@example.com"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-base"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                   />
                 </div>
 
@@ -266,7 +271,9 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
                     value={newClientData.phone}
                     onChange={(e) => setNewClientData({ ...newClientData, phone: e.target.value })}
                     placeholder="(555) 123-4567"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-base"
+                    inputMode="tel"
+                    autoCorrect="off"
                   />
                 </div>
 
@@ -279,7 +286,8 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({
                     value={newClientData.address}
                     onChange={(e) => setNewClientData({ ...newClientData, address: e.target.value })}
                     placeholder="123 Main St, City, State"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-base"
+                    autoCapitalize="words"
                   />
                 </div>
 

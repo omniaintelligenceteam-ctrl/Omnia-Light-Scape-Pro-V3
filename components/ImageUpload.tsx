@@ -200,11 +200,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <h3 className={`text-sm sm:text-base md:text-lg font-semibold mb-1 transition-colors duration-300 ${
               isDragging ? 'text-[#F6B45A]' : 'text-white'
             }`}>
-              {isDragging ? 'Drop to upload' : 'Drop your photo here'}
+              {isDragging ? 'Drop to upload' : 'Upload Photo'}
             </h3>
-            <p className="text-[11px] sm:text-xs md:text-sm text-gray-400">
-              or choose an option below
-            </p>
           </div>
 
           {/* Buttons */}
@@ -229,11 +226,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               <span className="whitespace-nowrap">Browse Files</span>
             </motion.button>
           </div>
-
-          {/* Helper text */}
-          <p className="mt-4 sm:mt-6 text-[9px] sm:text-[10px] md:text-xs text-gray-400 text-center px-2">
-            Supports JPG, PNG, HEIC  •  Max 10MB  •  Best at 1920×1080+
-          </p>
         </div>
       </div>
     </motion.div>

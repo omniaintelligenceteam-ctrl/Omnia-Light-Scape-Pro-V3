@@ -357,7 +357,75 @@ export const BOMView: React.FC<BOMViewProps> = ({
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile Card Layout */}
+            <div className="md:hidden space-y-3">
+              <AnimatePresence mode="popLayout">
+                {localBOM.fixtures.map((fixture, index) => (
+                  <motion.div
+                    key={fixture.id || index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="bg-[#111] rounded-xl border border-white/5 p-4"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h4 className="text-sm font-medium text-white">
+                        {FIXTURE_TYPE_NAMES[fixture.category] || fixture.name}
+                      </h4>
+                      <button
+                        onClick={() => handleDeleteFixture(index)}
+                        className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                        title="Remove fixture"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 block mb-1">Quantity</span>
+                        <input
+                          type="number"
+                          value={fixture.quantity}
+                          onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)}
+                          min="0"
+                          className="w-full bg-white/5 border border-white/10 focus:border-[#F6B45A] rounded-lg px-3 py-2 text-sm text-[#F6B45A] font-bold focus:outline-none transition-colors text-base"
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 block mb-1">Wattage</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={fixture.wattage}
+                            onChange={(e) => handleWattageChange(index, parseInt(e.target.value) || 1)}
+                            min="1"
+                            max="100"
+                            className="w-full bg-white/5 border border-white/10 focus:border-[#F6B45A] rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none transition-colors text-base"
+                            inputMode="numeric"
+                          />
+                          <span className="text-gray-500 text-sm">W</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                      <span className="text-[10px] uppercase tracking-wider text-gray-500">Total</span>
+                      <span className="text-sm font-bold text-white">{fixture.totalWattage}W</span>
+                    </div>
+                    {hasSkus && (fixture.brand || fixture.sku) && (
+                      <div className="mt-2 pt-2 border-t border-white/5 text-xs text-gray-400">
+                        {fixture.brand && <span className="mr-3">{fixture.brand}</span>}
+                        {fixture.sku && <span className="font-mono">{fixture.sku}</span>}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Desktop Table Layout */}
+            <div className="hidden md:block overflow-x-auto print:block">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-white/10 print:border-gray-200">
