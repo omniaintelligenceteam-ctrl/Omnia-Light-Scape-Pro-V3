@@ -2706,74 +2706,77 @@ Notes: ${invoice.notes || 'N/A'}
                       </motion.button>
                   </div>
 
-                  {/* Image Preview - Always Visible at Top */}
-                  {previewUrl && (
-                    <div className="shrink-0 p-4 pb-2 bg-[#0a0a0a]">
-                      <div className="relative w-full h-40 md:h-56 rounded-xl overflow-hidden border border-white/10">
-                        <img
-                          src={previewUrl}
-                          alt="Your photo"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-[10px] text-gray-300">
-                          Reference image
+                  {/* Content Area - Responsive Layout */}
+                  <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                    {/* Image Preview - Left side on desktop, top on mobile */}
+                    {previewUrl && (
+                      <div className="shrink-0 p-4 pb-2 md:pb-4 bg-[#0a0a0a] md:w-1/2 md:flex md:items-center md:justify-center">
+                        <div className="relative w-full h-40 md:h-auto md:max-h-[500px] md:aspect-video rounded-xl overflow-hidden border border-white/10">
+                          <img
+                            src={previewUrl}
+                            alt="Your photo"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-[10px] text-gray-300">
+                            Reference image
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Scrollable Options */}
-                  <div className="flex-1 px-4 py-3 overflow-y-auto bg-gradient-to-b from-[#0a0a0a] to-[#050505]">
-                      <div className="space-y-2 max-w-lg mx-auto">
-                          {getCurrentSubOptions().map((opt, index) => {
-                              const isSelected = pendingOptions.includes(opt.id);
-                              return (
-                                  <motion.button
-                                    key={opt.id}
-                                    onClick={() => togglePendingOption(opt.id)}
-                                    className={`group w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
-                                        isSelected
-                                            ? 'bg-[#F6B45A] border-[#F6B45A] shadow-[0_0_20px_rgba(246,180,90,0.3)]'
-                                            : 'bg-[#0d0d0d] border-white/5 hover:border-[#F6B45A]/40 hover:bg-[#F6B45A]/5'
-                                    }`}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    whileTap={{ scale: 0.98 }}
-                                  >
-                                      <div className="flex flex-col items-start text-left">
-                                          <span className={`text-sm font-semibold transition-colors ${
-                                              isSelected ? 'text-black' : 'text-white group-hover:text-[#F6B45A]'
-                                          }`}>
-                                              {opt.label}
-                                          </span>
-                                          <span className={`text-xs mt-0.5 transition-colors ${
-                                              isSelected ? 'text-black/60' : 'text-gray-500'
-                                          }`}>
-                                              {opt.description}
-                                          </span>
-                                      </div>
-                                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all ${
+                    {/* Scrollable Options - Right side on desktop, below image on mobile */}
+                    <div className={`flex-1 px-4 py-3 overflow-y-auto bg-gradient-to-b from-[#0a0a0a] to-[#050505] ${previewUrl ? 'md:w-1/2' : 'w-full'}`}>
+                        <div className="space-y-2 max-w-lg mx-auto md:max-w-none">
+                            {getCurrentSubOptions().map((opt, index) => {
+                                const isSelected = pendingOptions.includes(opt.id);
+                                return (
+                                    <motion.button
+                                      key={opt.id}
+                                      onClick={() => togglePendingOption(opt.id)}
+                                      className={`group w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
                                           isSelected
-                                              ? 'bg-black/20'
-                                              : 'border border-white/20 group-hover:border-[#F6B45A]/50'
-                                      }`}>
-                                          <AnimatePresence>
-                                              {isSelected && (
-                                                  <motion.div
-                                                      initial={{ scale: 0 }}
-                                                      animate={{ scale: 1 }}
-                                                      exit={{ scale: 0 }}
-                                                  >
-                                                      <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />
-                                                  </motion.div>
-                                              )}
-                                          </AnimatePresence>
-                                      </div>
-                                  </motion.button>
-                              )
-                          })}
-                      </div>
+                                              ? 'bg-[#F6B45A] border-[#F6B45A] shadow-[0_0_20px_rgba(246,180,90,0.3)]'
+                                              : 'bg-[#0d0d0d] border-white/5 hover:border-[#F6B45A]/40 hover:bg-[#F6B45A]/5'
+                                      }`}
+                                      initial={{ opacity: 0, x: -20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ delay: index * 0.05 }}
+                                      whileTap={{ scale: 0.98 }}
+                                    >
+                                        <div className="flex flex-col items-start text-left">
+                                            <span className={`text-sm font-semibold transition-colors ${
+                                                isSelected ? 'text-black' : 'text-white group-hover:text-[#F6B45A]'
+                                            }`}>
+                                                {opt.label}
+                                            </span>
+                                            <span className={`text-xs mt-0.5 transition-colors ${
+                                                isSelected ? 'text-black/60' : 'text-gray-500'
+                                            }`}>
+                                                {opt.description}
+                                            </span>
+                                        </div>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all ${
+                                            isSelected
+                                                ? 'bg-black/20'
+                                                : 'border border-white/20 group-hover:border-[#F6B45A]/50'
+                                        }`}>
+                                            <AnimatePresence>
+                                                {isSelected && (
+                                                    <motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        exit={{ scale: 0 }}
+                                                    >
+                                                        <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    </motion.button>
+                                )
+                            })}
+                        </div>
+                    </div>
                   </div>
 
                   {/* Footer */}
