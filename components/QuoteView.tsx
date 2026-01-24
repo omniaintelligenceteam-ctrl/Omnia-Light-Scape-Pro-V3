@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, DollarSign, Receipt, Building2, Hash, Pencil, Upload, Share2, Link2, Copy, ExternalLink } from 'lucide-react';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, DollarSign, Receipt, Building2, Hash, Pencil, Upload, Share2, Link2, Copy, ExternalLink, ChevronDown } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 import { uploadImage } from '../services/uploadService';
@@ -69,6 +69,9 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   // Delete Confirmation Modal State
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
+  // Add Item Dropdown State
+  const [showAddItemDropdown, setShowAddItemDropdown] = useState(false);
+
   // Client Details State (Controlled) - empty defaults
   const [clientName, setClientName] = useState(initialData?.clientDetails.name || "");
   const [clientEmail, setClientEmail] = useState(initialData?.clientDetails.email || "");
@@ -81,8 +84,14 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     setLineItems(newItems);
   };
 
-  const handleAddItem = () => {
-    const newItem: LineItem = {
+  const handleAddItem = (fixture?: FixturePricing) => {
+    const newItem: LineItem = fixture ? {
+      id: `${fixture.fixtureType}_${Date.now()}`,
+      name: fixture.name,
+      description: fixture.description,
+      quantity: 1,
+      unitPrice: fixture.unitPrice
+    } : {
       id: `custom_${Date.now()}`,
       name: "New Custom Item",
       description: "Description of services...",
@@ -90,6 +99,7 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
       unitPrice: 0.00
     };
     setLineItems([...lineItems, newItem]);
+    setShowAddItemDropdown(false);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -978,17 +988,61 @@ ${customMessage ? `\n${customMessage}\n` : ''}
             ))}
           </div>
 
-          {/* Add Item Button */}
+          {/* Add Item Button with Dropdown */}
           {!hideToolbar && (
-            <div className="mb-4 md:mb-12 print:hidden">
+            <div className="mb-4 md:mb-12 print:hidden relative">
                 <motion.button
-                    onClick={handleAddItem}
+                    onClick={() => setShowAddItemDropdown(!showAddItemDropdown)}
                     className="w-full md:w-auto flex items-center justify-center gap-2 text-[10px] md:text-xs font-bold uppercase tracking-wider text-[#F6B45A] hover:text-[#ffc67a] hover:bg-[#F6B45A]/10 px-4 md:px-8 py-2.5 md:py-4 rounded-lg md:rounded-xl border border-dashed border-[#F6B45A]/30 hover:border-[#F6B45A]/60 transition-all"
                     whileTap={{ scale: 0.99 }}
                 >
                     <Plus className="w-4 h-4 md:w-5 md:h-5" />
                     ADD ITEM
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showAddItemDropdown ? 'rotate-180' : ''}`} />
                 </motion.button>
+
+                {/* Dropdown Menu */}
+                <AnimatePresence>
+                    {showAddItemDropdown && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-0 right-0 md:left-auto md:right-auto mt-2 w-full md:w-80 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden"
+                        >
+                            <div className="p-2 border-b border-white/10">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 px-2">Select Fixture</span>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto">
+                                {defaultPricing.map((fixture) => (
+                                    <button
+                                        key={fixture.id}
+                                        onClick={() => handleAddItem(fixture)}
+                                        className="w-full px-4 py-3 text-left hover:bg-[#F6B45A]/10 transition-colors border-b border-white/5 last:border-b-0"
+                                    >
+                                        <div className="flex justify-between items-start gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-white truncate">{fixture.name.split(':')[0]}</p>
+                                                <p className="text-xs text-gray-500 capitalize">{fixture.fixtureType.replace('coredrill', 'Core Drill')}</p>
+                                            </div>
+                                            <span className="text-sm font-bold text-[#F6B45A] shrink-0">${fixture.unitPrice}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="p-2 border-t border-white/10">
+                                <button
+                                    onClick={() => handleAddItem()}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-lg transition-colors flex items-center gap-2"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add Custom Item
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
           )}
 

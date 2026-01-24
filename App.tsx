@@ -52,7 +52,7 @@ import { KanbanBoard } from './components/pipeline';
 import { useToast } from './components/Toast';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2 } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
@@ -350,6 +350,8 @@ const App: React.FC = () => {
   const [selectedFixtures, setSelectedFixtures] = useState<string[]>([]);
   // Sub-Options State
   const [fixtureSubOptions, setFixtureSubOptions] = useState<Record<string, string[]>>({});
+  // Fixture Count State (null = auto/AI determines, number = user-specified exact count)
+  const [fixtureCounts, setFixtureCounts] = useState<Record<string, number | null>>({});
 
   // Favorite Presets State
   interface FixturePreset {
@@ -1358,7 +1360,22 @@ const App: React.FC = () => {
     // --- PART 2: POSITIVE INSTRUCTIONS ---
     activePrompt += "### ACTIVE LIGHTING CONFIGURATION (EXCLUSIVE ALLOW-LIST):\n";
     activePrompt += "NOTE: This section defines the ONLY allowed lights. Treat this as an exclusive white-list.\n";
-    
+
+    // --- FIXTURE QUANTITIES (User-specified counts) ---
+    const fixturesWithCounts = selectedFixtures.filter(fid => fixtureCounts[fid] !== null && fixtureCounts[fid] !== undefined);
+    if (fixturesWithCounts.length > 0) {
+        activePrompt += "\n### FIXTURE QUANTITIES (EXACT COUNTS - MANDATORY):\n";
+        activePrompt += "The following fixture counts are USER-SPECIFIED and MUST be followed EXACTLY:\n";
+        fixturesWithCounts.forEach(fid => {
+            const fixture = FIXTURE_TYPES.find(f => f.id === fid);
+            const count = fixtureCounts[fid];
+            if (fixture && count) {
+                activePrompt += `- ${fixture.label.toUpperCase()}: Place EXACTLY ${count} fixtures. Not ${count - 1}, not ${count + 1}. EXACTLY ${count}.\n`;
+            }
+        });
+        activePrompt += "ENFORCEMENT: Count your fixtures before finalizing. If the count doesn't match, adjust placement.\n\n";
+    }
+
     // Add positive instructions for selected fixtures
     FIXTURE_TYPES.forEach(ft => {
         if (selectedFixtures.includes(ft.id)) {
@@ -4216,6 +4233,84 @@ Notes: ${invoice.notes || 'N/A'}
                                     );
                                 })}
                             </div>
+
+                            {/* Fixture Count Controls - Expandable Section */}
+                            <AnimatePresence>
+                                {selectedFixtures.length > 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="mt-4 overflow-hidden"
+                                    >
+                                        <div className="bg-[#0d0d0d] rounded-xl border border-white/10 p-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Hash className="w-4 h-4 text-[#F6B45A]" />
+                                                <span className="text-xs font-semibold text-white uppercase tracking-wider">Fixture Quantities</span>
+                                                <span className="text-[10px] text-gray-500 ml-auto">Auto = AI determines count</span>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {selectedFixtures.map((fixtureId) => {
+                                                    const fixture = FIXTURE_TYPES.find(f => f.id === fixtureId);
+                                                    if (!fixture) return null;
+                                                    const count = fixtureCounts[fixtureId];
+                                                    const isAuto = count === null || count === undefined;
+
+                                                    return (
+                                                        <div key={fixtureId} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 last:border-b-0">
+                                                            <span className="text-sm text-gray-300">{fixture.label}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                {/* Auto/Manual Toggle */}
+                                                                <button
+                                                                    onClick={() => setFixtureCounts(prev => ({
+                                                                        ...prev,
+                                                                        [fixtureId]: isAuto ? 8 : null
+                                                                    }))}
+                                                                    className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                                                                        isAuto
+                                                                            ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
+                                                                            : 'bg-white/5 text-gray-500 border border-white/10 hover:border-white/20'
+                                                                    }`}
+                                                                >
+                                                                    Auto
+                                                                </button>
+
+                                                                {/* Stepper Controls */}
+                                                                {!isAuto && (
+                                                                    <div className="flex items-center gap-1 bg-white/5 rounded-lg border border-white/10">
+                                                                        <button
+                                                                            onClick={() => setFixtureCounts(prev => ({
+                                                                                ...prev,
+                                                                                [fixtureId]: Math.max(1, (prev[fixtureId] || 8) - 1)
+                                                                            }))}
+                                                                            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-l-lg transition-colors"
+                                                                        >
+                                                                            <Minus className="w-4 h-4" />
+                                                                        </button>
+                                                                        <span className="w-10 text-center text-sm font-bold text-[#F6B45A]">
+                                                                            {count || 8}
+                                                                        </span>
+                                                                        <button
+                                                                            onClick={() => setFixtureCounts(prev => ({
+                                                                                ...prev,
+                                                                                [fixtureId]: Math.min(50, (prev[fixtureId] || 8) + 1)
+                                                                            }))}
+                                                                            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-r-lg transition-colors"
+                                                                        >
+                                                                            <Plus className="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
                         {/* Premium Custom Notes Input */}

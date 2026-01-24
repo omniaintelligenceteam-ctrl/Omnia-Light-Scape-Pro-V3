@@ -152,6 +152,7 @@ ${preferenceContext}
     - **Color Temperature (MANDATORY)**: ${colorTemperaturePrompt} This is a HARD RULE - ALL lights MUST use this exact color temperature unless the user explicitly specifies a different temperature in the DESIGN REQUEST notes below.
     - **Intensity**: ${getIntensityPrompt(lightIntensity)}
     - **Beam**: ${getBeamAnglePrompt(beamAngle)}
+    - **FIXTURE QUANTITIES**: When the DESIGN REQUEST specifies an EXACT count for a fixture type (e.g., "EXACTLY 8 up lights"), you MUST place that EXACT number. Count your fixtures before finalizing. Do not add more, do not add fewer.
 
     # YOUR ONLY PERMITTED MODIFICATIONS:
     1. Darken the overall scene to simulate nighttime
