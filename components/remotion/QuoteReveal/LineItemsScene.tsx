@@ -9,7 +9,7 @@ interface LineItemsSceneProps {
 
 export const LineItemsScene: React.FC<LineItemsSceneProps> = ({
   lineItems,
-  subtotal,
+  subtotal: _subtotal, // Available for display if needed
 }) => {
   const frame = useCurrentFrame();
 

@@ -1210,9 +1210,52 @@ const App: React.FC = () => {
     });
   };
 
+  // Helper function for smart default fixture counts per sub-option
+  const getDefaultCount = (fixtureId: string, subOptId: string): number => {
+      // Gutter sub-options typically need fewer fixtures
+      if (fixtureId === 'gutter') {
+          if (subOptId === 'dormers') return 2;
+          if (subOptId === 'peaks') return 1;
+          if (subOptId === 'secondStoryFacade') return 4;
+      }
+      // Up lights defaults
+      if (fixtureId === 'up') {
+          if (subOptId === 'siding') return 6;
+          if (subOptId === 'windows') return 4;
+          if (subOptId === 'columns') return 4;
+          if (subOptId === 'trees') return 4;
+      }
+      // Path lights defaults
+      if (fixtureId === 'path') {
+          if (subOptId === 'pathway') return 6;
+          if (subOptId === 'driveway') return 8;
+      }
+      // Soffit defaults
+      if (fixtureId === 'soffit') {
+          return 8;
+      }
+      // Hardscape defaults
+      if (fixtureId === 'hardscape') {
+          return 4;
+      }
+      return 4; // Generic default
+  };
+
   const confirmFixtureSelection = () => {
       if (activeConfigFixture) {
           setFixtureSubOptions(prev => ({ ...prev, [activeConfigFixture]: pendingOptions }));
+
+          // Set default counts for newly selected sub-options
+          const defaultCounts: Record<string, number> = {};
+          pendingOptions.forEach(optId => {
+              if (fixtureCounts[optId] === undefined || fixtureCounts[optId] === null) {
+                  defaultCounts[optId] = getDefaultCount(activeConfigFixture, optId);
+              }
+          });
+          if (Object.keys(defaultCounts).length > 0) {
+              setFixtureCounts(prev => ({ ...prev, ...defaultCounts }));
+          }
+
           // Ensure fixture is in selectedFixtures
           if (!selectedFixtures.includes(activeConfigFixture)) {
               setSelectedFixtures(prev => [...prev, activeConfigFixture]);
@@ -1361,17 +1404,27 @@ const App: React.FC = () => {
     activePrompt += "### ACTIVE LIGHTING CONFIGURATION (EXCLUSIVE ALLOW-LIST):\n";
     activePrompt += "NOTE: This section defines the ONLY allowed lights. Treat this as an exclusive white-list.\n";
 
-    // --- FIXTURE QUANTITIES (User-specified counts) ---
-    const fixturesWithCounts = selectedFixtures.filter(fid => fixtureCounts[fid] !== null && fixtureCounts[fid] !== undefined);
-    if (fixturesWithCounts.length > 0) {
+    // --- FIXTURE QUANTITIES (User-specified counts for sub-options) ---
+    const subOptionsWithCounts: { subOptId: string; label: string; count: number }[] = [];
+    selectedFixtures.forEach(fixtureId => {
+        const fixture = FIXTURE_TYPES.find(f => f.id === fixtureId);
+        if (!fixture) return;
+        const selectedSubOpts = fixtureSubOptions[fixtureId] || [];
+        selectedSubOpts.forEach(subOptId => {
+            const count = fixtureCounts[subOptId];
+            if (count !== null && count !== undefined) {
+                const subOpt = fixture.subOptions?.find(s => s.id === subOptId);
+                if (subOpt) {
+                    subOptionsWithCounts.push({ subOptId, label: subOpt.label, count });
+                }
+            }
+        });
+    });
+    if (subOptionsWithCounts.length > 0) {
         activePrompt += "\n### FIXTURE QUANTITIES (EXACT COUNTS - MANDATORY):\n";
         activePrompt += "The following fixture counts are USER-SPECIFIED and MUST be followed EXACTLY:\n";
-        fixturesWithCounts.forEach(fid => {
-            const fixture = FIXTURE_TYPES.find(f => f.id === fid);
-            const count = fixtureCounts[fid];
-            if (fixture && count) {
-                activePrompt += `- ${fixture.label.toUpperCase()}: Place EXACTLY ${count} fixtures. Not ${count - 1}, not ${count + 1}. EXACTLY ${count}.\n`;
-            }
+        subOptionsWithCounts.forEach(({ label, count }) => {
+            activePrompt += `- ${label.toUpperCase()}: Place EXACTLY ${count} fixtures. Not ${count - 1}, not ${count + 1}. EXACTLY ${count}.\n`;
         });
         activePrompt += "ENFORCEMENT: Count your fixtures before finalizing. If the count doesn't match, adjust placement.\n\n";
     }
@@ -4257,60 +4310,72 @@ Notes: ${invoice.notes || 'N/A'}
                                                 <span className="text-[10px] text-gray-500 ml-auto">Auto = AI determines count</span>
                                             </div>
                                             <div className="space-y-3">
-                                                {selectedFixtures.map((fixtureId) => {
+                                                {selectedFixtures.flatMap((fixtureId) => {
                                                     const fixture = FIXTURE_TYPES.find(f => f.id === fixtureId);
-                                                    if (!fixture) return null;
-                                                    const count = fixtureCounts[fixtureId];
-                                                    const isAuto = count === null || count === undefined;
+                                                    if (!fixture) return [];
 
-                                                    return (
-                                                        <div key={fixtureId} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 last:border-b-0">
-                                                            <span className="text-sm text-gray-300">{fixture.label}</span>
-                                                            <div className="flex items-center gap-2">
-                                                                {/* Auto/Manual Toggle */}
-                                                                <button
-                                                                    onClick={() => setFixtureCounts(prev => ({
-                                                                        ...prev,
-                                                                        [fixtureId]: isAuto ? 8 : null
-                                                                    }))}
-                                                                    className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-                                                                        isAuto
-                                                                            ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
-                                                                            : 'bg-white/5 text-gray-500 border border-white/10 hover:border-white/20'
-                                                                    }`}
-                                                                >
-                                                                    Auto
-                                                                </button>
+                                                    // Get selected sub-options for this fixture
+                                                    const selectedSubOpts = fixtureSubOptions[fixtureId] || [];
 
-                                                                {/* Stepper Controls */}
-                                                                {!isAuto && (
-                                                                    <div className="flex items-center gap-1 bg-white/5 rounded-lg border border-white/10">
-                                                                        <button
-                                                                            onClick={() => setFixtureCounts(prev => ({
-                                                                                ...prev,
-                                                                                [fixtureId]: Math.max(1, (prev[fixtureId] || 8) - 1)
-                                                                            }))}
-                                                                            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-l-lg transition-colors"
-                                                                        >
-                                                                            <Minus className="w-4 h-4" />
-                                                                        </button>
-                                                                        <span className="w-10 text-center text-sm font-bold text-[#F6B45A]">
-                                                                            {count || 8}
-                                                                        </span>
-                                                                        <button
-                                                                            onClick={() => setFixtureCounts(prev => ({
-                                                                                ...prev,
-                                                                                [fixtureId]: Math.min(50, (prev[fixtureId] || 8) + 1)
-                                                                            }))}
-                                                                            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-r-lg transition-colors"
-                                                                        >
-                                                                            <Plus className="w-4 h-4" />
-                                                                        </button>
-                                                                    </div>
-                                                                )}
+                                                    // If no sub-options selected, show nothing for this fixture
+                                                    if (selectedSubOpts.length === 0) return [];
+
+                                                    return selectedSubOpts.map((subOptId) => {
+                                                        const subOpt = fixture.subOptions?.find(s => s.id === subOptId);
+                                                        if (!subOpt) return null;
+
+                                                        const count = fixtureCounts[subOptId];
+                                                        const isAuto = count === null || count === undefined;
+
+                                                        return (
+                                                            <div key={subOptId} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 last:border-b-0">
+                                                                <span className="text-sm text-gray-300">{subOpt.label}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    {/* Auto/Manual Toggle */}
+                                                                    <button
+                                                                        onClick={() => setFixtureCounts(prev => ({
+                                                                            ...prev,
+                                                                            [subOptId]: isAuto ? getDefaultCount(fixtureId, subOptId) : null
+                                                                        }))}
+                                                                        className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                                                                            isAuto
+                                                                                ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
+                                                                                : 'bg-white/5 text-gray-500 border border-white/10 hover:border-white/20'
+                                                                        }`}
+                                                                    >
+                                                                        Auto
+                                                                    </button>
+
+                                                                    {/* Stepper Controls */}
+                                                                    {!isAuto && (
+                                                                        <div className="flex items-center gap-1 bg-white/5 rounded-lg border border-white/10">
+                                                                            <button
+                                                                                onClick={() => setFixtureCounts(prev => ({
+                                                                                    ...prev,
+                                                                                    [subOptId]: Math.max(1, (prev[subOptId] || 4) - 1)
+                                                                                }))}
+                                                                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-l-lg transition-colors"
+                                                                            >
+                                                                                <Minus className="w-4 h-4" />
+                                                                            </button>
+                                                                            <span className="w-10 text-center text-sm font-bold text-[#F6B45A]">
+                                                                                {count}
+                                                                            </span>
+                                                                            <button
+                                                                                onClick={() => setFixtureCounts(prev => ({
+                                                                                    ...prev,
+                                                                                    [subOptId]: Math.min(50, (prev[subOptId] || 4) + 1)
+                                                                                }))}
+                                                                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-r-lg transition-colors"
+                                                                            >
+                                                                                <Plus className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
+                                                        );
+                                                    });
                                                 })}
                                             </div>
                                         </div>

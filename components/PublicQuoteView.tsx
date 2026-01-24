@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, Loader2,
   AlertCircle, Check, XCircle, Shield, ChevronDown, ChevronUp, Sparkles,
-  CreditCard, Calendar
+  CreditCard, Calendar, Play, FileText as DocumentIcon
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { SignatureCapture } from './SignatureCapture';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
+import { QuoteVideoPlayer } from './remotion/QuoteVideoPlayer';
+import type { QuoteVideoProps } from './remotion/QuoteReveal';
 
 interface QuoteProject {
   id: string;
@@ -117,6 +119,9 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
   const [showTerms, setShowTerms] = useState(false);
   const [paymentOption, setPaymentOption] = useState<'deposit' | 'full'>('deposit');
 
+  // View mode: document or video
+  const [viewMode, setViewMode] = useState<'document' | 'video'>('document');
+
   useEffect(() => {
     async function fetchQuote() {
       try {
@@ -200,6 +205,35 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
   // Get total from quote if available
   const quoteTotal = data?.project?.promptConfig?.quote?.total || 0;
   const depositAmount = quoteTotal * 0.5;
+
+  // Build video props from quote data
+  const buildVideoProps = (): QuoteVideoProps | null => {
+    if (!data) return null;
+    const quoteConfig = data.project.promptConfig?.quote || {};
+    const lineItems = quoteConfig.lineItems || [];
+
+    return {
+      companyName: data.company.name,
+      companyLogo: data.company.logo || undefined,
+      clientName: data.client?.name || 'Valued Customer',
+      projectName: data.project.name,
+      beforeImage: data.project.originalImageUrl || undefined,
+      afterImage: data.project.generatedImageUrl || undefined,
+      lineItems: lineItems.map((item: any) => ({
+        name: item.name || item.type || 'Item',
+        quantity: item.quantity || 1,
+        unitPrice: item.price || 0,
+        total: (item.price || 0) * (item.quantity || 1),
+      })),
+      subtotal: quoteConfig.subtotal || quoteTotal,
+      tax: quoteConfig.tax || 0,
+      total: quoteTotal,
+      approvalUrl: window.location.href,
+      expiresAt: data.project.quoteExpiresAt || undefined,
+    };
+  };
+
+  const videoProps = buildVideoProps();
 
   // Loading State
   if (loading) {
@@ -324,7 +358,69 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
             </p>
             <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#F6B45A]/50" />
           </div>
+
+          {/* View Mode Toggle */}
+          {videoProps && !approved && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center justify-center gap-2 mt-6"
+            >
+              <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-xl p-1">
+                <motion.button
+                  onClick={() => setViewMode('document')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    viewMode === 'document'
+                      ? 'bg-[#F6B45A] text-black'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <DocumentIcon className="w-4 h-4" />
+                  Document
+                </motion.button>
+                <motion.button
+                  onClick={() => setViewMode('video')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    viewMode === 'video'
+                      ? 'bg-[#F6B45A] text-black'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Play className="w-4 h-4" />
+                  Video
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
+
+        {/* Video Player */}
+        <AnimatePresence mode="wait">
+          {viewMode === 'video' && videoProps && (
+            <motion.div
+              key="video"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="mb-8"
+            >
+              <QuoteVideoPlayer
+                quoteData={videoProps}
+                className="shadow-2xl shadow-black/50"
+                showControls
+              />
+              <p className="text-center text-gray-500 text-sm mt-4">
+                Watch your personalized quote presentation, then switch to Document view to approve.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Main Card */}
         <motion.div
