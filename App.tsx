@@ -4632,7 +4632,28 @@ Notes: ${invoice.notes || 'N/A'}
                                         onGenerateQuote={(p) => {
                                             setCurrentProjectId(p.id);
                                             if (p.image) setGeneratedImage(p.image);
-                                            setCurrentQuote(p.quote || null);
+
+                                            // Start with the project's existing quote or a default structure
+                                            let quoteToUse = p.quote || null;
+
+                                            // If the project has a clientId, populate the quote with client info
+                                            if (p.clientId) {
+                                                const client = clients.find(c => c.id === p.clientId);
+                                                if (client) {
+                                                    // Create or update the quote with client details
+                                                    quoteToUse = {
+                                                        ...(quoteToUse || { lineItems: [], taxRate: 0.07, discount: 0, total: 0 }),
+                                                        clientDetails: {
+                                                            name: client.name || '',
+                                                            email: client.email || '',
+                                                            phone: client.phone || '',
+                                                            address: client.address || ''
+                                                        }
+                                                    };
+                                                }
+                                            }
+
+                                            setCurrentQuote(quoteToUse);
                                             setProjectsSubTab('quotes');
                                         }}
                                         onScheduleProject={(p) => {
