@@ -157,6 +157,14 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   const [showAIChat, setShowAIChat] = useState(false);
   const { isOwner, isAdmin } = useOrganization();
 
+  // Toast notifications
+  const successToast = useSuccessToast();
+  const errorToast = useErrorToast();
+
+  // Form validation state
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onProfileChange && profile) {
       const reader = new FileReader();
@@ -368,20 +376,34 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
               onChange={(v) => onProfileChange?.({ ...profile, name: v })}
               placeholder="Your company name"
             />
-            <CardInput
-              label="Email"
-              value={profile.email}
-              onChange={(v) => onProfileChange?.({ ...profile, email: v })}
-              placeholder="contact@company.com"
-              type="email"
-            />
-            <CardInput
-              label="Phone Number"
-              value={profile.phone || ''}
-              onChange={(v) => onProfileChange?.({ ...profile, phone: v })}
-              placeholder="(555) 123-4567"
-              type="tel"
-            />
+            <div>
+              <CardInput
+                label="Email"
+                value={profile.email}
+                onChange={(v) => {
+                  const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || v === '';
+                  setEmailError(isValid ? '' : 'Invalid email format');
+                  onProfileChange?.({ ...profile, email: v });
+                }}
+                placeholder="contact@company.com"
+                type="email"
+              />
+              {emailError && <p className="text-xs text-red-400 mt-1">{emailError}</p>}
+            </div>
+            <div>
+              <CardInput
+                label="Phone Number"
+                value={profile.phone || ''}
+                onChange={(v) => {
+                  const cleaned = v.replace(/\D/g, '');
+                  setPhoneError(cleaned.length >= 10 || v === '' ? '' : 'Phone number too short');
+                  onProfileChange?.({ ...profile, phone: v });
+                }}
+                placeholder="(555) 123-4567"
+                type="tel"
+              />
+              {phoneError && <p className="text-xs text-red-400 mt-1">{phoneError}</p>}
+            </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Business Address
@@ -558,6 +580,13 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           ))}
 
           {/* Custom Pricing Items */}
+          {customPricing.length === 0 && (
+            <div className="text-center py-6 border border-dashed border-white/10 rounded-xl mt-4">
+              <DollarSign className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+              <h3 className="text-sm font-semibold text-white mb-1">No Custom Pricing</h3>
+              <p className="text-xs text-gray-500">Add custom fixtures with your own pricing below.</p>
+            </div>
+          )}
           {customPricing.length > 0 && (
             <div className="pt-4 border-t border-white/5">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
@@ -571,8 +600,10 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
                     </span>
                     <button
                       onClick={() => {
+                        if (!confirm('Delete this custom pricing item? This cannot be undone.')) return;
                         const updated = customPricing.filter(c => c.id !== item.id);
                         onCustomPricingChange?.(updated);
+                        successToast('Pricing item deleted');
                       }}
                       className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
                     >
@@ -698,6 +729,13 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           })}
 
           {/* Custom SKU Entries */}
+          {fixtureCatalog.filter(c => c.fixtureType === 'custom').length === 0 && (
+            <div className="text-center py-6 border border-dashed border-white/10 rounded-xl mt-4">
+              <Package className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+              <h3 className="text-sm font-semibold text-white mb-1">No Custom SKUs</h3>
+              <p className="text-xs text-gray-500">Add custom fixture entries below.</p>
+            </div>
+          )}
           {fixtureCatalog
             .filter(c => c.fixtureType === 'custom')
             .map((item) => (
@@ -708,8 +746,10 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
                   </span>
                   <button
                     onClick={() => {
+                      if (!confirm('Delete this fixture entry? This cannot be undone.')) return;
                       const updated = fixtureCatalog.filter(c => c.id !== item.id);
                       onFixtureCatalogChange?.(updated);
+                      successToast('Fixture entry deleted');
                     }}
                     className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                   >
@@ -1424,7 +1464,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
                       try {
                         const data = JSON.parse(event.target?.result as string);
                         if (data.version !== 1) {
-                          alert('Invalid settings file version');
+                          errorToast('Invalid settings file version');
                           return;
                         }
                         if (data.companyProfile && onProfileChange) onProfileChange(data.companyProfile);
@@ -1440,9 +1480,9 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
                         if (data.fontSize && onFontSizeChange) onFontSizeChange(data.fontSize);
                         if (data.highContrast !== undefined && onHighContrastChange) onHighContrastChange(data.highContrast);
                         if (data.notifications && onNotificationsChange) onNotificationsChange(data.notifications);
-                        alert('Settings imported successfully!');
+                        successToast('Settings imported successfully!');
                       } catch {
-                        alert('Failed to parse settings file.');
+                        errorToast('Failed to parse settings file');
                       }
                     };
                     reader.readAsText(file);

@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, Loader2, AlertCircle, Check, XCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, Loader2,
+  AlertCircle, Check, XCircle, Shield, ChevronDown, ChevronUp, Sparkles,
+  CreditCard, Calendar
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { SignatureCapture } from './SignatureCapture';
+import { BeforeAfterSlider } from './BeforeAfterSlider';
 
 interface QuoteProject {
   id: string;
@@ -40,6 +47,61 @@ interface PublicQuoteViewProps {
   token: string;
 }
 
+// Celebration confetti burst
+const triggerCelebration = () => {
+  const duration = 3000;
+  const colors = ['#F6B45A', '#FFD700', '#FFA500', '#FFE4B5', '#FFFFFF'];
+
+  // First burst
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors
+  });
+
+  // Side bursts
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.6 },
+      colors
+    });
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.6 },
+      colors
+    });
+  }, 250);
+
+  // Final shower
+  const end = Date.now() + duration;
+  const frame = () => {
+    confetti({
+      particleCount: 2,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.5 },
+      colors
+    });
+    confetti({
+      particleCount: 2,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.5 },
+      colors
+    });
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  };
+  frame();
+};
+
 export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
   const [data, setData] = useState<PublicQuoteData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +109,13 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
   const [approving, setApproving] = useState(false);
   const [approved, setApproved] = useState(false);
   const [approvalDate, setApprovalDate] = useState<string | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  // Approval form state
+  const [signature, setSignature] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [paymentOption, setPaymentOption] = useState<'deposit' | 'full'>('deposit');
 
   useEffect(() => {
     async function fetchQuote() {
@@ -75,11 +144,18 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
   }, [token]);
 
   const handleApprove = async () => {
+    if (!signature || !termsAccepted) return;
+
     try {
       setApproving(true);
       const response = await fetch(`/api/public/quote/${token}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signature,
+          termsAcceptedAt: new Date().toISOString(),
+          paymentOption
+        })
       });
 
       const result = await response.json();
@@ -88,8 +164,15 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
         throw new Error(result.error || 'Failed to approve quote');
       }
 
-      setApproved(true);
-      setApprovalDate(result.data.approvedAt);
+      // Trigger celebration
+      setShowCelebration(true);
+      triggerCelebration();
+
+      setTimeout(() => {
+        setApproved(true);
+        setApprovalDate(result.data.approvedAt);
+        setShowCelebration(false);
+      }, 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to approve quote');
     } finally {
@@ -105,17 +188,33 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
     });
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Get total from quote if available
+  const quoteTotal = data?.project?.promptConfig?.quote?.total || 0;
+  const depositAmount = quoteTotal * 0.5;
+
   // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+        <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }} />
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
+          className="text-center relative z-10"
         >
-          <Loader2 className="w-12 h-12 text-amber-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading quote...</p>
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#F6B45A]/20 to-[#F6B45A]/5 border border-[#F6B45A]/20 flex items-center justify-center mx-auto mb-6">
+            <Loader2 className="w-10 h-10 text-[#F6B45A] animate-spin" />
+          </div>
+          <p className="text-gray-400 font-medium">Loading your quote...</p>
         </motion.div>
       </div>
     );
@@ -124,16 +223,16 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
   // Error State
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 max-w-md text-center"
+          className="bg-gradient-to-b from-red-500/10 to-transparent border border-red-500/20 rounded-2xl p-8 max-w-md text-center backdrop-blur-xl"
         >
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">Unable to Load Quote</h1>
+          <h1 className="text-xl font-bold text-white font-serif mb-2">Unable to Load Quote</h1>
           <p className="text-gray-400">{typeof error === 'string' ? error : 'An error occurred'}</p>
         </motion.div>
       </div>
@@ -144,34 +243,86 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
 
   const { project, client, company } = data;
   const isExpired = project.quoteExpiresAt && new Date(project.quoteExpiresAt) < new Date();
+  const canApprove = signature && termsAccepted && !approved && !isExpired;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black py-8 px-4 sm:px-6 lg:px-8">
-      {/* Background Glow */}
-      <div className="fixed top-[-20%] right-[-10%] w-[50%] h-[600px] bg-amber-500/5 blur-[150px] rounded-full pointer-events-none" />
-      <div className="fixed bottom-[-20%] left-[-10%] w-[40%] h-[500px] bg-amber-500/3 blur-[120px] rounded-full pointer-events-none" />
+    <div className="min-h-screen bg-[#050505] py-8 px-4 sm:px-6 lg:px-8">
+      {/* Background Effects */}
+      <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }} />
+      <div className="fixed inset-0 opacity-[0.015] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
+      {/* Celebration Overlay */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-center"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-500/30"
+              >
+                <CheckCircle2 className="w-12 h-12 text-white" />
+              </motion.div>
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-3xl font-bold text-white font-serif mb-2"
+              >
+                Quote Approved!
+              </motion.h2>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="text-gray-400"
+              >
+                Thank you for choosing {company.name}
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="max-w-3xl mx-auto relative z-10">
-        {/* Header */}
+        {/* Premium Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-10"
         >
           {company.logo ? (
             <img
               src={company.logo}
               alt={company.name}
-              className="h-16 md:h-20 max-w-[200px] mx-auto mb-4 object-contain"
+              className="h-16 md:h-20 max-w-[200px] mx-auto mb-6 object-contain"
             />
-          ) : null}
-          <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600 mb-2">
+          ) : (
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#F6B45A] to-[#E09A3A] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#F6B45A]/20">
+              <span className="text-3xl font-bold text-black font-serif">
+                {company.name?.charAt(0) || 'C'}
+              </span>
+            </div>
+          )}
+          <h1 className="text-3xl md:text-4xl font-bold text-white font-serif mb-3">
             {company.name}
           </h1>
-          <div className="flex items-center justify-center gap-3">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-500/50" />
-            <p className="text-amber-500/80 text-sm font-medium tracking-wider uppercase">Landscape Lighting Quote</p>
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/50" />
+          <div className="flex items-center justify-center gap-4">
+            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#F6B45A]/50" />
+            <p className="text-[#F6B45A]/80 text-xs font-semibold tracking-[0.2em] uppercase">
+              Landscape Lighting Quote
+            </p>
+            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#F6B45A]/50" />
           </div>
         </motion.div>
 
@@ -180,17 +331,17 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-b from-white/[0.08] to-gray-900/50 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl"
+          className="bg-gradient-to-b from-white/[0.08] to-[#111]/80 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl shadow-black/50"
         >
           {/* Status Banner */}
           {approved ? (
-            <div className="bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 border-b border-emerald-500/30 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <div className="bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-emerald-500/20 border-b border-emerald-500/20 px-6 py-5">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-500/20 rounded-xl border border-emerald-500/30 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-emerald-400">Quote Approved</p>
+                  <p className="font-bold text-emerald-400 font-serif text-lg">Quote Approved</p>
                   <p className="text-sm text-emerald-300/70">
                     {approvalDate && `Approved on ${formatDate(approvalDate)}`}
                   </p>
@@ -198,77 +349,84 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
               </div>
             </div>
           ) : isExpired ? (
-            <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 border-b border-red-500/30 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5 text-red-400" />
+            <div className="bg-gradient-to-r from-red-500/20 via-red-500/10 to-red-500/20 border-b border-red-500/20 px-6 py-5">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-red-500/20 rounded-xl border border-red-500/30 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-red-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-red-400">Quote Expired</p>
+                  <p className="font-bold text-red-400 font-serif text-lg">Quote Expired</p>
                   <p className="text-sm text-red-300/70">
-                    Please contact {company.name} for an updated quote
+                    Contact {company.name} for an updated quote
                   </p>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-gradient-to-r from-amber-500/10 to-amber-600/10 border-b border-amber-500/20 px-6 py-4">
+            <div className="bg-gradient-to-r from-[#F6B45A]/10 via-[#F6B45A]/5 to-[#F6B45A]/10 border-b border-[#F6B45A]/20 px-6 py-5">
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-amber-400" />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-[#F6B45A]/20 rounded-xl border border-[#F6B45A]/30 flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-[#F6B45A]" />
                   </div>
                   <div>
-                    <p className="font-semibold text-amber-400">Awaiting Approval</p>
+                    <p className="font-bold text-[#F6B45A] font-serif text-lg">Awaiting Your Approval</p>
                     {project.quoteExpiresAt && (
-                      <p className="text-sm text-amber-300/70">
+                      <p className="text-sm text-[#F6B45A]/70">
                         Valid until {formatDate(project.quoteExpiresAt)}
                       </p>
                     )}
                   </div>
                 </div>
+                {quoteTotal > 0 && (
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Total</p>
+                    <p className="text-2xl font-bold text-white font-serif">{formatCurrency(quoteTotal)}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Project Info */}
-          <div className="p-6 border-b border-white/10">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Project Details */}
+          {/* Project & Client Info */}
+          <div className="p-6 md:p-8 border-b border-white/10">
+            <div className="grid md:grid-cols-2 gap-8">
               <div>
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-amber-500" />
+                <h2 className="text-lg font-bold text-white font-serif mb-4 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-[#F6B45A]" />
                   Project Details
                 </h2>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-400">Project Name</p>
-                    <p className="text-white font-medium">{project.name}</p>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between py-2 border-b border-white/5">
+                    <span className="text-gray-400">Project Name</span>
+                    <span className="text-white font-medium">{project.name}</span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Quote Date</p>
-                    <p className="text-white">{formatDate(project.createdAt)}</p>
+                  <div className="flex justify-between py-2 border-b border-white/5">
+                    <span className="text-gray-400">Quote Date</span>
+                    <span className="text-white">{formatDate(project.createdAt)}</span>
                   </div>
+                  {project.quoteExpiresAt && (
+                    <div className="flex justify-between py-2">
+                      <span className="text-gray-400">Valid Until</span>
+                      <span className="text-white">{formatDate(project.quoteExpiresAt)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Client Details */}
               {client && (
                 <div>
-                  <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-amber-500" />
-                    Client Details
+                  <h2 className="text-lg font-bold text-white font-serif mb-4 flex items-center gap-2">
+                    <User className="w-5 h-5 text-[#F6B45A]" />
+                    Prepared For
                   </h2>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-gray-400">Name</p>
-                      <p className="text-white font-medium">{client.name}</p>
-                    </div>
+                  <div className="p-4 bg-white/[0.02] rounded-xl border border-white/5">
+                    <p className="text-white font-semibold text-lg mb-2">{client.name}</p>
                     {client.email && (
-                      <div className="flex items-center gap-2 text-gray-300">
-                        <Mail className="w-4 h-4 text-gray-500" />
-                        <span>{client.email}</span>
-                      </div>
+                      <p className="text-gray-400 text-sm flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        {client.email}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -276,80 +434,196 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
             </div>
           </div>
 
-          {/* Design Preview */}
+          {/* Design Preview - Before/After or Single Image */}
           {project.generatedImageUrl && (
-            <div className="p-6 border-b border-white/10">
-              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-amber-500" />
+            <div className="p-6 md:p-8 border-b border-white/10">
+              <h2 className="text-lg font-bold text-white font-serif mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#F6B45A]" />
                 Your Lighting Design
               </h2>
-              <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/30">
-                <img
-                  src={project.generatedImageUrl}
-                  alt="Lighting Design Preview"
-                  className="w-full h-auto object-cover"
+
+              {project.originalImageUrl ? (
+                <BeforeAfterSlider
+                  beforeImage={project.originalImageUrl}
+                  afterImage={project.generatedImageUrl}
+                  beforeLabel="Before"
+                  afterLabel="With Lighting"
                 />
-                {/* Corner Accents */}
-                <div className="absolute top-3 left-3 w-6 h-6 border-l-2 border-t-2 border-amber-500/50" />
-                <div className="absolute top-3 right-3 w-6 h-6 border-r-2 border-t-2 border-amber-500/50" />
-                <div className="absolute bottom-3 left-3 w-6 h-6 border-l-2 border-b-2 border-amber-500/50" />
-                <div className="absolute bottom-3 right-3 w-6 h-6 border-r-2 border-b-2 border-amber-500/50" />
-              </div>
+              ) : (
+                <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                  <img
+                    src={project.generatedImageUrl}
+                    alt="Lighting Design Preview"
+                    className="w-full h-auto object-cover"
+                  />
+                  {/* Corner Accents */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-3 left-3 w-6 h-6 border-l-2 border-t-2 border-[#F6B45A]/40 rounded-tl-sm" />
+                    <div className="absolute top-3 right-3 w-6 h-6 border-r-2 border-t-2 border-[#F6B45A]/40 rounded-tr-sm" />
+                    <div className="absolute bottom-3 left-3 w-6 h-6 border-l-2 border-b-2 border-[#F6B45A]/40 rounded-bl-sm" />
+                    <div className="absolute bottom-3 right-3 w-6 h-6 border-r-2 border-b-2 border-[#F6B45A]/40 rounded-br-sm" />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Company Contact */}
-          <div className="p-6 border-b border-white/10 bg-white/[0.02]">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-amber-500" />
-              Contact Us
-            </h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-gray-300">
-                <Mail className="w-4 h-4 text-gray-500" />
-                <a href={`mailto:${company.email}`} className="hover:text-amber-400 transition-colors">
-                  {company.email}
-                </a>
+          {/* Warranty Badge */}
+          <div className="px-6 md:px-8 py-4 border-b border-white/10 bg-gradient-to-r from-emerald-500/5 to-transparent">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-emerald-400" />
               </div>
-              {company.phone && (
-                <div className="flex items-center gap-3 text-gray-300">
-                  <Phone className="w-4 h-4 text-gray-500" />
-                  <a href={`tel:${company.phone}`} className="hover:text-amber-400 transition-colors">
-                    {company.phone}
-                  </a>
-                </div>
-              )}
-              {company.address && (
-                <div className="flex items-start gap-3 text-gray-300">
-                  <MapPin className="w-4 h-4 text-gray-500 mt-1" />
-                  <span className="whitespace-pre-line">{company.address}</span>
-                </div>
-              )}
+              <div>
+                <p className="font-semibold text-emerald-400">5-Year Warranty Included</p>
+                <p className="text-xs text-gray-500">Parts and labor coverage on all installed fixtures</p>
+              </div>
             </div>
           </div>
 
-          {/* Approval Action */}
+          {/* Approval Section - Only if not approved and not expired */}
           {!approved && !isExpired && (
-            <div className="p-6">
+            <div className="p-6 md:p-8 space-y-6">
+              {/* Payment Options */}
+              {quoteTotal > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-[#F6B45A]" />
+                    Payment Option
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setPaymentOption('deposit')}
+                      className={`p-4 rounded-xl border transition-all text-left ${
+                        paymentOption === 'deposit'
+                          ? 'bg-[#F6B45A]/10 border-[#F6B45A]/40'
+                          : 'bg-white/[0.02] border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-semibold ${paymentOption === 'deposit' ? 'text-[#F6B45A]' : 'text-white'}`}>
+                          50% Deposit
+                        </span>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          paymentOption === 'deposit' ? 'border-[#F6B45A] bg-[#F6B45A]' : 'border-white/30'
+                        }`}>
+                          {paymentOption === 'deposit' && <Check className="w-3 h-3 text-black" />}
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold text-white">{formatCurrency(depositAmount)}</p>
+                      <p className="text-xs text-gray-500">Balance due upon completion</p>
+                    </button>
+
+                    <button
+                      onClick={() => setPaymentOption('full')}
+                      className={`p-4 rounded-xl border transition-all text-left ${
+                        paymentOption === 'full'
+                          ? 'bg-[#F6B45A]/10 border-[#F6B45A]/40'
+                          : 'bg-white/[0.02] border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-semibold ${paymentOption === 'full' ? 'text-[#F6B45A]' : 'text-white'}`}>
+                          Pay in Full
+                        </span>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          paymentOption === 'full' ? 'border-[#F6B45A] bg-[#F6B45A]' : 'border-white/30'
+                        }`}>
+                          {paymentOption === 'full' && <Check className="w-3 h-3 text-black" />}
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold text-white">{formatCurrency(quoteTotal)}</p>
+                      <p className="text-xs text-gray-500">Complete payment now</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Terms Acceptance */}
+              <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
+                <button
+                  onClick={() => setShowTerms(!showTerms)}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTermsAccepted(!termsAccepted);
+                      }}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${
+                        termsAccepted
+                          ? 'bg-[#F6B45A] border-[#F6B45A]'
+                          : 'border-white/30 hover:border-white/50'
+                      }`}
+                    >
+                      {termsAccepted && <Check className="w-3 h-3 text-black" />}
+                    </div>
+                    <span className="text-sm text-white">
+                      I accept the <span className="text-[#F6B45A]">terms and conditions</span>
+                    </span>
+                  </div>
+                  {showTerms ? (
+                    <ChevronUp className="w-4 h-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {showTerms && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-4 pt-4 border-t border-white/10 text-xs text-gray-400 space-y-2 max-h-40 overflow-y-auto">
+                        <p>By approving this quote, you agree to the following terms:</p>
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li>Work will be scheduled within 2-4 weeks of approval, weather permitting.</li>
+                          <li>A {paymentOption === 'deposit' ? '50% deposit is required' : 'full payment is due'} upon approval.</li>
+                          <li>Final payment is due upon project completion.</li>
+                          <li>All fixtures include a 5-year manufacturer warranty.</li>
+                          <li>Changes to the approved design may result in additional charges.</li>
+                          <li>Cancellations within 48 hours of scheduled work may incur fees.</li>
+                        </ul>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Digital Signature */}
+              <SignatureCapture
+                onSignatureChange={setSignature}
+                disabled={!termsAccepted}
+              />
+
+              {/* Approve Button */}
               <motion.button
                 onClick={handleApprove}
-                disabled={approving}
-                className="w-full relative overflow-hidden bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold py-4 px-6 rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/20"
-                whileHover={!approving ? { scale: 1.01 } : {}}
-                whileTap={!approving ? { scale: 0.99 } : {}}
+                disabled={!canApprove || approving}
+                className={`w-full relative overflow-hidden py-4 px-6 rounded-xl text-lg font-bold transition-all ${
+                  canApprove
+                    ? 'bg-gradient-to-r from-[#F6B45A] to-[#E09A3A] text-black shadow-lg shadow-[#F6B45A]/20 hover:shadow-xl hover:shadow-[#F6B45A]/30'
+                    : 'bg-white/5 text-gray-500 cursor-not-allowed'
+                }`}
+                whileHover={canApprove ? { scale: 1.01 } : {}}
+                whileTap={canApprove ? { scale: 0.99 } : {}}
               >
                 {approving ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Approving...
+                    Processing Approval...
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     <Check className="w-5 h-5" />
-                    Approve This Quote
+                    Approve Quote {quoteTotal > 0 && `(${formatCurrency(paymentOption === 'deposit' ? depositAmount : quoteTotal)} due)`}
                   </span>
                 )}
-                {!approving && (
+                {canApprove && !approving && (
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg]"
                     initial={{ x: '-100%' }}
@@ -358,34 +632,82 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
                   />
                 )}
               </motion.button>
-              <p className="text-center text-sm text-gray-500 mt-4">
-                By approving, you agree to proceed with this lighting project
-              </p>
+
+              {!canApprove && !approving && (
+                <p className="text-center text-xs text-gray-500">
+                  {!termsAccepted && !signature && 'Accept terms and sign above to approve'}
+                  {!termsAccepted && signature && 'Accept the terms and conditions to continue'}
+                  {termsAccepted && !signature && 'Add your signature above to approve'}
+                </p>
+              )}
             </div>
           )}
 
-          {/* Already Approved Message */}
+          {/* Approved Message */}
           {approved && (
-            <div className="p-6 text-center">
-              <p className="text-emerald-400 font-medium mb-2">Thank you for your approval!</p>
-              <p className="text-gray-400 text-sm">
-                {company.name} will be in touch to schedule your installation.
+            <div className="p-6 md:p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white font-serif mb-2">Thank You!</h3>
+              <p className="text-gray-400 mb-4">
+                Your approval has been received. {company.name} will be in touch shortly to schedule your installation.
               </p>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full text-sm text-gray-400">
+                <Calendar className="w-4 h-4" />
+                Expect a call within 1-2 business days
+              </div>
             </div>
           )}
 
           {/* Expired Message */}
           {isExpired && !approved && (
-            <div className="p-6 text-center">
+            <div className="p-6 md:p-8 text-center">
               <p className="text-gray-400">
-                Contact{' '}
-                <a href={`mailto:${company.email}`} className="text-amber-400 hover:underline">
+                This quote has expired. Contact{' '}
+                <a href={`mailto:${company.email}`} className="text-[#F6B45A] hover:underline">
                   {company.email}
                 </a>{' '}
-                to get an updated quote.
+                for an updated quote.
               </p>
             </div>
           )}
+
+          {/* Company Contact */}
+          <div className="p-6 md:p-8 bg-white/[0.02] border-t border-white/10">
+            <h2 className="text-lg font-bold text-white font-serif mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-[#F6B45A]" />
+              Questions? Contact Us
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <a
+                href={`mailto:${company.email}`}
+                className="flex items-center gap-3 p-3 bg-white/[0.02] rounded-xl border border-white/5 hover:border-[#F6B45A]/30 transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-[#F6B45A]/10 transition-colors">
+                  <Mail className="w-5 h-5 text-gray-400 group-hover:text-[#F6B45A]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Email</p>
+                  <p className="text-sm text-white">{company.email}</p>
+                </div>
+              </a>
+              {company.phone && (
+                <a
+                  href={`tel:${company.phone}`}
+                  className="flex items-center gap-3 p-3 bg-white/[0.02] rounded-xl border border-white/5 hover:border-[#F6B45A]/30 transition-colors group"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-[#F6B45A]/10 transition-colors">
+                    <Phone className="w-5 h-5 text-gray-400 group-hover:text-[#F6B45A]" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Phone</p>
+                    <p className="text-sm text-white">{company.phone}</p>
+                  </div>
+                </a>
+              )}
+            </div>
+          </div>
         </motion.div>
 
         {/* Footer */}

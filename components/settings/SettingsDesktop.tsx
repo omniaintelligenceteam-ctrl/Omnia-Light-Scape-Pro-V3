@@ -6,7 +6,6 @@ import {
   DollarSign, Package
 } from 'lucide-react';
 import { useSuccessToast, useErrorToast } from '../Toast';
-import { SkeletonSection } from '../ui/Skeleton';
 import { SettingsNav, SettingsSection } from './SettingsNav';
 import { SettingsCard } from './ui/SettingsCard';
 import { ToggleRow } from './ui/SettingsToggle';
