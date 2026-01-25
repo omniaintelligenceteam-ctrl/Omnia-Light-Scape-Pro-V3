@@ -27,16 +27,20 @@ export interface OnboardingProgress {
   firstProjectCreated: boolean;
   tooltipsCompleted: string[];
   hasSeenWelcome: boolean;
+  // Demo guide state
+  demoStep: number;
+  demoCompletedSteps: number[];
+  demoSkipped: boolean;
 }
 
 // Feature tooltip definition
 export interface FeatureTooltip {
   id: string;
+  section: 'editor' | 'projects' | 'schedule' | 'settings';
   targetSelector: string;
   title: string;
   description: string;
   position: 'top' | 'bottom' | 'left' | 'right';
-  order: number;
 }
 
 const STORAGE_KEY = 'omnia_onboarding_progress';
@@ -76,41 +80,102 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
 ];
 
-// Feature tooltips for guided tour
+// Feature tooltips for guided tour - organized by section
 export const FEATURE_TOOLTIPS: FeatureTooltip[] = [
+  // Editor section
   {
     id: 'upload-photo',
+    section: 'editor',
     targetSelector: '[data-tour="upload"]',
     title: 'Upload a Photo',
-    description: 'Start by uploading a daytime photo of the property',
+    description: 'Drop a daytime property photo here to get started',
     position: 'bottom',
-    order: 1,
+  },
+  {
+    id: 'select-fixtures',
+    section: 'editor',
+    targetSelector: '[data-tour="fixtures"]',
+    title: 'Choose Fixtures',
+    description: 'Select the lighting types you want to visualize',
+    position: 'right',
   },
   {
     id: 'generate-design',
+    section: 'editor',
     targetSelector: '[data-tour="generate"]',
-    title: 'Generate AI Design',
-    description: 'Click to generate a stunning nighttime lighting visualization',
-    position: 'left',
-    order: 2,
+    title: 'Generate Design',
+    description: 'AI creates a realistic nighttime lighting preview',
+    position: 'top',
+  },
+  // Projects section
+  {
+    id: 'pipeline-view',
+    section: 'projects',
+    targetSelector: '[data-tour="pipeline"]',
+    title: 'Project Pipeline',
+    description: 'Track projects from quote to completion',
+    position: 'bottom',
   },
   {
     id: 'create-quote',
+    section: 'projects',
     targetSelector: '[data-tour="quote"]',
-    title: 'Create Quote',
-    description: 'Generate a professional quote with itemized pricing',
+    title: 'Create Quotes',
+    description: 'Build professional quotes with your designs',
     position: 'left',
-    order: 3,
   },
   {
-    id: 'send-quote',
-    targetSelector: '[data-tour="send"]',
-    title: 'Send to Client',
-    description: 'Email or text the quote directly to your client',
+    id: 'client-list',
+    section: 'projects',
+    targetSelector: '[data-tour="clients"]',
+    title: 'Manage Clients',
+    description: 'Keep track of all your client information',
     position: 'bottom',
-    order: 4,
+  },
+  // Schedule section
+  {
+    id: 'calendar-view',
+    section: 'schedule',
+    targetSelector: '[data-tour="calendar"]',
+    title: 'Your Schedule',
+    description: 'View and manage all your appointments',
+    position: 'bottom',
+  },
+  {
+    id: 'create-event',
+    section: 'schedule',
+    targetSelector: '[data-tour="new-event"]',
+    title: 'Add Events',
+    description: 'Schedule service calls and appointments',
+    position: 'left',
+  },
+  // Settings section
+  {
+    id: 'team-setup',
+    section: 'settings',
+    targetSelector: '[data-tour="team"]',
+    title: 'Team Members',
+    description: 'Invite salespeople and technicians',
+    position: 'bottom',
+  },
+  {
+    id: 'company-profile',
+    section: 'settings',
+    targetSelector: '[data-tour="company"]',
+    title: 'Company Details',
+    description: 'Set up your branding for quotes and invoices',
+    position: 'bottom',
   },
 ];
+
+// Helper to get first unseen tooltip for a section
+export const getTooltipForSection = (
+  section: string,
+  completedTooltips: string[]
+): FeatureTooltip | null => {
+  const sectionTooltips = FEATURE_TOOLTIPS.filter(t => t.section === section);
+  return sectionTooltips.find(t => !completedTooltips.includes(t.id)) || null;
+};
 
 // Default progress state
 const getDefaultProgress = (): OnboardingProgress => ({
@@ -123,6 +188,10 @@ const getDefaultProgress = (): OnboardingProgress => ({
   firstProjectCreated: false,
   tooltipsCompleted: [],
   hasSeenWelcome: false,
+  // Demo guide defaults
+  demoStep: 1,
+  demoCompletedSteps: [],
+  demoSkipped: false,
 });
 
 // Load progress from localStorage
@@ -131,7 +200,8 @@ const loadProgress = (): OnboardingProgress | null => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      // Merge with defaults to handle missing fields from older versions
+      return { ...getDefaultProgress(), ...JSON.parse(stored) };
     }
   } catch {
     // Invalid stored data
@@ -189,8 +259,13 @@ export const useOnboarding = (options: UseOnboardingOptions = {}) => {
 
   // Active tooltips (not yet completed)
   const activeTooltips = useMemo(() => {
-    return FEATURE_TOOLTIPS.filter(t => !progress.tooltipsCompleted.includes(t.id))
-      .sort((a, b) => a.order - b.order);
+    return FEATURE_TOOLTIPS.filter(t => !progress.tooltipsCompleted.includes(t.id));
+  }, [progress.tooltipsCompleted]);
+
+  // Get first unseen tooltip for a section
+  const getTooltipForSection = useCallback((section: string): FeatureTooltip | null => {
+    const sectionTooltips = FEATURE_TOOLTIPS.filter(t => t.section === section);
+    return sectionTooltips.find(t => !progress.tooltipsCompleted.includes(t.id)) || null;
   }, [progress.tooltipsCompleted]);
 
   // Current tooltip
@@ -351,6 +426,34 @@ export const useOnboarding = (options: UseOnboardingOptions = {}) => {
     setCurrentTooltipIndex(0);
   }, []);
 
+  // Demo guide: check if demo is active
+  const isDemoActive = useMemo(() => {
+    return !progress.demoSkipped && progress.demoCompletedSteps.length < 6;
+  }, [progress.demoSkipped, progress.demoCompletedSteps]);
+
+  // Demo guide: complete a step
+  const completeDemoStep = useCallback((stepId: number) => {
+    setProgress(prev => {
+      if (prev.demoCompletedSteps.includes(stepId)) return prev;
+      const newCompleted = [...prev.demoCompletedSteps, stepId];
+      // Move to next incomplete step
+      const nextStep = [1, 2, 3, 4, 5, 6].find(s => !newCompleted.includes(s)) || 6;
+      return {
+        ...prev,
+        demoCompletedSteps: newCompleted,
+        demoStep: nextStep,
+      };
+    });
+  }, []);
+
+  // Demo guide: skip entire demo
+  const skipDemo = useCallback(() => {
+    setProgress(prev => ({
+      ...prev,
+      demoSkipped: true,
+    }));
+  }, []);
+
   return {
     // State
     progress,
@@ -383,11 +486,19 @@ export const useOnboarding = (options: UseOnboardingOptions = {}) => {
     skipAllTooltips,
     nextTooltip,
     startTooltipsTour,
+    getTooltipForSection,
 
     // Utility
     resetOnboarding,
     steps: ONBOARDING_STEPS,
     tooltips: FEATURE_TOOLTIPS,
+
+    // Demo guide
+    isDemoActive,
+    demoStep: progress.demoStep,
+    demoCompletedSteps: progress.demoCompletedSteps,
+    completeDemoStep,
+    skipDemo,
   };
 };
 

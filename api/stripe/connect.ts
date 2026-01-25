@@ -8,6 +8,25 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://omnialightscape.vercel.app';
 
+// Parse address string into Stripe-compatible components
+function parseAddress(address?: string): { line1: string; city: string; state: string; postal_code: string } | null {
+  if (!address) return null;
+
+  // Try to parse "123 Main St, City, ST 12345" format
+  const match = address.match(/^(.+?),\s*(.+?),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)$/i);
+  if (match) {
+    return {
+      line1: match[1].trim(),
+      city: match[2].trim(),
+      state: match[3].toUpperCase(),
+      postal_code: match[4],
+    };
+  }
+
+  // Fallback: use full address as line1
+  return { line1: address, city: '', state: '', postal_code: '' };
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { userId: clerkUserId } = req.query;
 
@@ -36,10 +55,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const supabaseUserId = userData.id;
 
-    // Get existing settings
+    // Get existing settings including company profile for pre-fill
     const { data: settings } = await supabase
       .from('settings')
-      .select('stripe_account_id, stripe_account_status')
+      .select('stripe_account_id, stripe_account_status, company_name, company_email, company_phone, company_address')
       .eq('user_id', supabaseUserId)
       .single();
 
@@ -49,7 +68,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Create new Connect account if none exists
       if (!stripeAccountId) {
-        const account = await stripe.accounts.create({
+        // Parse address for pre-fill
+        const addressParts = parseAddress(settings?.company_address);
+
+        // Build account create params with pre-filled profile data
+        const accountParams: Stripe.AccountCreateParams = {
           type: 'express',
           email: userData.email,
           capabilities: {
@@ -61,7 +84,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             supabase_user_id: supabaseUserId,
             clerk_user_id: clerkUserId
           }
-        });
+        };
+
+        // Pre-fill business profile if company name exists
+        if (settings?.company_name) {
+          accountParams.business_profile = {
+            name: settings.company_name,
+          };
+        }
+
+        // Pre-fill individual details from company profile
+        if (settings?.company_email || settings?.company_phone || addressParts) {
+          accountParams.individual = {};
+
+          if (settings?.company_email) {
+            accountParams.individual.email = settings.company_email;
+          }
+          if (settings?.company_phone) {
+            // Strip non-numeric characters for Stripe
+            accountParams.individual.phone = settings.company_phone.replace(/\D/g, '');
+          }
+          if (addressParts && addressParts.line1) {
+            accountParams.individual.address = {
+              line1: addressParts.line1,
+              city: addressParts.city || undefined,
+              state: addressParts.state || undefined,
+              postal_code: addressParts.postal_code || undefined,
+              country: 'US',
+            };
+          }
+        }
+
+        const account = await stripe.accounts.create(accountParams);
 
         stripeAccountId = account.id;
 

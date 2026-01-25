@@ -64,7 +64,8 @@ interface KanbanBoardProps {
 }
 
 // Define the order of columns
-const COLUMN_ORDER: ProjectStatus[] = ['draft', 'quoted', 'approved', 'scheduled', 'completed'];
+// Completed projects are managed separately (not shown in Kanban workflow view)
+const COLUMN_ORDER: ProjectStatus[] = ['draft', 'quoted', 'approved', 'scheduled'];
 
 // Haptic feedback helper
 const triggerHaptic = (pattern: number | number[] = 10) => {

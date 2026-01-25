@@ -538,10 +538,16 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
           )}
 
           <div className="flex items-center gap-2 mt-1.5">
-            {quoteValue !== undefined && quoteValue > 0 && (
+            {/* Only show price when quote exists with value > 0 */}
+            {quoteValue && quoteValue > 0 ? (
               <span className="text-xs font-bold text-[#F6B45A]">
                 ${quoteValue.toLocaleString()}
               </span>
+            ) : project.status === 'draft' ? null : (
+              /* Show dash for non-draft projects without a quote value */
+              project.quote && (
+                <span className="text-xs text-gray-500">—</span>
+              )
             )}
 
             {daysSinceCreated > 0 && (

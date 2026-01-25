@@ -1,0 +1,10 @@
+export { ProfileSection } from './ProfileSection';
+export { AppearanceSection } from './AppearanceSection';
+export { NotificationsSection } from './NotificationsSection';
+export { PricingSection } from './PricingSection';
+export { CatalogSection } from './CatalogSection';
+export { LightingSection } from './LightingSection';
+export { FollowUpsSection } from './FollowUpsSection';
+export { SubscriptionSection } from './SubscriptionSection';
+export { AnalyticsSection } from './AnalyticsSection';
+export { SupportSection } from './SupportSection';

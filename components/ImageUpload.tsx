@@ -261,6 +261,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   // Empty state - premium drop zone
   return (
     <motion.div
+      data-tour="upload"
       className={`relative w-full rounded-2xl transition-all duration-300 ${
         isDragging ? 'scale-[1.02]' : ''
       }`}

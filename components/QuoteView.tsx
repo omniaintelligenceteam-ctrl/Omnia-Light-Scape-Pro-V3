@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, DollarSign, Receipt, Building2, Hash, Pencil, Upload, Share2, Link2, Copy, ExternalLink, ChevronDown } from 'lucide-react';
+import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, Receipt, Hash, Pencil, Share2, ChevronDown } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 import { uploadImage } from '../services/uploadService';
+import { SendQuoteModal, SharePortalModal, DeleteConfirmModal } from './quote';
 
 interface QuoteViewProps {
     onSave: (data: QuoteData) => void;
@@ -40,9 +41,6 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     internalNotes = '',
     onInternalNotesChange
 }) => {
-  // Helper to find pricing by type
-  const getPrice = (type: string) => defaultPricing.find(p => p.fixtureType === type) || DEFAULT_PRICING.find(p => p.fixtureType === type)!;
-
   // Line Items State - use initialData if provided, otherwise empty array (no defaults)
   // This ensures only items selected in the editor appear on the quote
   const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || []);
@@ -53,7 +51,6 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
 
   // Send Quote Modal State
   const [showSendModal, setShowSendModal] = useState(false);
-  const [sendMethod, setSendMethod] = useState<'email' | 'sms'>('email');
   const [customMessage, setCustomMessage] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -182,27 +179,6 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
     }
   };
 
-  // Generate quote summary text for SMS/Email
-  const generateQuoteSummary = () => {
-    const itemsList = lineItems
-      .filter(item => item.quantity > 0)
-      .map(item => `• ${item.name} (${item.quantity}x) - $${(item.unitPrice * item.quantity).toFixed(2)}`)
-      .join('\n');
-
-    return `Quote for ${clientName}
-
-Project: ${projectAddress.split('\n')[0]}
-
-${itemsList}
-
-Subtotal: $${subtotal.toFixed(2)}
-${discount > 0 ? `Discount: -$${discount.toFixed(2)}\n` : ''}Tax (${(taxRate * 100).toFixed(1)}%): $${tax.toFixed(2)}
-TOTAL: $${total.toFixed(2)}
-
-${customMessage ? `\n${customMessage}\n` : ''}
-- ${companyProfile.name}`;
-  };
-
   const handleSendEmail = async () => {
     if (!clientEmail) return;
 
@@ -302,16 +278,6 @@ ${customMessage ? `\n${customMessage}\n` : ''}
     } finally {
       setIsSendingEmail(false);
     }
-  };
-
-  const handleSendSMS = () => {
-    // Clean phone number for SMS
-    const cleanPhone = clientPhone.replace(/[^\d+]/g, '');
-    const message = encodeURIComponent(generateQuoteSummary());
-    // Use sms: protocol - works on mobile devices
-    const smsLink = `sms:${cleanPhone}?body=${message}`;
-    window.open(smsLink, '_blank');
-    setShowSendModal(false);
   };
 
   // Generate shareable client portal link
@@ -1227,343 +1193,40 @@ ${customMessage ? `\n${customMessage}\n` : ''}
       )}
 
       {/* Send Quote Modal */}
-      <AnimatePresence>
-          {showSendModal && (
-            <motion.div
-                className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 pt-8 pb-32 bg-black/80 backdrop-blur-sm overflow-y-auto"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{ paddingBottom: 'max(8rem, env(safe-area-inset-bottom, 2rem))' }}
-            >
-              <motion.div
-                  className="w-full max-w-md bg-gradient-to-b from-[#151515] to-[#0a0a0a] rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden my-auto md:my-0"
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.9, y: 20 }}
-              >
-                {/* Modal Header */}
-                <div className="relative flex items-center justify-between p-5 border-b border-white/10">
-                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/30 to-transparent" />
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-[#F6B45A]/10 rounded-xl border border-[#F6B45A]/20">
-                      <Send className="w-5 h-5 text-[#F6B45A]" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg text-white font-serif">Send Quote</h3>
-                        <p className="text-[10px] text-gray-500">Choose delivery method</p>
-                    </div>
-                  </div>
-                  <motion.button
-                    onClick={() => setShowSendModal(false)}
-                    className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <X className="w-5 h-5" />
-                  </motion.button>
-                </div>
-
-                {/* Modal Body */}
-                <div className="p-5 space-y-5">
-                  {/* Recipient Info */}
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                    <div className="flex items-center gap-3 mb-3">
-                      <User className="w-4 h-4 text-[#F6B45A]" />
-                      <span className="font-bold text-white">{clientName || 'No name set'}</span>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-3 text-gray-400">
-                        <Mail className="w-3.5 h-3.5" />
-                        <span>{clientEmail || 'No email set'}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-gray-400">
-                        <Phone className="w-3.5 h-3.5" />
-                        <span>{clientPhone || 'No phone set'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Send Method - Email Only */}
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Mail className="w-4 h-4 text-[#F6B45A]" />
-                    <span>Quote will be sent via email</span>
-                  </div>
-
-                  {/* Custom Message */}
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 block">Add a personal message (optional)</label>
-                    <textarea
-                      value={customMessage}
-                      onChange={(e) => setCustomMessage(e.target.value)}
-                      placeholder="Thanks for choosing us! Let me know if you have any questions..."
-                      className="w-full h-24 bg-white/5 border border-white/10 rounded-xl p-4 text-white text-sm focus:border-[#F6B45A]/50 focus:outline-none resize-none placeholder-gray-500 transition-colors"
-                    />
-                  </div>
-
-                  {/* Quote Preview */}
-                  <div className="bg-gradient-to-br from-[#F6B45A]/10 to-transparent rounded-xl p-4 border border-[#F6B45A]/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Quote Total</span>
-                      <span className="text-xl font-bold text-[#F6B45A] font-mono">${total.toFixed(2)}</span>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {lineItems.filter(i => i.quantity > 0).length} items
-                    </div>
-                  </div>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="p-5 border-t border-white/10 bg-black/30">
-                  <motion.button
-                    onClick={handleSendEmail}
-                    disabled={!clientEmail || isSendingEmail || emailSent}
-                    className={`relative w-full overflow-hidden py-4 rounded-xl font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed shadow-lg ${
-                      emailSent
-                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20'
-                        : 'bg-gradient-to-r from-[#F6B45A] to-[#ffc67a] text-black shadow-[#F6B45A]/20 disabled:opacity-50'
-                    }`}
-                    whileHover={!(!clientEmail || isSendingEmail || emailSent) ? { scale: 1.01 } : {}}
-                    whileTap={!(!clientEmail || isSendingEmail || emailSent) ? { scale: 0.99 } : {}}
-                  >
-                    {emailSent ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Email Sent!
-                      </>
-                    ) : isSendingEmail ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="w-4 h-4" />
-                        Send Quote
-                      </>
-                    )}
-                    {!emailSent && !isSendingEmail && (
-                      <motion.div
-                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]"
-                          initial={{ x: '-100%' }}
-                          whileHover={{ x: '200%' }}
-                          transition={{ duration: 0.6 }}
-                      />
-                    )}
-                  </motion.button>
-                  {!clientEmail && (
-                    <p className="text-xs text-red-400 text-center mt-3">Please add a client email address first</p>
-                  )}
-                  {emailError && (
-                    <p className="text-xs text-red-400 text-center mt-3">{emailError}</p>
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-      </AnimatePresence>
+      <SendQuoteModal
+        isOpen={showSendModal}
+        onClose={() => setShowSendModal(false)}
+        clientName={clientName}
+        clientEmail={clientEmail}
+        clientPhone={clientPhone}
+        customMessage={customMessage}
+        onCustomMessageChange={setCustomMessage}
+        total={total}
+        lineItemsCount={lineItems.filter(i => i.quantity > 0).length}
+        onSendEmail={handleSendEmail}
+        isSendingEmail={isSendingEmail}
+        emailSent={emailSent}
+        emailError={emailError}
+      />
 
       {/* Share Portal Modal */}
-      <AnimatePresence>
-          {showShareModal && (
-            <motion.div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-            >
-              <motion.div
-                  className="w-full max-w-md bg-gradient-to-b from-[#151515] to-[#0a0a0a] rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden"
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.9, y: 20 }}
-              >
-                {/* Modal Header */}
-                <div className="relative flex items-center justify-between p-5 border-b border-white/10">
-                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/30 to-transparent" />
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-[#F6B45A]/10 rounded-xl border border-[#F6B45A]/20">
-                      <Share2 className="w-5 h-5 text-[#F6B45A]" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg text-white font-serif">Client Portal</h3>
-                        <p className="text-[10px] text-gray-500">Share quote with client</p>
-                    </div>
-                  </div>
-                  <motion.button
-                    onClick={() => setShowShareModal(false)}
-                    className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <X className="w-5 h-5" />
-                  </motion.button>
-                </div>
-
-                {/* Modal Body */}
-                <div className="p-5 space-y-5">
-                  {/* Info */}
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <ExternalLink className="w-4 h-4 text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-white text-sm mb-1">Client Portal Link</p>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                          Share this link with your client. They can view the quote details and approve it directly without needing an account.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Link Display */}
-                  {isGeneratingLink ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 text-[#F6B45A] animate-spin" />
-                      <span className="ml-3 text-gray-400">Generating link...</span>
-                    </div>
-                  ) : shareError ? (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
-                      <p className="text-red-400 text-sm">{shareError}</p>
-                      <button
-                        onClick={handleGenerateShareLink}
-                        className="mt-3 text-xs text-[#F6B45A] hover:underline"
-                      >
-                        Try again
-                      </button>
-                    </div>
-                  ) : shareUrl ? (
-                    <div className="space-y-3">
-                      <div className="bg-[#0a0a0a] border border-white/10 rounded-xl p-4 flex items-center gap-3">
-                        <Link2 className="w-5 h-5 text-gray-500 shrink-0" />
-                        <input
-                          type="text"
-                          value={shareUrl}
-                          readOnly
-                          className="flex-1 bg-transparent text-white text-sm focus:outline-none truncate"
-                        />
-                      </div>
-                      <motion.button
-                        onClick={handleCopyLink}
-                        className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                          linkCopied
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-[#F6B45A]/10 text-[#F6B45A] border border-[#F6B45A]/30 hover:bg-[#F6B45A]/20'
-                        }`}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {linkCopied ? (
-                          <>
-                            <Check className="w-4 h-4" />
-                            Copied to Clipboard!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" />
-                            Copy Link
-                          </>
-                        )}
-                      </motion.button>
-                    </div>
-                  ) : null}
-
-                  {/* Valid Period Info */}
-                  {shareUrl && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500 justify-center">
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>Link valid for 30 days</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Modal Footer */}
-                <div className="p-5 border-t border-white/10 bg-black/30">
-                  <motion.button
-                    onClick={() => setShowShareModal(false)}
-                    className="w-full py-3 rounded-xl font-bold text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Close
-                  </motion.button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-      </AnimatePresence>
+      <SharePortalModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareUrl={shareUrl}
+        isGeneratingLink={isGeneratingLink}
+        linkCopied={linkCopied}
+        shareError={shareError}
+        onGenerateLink={handleGenerateShareLink}
+        onCopyLink={handleCopyLink}
+      />
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-          {showDeleteConfirmModal && (
-            <motion.div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-            >
-              <motion.div
-                  className="w-full max-w-sm bg-gradient-to-b from-[#151515] to-[#0a0a0a] rounded-2xl border border-red-500/20 shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden"
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.9, y: 20 }}
-              >
-                {/* Modal Header */}
-                <div className="relative flex items-center justify-between p-5 border-b border-white/10">
-                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20">
-                      <Trash2 className="w-5 h-5 text-red-400" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg text-white font-serif">Delete Project</h3>
-                        <p className="text-[10px] text-gray-500">This action cannot be undone</p>
-                    </div>
-                  </div>
-                  <motion.button
-                    onClick={() => setShowDeleteConfirmModal(false)}
-                    className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <X className="w-5 h-5" />
-                  </motion.button>
-                </div>
-
-                {/* Modal Body */}
-                <div className="p-5">
-                  <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 mb-5">
-                    <p className="text-sm text-gray-300 leading-relaxed">
-                      Are you sure you want to delete this project? All associated data including the design, quote, and internal notes will be permanently removed.
-                    </p>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <motion.button
-                      onClick={() => setShowDeleteConfirmModal(false)}
-                      className="flex-1 py-3 rounded-xl font-bold text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Cancel
-                    </motion.button>
-                    <motion.button
-                      onClick={() => {
-                        setShowDeleteConfirmModal(false);
-                        onDeleteProject?.();
-                      }}
-                      className="flex-1 py-3 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-all"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-      </AnimatePresence>
+      <DeleteConfirmModal
+        isOpen={showDeleteConfirmModal}
+        onClose={() => setShowDeleteConfirmModal(false)}
+        onConfirm={() => onDeleteProject?.()}
+      />
     </div>
   );
 };

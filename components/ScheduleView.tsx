@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star, CheckCircle2, DollarSign } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star, CheckCircle2, DollarSign, Filter } from 'lucide-react';
 import { SavedProject, TimeSlot, CalendarEvent, EventType } from '../types';
+
+type ViewMode = 'all' | 'my-jobs';
 
 interface ScheduleViewProps {
   projects: SavedProject[];
@@ -16,6 +18,9 @@ interface ScheduleViewProps {
   onCreateEvent?: () => void;
   onEditEvent?: (event: CalendarEvent) => void;
   onDeleteEvent?: (eventId: string) => void;
+  // User filtering props
+  currentUserId?: string;
+  onEditTeam?: (project: SavedProject) => void;
 }
 
 // Helper to format date for display
@@ -75,7 +80,7 @@ const getEventTypeDisplay = (type: EventType): { label: string; icon: React.Reac
 const CalendarGrid: React.FC<{
   currentMonth: Date;
   selectedDate: Date;
-  scheduledDates: Set<string>;
+  scheduledDates: Map<string, number>;
   onDateSelect: (date: Date) => void;
   onMonthChange: (delta: number) => void;
 }> = ({ currentMonth, selectedDate, scheduledDates, onDateSelect, onMonthChange }) => {
@@ -97,7 +102,8 @@ const CalendarGrid: React.FC<{
     const dateStr = date.toISOString().split('T')[0];
     const isSelected = date.toDateString() === selectedDate.toDateString();
     const isToday = date.toDateString() === today.toDateString();
-    const hasJobs = scheduledDates.has(dateStr);
+    const eventCount = scheduledDates.get(dateStr) || 0;
+    const hasJobs = eventCount > 0;
     const isPast = date < today;
 
     days.push(
@@ -137,16 +143,21 @@ const CalendarGrid: React.FC<{
           />
         )}
         <span className={`text-sm md:text-base font-medium relative z-10 ${isSelected ? 'text-white' : ''}`}>{day}</span>
-        {/* Glowing event dots */}
+        {/* Glowing event dots with count badge */}
         {hasJobs && (
-          <div className={`absolute bottom-1 flex gap-0.5`}>
+          <div className="absolute bottom-1 flex items-center gap-0.5">
             <motion.div
-              className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#F6B45A]'}`}
+              className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-[#F6B45A]'}`}
               animate={!isSelected ? {
                 boxShadow: ['0 0 0 0 rgba(246,180,90,0.4)', '0 0 6px 2px rgba(246,180,90,0.6)', '0 0 0 0 rgba(246,180,90,0.4)']
               } : {}}
               transition={{ duration: 2, repeat: Infinity }}
             />
+            {eventCount > 1 && (
+              <span className={`text-[8px] font-bold ${isSelected ? 'text-white' : 'text-[#F6B45A]'}`}>
+                {eventCount}
+              </span>
+            )}
           </div>
         )}
       </motion.button>
@@ -217,7 +228,8 @@ const JobCard: React.FC<{
   onViewProject: () => void;
   onReschedule: () => void;
   onComplete: () => void;
-}> = ({ project, onViewProject, onReschedule, onComplete }) => {
+  onEditTeam?: () => void;
+}> = ({ project, onViewProject, onReschedule, onComplete, onEditTeam }) => {
   const schedule = project.schedule;
   if (!schedule) return null;
 
@@ -296,8 +308,18 @@ const JobCard: React.FC<{
         </div>
       )}
 
+      {/* Team Assignment */}
+      {project.assignedTo && project.assignedTo.length > 0 && (
+        <div className="flex items-center gap-2 text-sm">
+          <Users className="w-4 h-4 text-gray-500" />
+          <span className="text-gray-400">
+            {project.assignedTo.length} team member{project.assignedTo.length > 1 ? 's' : ''} assigned
+          </span>
+        </div>
+      )}
+
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5">
         <motion.button
           onClick={onViewProject}
           className="flex-1 px-3 py-2 text-sm font-medium text-gray-300 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
@@ -318,6 +340,17 @@ const JobCard: React.FC<{
         >
           Reschedule
         </motion.button>
+        {onEditTeam && (
+          <motion.button
+            onClick={onEditTeam}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#F6B45A] bg-[#F6B45A]/10 hover:bg-[#F6B45A]/20 rounded-lg transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Users className="w-3.5 h-3.5" />
+            Edit Team
+          </motion.button>
+        )}
         {!isApproved && (
           <motion.button
             onClick={onComplete}
@@ -449,8 +482,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   onCreateEvent,
   onEditEvent,
   onDeleteEvent,
+  currentUserId,
+  onEditTeam,
 }) => {
-  const [currentMonth, setCurrentMonth] = React.useState(new Date(selectedDate));
+  const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
+  const [viewMode, setViewMode] = useState<ViewMode>('all');
 
   // Get all scheduled projects (including approved projects that have a schedule)
   const scheduledProjects = useMemo(() => {
@@ -462,28 +498,36 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     return projects.filter(p => (p.status === 'approved' || p.status === 'quoted') && !p.schedule);
   }, [projects]);
 
-  // Get set of dates with scheduled jobs or events
+  // Get map of dates with scheduled jobs/events and their counts
   const scheduledDates = useMemo(() => {
-    const dates = new Set<string>();
+    const dates = new Map<string, number>();
     scheduledProjects.forEach(p => {
       if (p.schedule?.scheduledDate) {
-        dates.add(p.schedule.scheduledDate);
+        const date = p.schedule.scheduledDate;
+        dates.set(date, (dates.get(date) || 0) + 1);
       }
     });
     // Add event dates too
     events.forEach(e => {
       if (e.date) {
-        dates.add(e.date);
+        dates.set(e.date, (dates.get(e.date) || 0) + 1);
       }
     });
     return dates;
   }, [scheduledProjects, events]);
 
-  // Get jobs for selected date
+  // Get jobs for selected date, filtered by view mode
   const selectedDateStr = selectedDate.toISOString().split('T')[0];
   const jobsForSelectedDate = useMemo(() => {
-    return scheduledProjects.filter(p => p.schedule?.scheduledDate === selectedDateStr);
-  }, [scheduledProjects, selectedDateStr]);
+    let filtered = scheduledProjects.filter(p => p.schedule?.scheduledDate === selectedDateStr);
+
+    // Filter by user if in "my-jobs" mode
+    if (viewMode === 'my-jobs' && currentUserId) {
+      filtered = filtered.filter(p => p.assignedTo?.includes(currentUserId));
+    }
+
+    return filtered;
+  }, [scheduledProjects, selectedDateStr, viewMode, currentUserId]);
 
   // Group jobs by time slot
   const jobsByTimeSlot = useMemo(() => {
@@ -532,7 +576,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
             <CalendarDays className="w-5 h-5 text-blue-400" />
@@ -542,17 +586,52 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             <p className="text-sm text-gray-400">Manage your installation appointments</p>
           </div>
         </div>
-        {onCreateEvent && (
-          <motion.button
-            onClick={onCreateEvent}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg shadow-purple-500/20"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Create Event</span>
-          </motion.button>
-        )}
+
+        <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          {currentUserId && (
+            <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1">
+              <motion.button
+                onClick={() => setViewMode('all')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  viewMode === 'all'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+                whileHover={{ scale: viewMode === 'all' ? 1 : 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span>All Jobs</span>
+              </motion.button>
+              <motion.button
+                onClick={() => setViewMode('my-jobs')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  viewMode === 'my-jobs'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+                whileHover={{ scale: viewMode === 'my-jobs' ? 1 : 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>My Jobs</span>
+              </motion.button>
+            </div>
+          )}
+
+          {onCreateEvent && (
+            <motion.button
+              onClick={onCreateEvent}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg shadow-purple-500/20"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline">Create Event</span>
+            </motion.button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -707,6 +786,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                       onViewProject={() => onViewProject(job)}
                       onReschedule={() => onReschedule(job)}
                       onComplete={() => onComplete(job)}
+                      onEditTeam={onEditTeam ? () => onEditTeam(job) : undefined}
                     />
                   ))}
                   {eventsByTimeSlot.morning.map(event => (
@@ -734,6 +814,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                       onViewProject={() => onViewProject(job)}
                       onReschedule={() => onReschedule(job)}
                       onComplete={() => onComplete(job)}
+                      onEditTeam={onEditTeam ? () => onEditTeam(job) : undefined}
                     />
                   ))}
                   {eventsByTimeSlot.afternoon.map(event => (
@@ -761,6 +842,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                       onViewProject={() => onViewProject(job)}
                       onReschedule={() => onReschedule(job)}
                       onComplete={() => onComplete(job)}
+                      onEditTeam={onEditTeam ? () => onEditTeam(job) : undefined}
                     />
                   ))}
                   {eventsByTimeSlot.evening.map(event => (
@@ -788,6 +870,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                       onViewProject={() => onViewProject(job)}
                       onReschedule={() => onReschedule(job)}
                       onComplete={() => onComplete(job)}
+                      onEditTeam={onEditTeam ? () => onEditTeam(job) : undefined}
                     />
                   ))}
                   {eventsByTimeSlot.custom.map(event => (

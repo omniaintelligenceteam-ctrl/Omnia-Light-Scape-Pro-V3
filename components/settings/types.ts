@@ -19,6 +19,10 @@ export interface FollowUpSettings {
   enableInvoiceReminders: boolean;
   enablePreInstallReminders: boolean;
   enableSmsForOverdue: boolean;    // Send SMS for overdue invoices
+  // Google Review settings
+  googleReviewUrl: string;         // Business's Google Review URL
+  enableReviewRequests: boolean;   // Enable/disable review request emails
+  reviewRequestDays: number;       // Days after completion to send review request
 }
 
 export interface SettingsViewProps {

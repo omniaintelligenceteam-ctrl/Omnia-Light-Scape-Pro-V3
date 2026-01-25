@@ -50,6 +50,8 @@ import { SaveImageModal } from './components/SaveImageModal';
 import { AcceptInvite } from './components/AcceptInvite';
 import { KanbanBoard } from './components/pipeline';
 import { useToast } from './components/Toast';
+import DemoGuide from './components/DemoGuide';
+import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash } from 'lucide-react';
@@ -203,7 +205,8 @@ const App: React.FC = () => {
     isLoading: techniciansLoading,
     createTechnician,
     updateTechnician,
-    deleteTechnician
+    deleteTechnician,
+    activeTechnicians
   } = useTechnicians();
 
   // Selected location filter - null means "All Locations"
@@ -297,6 +300,9 @@ const App: React.FC = () => {
 
   // Team members for assignment dropdown
   const { members: teamMembers } = useTeamMembers();
+
+  // Demo guide onboarding
+  const onboarding = useOnboarding({ autoStart: false });
 
   // Client management UI state
   const [showClientModal, setShowClientModal] = useState(false);
@@ -508,6 +514,7 @@ const App: React.FC = () => {
   const [scheduleNotes, setScheduleNotes] = useState<string>('');
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
   const [scheduleConflicts, setScheduleConflicts] = useState<ConflictResult>({ hasConflict: false, conflicts: [], warnings: [] });
+  const [selectedTeamMembers, setSelectedTeamMembers] = useState<string[]>([]);
 
   // Completion Modal State
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -537,6 +544,11 @@ const App: React.FC = () => {
 
   // Completed Jobs Modal State
   const [showCompletedJobsModal, setShowCompletedJobsModal] = useState(false);
+
+  // Edit Team Modal State
+  const [showEditTeamModal, setShowEditTeamModal] = useState(false);
+  const [editTeamProjectId, setEditTeamProjectId] = useState<string | null>(null);
+  const [editTeamMembers, setEditTeamMembers] = useState<string[]>([]);
 
   // Next Step Modal State (workflow prompts)
   const [showNextStepModal, setShowNextStepModal] = useState(false);
@@ -612,6 +624,34 @@ const App: React.FC = () => {
     };
     checkAuth();
   }, []);
+
+  // Demo guide: Track tab visits for steps 4-6
+  useEffect(() => {
+    if (!onboarding.isDemoActive) return;
+    if (activeTab === 'projects') {
+      onboarding.completeDemoStep(4);
+    } else if (activeTab === 'schedule') {
+      onboarding.completeDemoStep(5);
+    } else if (activeTab === 'settings') {
+      onboarding.completeDemoStep(6);
+    }
+  }, [activeTab, onboarding.isDemoActive, onboarding.completeDemoStep]);
+
+  // Demo guide: Track image upload (step 1)
+  useEffect(() => {
+    if (!onboarding.isDemoActive) return;
+    if (file) {
+      onboarding.completeDemoStep(1);
+    }
+  }, [file, onboarding.isDemoActive, onboarding.completeDemoStep]);
+
+  // Demo guide: Track fixture selection (step 2)
+  useEffect(() => {
+    if (!onboarding.isDemoActive) return;
+    if (selectedFixtures.length > 0) {
+      onboarding.completeDemoStep(2);
+    }
+  }, [selectedFixtures, onboarding.isDemoActive, onboarding.completeDemoStep]);
 
   // Load theme preferences from localStorage on mount
   useEffect(() => {
@@ -1309,6 +1349,11 @@ const App: React.FC = () => {
 
   const handleGenerate = async () => {
     if (!file || !previewUrl) return;
+
+    // Demo guide: Complete step 3 when generate is clicked
+    if (onboarding.isDemoActive) {
+      onboarding.completeDemoStep(3);
+    }
 
     // Rate limiting - prevent rapid clicks
     const now = Date.now();
@@ -2572,7 +2617,7 @@ Notes: ${invoice.notes || 'N/A'}
 
   // Send invoice via email
   const handleSendInvoiceEmail = async () => {
-      if (!currentInvoice || !currentInvoice.clientDetails.email) return;
+      if (!currentInvoice || !currentInvoice.clientDetails.email || !user?.id) return;
 
       setIsSendingInvoiceEmail(true);
       setInvoiceEmailError(null);
@@ -2585,6 +2630,41 @@ Notes: ${invoice.notes || 'N/A'}
       const projectImageUrl = rawImageUrl && rawImageUrl.startsWith('http') ? rawImageUrl : null;
 
       try {
+          // Generate share token to get payment URL
+          let paymentUrl: string | undefined;
+          if (currentInvoice.projectId) {
+            const invoiceData = {
+              invoiceNumber: currentInvoice.invoiceNumber,
+              invoiceDate: currentInvoice.invoiceDate,
+              dueDate: currentInvoice.dueDate,
+              lineItems: currentInvoice.lineItems,
+              subtotal: currentInvoice.subtotal,
+              taxRate: currentInvoice.taxRate,
+              taxAmount: currentInvoice.taxAmount,
+              discount: currentInvoice.discount,
+              total: currentInvoice.total,
+              notes: currentInvoice.notes,
+              clientDetails: currentInvoice.clientDetails
+            };
+
+            const shareResponse = await fetch(`/api/projects/${currentInvoice.projectId}/share?userId=${user.id}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'invoice',
+                expiresInDays: 30,
+                invoiceData
+              })
+            });
+
+            if (shareResponse.ok) {
+              const shareData = await shareResponse.json();
+              if (shareData.data?.shareUrl) {
+                paymentUrl = shareData.data.shareUrl;
+              }
+            }
+          }
+
           const response = await fetch('/api/send-invoice', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -2608,7 +2688,8 @@ Notes: ${invoice.notes || 'N/A'}
                   total: currentInvoice.total,
                   notes: currentInvoice.notes,
                   projectImageUrl: projectImageUrl || undefined,
-                  customMessage: invoiceEmailMessage || undefined
+                  customMessage: invoiceEmailMessage || undefined,
+                  paymentUrl
               })
           });
 
@@ -4097,7 +4178,7 @@ Notes: ${invoice.notes || 'N/A'}
                     <div className="flex flex-col gap-4 md:gap-6">
 
                         {/* Premium Fixture Selection */}
-                        <div className="flex flex-col gap-4 md:gap-5">
+                        <div className="flex flex-col gap-4 md:gap-5" data-tour="fixtures">
                             {/* Section Header with Presets */}
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center justify-between">
@@ -4447,6 +4528,7 @@ Notes: ${invoice.notes || 'N/A'}
 
                         {/* ✨ HERO Generate Button - The Core Action */}
                         <motion.button
+                            data-tour="generate"
                             onClick={(e) => {
                                 // Capture click position for ripple effect
                                 const rect = e.currentTarget.getBoundingClientRect();
@@ -4808,7 +4890,7 @@ Notes: ${invoice.notes || 'N/A'}
 
 
                  {/* Simplified Navigation: 3 Main Tabs */}
-                 <div className="flex items-center gap-2 mb-4">
+                 <div className="flex items-center gap-2 mb-4" data-tour="pipeline">
                      <button
                          onClick={() => setProjectsSubTab('pipeline')}
                          className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
@@ -4821,6 +4903,7 @@ Notes: ${invoice.notes || 'N/A'}
                          <span>Pipeline</span>
                      </button>
                      <button
+                         data-tour="clients"
                          onClick={() => setProjectsSubTab('clients')}
                          className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all active:scale-95 ${
                              projectsSubTab === 'clients'
@@ -6997,7 +7080,7 @@ Notes: ${invoice.notes || 'N/A'}
                   }}
                 />
               ) : (
-                <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
+                <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10" data-tour="calendar">
                   <ScheduleView
                     projects={filteredProjectsByLocation}
                     selectedDate={selectedCalendarDate}
@@ -7040,6 +7123,12 @@ Notes: ${invoice.notes || 'N/A'}
                     onCreateEvent={handleCreateEvent}
                     onEditEvent={handleEditEvent}
                     onDeleteEvent={handleDeleteEvent}
+                    currentUserId={user?.id}
+                    onEditTeam={(project) => {
+                      setEditTeamProjectId(project.id);
+                      setEditTeamMembers(project.assignedTo || []);
+                      setShowEditTeamModal(true);
+                    }}
                   />
                 </div>
               )}
@@ -7055,6 +7144,7 @@ Notes: ${invoice.notes || 'N/A'}
                exit={{ x: tabDirection * -100 + '%' }}
                transition={{ type: 'spring', stiffness: 700, damping: 45 }}
                className="absolute inset-0 overflow-y-auto overflow-x-hidden"
+               data-tour="team"
              >
              <SettingsView
                 profile={companyProfile}
@@ -7301,6 +7391,64 @@ Notes: ${invoice.notes || 'N/A'}
                   </div>
                 </div>
 
+                {/* Team Assignment */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Assign Team Members
+                    </div>
+                  </label>
+                  {activeTechnicians.length === 0 ? (
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-center">
+                      <p className="text-sm text-gray-400">No technicians found</p>
+                      <p className="text-xs text-gray-500 mt-1">Add technicians in Settings → Team</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {activeTechnicians.map((tech) => (
+                        <label
+                          key={tech.id}
+                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                            selectedTeamMembers.includes(tech.id)
+                              ? 'bg-[#F6B45A]/10 border-[#F6B45A]/30'
+                              : 'bg-white/5 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedTeamMembers.includes(tech.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTeamMembers(prev => [...prev, tech.id]);
+                              } else {
+                                setSelectedTeamMembers(prev => prev.filter(id => id !== tech.id));
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                          <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                            selectedTeamMembers.includes(tech.id)
+                              ? 'bg-[#F6B45A] text-black'
+                              : 'bg-white/10 border border-white/20'
+                          }`}>
+                            {selectedTeamMembers.includes(tech.id) && <Check className="w-3.5 h-3.5" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{tech.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{tech.role}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {selectedTeamMembers.length > 0 && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      {selectedTeamMembers.length} team member{selectedTeamMembers.length > 1 ? 's' : ''} assigned
+                    </p>
+                  )}
+                </div>
+
                 {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Installation Notes (optional)</label>
@@ -7351,6 +7499,7 @@ Notes: ${invoice.notes || 'N/A'}
                     setShowScheduleModal(false);
                     setScheduleProjectId(null);
                     setScheduleNotes('');
+                    setSelectedTeamMembers([]);
                     showToast('info', 'You can schedule this job later from the Schedule tab');
                   }}
                   className="px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
@@ -7381,6 +7530,11 @@ Notes: ${invoice.notes || 'N/A'}
                       };
                       const success = await scheduleProject(scheduleProjectId, scheduleData);
                       if (success) {
+                        // Update assignedTo if team members were selected
+                        if (selectedTeamMembers.length > 0) {
+                          await updateProject(scheduleProjectId, { assignedTo: selectedTeamMembers });
+                        }
+
                         showToast('success', 'Job scheduled successfully!');
                         setShowScheduleModal(false);
                         // Show next step prompt
@@ -7389,6 +7543,7 @@ Notes: ${invoice.notes || 'N/A'}
                         setShowNextStepModal(true);
                         setScheduleProjectId(null);
                         setScheduleNotes('');
+                        setSelectedTeamMembers([]);
 
                         // Send scheduling confirmation email to client
                         if (project?.quote?.clientDetails?.email) {
@@ -7415,6 +7570,39 @@ Notes: ${invoice.notes || 'N/A'}
                             console.error('Failed to send schedule confirmation:', emailErr);
                           }
                         }
+
+                        // Send email notifications to assigned team members
+                        if (selectedTeamMembers.length > 0) {
+                          try {
+                            // Get technician details for the selected team members
+                            const assignedTechnicians = activeTechnicians.filter(t =>
+                              selectedTeamMembers.includes(t.id)
+                            );
+
+                            await fetch('/api/send-team-assignment', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                technicians: assignedTechnicians.map(t => ({
+                                  name: t.name,
+                                  email: t.email,
+                                })),
+                                projectName: project?.name,
+                                clientName: project?.quote?.clientDetails?.name || 'Customer',
+                                address: project?.quote?.clientDetails?.address,
+                                scheduledDate: scheduleData.scheduledDate,
+                                timeSlot: scheduleData.timeSlot,
+                                customTime: scheduleData.customTime,
+                                estimatedDuration: scheduleData.estimatedDuration,
+                                installationNotes: scheduleData.installationNotes,
+                                companyName: companyProfile.name,
+                              })
+                            });
+                            showToast('success', `Assignment emails sent to ${assignedTechnicians.length} team member${assignedTechnicians.length > 1 ? 's' : ''}`);
+                          } catch (teamEmailErr) {
+                            console.error('Failed to send team assignment emails:', teamEmailErr);
+                          }
+                        }
                       } else {
                         showToast('error', 'Failed to schedule job');
                       }
@@ -7426,6 +7614,167 @@ Notes: ${invoice.notes || 'N/A'}
                     Schedule Job
                   </motion.button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Team Modal */}
+      <AnimatePresence>
+        {showEditTeamModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowEditTeamModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-md"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#F6B45A]/20 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-[#F6B45A]" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Edit Team Assignment</h3>
+                    <p className="text-sm text-gray-400">
+                      {editTeamProjectId && projects.find(p => p.id === editTeamProjectId)?.name}
+                    </p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => setShowEditTeamModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </motion.button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                {activeTechnicians.length === 0 ? (
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-center">
+                    <p className="text-sm text-gray-400">No technicians found</p>
+                    <p className="text-xs text-gray-500 mt-1">Add technicians in Settings → Team</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {activeTechnicians.map((tech) => (
+                      <label
+                        key={tech.id}
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          editTeamMembers.includes(tech.id)
+                            ? 'bg-[#F6B45A]/10 border-[#F6B45A]/30'
+                            : 'bg-white/5 border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editTeamMembers.includes(tech.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditTeamMembers(prev => [...prev, tech.id]);
+                            } else {
+                              setEditTeamMembers(prev => prev.filter(id => id !== tech.id));
+                            }
+                          }}
+                          className="sr-only"
+                        />
+                        <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                          editTeamMembers.includes(tech.id)
+                            ? 'bg-[#F6B45A] text-black'
+                            : 'bg-white/10 border border-white/20'
+                        }`}>
+                          {editTeamMembers.includes(tech.id) && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{tech.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{tech.role}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {editTeamMembers.length > 0 && (
+                  <p className="text-xs text-gray-400">
+                    {editTeamMembers.length} team member{editTeamMembers.length > 1 ? 's' : ''} assigned
+                  </p>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 border-t border-white/10">
+                <motion.button
+                  onClick={() => setShowEditTeamModal(false)}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={async () => {
+                    if (!editTeamProjectId) return;
+                    const project = projects.find(p => p.id === editTeamProjectId);
+                    const previousTeam = project?.assignedTo || [];
+                    const newMembers = editTeamMembers.filter(id => !previousTeam.includes(id));
+
+                    const success = await updateProject(editTeamProjectId, { assignedTo: editTeamMembers });
+                    if (success) {
+                      showToast('success', 'Team assignment updated');
+                      setShowEditTeamModal(false);
+
+                      // Send email to newly assigned team members
+                      if (newMembers.length > 0 && project?.schedule) {
+                        try {
+                          const assignedTechnicians = activeTechnicians.filter(t =>
+                            newMembers.includes(t.id)
+                          );
+
+                          await fetch('/api/send-team-assignment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              technicians: assignedTechnicians.map(t => ({
+                                name: t.name,
+                                email: t.email,
+                              })),
+                              projectName: project.name,
+                              clientName: project.quote?.clientDetails?.name || 'Customer',
+                              address: project.quote?.clientDetails?.address,
+                              scheduledDate: project.schedule.scheduledDate,
+                              timeSlot: project.schedule.timeSlot,
+                              customTime: project.schedule.customTime,
+                              estimatedDuration: project.schedule.estimatedDuration,
+                              installationNotes: project.schedule.installationNotes,
+                              companyName: companyProfile.name,
+                            })
+                          });
+                          showToast('success', `Assignment email sent to ${newMembers.length} new team member${newMembers.length > 1 ? 's' : ''}`);
+                        } catch (err) {
+                          console.error('Failed to send team assignment emails:', err);
+                        }
+                      }
+                    } else {
+                      showToast('error', 'Failed to update team assignment');
+                    }
+                  }}
+                  className="px-6 py-2 bg-[#F6B45A] hover:bg-[#e5a34a] text-black font-medium rounded-xl transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Save Changes
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>
@@ -9631,6 +9980,14 @@ Notes: ${invoice.notes || 'N/A'}
         clients={clients}
         searchClients={searchClients}
         isSaving={isSavingImage}
+      />
+
+      {/* Demo Guide */}
+      <DemoGuide
+        currentStep={onboarding.demoStep}
+        completedSteps={onboarding.demoCompletedSteps}
+        onSkip={onboarding.skipDemo}
+        isVisible={onboarding.isDemoActive}
       />
 
       {/* Client Modal */}

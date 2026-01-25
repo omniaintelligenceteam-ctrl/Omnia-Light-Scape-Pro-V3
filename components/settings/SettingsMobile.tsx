@@ -1095,6 +1095,54 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
               </div>
             )}
           </div>
+
+          {/* Review Requests */}
+          <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-4">
+            <h3 className="text-base font-semibold text-white">Review Requests</h3>
+            <ToggleRow
+              title="Enable review requests"
+              description="Request Google reviews after completion"
+              checked={followUpSettings?.enableReviewRequests ?? true}
+              onChange={(checked) => onFollowUpSettingsChange?.({
+                ...followUpSettings!,
+                enableReviewRequests: checked
+              })}
+            />
+            {followUpSettings?.enableReviewRequests !== false && (
+              <>
+                <div>
+                  <span className="text-sm text-gray-300 block mb-2">Google Review URL</span>
+                  <input
+                    type="url"
+                    placeholder="https://g.page/r/your-business/review"
+                    value={followUpSettings?.googleReviewUrl ?? ''}
+                    onChange={(e) => onFollowUpSettingsChange?.({
+                      ...followUpSettings!,
+                      googleReviewUrl: e.target.value
+                    })}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 text-sm"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Send after</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={followUpSettings?.reviewRequestDays ?? 7}
+                      onChange={(e) => onFollowUpSettingsChange?.({
+                        ...followUpSettings!,
+                        reviewRequestDays: parseInt(e.target.value) || 7
+                      })}
+                      className="w-14 px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-center text-sm"
+                    />
+                    <span className="text-sm text-gray-400">days</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </FullScreenModal>
 

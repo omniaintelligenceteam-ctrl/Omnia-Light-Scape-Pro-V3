@@ -29,6 +29,10 @@ interface UserFollowUpSettings {
   follow_up_enable_invoice_reminders?: boolean;
   follow_up_enable_pre_install_reminders?: boolean;
   follow_up_sms_enabled?: boolean;
+  // Google Review settings
+  google_review_url?: string;
+  follow_up_enable_review_requests?: boolean;
+  follow_up_review_request_days?: number;
 }
 
 // Merge user settings with defaults
@@ -39,13 +43,15 @@ function getFollowUpConfig(userSettings?: UserFollowUpSettings) {
     invoice_reminder: userSettings?.follow_up_invoice_reminder_days ?? DEFAULT_FOLLOW_UP_CONFIG.invoice_reminder,
     invoice_overdue: userSettings?.follow_up_invoice_overdue_days ?? DEFAULT_FOLLOW_UP_CONFIG.invoice_overdue,
     pre_installation: userSettings?.follow_up_pre_installation_days ?? DEFAULT_FOLLOW_UP_CONFIG.pre_installation,
-    review_request: DEFAULT_FOLLOW_UP_CONFIG.review_request,
+    review_request: userSettings?.follow_up_review_request_days ?? DEFAULT_FOLLOW_UP_CONFIG.review_request,
     maintenance_reminder: DEFAULT_FOLLOW_UP_CONFIG.maintenance_reminder,
     // Enable flags
     enableQuoteReminders: userSettings?.follow_up_enable_quote_reminders ?? true,
     enableInvoiceReminders: userSettings?.follow_up_enable_invoice_reminders ?? true,
     enablePreInstallReminders: userSettings?.follow_up_enable_pre_install_reminders ?? true,
-    enableSmsForOverdue: userSettings?.follow_up_sms_enabled ?? false
+    enableSmsForOverdue: userSettings?.follow_up_sms_enabled ?? false,
+    enableReviewRequests: userSettings?.follow_up_enable_review_requests ?? true,
+    googleReviewUrl: userSettings?.google_review_url || ''
   };
 }
 
@@ -69,6 +75,8 @@ interface ProjectFollowUp {
   type: FollowUpType;
   shareToken?: string;
   scheduleData?: ScheduleInfo;
+  googleReviewUrl?: string;
+  clientId?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -126,7 +134,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           follow_up_enable_quote_reminders,
           follow_up_enable_invoice_reminders,
           follow_up_enable_pre_install_reminders,
-          follow_up_sms_enabled
+          follow_up_sms_enabled,
+          google_review_url,
+          follow_up_enable_review_requests,
+          follow_up_review_request_days
         `)
         .eq('user_id', user.id)
         .single();
@@ -285,8 +296,8 @@ async function findProjectsNeedingFollowUp(
       }
     }
 
-    // Review request: 7 days after completion
-    if (project.completed_at) {
+    // Review request: X days after completion (if enabled)
+    if (config.enableReviewRequests && project.completed_at) {
       const completedDate = new Date(project.completed_at);
       const daysSinceCompletion = Math.floor((now.getTime() - completedDate.getTime()) / (1000 * 60 * 60 * 24));
       if (daysSinceCompletion >= config.review_request && daysSinceCompletion < config.maintenance_reminder) {
@@ -297,7 +308,8 @@ async function findProjectsNeedingFollowUp(
           clientId: client.id,
           clientEmail: client.email,
           clientName: client.name,
-          type: 'review_request'
+          type: 'review_request',
+          googleReviewUrl: config.googleReviewUrl
         });
       }
     }
@@ -336,7 +348,7 @@ async function sendFollowUpEmail(followUp: ProjectFollowUp): Promise<void> {
 }
 
 function getEmailTemplates(followUp: ProjectFollowUp) {
-  const { clientName, projectName, companyName, companyEmail, type } = followUp;
+  const { clientName, projectName, companyName, companyEmail, type, googleReviewUrl } = followUp;
 
   const templates: Record<FollowUpType, { subject: string; html: string }> = {
     quote_reminder: {
@@ -438,16 +450,27 @@ function getEmailTemplates(followUp: ProjectFollowUp) {
     review_request: {
       subject: `${companyName} - How was your lighting installation?`,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #10B981;">We'd Love Your Feedback!</h2>
-          <p>Hi ${clientName},</p>
-          <p>It's been about a week since we completed your lighting installation for <strong>${projectName}</strong>.</p>
-          <p>We hope you're enjoying your new outdoor lighting! We'd love to hear about your experience.</p>
-          <p>If you could take a moment to leave us a review, it would mean a lot to our team.</p>
-          <p>Thank you for choosing ${companyName}!</p>
-          <p>Best regards,<br/>${companyName}</p>
-          <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
-          <p style="color: #666; font-size: 12px;">Reply to this email or contact us at ${companyEmail}</p>
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #111; color: #fff;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="font-size: 32px;">⭐⭐⭐⭐⭐</span>
+          </div>
+          <h2 style="color: #F6B45A; text-align: center; margin-bottom: 20px;">We'd Love Your Feedback!</h2>
+          <p style="color: #e5e5e5;">Hi ${clientName},</p>
+          <p style="color: #e5e5e5;">We hope you're enjoying your new outdoor lighting from <strong style="color: #fff;">${projectName}</strong>!</p>
+          <p style="color: #e5e5e5;">Your feedback helps us grow and serve our community better. If you had a great experience, we'd be honored if you could share it with others.</p>
+          ${googleReviewUrl ? `
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${googleReviewUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #F6B45A 0%, #D4A04A 100%); color: #111; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+              ⭐ Leave a Google Review
+            </a>
+          </div>
+          ` : `
+          <p style="color: #e5e5e5;">If you could take a moment to leave us a review, it would mean a lot to our team.</p>
+          `}
+          <p style="color: #e5e5e5;">Thank you for choosing ${companyName}!</p>
+          <p style="color: #e5e5e5;">Best regards,<br/><strong style="color: #F6B45A;">${companyName}</strong></p>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #333;" />
+          <p style="color: #888; font-size: 12px; text-align: center;">Reply to this email or contact us at ${companyEmail}</p>
         </div>
       `
     },
