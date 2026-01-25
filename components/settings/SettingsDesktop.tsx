@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Save } from 'lucide-react';
+import { useUser } from '@clerk/clerk-react';
 import { SettingsNav, SettingsSection } from './SettingsNav';
 import { SettingsViewProps } from './types';
 import { LocationsSection } from './LocationsSection';
@@ -104,6 +105,69 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const { isOwner, isAdmin } = useOrganization();
+  const { user } = useUser();
+
+  // Stripe Connect state
+  const [stripeConnect, setStripeConnect] = useState<{
+    connected: boolean;
+    status: 'pending' | 'active' | 'restricted' | null;
+    chargesEnabled?: boolean;
+    payoutsEnabled?: boolean;
+  }>({ connected: false, status: null });
+  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+
+  // Fetch Stripe Connect status on mount
+  useEffect(() => {
+    const fetchStripeStatus = async () => {
+      if (!user?.id) return;
+      try {
+        const res = await fetch(`/api/stripe/connect?userId=${user.id}`);
+        const data = await res.json();
+        if (data.success) {
+          setStripeConnect({
+            connected: data.connected,
+            status: data.status,
+            chargesEnabled: data.chargesEnabled,
+            payoutsEnabled: data.payoutsEnabled
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch Stripe status:', err);
+      }
+    };
+    fetchStripeStatus();
+  }, [user?.id]);
+
+  // Handler to start Stripe Connect onboarding
+  const handleConnectStripe = async () => {
+    if (!user?.id) return;
+    setIsConnectingStripe(true);
+    try {
+      const res = await fetch(`/api/stripe/connect?userId=${user.id}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success && data.onboardingUrl) {
+        window.open(data.onboardingUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Failed to start Stripe Connect:', err);
+    } finally {
+      setIsConnectingStripe(false);
+    }
+  };
+
+  // Handler to open Stripe Express dashboard
+  const handleOpenStripeDashboard = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`/api/stripe/dashboard?userId=${user.id}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success && data.loginUrl) {
+        window.open(data.loginUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Failed to open Stripe dashboard:', err);
+    }
+  };
 
   return (
     <div className="h-full flex bg-gradient-to-br from-[#050505] via-[#080808] to-[#0a0a0a]">
@@ -145,6 +209,10 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
               <ProfileSection
                 profile={profile}
                 onProfileChange={onProfileChange}
+                stripeConnect={stripeConnect}
+                onConnectStripe={handleConnectStripe}
+                onOpenStripeDashboard={handleOpenStripeDashboard}
+                isConnectingStripe={isConnectingStripe}
               />
             )}
 

@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Upload } from 'lucide-react';
+import { Upload, CreditCard, ExternalLink, Loader2 } from 'lucide-react';
 import { SettingsCard } from '../ui/SettingsCard';
 import { CardInput } from '../ui/PremiumInput';
 import { CompanyProfile } from '../../../types';
 
+interface StripeConnectInfo {
+  connected: boolean;
+  status: 'pending' | 'active' | 'restricted' | null;
+  chargesEnabled?: boolean;
+  payoutsEnabled?: boolean;
+}
+
 interface ProfileSectionProps {
   profile: CompanyProfile;
   onProfileChange?: (profile: CompanyProfile) => void;
+  stripeConnect?: StripeConnectInfo;
+  onConnectStripe?: () => void;
+  onOpenStripeDashboard?: () => void;
+  isConnectingStripe?: boolean;
 }
 
 const contentVariants = {
@@ -18,7 +29,11 @@ const contentVariants = {
 
 export const ProfileSection: React.FC<ProfileSectionProps> = ({
   profile,
-  onProfileChange
+  onProfileChange,
+  stripeConnect,
+  onConnectStripe,
+  onOpenStripeDashboard,
+  isConnectingStripe = false
 }) => {
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -125,6 +140,61 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
                   placeholder-gray-600 focus:border-[#F6B45A]/50 focus:outline-none resize-none transition-colors"
               />
             </div>
+          </div>
+        </div>
+      </SettingsCard>
+
+      {/* Stripe Connect Section */}
+      <SettingsCard className="p-6 mt-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-[#635BFF]/10 rounded-xl flex items-center justify-center shrink-0">
+              <CreditCard className="w-6 h-6 text-[#635BFF]" />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">Accept Payments</h3>
+              <p className="text-sm text-gray-400">
+                {stripeConnect?.connected
+                  ? stripeConnect.status === 'active'
+                    ? 'Connected - Ready to accept payments'
+                    : 'Setup incomplete - Complete verification'
+                  : 'Connect Stripe to accept invoice payments'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            {stripeConnect?.connected ? (
+              <>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  stripeConnect.status === 'active'
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-yellow-500/20 text-yellow-400'
+                }`}>
+                  {stripeConnect.status === 'active' ? 'Active' : 'Pending'}
+                </span>
+                <button
+                  onClick={onOpenStripeDashboard}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 rounded-xl text-sm font-medium text-white transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Dashboard
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={onConnectStripe}
+                disabled={isConnectingStripe}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#635BFF] hover:bg-[#5851e0] rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-50"
+              >
+                {isConnectingStripe ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CreditCard className="w-4 h-4" />
+                )}
+                Connect Stripe
+              </button>
+            )}
           </div>
         </div>
       </SettingsCard>

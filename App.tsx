@@ -625,15 +625,11 @@ const App: React.FC = () => {
     checkAuth();
   }, []);
 
-  // Demo guide: Track tab visits for steps 4-6
+  // Demo guide: Track settings tab visit (step 9)
   useEffect(() => {
     if (!onboarding.isDemoActive) return;
-    if (activeTab === 'projects') {
-      onboarding.completeDemoStep(4);
-    } else if (activeTab === 'schedule') {
-      onboarding.completeDemoStep(5);
-    } else if (activeTab === 'settings') {
-      onboarding.completeDemoStep(6);
+    if (activeTab === 'settings') {
+      onboarding.completeDemoStep(9);
     }
   }, [activeTab, onboarding.isDemoActive, onboarding.completeDemoStep]);
 
@@ -2114,6 +2110,8 @@ const App: React.FC = () => {
         if (success) {
           setCurrentQuote(quoteData);
           showToast('success', 'Quote updated!');
+          // Demo guide: Step 4 - Save & Generate Quote
+          if (onboarding.isDemoActive) onboarding.completeDemoStep(4);
         } else {
           setError('Failed to update quote. Please try again.');
           showToast('error', 'Failed to update quote');
@@ -2126,6 +2124,8 @@ const App: React.FC = () => {
           setCurrentProjectId(result.id);
           handleTabChange('projects');
           showToast('success', 'Quote saved to project!');
+          // Demo guide: Step 4 - Save & Generate Quote
+          if (onboarding.isDemoActive) onboarding.completeDemoStep(4);
         } else {
           setError('Failed to save project. Please try again.');
           showToast('error', 'Failed to save project');
@@ -2172,6 +2172,8 @@ const App: React.FC = () => {
   const handleApproveProject = async (projectId: string) => {
       await updateProjectStatus(projectId, 'approved');
       showToast('success', 'Project approved! Ready to schedule.');
+      // Demo guide: Step 6 - Approve Quote
+      if (onboarding.isDemoActive) onboarding.completeDemoStep(6);
   };
 
   // Change project status
@@ -2223,6 +2225,8 @@ const App: React.FC = () => {
       setCurrentInvoice(newInvoice);
       setInvoices(prev => [...prev, newInvoice]);
       setProjectsSubTab('invoicing');
+      // Demo guide: Step 8 - Invoice Job
+      if (onboarding.isDemoActive) onboarding.completeDemoStep(8);
   };
 
   // Send quote to client portal
@@ -2298,6 +2302,8 @@ const App: React.FC = () => {
 
       showToast('success', 'Quote sent to client!');
       setShowProjectDetailModal(false);
+      // Demo guide: Step 5 - Email Quote for Approval
+      if (onboarding.isDemoActive) onboarding.completeDemoStep(5);
     } catch (err: any) {
       console.error('Error sending quote:', err);
       showToast('error', err.message || 'Failed to send quote');
@@ -2391,6 +2397,8 @@ const App: React.FC = () => {
       const newEvent = await createEvent(eventData);
       if (newEvent) {
         showToast('success', 'Event created!');
+        // Demo guide: Step 7 - Schedule Quote
+        if (onboarding.isDemoActive) onboarding.completeDemoStep(7);
       } else {
         showToast('error', 'Failed to create event');
       }

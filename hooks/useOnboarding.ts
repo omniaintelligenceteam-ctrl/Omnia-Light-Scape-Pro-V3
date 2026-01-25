@@ -426,9 +426,9 @@ export const useOnboarding = (options: UseOnboardingOptions = {}) => {
     setCurrentTooltipIndex(0);
   }, []);
 
-  // Demo guide: check if demo is active
+  // Demo guide: check if demo is active (9 steps total)
   const isDemoActive = useMemo(() => {
-    return !progress.demoSkipped && progress.demoCompletedSteps.length < 6;
+    return !progress.demoSkipped && progress.demoCompletedSteps.length < 9;
   }, [progress.demoSkipped, progress.demoCompletedSteps]);
 
   // Demo guide: complete a step
@@ -436,8 +436,8 @@ export const useOnboarding = (options: UseOnboardingOptions = {}) => {
     setProgress(prev => {
       if (prev.demoCompletedSteps.includes(stepId)) return prev;
       const newCompleted = [...prev.demoCompletedSteps, stepId];
-      // Move to next incomplete step
-      const nextStep = [1, 2, 3, 4, 5, 6].find(s => !newCompleted.includes(s)) || 6;
+      // Move to next incomplete step (9 steps total)
+      const nextStep = [1, 2, 3, 4, 5, 6, 7, 8, 9].find(s => !newCompleted.includes(s)) || 9;
       return {
         ...prev,
         demoCompletedSteps: newCompleted,
