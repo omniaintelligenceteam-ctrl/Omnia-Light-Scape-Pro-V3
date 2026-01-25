@@ -1,8 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Paintbrush, FolderOpen, FolderClosed, Settings, Sparkles, Calendar, CalendarCheck, ClipboardList } from 'lucide-react';
 import { useOrganization } from '../hooks/useOrganization';
 import { OrganizationRole, RolePermissions } from '../types';
+
+// Check if device supports touch
+const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
+
+// Haptic feedback helper
+const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
+  if ('vibrate' in navigator) {
+    const patterns = { light: 10, medium: 25, heavy: 50 };
+    navigator.vibrate(patterns[type]);
+  }
+};
 
 interface MenuItem {
   id: string;
@@ -21,6 +32,14 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const { role, hasPermission } = useOrganization();
+
+  // Handle tab change with haptic feedback
+  const handleTabChange = useCallback((tabId: string) => {
+    if (isTouchDevice && tabId !== activeTab) {
+      triggerHaptic('light');
+    }
+    onTabChange(tabId);
+  }, [activeTab, onTabChange]);
 
   // Define all menu items with their access requirements
   const allMenuItems: MenuItem[] = [
@@ -102,8 +121,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             return (
               <motion.button
                 key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className="relative flex-1 flex flex-col items-center justify-center gap-1.5 md:gap-2 lg:gap-2.5 py-3 md:py-5 lg:py-6 rounded-2xl md:rounded-2xl lg:rounded-3xl transition-all duration-300"
+                onClick={() => handleTabChange(item.id)}
+                className="relative flex-1 flex flex-col items-center justify-center gap-1.5 md:gap-2 lg:gap-2.5 py-3 md:py-5 lg:py-6 min-h-[56px] md:min-h-[64px] rounded-2xl md:rounded-2xl lg:rounded-3xl transition-all duration-300 touch-manipulation select-none"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.95, y: 1 }}
                 style={{

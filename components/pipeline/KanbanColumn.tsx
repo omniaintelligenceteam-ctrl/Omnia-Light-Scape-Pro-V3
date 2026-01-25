@@ -22,6 +22,10 @@ interface KanbanColumnProps {
   onCompleteProject?: (project: SavedProject) => void;
   onGenerateInvoice?: (project: SavedProject) => void;
   onDropProject: (projectId: string, newStatus: ProjectStatus) => void;
+  // Batch selection props
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelection?: (projectId: string) => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -36,6 +40,9 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onCompleteProject,
   onGenerateInvoice,
   onDropProject,
+  selectionMode = false,
+  selectedIds = new Set(),
+  onToggleSelection,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const config = statusConfig[status];
@@ -123,6 +130,9 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 onScheduleProject={onScheduleProject}
                 onCompleteProject={onCompleteProject}
                 onGenerateInvoice={onGenerateInvoice}
+                selectionMode={selectionMode}
+                isSelected={selectedIds.has(project.id)}
+                onToggleSelection={onToggleSelection}
               />
             ))}
           </AnimatePresence>

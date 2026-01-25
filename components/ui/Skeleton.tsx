@@ -123,3 +123,123 @@ export const SkeletonProjectGrid: React.FC<{ count?: number }> = ({ count = 6 })
     ))}
   </div>
 );
+
+// Skeleton for Kanban Card
+export const SkeletonKanbanCard: React.FC = () => (
+  <div className="shimmer rounded-xl bg-[#151515] border border-white/5 p-4 space-y-3">
+    {/* Image placeholder */}
+    <div className="h-24 bg-white/5 rounded-lg" />
+    {/* Client name */}
+    <div className="h-4 bg-white/5 rounded w-2/3" />
+    {/* Address */}
+    <div className="h-3 bg-white/5 rounded w-full" />
+    {/* Price */}
+    <div className="flex justify-between items-center pt-2">
+      <div className="h-5 bg-white/5 rounded w-20" />
+      <div className="h-6 w-6 bg-white/5 rounded-full" />
+    </div>
+  </div>
+);
+
+// Skeleton for Kanban Column
+export const SkeletonKanbanColumn: React.FC<{ cardCount?: number }> = ({ cardCount = 3 }) => (
+  <div className="w-72 flex-shrink-0 space-y-3">
+    {/* Column Header */}
+    <div className="flex items-center justify-between px-3 py-2">
+      <div className="flex items-center gap-2">
+        <div className="shimmer w-3 h-3 rounded-full bg-white/5" />
+        <div className="shimmer h-4 bg-white/5 rounded w-20" />
+      </div>
+      <div className="shimmer h-5 w-8 bg-white/5 rounded-full" />
+    </div>
+    {/* Cards */}
+    <div className="space-y-3">
+      {Array.from({ length: cardCount }).map((_, i) => (
+        <SkeletonKanbanCard key={i} />
+      ))}
+    </div>
+  </div>
+);
+
+// Skeleton for Kanban Board
+export const SkeletonKanbanBoard: React.FC = () => (
+  <div className="flex gap-4 overflow-x-auto pb-4">
+    <SkeletonKanbanColumn cardCount={2} />
+    <SkeletonKanbanColumn cardCount={3} />
+    <SkeletonKanbanColumn cardCount={1} />
+    <SkeletonKanbanColumn cardCount={2} />
+    <SkeletonKanbanColumn cardCount={1} />
+  </div>
+);
+
+// Skeleton for Stat Card
+export const SkeletonStatCard: React.FC = () => (
+  <div className="shimmer rounded-xl bg-[#151515] border border-white/5 p-5 space-y-3">
+    <div className="flex items-center justify-between">
+      <div className="h-3 bg-white/5 rounded w-24" />
+      <div className="h-8 w-8 bg-white/5 rounded-xl" />
+    </div>
+    <div className="h-8 bg-white/5 rounded w-32" />
+    <div className="h-3 bg-white/5 rounded w-20" />
+  </div>
+);
+
+// Skeleton for Stats Grid
+export const SkeletonStatsGrid: React.FC<{ count?: number }> = ({ count = 4 }) => (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    {Array.from({ length: count }).map((_, i) => (
+      <SkeletonStatCard key={i} />
+    ))}
+  </div>
+);
+
+// Skeleton for Chart
+export const SkeletonChart: React.FC<{ height?: number }> = ({ height = 300 }) => (
+  <div className="shimmer rounded-xl bg-[#151515] border border-white/5 p-5 space-y-4">
+    {/* Chart title */}
+    <div className="flex items-center justify-between">
+      <div className="h-5 bg-white/5 rounded w-32" />
+      <div className="flex gap-2">
+        <div className="h-6 w-16 bg-white/5 rounded" />
+        <div className="h-6 w-16 bg-white/5 rounded" />
+      </div>
+    </div>
+    {/* Chart area */}
+    <div className="bg-white/5 rounded-lg" style={{ height }} />
+  </div>
+);
+
+// Skeleton for Schedule/Calendar Day
+export const SkeletonScheduleDay: React.FC = () => (
+  <div className="shimmer rounded-xl bg-[#151515] border border-white/5 p-4 space-y-3">
+    <div className="flex items-center justify-between">
+      <div className="h-4 bg-white/5 rounded w-24" />
+      <div className="h-6 w-6 bg-white/5 rounded-full" />
+    </div>
+    <div className="space-y-2">
+      <div className="h-12 bg-white/5 rounded-lg" />
+      <div className="h-12 bg-white/5 rounded-lg" />
+    </div>
+  </div>
+);
+
+// Skeleton for List Item
+export const SkeletonListItem: React.FC = () => (
+  <div className="shimmer flex items-center gap-4 p-4 border-b border-white/5">
+    <div className="w-10 h-10 bg-white/5 rounded-xl flex-shrink-0" />
+    <div className="flex-1 space-y-2">
+      <div className="h-4 bg-white/5 rounded w-3/4" />
+      <div className="h-3 bg-white/5 rounded w-1/2" />
+    </div>
+    <div className="h-8 w-20 bg-white/5 rounded-lg" />
+  </div>
+);
+
+// Skeleton for List
+export const SkeletonList: React.FC<{ count?: number }> = ({ count = 5 }) => (
+  <div className="divide-y divide-white/5">
+    {Array.from({ length: count }).map((_, i) => (
+      <SkeletonListItem key={i} />
+    ))}
+  </div>
+);

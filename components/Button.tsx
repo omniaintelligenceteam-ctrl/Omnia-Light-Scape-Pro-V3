@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Check, X } from 'lucide-react';
 
@@ -10,10 +10,22 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'sm' | 'md' | 'lg';
   enableShine?: boolean;
   enableRipple?: boolean;
+  enableHaptics?: boolean;
   state?: ButtonState;
   successDuration?: number;
   errorDuration?: number;
 }
+
+// Check if device supports touch
+const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
+
+// Haptic feedback helper
+const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
+  if ('vibrate' in navigator) {
+    const patterns = { light: 10, medium: 25, heavy: 50 };
+    navigator.vibrate(patterns[type]);
+  }
+};
 
 interface Ripple {
   x: number;
@@ -30,6 +42,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   enableShine = true,
   enableRipple = true,
+  enableHaptics = true,
   state: externalState,
   successDuration = 2000,
   errorDuration = 2000,
@@ -53,24 +66,34 @@ export const Button: React.FC<ButtonProps> = ({
   const isSuccessState = currentState === 'success';
   const isErrorState = currentState === 'error';
 
-  // Auto-reset success/error states
+  // Auto-reset success/error states with haptic feedback
   useEffect(() => {
     if (externalState === 'success') {
+      // Success haptic: double vibration
+      if (enableHaptics && isTouchDevice) {
+        triggerHaptic('medium');
+      }
       const timer = setTimeout(() => setInternalState('idle'), successDuration);
       return () => clearTimeout(timer);
     }
     if (externalState === 'error') {
+      // Error haptic: heavy vibration
+      if (enableHaptics && isTouchDevice) {
+        triggerHaptic('heavy');
+      }
       const timer = setTimeout(() => setInternalState('idle'), errorDuration);
       return () => clearTimeout(timer);
     }
-  }, [externalState, successDuration, errorDuration]);
+  }, [externalState, successDuration, errorDuration, enableHaptics]);
 
-  const baseStyles = "rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden";
+  // Touch-optimized base styles with minimum 48px touch target for accessibility
+  const baseStyles = "rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden touch-manipulation select-none";
 
+  // Size styles with minimum 44px height for touch targets (Apple HIG) / 48px recommended (WCAG)
   const sizeStyles = {
-    sm: "px-4 py-2 text-sm",
-    md: "px-6 py-3",
-    lg: "px-8 py-4 text-lg",
+    sm: "px-4 py-2 text-sm min-h-[44px]",
+    md: "px-6 py-3 min-h-[48px]",
+    lg: "px-8 py-4 text-lg min-h-[52px]",
   };
 
   const variants = {
@@ -90,8 +113,13 @@ export const Button: React.FC<ButtonProps> = ({
   // Get shine color based on variant
   const shineColor = variant === 'primary' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)';
 
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (enableRipple && !disabled && !isLoading) {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    // Trigger haptic feedback on touch devices
+    if (enableHaptics && isTouchDevice && !disabled && !isLoadingState) {
+      triggerHaptic('light');
+    }
+
+    if (enableRipple && !disabled && !isLoadingState) {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -105,7 +133,7 @@ export const Button: React.FC<ButtonProps> = ({
     }
 
     onClick?.(e);
-  };
+  }, [enableHaptics, enableRipple, disabled, isLoadingState, onClick]);
 
   return (
     <motion.button
