@@ -18,12 +18,15 @@ import {
   CatalogSection,
   LightingSection,
   FollowUpsSection,
+  DunningSection,
   SubscriptionSection,
   AnalyticsSection,
   SupportSection,
   ReportsSection
 } from './sections';
 import { ExpenseList } from '../expenses/ExpenseList';
+import { BillsSection } from '../bills/BillsSection';
+import { TimesheetsSection } from '../timesheets/TimesheetsSection';
 
 const contentVariants = {
   hidden: { opacity: 0, x: 20 },
@@ -299,6 +302,11 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
               />
             )}
 
+            {/* Payment Reminders (Dunning) Section */}
+            {activeSection === 'dunning' && (
+              <DunningSection />
+            )}
+
             {/* Goals Section */}
             {activeSection === 'goals' && (
               <motion.div
@@ -440,6 +448,34 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 transition={{ duration: 0.2 }}
               >
                 <ExpenseList />
+              </motion.div>
+            )}
+
+            {/* Bills Section */}
+            {activeSection === 'bills' && (
+              <motion.div
+                key="bills"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+              >
+                <BillsSection />
+              </motion.div>
+            )}
+
+            {/* Timesheets Section */}
+            {activeSection === 'timesheets' && (
+              <motion.div
+                key="timesheets"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+              >
+                <TimesheetsSection />
               </motion.div>
             )}
 

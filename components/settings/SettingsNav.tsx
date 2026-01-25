@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Palette, Bell, DollarSign, Package, Lightbulb,
-  CreditCard, HelpCircle, LogOut, Clock, Target, MapPin, Users, UserPlus, Warehouse, BarChart3, FileText, Receipt
+  CreditCard, HelpCircle, LogOut, Clock, Target, MapPin, Users, UserPlus, Warehouse, BarChart3, FileText, Receipt, Building2, BellRing
 } from 'lucide-react';
 
 export type SettingsSection =
@@ -14,10 +14,13 @@ export type SettingsSection =
   | 'inventory'
   | 'lighting'
   | 'followups'
+  | 'dunning'
   | 'goals'
   | 'analytics'
   | 'reports'
   | 'expenses'
+  | 'bills'
+  | 'timesheets'
   | 'locations'
   | 'technicians'
   | 'team'
@@ -41,10 +44,13 @@ const navItems: NavItem[] = [
   { id: 'inventory', label: 'Inventory', icon: Warehouse, group: 'Business' },
   { id: 'lighting', label: 'Lighting', icon: Lightbulb, group: 'Business' },
   { id: 'followups', label: 'Follow-ups', icon: Clock, group: 'Business' },
+  { id: 'dunning', label: 'Reminders', icon: BellRing, group: 'Business' },
   { id: 'goals', label: 'Goals', icon: Target, group: 'Business' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, group: 'Business' },
   { id: 'reports', label: 'Reports', icon: FileText, group: 'Business' },
   { id: 'expenses', label: 'Expenses', icon: Receipt, group: 'Business' },
+  { id: 'bills', label: 'Bills', icon: Building2, group: 'Business' },
+  { id: 'timesheets', label: 'Timesheets', icon: Clock, group: 'Business' },
   { id: 'locations', label: 'Locations', icon: MapPin, group: 'Organization' },
   { id: 'technicians', label: 'Technicians', icon: Users, group: 'Organization' },
   { id: 'team', label: 'Team', icon: UserPlus, group: 'Organization' },

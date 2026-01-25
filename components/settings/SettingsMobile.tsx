@@ -4,7 +4,7 @@ import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
   HelpCircle, LogOut, Save, Loader2, Upload, Check, Moon,
   Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2, Phone,
-  X, ChevronRight, Download, FileJson, Clock, Target, MapPin, Users, UserPlus
+  X, ChevronRight, Download, FileJson, Clock, Target, MapPin, Users, UserPlus, BellRing
 } from 'lucide-react';
 import { useSuccessToast, useErrorToast } from '../Toast';
 import { ToggleRow } from './ui/SettingsToggle';
@@ -20,6 +20,7 @@ import { TechniciansSection } from './TechniciansSection';
 import { TeamSection } from './TeamSection';
 import { useOrganization } from '../../hooks/useOrganization';
 import { InventoryView } from '../InventoryView';
+import { DunningSection } from './sections';
 
 // Menu item button component
 const MenuButton: React.FC<{
@@ -271,6 +272,14 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           title="Follow-ups"
           description="Automated reminders"
           onClick={() => setActiveModal('followups')}
+        />
+
+        {/* Payment Reminders (Dunning) */}
+        <MenuButton
+          icon={BellRing}
+          title="Payment Reminders"
+          description="Automated AR collection"
+          onClick={() => setActiveModal('dunning')}
         />
 
         {/* Goals */}
@@ -1275,6 +1284,15 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
             />
           </div>
         </div>
+      </FullScreenModal>
+
+      {/* Payment Reminders (Dunning) Modal */}
+      <FullScreenModal
+        isOpen={activeModal === 'dunning'}
+        onClose={() => setActiveModal(null)}
+        title="Payment Reminders"
+      >
+        <DunningSection />
       </FullScreenModal>
 
       {/* Locations Modal */}
