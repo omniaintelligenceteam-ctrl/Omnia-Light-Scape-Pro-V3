@@ -908,7 +908,7 @@ ${customMessage ? `\n${customMessage}\n` : ''}
                         </div>
                         <div className="flex-1 text-right">
                             <span className="text-sm font-bold text-[#F6B45A] font-mono">
-                                ${(item.unitPrice * item.quantity).toFixed(0)}
+                                ${(item.unitPrice * item.quantity).toFixed(2)}
                             </span>
                         </div>
                     </div>
@@ -1122,14 +1122,17 @@ ${customMessage ? `\n${customMessage}\n` : ''}
 
                      <div className="w-full md:w-72 flex justify-between items-center py-1.5 md:py-3 text-xs md:text-sm text-gray-300 border-b border-white/10 print:border-gray-200 print:text-gray-600">
                         <div className="flex items-center gap-1 md:gap-2">
-                            <span>Tax</span>
-                            <div className="flex items-center bg-[#0a0a0a] rounded-lg px-2 py-1 md:px-3 md:py-2 border border-white/10 print:bg-gray-50 print:border-none">
+                            <span>Tax Rate</span>
+                            <div className="flex items-center bg-[#0a0a0a] rounded-lg px-2 py-1 md:px-3 md:py-2 border border-white/10 hover:border-[#F6B45A]/30 transition-colors print:bg-gray-50 print:border-none" title="Enter your state tax rate">
                                 <input
                                     type="number"
                                     value={(taxRate * 100).toFixed(1)}
                                     onChange={(e) => setTaxRate((parseFloat(e.target.value) || 0) / 100)}
-                                    className="w-8 md:w-12 text-right bg-transparent border-none p-0 text-xs md:text-sm focus:ring-0 font-medium text-white font-mono print:text-black"
+                                    className="w-10 md:w-14 text-right bg-transparent border-none p-0 text-xs md:text-sm focus:ring-0 font-medium text-white font-mono print:text-black"
                                     step="0.1"
+                                    min="0"
+                                    max="15"
+                                    placeholder="7.0"
                                 />
                                 <Percent className="w-2.5 h-2.5 md:w-3 md:h-3 ml-0.5 md:ml-1 text-gray-500" />
                             </div>

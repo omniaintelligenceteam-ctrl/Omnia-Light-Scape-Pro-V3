@@ -257,7 +257,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       </AnimatePresence>
 
       {/* Main drop zone */}
-      <div className={`relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] rounded-2xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
+      <div className={`relative aspect-[16/10] sm:aspect-[16/10] md:aspect-[16/9] rounded-2xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
         isDragging
           ? 'border-[#F6B45A] bg-[#F6B45A]/5'
           : 'border-white/10 hover:border-white/20 bg-gradient-to-b from-white/[0.02] to-black/20'

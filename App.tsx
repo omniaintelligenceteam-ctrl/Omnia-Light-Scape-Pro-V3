@@ -3118,11 +3118,11 @@ Notes: ${invoice.notes || 'N/A'}
               animate={{ x: 0 }}
               exit={{ x: tabDirection * -100 + '%' }}
               transition={{ type: 'spring', stiffness: 700, damping: 45 }}
-              className="absolute inset-0 h-full overflow-y-auto overflow-x-hidden bg-[#050505] pb-24 md:pb-20">
+              className="absolute inset-0 h-full overflow-y-auto overflow-x-hidden bg-[#050505] pb-32 md:pb-20">
               {/* Background Ambient Glow */}
               <div className="absolute top-[-10%] left-[20%] w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-              <div className="max-w-4xl mx-auto min-h-full p-4 md:p-8 flex flex-col justify-start md:justify-center relative z-10">
+              <div className="max-w-4xl mx-auto min-h-full px-3 py-4 md:p-8 flex flex-col justify-start md:justify-center relative z-10">
                 
                 {/* MODE 1: RESULT VIEW (Generated Image Only) */}
                 {generatedImage ? (
@@ -4076,7 +4076,7 @@ Notes: ${invoice.notes || 'N/A'}
                 ) : (
                 <motion.div
                     key="editor-input"
-                    className="flex flex-col gap-8 pb-20 md:pb-0"
+                    className="flex flex-col gap-5 md:gap-8 pb-4 md:pb-0"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
@@ -4094,10 +4094,10 @@ Notes: ${invoice.notes || 'N/A'}
                     </div>
 
                     {/* Controls */}
-                    <div className="flex flex-col gap-6">
-                        
+                    <div className="flex flex-col gap-4 md:gap-6">
+
                         {/* Premium Fixture Selection */}
-                        <div className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-4 md:gap-5">
                             {/* Section Header with Presets */}
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center justify-between">
@@ -4244,7 +4244,7 @@ Notes: ${invoice.notes || 'N/A'}
                                             </AnimatePresence>
 
                                             {/* Content */}
-                                            <div className="relative z-10 flex items-center justify-center gap-2 py-2.5 px-4 md:py-3 md:px-5">
+                                            <div className="relative z-10 flex items-center justify-center gap-1.5 py-2 px-3 md:py-3 md:px-5">
                                                 {/* Label with hover color change */}
                                                 <span className={`text-xs md:text-sm font-semibold tracking-wide transition-colors duration-200 whitespace-nowrap ${
                                                     isSelected
@@ -4385,9 +4385,9 @@ Notes: ${invoice.notes || 'N/A'}
                         </div>
 
                         {/* Premium Custom Notes Input */}
-                        <div className="relative mt-2">
+                        <div className="relative mt-1 md:mt-2">
                             {/* Section Header */}
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center justify-between mb-3 md:mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10">
                                         <Settings2 className="w-4 h-4 text-gray-400" />
