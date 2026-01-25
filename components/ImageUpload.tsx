@@ -5,6 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Check if device supports touch
 const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
 
+// Sample photos for demo mode
+const SAMPLE_PHOTOS = [
+  { id: 'sample1', name: 'Modern Home', url: '/samples/house1.jpg' },
+  { id: 'sample2', name: 'Colonial Estate', url: '/samples/house2.jpg' },
+  { id: 'sample3', name: 'Ranch House', url: '/samples/house3.jpg' },
+];
+
 // Haptic feedback helper
 const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
   if ('vibrate' in navigator) {
@@ -86,6 +93,26 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [loadingSampleId, setLoadingSampleId] = useState<string | null>(null);
+
+  // Handle sample photo selection
+  const handleSampleSelect = useCallback(async (sampleUrl: string, name: string, id: string) => {
+    setLoadingSampleId(id);
+    if (isTouchDevice) triggerHaptic('light');
+
+    try {
+      const response = await fetch(sampleUrl);
+      if (!response.ok) throw new Error('Failed to load sample');
+      const blob = await response.blob();
+      const file = new File([blob], `${name.replace(/\s+/g, '-').toLowerCase()}.jpg`, { type: 'image/jpeg' });
+      onImageSelect(file);
+      if (isTouchDevice) triggerHaptic('medium');
+    } catch (error) {
+      console.error('Failed to load sample photo:', error);
+    } finally {
+      setLoadingSampleId(null);
+    }
+  }, [onImageSelect]);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -352,6 +379,50 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="whitespace-nowrap">Browse Files</span>
             </motion.button>
+          </div>
+
+          {/* Sample photos section */}
+          <div className="mt-4 sm:mt-5 w-full max-w-xs sm:max-w-sm px-2 sm:px-0">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-[10px] sm:text-xs text-gray-500 whitespace-nowrap">Or try a sample</span>
+              <div className="flex-1 h-px bg-white/10" />
+            </div>
+
+            <div className="flex gap-2 sm:gap-3 justify-center">
+              {SAMPLE_PHOTOS.map((sample) => (
+                <motion.button
+                  key={sample.id}
+                  onClick={() => handleSampleSelect(sample.url, sample.name, sample.id)}
+                  disabled={isProcessing || loadingSampleId !== null}
+                  className="relative group flex flex-col items-center gap-1.5 p-1.5 sm:p-2 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 transition-all disabled:opacity-50 touch-manipulation"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  {/* Thumbnail placeholder with loading state */}
+                  <div className="relative w-14 h-10 sm:w-16 sm:h-12 rounded-lg bg-white/5 overflow-hidden">
+                    <img
+                      src={sample.url}
+                      alt={sample.name}
+                      className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                      onError={(e) => {
+                        // Hide broken image, show placeholder
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    {/* Loading overlay */}
+                    {loadingSampleId === sample.id && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 text-[#F6B45A] animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] text-gray-400 group-hover:text-gray-300 transition-colors">
+                    {sample.name}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
           </div>
 
           {/* Processing overlay */}
