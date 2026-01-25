@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Clock,
   Image as ImageIcon,
-  ExternalLink,
   LogOut,
   Home,
   ImageIcon as GalleryIcon,
@@ -488,11 +487,15 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              {/* Total Projects */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="group relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-2xl border border-white/5 p-5 overflow-hidden hover:border-[#F6B45A]/20 transition-all"
+                className="group relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-2xl border border-white/5 p-5 overflow-hidden hover:border-[#F6B45A]/20 transition-all cursor-pointer"
+                onClick={() => setActiveTab('all')}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-[#F6B45A]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="relative">
@@ -501,47 +504,101 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
                       <ImageIcon className="w-5 h-5 text-[#F6B45A]" />
                     </div>
                   </div>
-                  <p className="text-3xl font-bold text-white mb-1">{data?.summary.totalProjects || 0}</p>
+                  <motion.p
+                    className="text-3xl font-bold text-white mb-1 text-mono-price"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    {data?.summary.totalProjects || 0}
+                  </motion.p>
                   <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Total Projects</p>
                 </div>
               </motion.div>
 
+              {/* Pending Quotes - with pulse if has pending */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="group relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-2xl border border-white/5 p-5 overflow-hidden hover:border-purple-500/20 transition-all"
+                className={`group relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-2xl border p-5 overflow-hidden transition-all cursor-pointer ${
+                  (data?.summary.pendingQuotes || 0) > 0
+                    ? 'border-[#F6B45A]/30 animate-pulse-gold'
+                    : 'border-white/5 hover:border-purple-500/20'
+                }`}
+                onClick={() => setActiveTab('quotes')}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#F6B45A]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="relative">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <FileText className="w-5 h-5 text-purple-400" />
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${
+                      (data?.summary.pendingQuotes || 0) > 0
+                        ? 'bg-[#F6B45A]/20 border border-[#F6B45A]/30'
+                        : 'bg-purple-500/10 border border-purple-500/20'
+                    }`}>
+                      <Sparkles className={`w-5 h-5 ${(data?.summary.pendingQuotes || 0) > 0 ? 'text-[#F6B45A]' : 'text-purple-400'}`} />
                     </div>
+                    {(data?.summary.pendingQuotes || 0) > 0 && (
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-[#F6B45A] bg-[#F6B45A]/10 px-2 py-0.5 rounded-full">
+                        Action Needed
+                      </span>
+                    )}
                   </div>
-                  <p className="text-3xl font-bold text-white mb-1">{data?.summary.pendingQuotes || 0}</p>
+                  <motion.p
+                    className={`text-3xl font-bold mb-1 text-mono-price ${(data?.summary.pendingQuotes || 0) > 0 ? 'text-[#F6B45A]' : 'text-white'}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.35 }}
+                  >
+                    {data?.summary.pendingQuotes || 0}
+                  </motion.p>
                   <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Pending Quotes</p>
                 </div>
               </motion.div>
 
+              {/* Pending Invoices - with pulse if has pending */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="group relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-2xl border border-white/5 p-5 overflow-hidden hover:border-blue-500/20 transition-all"
+                className={`group relative bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-2xl border p-5 overflow-hidden transition-all cursor-pointer ${
+                  (data?.summary.pendingInvoices || 0) > 0
+                    ? 'border-blue-500/30 animate-pulse-blue'
+                    : 'border-white/5 hover:border-blue-500/20'
+                }`}
+                onClick={() => setActiveTab('invoices')}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="relative">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className={`w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform ${
+                      (data?.summary.pendingInvoices || 0) > 0 ? 'animate-pulse-blue' : ''
+                    }`}>
                       <Receipt className="w-5 h-5 text-blue-400" />
                     </div>
+                    {(data?.summary.pendingInvoices || 0) > 0 && (
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">
+                        Payment Due
+                      </span>
+                    )}
                   </div>
-                  <p className="text-3xl font-bold text-white mb-1">{data?.summary.pendingInvoices || 0}</p>
+                  <motion.p
+                    className={`text-3xl font-bold mb-1 text-mono-price ${(data?.summary.pendingInvoices || 0) > 0 ? 'text-blue-400' : 'text-white'}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    {data?.summary.pendingInvoices || 0}
+                  </motion.p>
                   <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Pending Invoices</p>
                 </div>
               </motion.div>
 
+              {/* Approved/Completed */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -555,8 +612,15 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     </div>
                   </div>
-                  <p className="text-3xl font-bold text-white mb-1">{data?.summary.approvedProjects || 0}</p>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Approved</p>
+                  <motion.p
+                    className="text-3xl font-bold text-emerald-400 mb-1 text-mono-price"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.45 }}
+                  >
+                    {data?.summary.approvedProjects || 0}
+                  </motion.p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Completed</p>
                 </div>
               </motion.div>
             </div>
@@ -645,13 +709,16 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
                   {/* Hover glow effect */}
                   <div className="absolute inset-0 bg-gradient-to-br from-[#F6B45A]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                  {/* Project Image */}
-                  <div className="aspect-video bg-[#080808] relative overflow-hidden">
+                  {/* Project Image with Ken Burns Effect */}
+                  <div className="aspect-[16/10] bg-[#080808] relative overflow-hidden">
                     {project.imageUrl ? (
-                      <img
+                      <motion.img
                         src={project.imageUrl}
                         alt={project.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover"
+                        initial={{ scale: 1 }}
+                        whileHover={{ scale: 1.08 }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#0a0a0a] to-[#050505]">
@@ -660,24 +727,39 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
                     )}
 
                     {/* Premium vignette overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
 
-                    {/* Status Badge */}
+                    {/* Corner Brackets */}
+                    <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-[#F6B45A]/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-[#F6B45A]/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-[#F6B45A]/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                    {/* Status Badge with Pulse Animation */}
                     <div className="absolute top-3 right-3">
                       {project.invoice.paidAt ? (
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="px-3 py-1.5 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full flex items-center gap-1.5 shadow-lg shadow-emerald-500/30"
+                          className="px-3 py-1.5 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full flex items-center gap-1.5 shadow-lg shadow-emerald-500/30 animate-pulse-emerald"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Paid
+                        </motion.span>
+                      ) : project.invoice.sentAt && !project.invoice.paidAt ? (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="px-3 py-1.5 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full flex items-center gap-1.5 shadow-lg shadow-blue-500/30 animate-pulse-blue"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          Payment Due
                         </motion.span>
                       ) : project.quote.approvedAt ? (
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="px-3 py-1.5 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full flex items-center gap-1.5 shadow-lg shadow-blue-500/30"
+                          className="px-3 py-1.5 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full flex items-center gap-1.5 shadow-lg shadow-emerald-500/30"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Approved
@@ -686,46 +768,45 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="px-3 py-1.5 bg-purple-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full flex items-center gap-1.5 shadow-lg shadow-purple-500/30"
+                          className="px-3 py-1.5 bg-[#F6B45A]/90 backdrop-blur-sm text-black text-xs font-bold rounded-full flex items-center gap-1.5 shadow-lg shadow-[#F6B45A]/30 animate-pulse-gold"
                         >
-                          <Clock className="w-3.5 h-3.5" />
-                          Quote Pending
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Action Needed
                         </motion.span>
                       ) : null}
                     </div>
+
+                    {/* Price Badge on Image */}
+                    {project.totalPrice && (
+                      <div className="absolute bottom-3 left-3">
+                        <span className="px-3 py-1.5 bg-black/70 backdrop-blur-sm text-[#F6B45A] text-sm font-bold rounded-lg font-mono">
+                          {formatCurrency(project.totalPrice)}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Project Info */}
                   <div className="p-5 relative">
-                    <h3 className="font-serif font-bold text-lg text-white mb-1.5 group-hover:text-[#F6B45A] transition-colors">{project.name}</h3>
-                    <p className="text-sm text-gray-500 mb-4 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
+                    <h3 className="font-serif font-bold text-lg text-white mb-1 group-hover:text-[#F6B45A] transition-colors line-clamp-1">{project.name}</h3>
+                    <p className="text-xs text-gray-500 mb-4 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
                       {formatDate(project.createdAt)}
                     </p>
 
-                    {project.totalPrice && (
-                      <div className="mb-5">
-                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Project Total</p>
-                        <p className="text-2xl font-bold text-[#F6B45A] flex items-center">
-                          {formatCurrency(project.totalPrice)}
-                        </p>
-                      </div>
-                    )}
-
                     {/* Action Buttons */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-2">
                       {project.quote.token && !project.quote.approvedAt && (
                         <motion.a
                           href={`/p/quote/${project.quote.token}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-bold rounded-xl hover:from-purple-500 hover:to-purple-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
-                          whileHover={{ scale: 1.02, y: -2 }}
+                          className="flex-1 py-2.5 px-3 bg-gradient-to-r from-[#F6B45A] to-[#E09A3A] text-black text-xs font-bold rounded-xl hover:from-[#ffc67a] hover:to-[#F6B45A] transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-[#F6B45A]/20"
+                          whileHover={{ scale: 1.02, y: -1 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          <FileText className="w-4 h-4" />
-                          View Quote
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <FileText className="w-3.5 h-3.5" />
+                          Approve Quote
                         </motion.a>
                       )}
                       {project.invoice.token && !project.invoice.paidAt && (
@@ -733,13 +814,12 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ initialToken }) => {
                           href={`/p/invoice/${project.invoice.token}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-bold rounded-xl hover:from-blue-500 hover:to-blue-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
-                          whileHover={{ scale: 1.02, y: -2 }}
+                          className="flex-1 py-2.5 px-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-bold rounded-xl hover:from-blue-500 hover:to-blue-400 transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-blue-500/20"
+                          whileHover={{ scale: 1.02, y: -1 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          <Receipt className="w-4 h-4" />
-                          Pay Invoice
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <Receipt className="w-3.5 h-3.5" />
+                          Pay Now
                         </motion.a>
                       )}
                     </div>

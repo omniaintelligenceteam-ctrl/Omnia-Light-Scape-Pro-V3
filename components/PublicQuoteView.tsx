@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, Loader2,
   AlertCircle, Check, XCircle, Shield, ChevronDown, ChevronUp, Sparkles,
-  CreditCard, Calendar, Play, FileText as DocumentIcon
+  CreditCard, Calendar, Play, FileText as DocumentIcon, Receipt
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { SignatureCapture } from './SignatureCapture';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { QuoteVideoPlayer } from './remotion/QuoteVideoPlayer';
 import type { QuoteVideoProps } from './remotion/QuoteReveal';
+import { QuoteCoverSection, InteractivePricingTable } from './quote';
+import { QuotePageSkeleton } from './shared/PremiumSkeleton';
 
 interface QuoteProject {
   id: string;
@@ -235,23 +237,9 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
 
   const videoProps = buildVideoProps();
 
-  // Loading State
+  // Loading State - Premium Skeleton
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
-        <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }} />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center relative z-10"
-        >
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#F6B45A]/20 to-[#F6B45A]/5 border border-[#F6B45A]/20 flex items-center justify-center mx-auto mb-6">
-            <Loader2 className="w-10 h-10 text-[#F6B45A] animate-spin" />
-          </div>
-          <p className="text-gray-400 font-medium">Loading your quote...</p>
-        </motion.div>
-      </div>
-    );
+    return <QuotePageSkeleton />;
   }
 
   // Error State
@@ -422,6 +410,21 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
           )}
         </AnimatePresence>
 
+        {/* Premium Cover Section - Shows project image as hero */}
+        {viewMode === 'document' && project.generatedImageUrl && (
+          <div className="mb-8">
+            <QuoteCoverSection
+              companyName={company.name}
+              companyLogo={company.logo}
+              clientName={client?.name}
+              projectName={project.name}
+              quoteDate={project.createdAt}
+              projectImage={project.generatedImageUrl}
+              expiresAt={project.quoteExpiresAt}
+            />
+          </div>
+        )}
+
         {/* Main Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -563,6 +566,41 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
               )}
             </div>
           )}
+
+          {/* Interactive Pricing Table - Line Items */}
+          {(() => {
+            const quoteConfig = project.promptConfig?.quote || {};
+            const lineItems = quoteConfig.lineItems || [];
+            if (lineItems.length > 0) {
+              const formattedItems = lineItems.map((item: any, index: number) => ({
+                id: item.id || `item-${index}`,
+                name: item.name || item.type || 'Item',
+                type: item.fixtureType || item.category,
+                description: item.description,
+                quantity: item.quantity || 1,
+                unitPrice: item.price || item.unitPrice || 0,
+                total: (item.price || item.unitPrice || 0) * (item.quantity || 1),
+              }));
+              return (
+                <div className="p-6 md:p-8 border-b border-white/10">
+                  <h2 className="text-lg font-bold text-white font-serif mb-6 flex items-center gap-2">
+                    <Receipt className="w-5 h-5 text-[#F6B45A]" />
+                    Quote Details
+                  </h2>
+                  <InteractivePricingTable
+                    lineItems={formattedItems}
+                    subtotal={quoteConfig.subtotal || quoteTotal}
+                    taxRate={quoteConfig.taxRate || 0}
+                    taxAmount={quoteConfig.tax || 0}
+                    discount={quoteConfig.discount || 0}
+                    total={quoteTotal}
+                    showAnimations={true}
+                  />
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* Warranty Badge */}
           <div className="px-6 md:px-8 py-4 border-b border-white/10 bg-gradient-to-r from-emerald-500/5 to-transparent">

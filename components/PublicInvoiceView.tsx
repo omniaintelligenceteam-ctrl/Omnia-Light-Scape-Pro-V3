@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, Loader2, CreditCard, XCircle, DollarSign, Clock, ExternalLink } from 'lucide-react';
+import { CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, XCircle, DollarSign, Clock } from 'lucide-react';
+import { InvoiceStatusHero, getInvoiceStatus, PaymentSection } from './invoice';
+import { InvoicePageSkeleton } from './shared/PremiumSkeleton';
 
 interface InvoiceProject {
   id: string;
@@ -144,20 +146,9 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
     }).format(amount);
   };
 
-  // Loading State
+  // Loading State - Premium Skeleton
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading invoice...</p>
-        </motion.div>
-      </div>
-    );
+    return <InvoicePageSkeleton />;
   }
 
   // Error State
@@ -217,6 +208,17 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
             <div className="h-px w-12 bg-gradient-to-l from-transparent to-blue-500/50" />
           </div>
         </motion.div>
+
+        {/* Premium Invoice Status Hero */}
+        <div className="mb-8">
+          <InvoiceStatusHero
+            status={getInvoiceStatus(invoiceData?.dueDate || project.invoiceExpiresAt || null, isPaid)}
+            amount={invoiceTotal}
+            dueDate={invoiceData?.dueDate || project.invoiceExpiresAt}
+            paidDate={project.invoicePaidAt}
+            invoiceNumber={invoiceData?.invoiceNumber || `INV-${project.id.slice(0, 8).toUpperCase()}`}
+          />
+        </div>
 
         {/* Main Card */}
         <motion.div
@@ -503,40 +505,17 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
             </div>
           </div>
 
-          {/* Payment Action */}
-          {!isPaid && !isExpired && invoiceTotal > 0 && canAcceptPayment && (
+          {/* Payment Section */}
+          {!isExpired && invoiceTotal > 0 && canAcceptPayment && (
             <div className="p-6">
-              <motion.button
-                onClick={handlePay}
-                disabled={paying}
-                className="w-full relative overflow-hidden bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-4 px-6 rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
-                whileHover={!paying ? { scale: 1.01 } : {}}
-                whileTap={!paying ? { scale: 0.99 } : {}}
-              >
-                {paying ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Redirecting to payment...
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <CreditCard className="w-5 h-5" />
-                    Pay {formatCurrency(invoiceTotal)}
-                  </span>
-                )}
-                {!paying && (
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg]"
-                    initial={{ x: '-100%' }}
-                    whileHover={{ x: '200%' }}
-                    transition={{ duration: 0.6 }}
-                  />
-                )}
-              </motion.button>
-              <div className="flex items-center justify-center gap-2 mt-4 text-sm text-gray-500">
-                <ExternalLink className="w-4 h-4" />
-                <span>Secure payment powered by Stripe</span>
-              </div>
+              <PaymentSection
+                amount={invoiceTotal}
+                onPay={handlePay}
+                isPaying={paying}
+                isPaid={isPaid}
+                companyEmail={company.email}
+                companyPhone={company.phone}
+              />
             </div>
           )}
 
@@ -560,16 +539,6 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
                   </p>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Already Paid Message */}
-          {isPaid && (
-            <div className="p-6 text-center">
-              <p className="text-emerald-400 font-medium mb-2">Thank you for your payment!</p>
-              <p className="text-gray-400 text-sm">
-                A confirmation has been sent to your email.
-              </p>
             </div>
           )}
 

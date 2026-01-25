@@ -682,3 +682,324 @@ select option:checked {
 .gold-glow-hover:hover {
     box-shadow: 0 0 50px var(--accent-glow);
 }
+
+/* ============================================
+   PREMIUM QUOTE/INVOICE DESIGN SYSTEM
+   ============================================ */
+
+/* Status Colors for Quotes & Invoices */
+:root {
+    --status-pending: #8B5CF6;
+    --status-pending-glow: rgba(139, 92, 246, 0.3);
+    --status-approved: #10B981;
+    --status-approved-glow: rgba(16, 185, 129, 0.3);
+    --status-paid: #10B981;
+    --status-paid-glow: rgba(16, 185, 129, 0.3);
+    --status-overdue: #EF4444;
+    --status-overdue-glow: rgba(239, 68, 68, 0.4);
+    --status-due-soon: #F59E0B;
+    --status-due-soon-glow: rgba(245, 158, 11, 0.3);
+    --invoice-accent: #3B82F6;
+    --invoice-accent-glow: rgba(59, 130, 246, 0.3);
+}
+
+/* Status Badge Pulse Animations */
+@keyframes status-pulse-gold {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(246, 180, 90, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(246, 180, 90, 0);
+    }
+}
+
+@keyframes status-pulse-blue {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+    }
+}
+
+@keyframes status-pulse-amber {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+    }
+}
+
+@keyframes status-pulse-red {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+}
+
+@keyframes status-pulse-emerald {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+    }
+}
+
+.animate-pulse-gold {
+    animation: status-pulse-gold 2s ease-in-out infinite;
+}
+
+.animate-pulse-blue {
+    animation: status-pulse-blue 2s ease-in-out infinite;
+}
+
+.animate-pulse-amber {
+    animation: status-pulse-amber 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-red {
+    animation: status-pulse-red 1.2s ease-in-out infinite;
+}
+
+.animate-pulse-emerald {
+    animation: status-pulse-emerald 2s ease-in-out infinite;
+}
+
+/* Premium Number Count Up Animation */
+@keyframes count-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-count-up {
+    animation: count-up 0.5s ease-out forwards;
+}
+
+/* Slide In From Bottom (for modals/cards) */
+@keyframes slide-in-bottom {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-in-bottom {
+    animation: slide-in-bottom 0.4s ease-out forwards;
+}
+
+/* Staggered Item Entrance */
+.stagger-item {
+    opacity: 0;
+    animation: slide-in-bottom 0.4s ease-out forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 80ms; }
+.stagger-item:nth-child(3) { animation-delay: 160ms; }
+.stagger-item:nth-child(4) { animation-delay: 240ms; }
+.stagger-item:nth-child(5) { animation-delay: 320ms; }
+.stagger-item:nth-child(6) { animation-delay: 400ms; }
+.stagger-item:nth-child(7) { animation-delay: 480ms; }
+.stagger-item:nth-child(8) { animation-delay: 560ms; }
+.stagger-item:nth-child(9) { animation-delay: 640ms; }
+.stagger-item:nth-child(10) { animation-delay: 720ms; }
+
+/* Premium Button Shimmer Effect */
+@keyframes button-shimmer {
+    0% {
+        background-position: -200% center;
+    }
+    100% {
+        background-position: 200% center;
+    }
+}
+
+.btn-shimmer {
+    background: linear-gradient(
+        90deg,
+        var(--accent-primary) 0%,
+        #ffd89b 25%,
+        var(--accent-primary) 50%,
+        #ffd89b 75%,
+        var(--accent-primary) 100%
+    );
+    background-size: 200% auto;
+    animation: button-shimmer 3s linear infinite;
+}
+
+.btn-shimmer-blue {
+    background: linear-gradient(
+        90deg,
+        #3B82F6 0%,
+        #60A5FA 25%,
+        #3B82F6 50%,
+        #60A5FA 75%,
+        #3B82F6 100%
+    );
+    background-size: 200% auto;
+    animation: button-shimmer 3s linear infinite;
+}
+
+/* Ken Burns Effect for Images */
+@keyframes ken-burns {
+    0% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(1.1);
+    }
+}
+
+.ken-burns {
+    animation: ken-burns 20s ease-in-out infinite alternate;
+}
+
+.group:hover .ken-burns-hover {
+    animation: ken-burns 8s ease-in-out infinite alternate;
+}
+
+/* Premium Glass Card */
+.glass-card {
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Corner Bracket Decorations */
+.corner-brackets::before,
+.corner-brackets::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--accent-primary);
+    opacity: 0.6;
+}
+
+.corner-brackets::before {
+    top: -1px;
+    left: -1px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.corner-brackets::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: none;
+    border-top: none;
+}
+
+/* Status Glow Effects */
+.glow-gold {
+    box-shadow: 0 0 20px rgba(246, 180, 90, 0.3), 0 0 40px rgba(246, 180, 90, 0.1);
+}
+
+.glow-blue {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+}
+
+.glow-emerald {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.1);
+}
+
+.glow-amber {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3), 0 0 40px rgba(245, 158, 11, 0.1);
+}
+
+.glow-red {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.2);
+}
+
+/* Progress Ring Animation */
+@keyframes progress-ring {
+    from {
+        stroke-dashoffset: 100;
+    }
+    to {
+        stroke-dashoffset: var(--progress, 0);
+    }
+}
+
+.progress-ring-animate {
+    animation: progress-ring 1s ease-out forwards;
+}
+
+/* Signature Line Guide */
+.signature-guide {
+    background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent calc(100% - 1px),
+        rgba(255, 255, 255, 0.1) calc(100% - 1px),
+        rgba(255, 255, 255, 0.1) 100%
+    );
+    background-size: 100% 40px;
+}
+
+/* Invoice/Quote Typography */
+.text-mono-price {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+/* Premium Skeleton Shapes */
+.skeleton-text {
+    height: 1em;
+    border-radius: 4px;
+}
+
+.skeleton-heading {
+    height: 2em;
+    border-radius: 6px;
+}
+
+.skeleton-avatar {
+    border-radius: 9999px;
+}
+
+.skeleton-card {
+    border-radius: 16px;
+}
+
+/* Quote/Invoice Section Divider */
+.section-divider {
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(246, 180, 90, 0.3) 20%,
+        rgba(246, 180, 90, 0.3) 80%,
+        transparent 100%
+    );
+}
+
+.section-divider-blue {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(59, 130, 246, 0.3) 20%,
+        rgba(59, 130, 246, 0.3) 80%,
+        transparent 100%
+    );
+}
