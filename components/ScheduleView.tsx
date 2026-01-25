@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star, CheckCircle2, DollarSign, Filter } from 'lucide-react';
-import { SavedProject, TimeSlot, CalendarEvent, EventType } from '../types';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star, CheckCircle2, DollarSign, Route } from 'lucide-react';
+import { SavedProject, TimeSlot, CalendarEvent, EventType, Technician } from '../types';
+import RoutePlanner from './RoutePlanner';
 
-type ViewMode = 'all' | 'my-jobs';
+type ViewMode = 'all' | 'my-jobs' | 'routes';
 
 interface ScheduleViewProps {
   projects: SavedProject[];
@@ -21,6 +22,8 @@ interface ScheduleViewProps {
   // User filtering props
   currentUserId?: string;
   onEditTeam?: (project: SavedProject) => void;
+  // Route planning props
+  technicians?: Technician[];
 }
 
 // Helper to format date for display
@@ -484,6 +487,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   onDeleteEvent,
   currentUserId,
   onEditTeam,
+  technicians = [],
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
   const [viewMode, setViewMode] = useState<ViewMode>('all');
@@ -589,21 +593,21 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
         <div className="flex items-center gap-3">
           {/* View Mode Toggle */}
-          {currentUserId && (
-            <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1">
-              <motion.button
-                onClick={() => setViewMode('all')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  viewMode === 'all'
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-                whileHover={{ scale: viewMode === 'all' ? 1 : 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span>All Jobs</span>
-              </motion.button>
+          <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1">
+            <motion.button
+              onClick={() => setViewMode('all')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                viewMode === 'all'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+              whileHover={{ scale: viewMode === 'all' ? 1 : 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Calendar</span>
+            </motion.button>
+            {currentUserId && (
               <motion.button
                 onClick={() => setViewMode('my-jobs')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
@@ -615,10 +619,23 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 whileTap={{ scale: 0.98 }}
               >
                 <User className="w-3.5 h-3.5" />
-                <span>My Jobs</span>
+                <span className="hidden sm:inline">My Jobs</span>
               </motion.button>
-            </div>
-          )}
+            )}
+            <motion.button
+              onClick={() => setViewMode('routes')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                viewMode === 'routes'
+                  ? 'bg-[#F6B45A] text-black'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+              whileHover={{ scale: viewMode === 'routes' ? 1 : 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Route className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Plan Routes</span>
+            </motion.button>
+          </div>
 
           {onCreateEvent && (
             <motion.button
@@ -634,29 +651,45 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Calendar */}
-        <CalendarGrid
-          currentMonth={currentMonth}
-          selectedDate={selectedDate}
-          scheduledDates={scheduledDates}
-          onDateSelect={(date) => {
-            onDateSelect(date);
-            // If date is in different month, update current month view
-            if (date.getMonth() !== currentMonth.getMonth() || date.getFullYear() !== currentMonth.getFullYear()) {
-              setCurrentMonth(new Date(date));
-            }
-          }}
-          onMonthChange={handleMonthChange}
-        />
+      {/* Route Planner View */}
+      {viewMode === 'routes' ? (
+        <div className="bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden" style={{ minHeight: '600px' }}>
+          <RoutePlanner
+            projects={projects}
+            technicians={technicians}
+            selectedDate={selectedDate.toISOString().split('T')[0]}
+            onDateChange={(dateStr) => onDateSelect(new Date(dateStr))}
+            onProjectClick={(projectId) => {
+              const project = projects.find(p => p.id === projectId);
+              if (project) onViewProject(project);
+            }}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Calendar */}
+            <CalendarGrid
+              currentMonth={currentMonth}
+              selectedDate={selectedDate}
+              scheduledDates={scheduledDates}
+              onDateSelect={(date) => {
+                onDateSelect(date);
+                // If date is in different month, update current month view
+                if (date.getMonth() !== currentMonth.getMonth() || date.getFullYear() !== currentMonth.getFullYear()) {
+                  setCurrentMonth(new Date(date));
+                }
+              }}
+              onMonthChange={handleMonthChange}
+            />
 
-        {/* Day View */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white">
-            {formatDate(selectedDate)}
-          </h3>
+            {/* Day View */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white">
+                {formatDate(selectedDate)}
+              </h3>
 
-          {!hasItemsForSelectedDate ? (
+              {!hasItemsForSelectedDate ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -926,6 +959,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               ))}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

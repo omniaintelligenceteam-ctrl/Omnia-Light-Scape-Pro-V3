@@ -272,6 +272,10 @@ export interface Client {
   totalRevenue?: number;
   leadSource?: LeadSource;
   marketingCost?: number;
+  // Geocoding fields for route optimization
+  latitude?: number;
+  longitude?: number;
+  geocodedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -382,6 +386,9 @@ export interface Location {
   managerName?: string;
   managerEmail?: string;
   isActive: boolean;
+  // Geocoding fields for route optimization
+  latitude?: number;
+  longitude?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -412,6 +419,10 @@ export interface Technician {
   certifications?: TechnicianCertification[];
   notes?: string;
   hourlyRate?: number;
+  // Home location for route optimization (starting point)
+  homeAddress?: string;
+  homeLatitude?: number;
+  homeLongitude?: number;
 }
 
 export type LeadSource = 'google' | 'referral' | 'angi' | 'thumbtack' | 'website' | 'social' | 'yard_sign' | 'other';
@@ -808,4 +819,81 @@ export interface CashFlowForecast {
   projectedCollections30Day: number;
   projectedCollections60Day: number;
   projectedCollections90Day: number;
+}
+
+// === ROUTE OPTIMIZATION TYPES ===
+export interface GeoCoordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface RouteJob {
+  projectId: string;
+  projectName: string;
+  clientName: string;
+  location: GeoCoordinates;
+  address: string;
+  timeWindow?: { start: string; end: string };
+  duration: number; // Estimated job duration in minutes
+  timeSlot?: TimeSlot;
+  customTime?: string;
+}
+
+export interface RouteRequest {
+  technicianId: string;
+  technicianName: string;
+  startLocation: GeoCoordinates;
+  startAddress: string;
+  jobs: RouteJob[];
+  constraints?: {
+    maxDrivingTime?: number; // Max driving time in minutes
+    returnToStart?: boolean; // Return to home base at end
+    avoidTolls?: boolean;
+    workingHoursStart?: string; // "08:00"
+    workingHoursEnd?: string;   // "17:00"
+  };
+}
+
+export interface RouteStop {
+  order: number;
+  projectId: string;
+  projectName: string;
+  clientName: string;
+  address: string;
+  location: GeoCoordinates;
+  arrivalTime: string;      // ISO datetime
+  departureTime: string;    // ISO datetime
+  jobDuration: number;      // minutes
+  drivingTimeFromPrevious: number;  // seconds
+  distanceFromPrevious: number;     // meters
+}
+
+export interface OptimizedRoute {
+  id?: string;
+  technicianId: string;
+  technicianName: string;
+  planDate: string;         // ISO date
+  startLocation: GeoCoordinates;
+  startAddress: string;
+  totalDistance: number;    // meters
+  totalDuration: number;    // seconds (includes driving + job time)
+  totalDrivingTime: number; // seconds (driving only)
+  totalJobTime: number;     // seconds (work time only)
+  stops: RouteStop[];
+  returnToStart: boolean;
+  returnArrivalTime?: string;
+  leaveTime?: string;       // ISO datetime - when to leave to arrive 15 min early
+  polyline?: string;        // Encoded route for map display
+  createdAt: string;
+}
+
+export interface RoutePlanSummary {
+  technicianId: string;
+  technicianName: string;
+  planDate: string;
+  jobCount: number;
+  totalDrivingMinutes: number;
+  totalWorkHours: number;
+  firstJobTime: string;
+  lastJobEndTime: string;
 }

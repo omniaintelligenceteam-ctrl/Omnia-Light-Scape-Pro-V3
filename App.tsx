@@ -7137,6 +7137,7 @@ Notes: ${invoice.notes || 'N/A'}
                       setEditTeamMembers(project.assignedTo || []);
                       setShowEditTeamModal(true);
                     }}
+                    technicians={technicians}
                   />
                 </div>
               )}

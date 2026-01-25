@@ -23,6 +23,7 @@ import {
   SupportSection,
   ReportsSection
 } from './sections';
+import { ExpenseList } from '../expenses/ExpenseList';
 
 const contentVariants = {
   hidden: { opacity: 0, x: 20 },
@@ -426,6 +427,20 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
             {/* Reports Section */}
             {activeSection === 'reports' && (
               <ReportsSection />
+            )}
+
+            {/* Expenses Section */}
+            {activeSection === 'expenses' && (
+              <motion.div
+                key="expenses"
+                variants={contentVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+              >
+                <ExpenseList />
+              </motion.div>
             )}
 
             {/* Support Section */}
