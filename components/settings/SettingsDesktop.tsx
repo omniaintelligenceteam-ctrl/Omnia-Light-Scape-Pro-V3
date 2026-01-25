@@ -20,7 +20,8 @@ import {
   FollowUpsSection,
   SubscriptionSection,
   AnalyticsSection,
-  SupportSection
+  SupportSection,
+  ReportsSection
 } from './sections';
 
 const contentVariants = {
@@ -420,6 +421,11 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 capacityPlanningData={capacityPlanningData}
                 onViewProject={onViewProject}
               />
+            )}
+
+            {/* Reports Section */}
+            {activeSection === 'reports' && (
+              <ReportsSection />
             )}
 
             {/* Support Section */}

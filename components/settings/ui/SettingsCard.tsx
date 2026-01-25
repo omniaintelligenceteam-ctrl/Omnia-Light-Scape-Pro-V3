@@ -5,10 +5,17 @@ import { ChevronDown } from 'lucide-react';
 interface SettingsCardProps {
   children: React.ReactNode;
   className?: string;
+  onClick?: () => void;
 }
 
-export const SettingsCard: React.FC<SettingsCardProps> = ({ children, className = '' }) => (
-  <div className={`bg-white/[0.03] backdrop-blur-sm rounded-2xl border border-white/5 ${className}`}>
+export const SettingsCard: React.FC<SettingsCardProps> = ({ children, className = '', onClick }) => (
+  <div
+    className={`bg-white/[0.03] backdrop-blur-sm rounded-2xl border border-white/5 ${className}`}
+    onClick={onClick}
+    role={onClick ? 'button' : undefined}
+    tabIndex={onClick ? 0 : undefined}
+    onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+  >
     {children}
   </div>
 );
