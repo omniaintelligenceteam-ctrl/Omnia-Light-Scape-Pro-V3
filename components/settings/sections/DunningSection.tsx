@@ -15,6 +15,8 @@ import {
   ChevronUp,
   History,
   Settings,
+  RefreshCw,
+  DollarSign,
 } from 'lucide-react';
 import { SettingsCard } from '../ui/SettingsCard';
 import { useDunning, DunningStep } from '../../../hooks/useDunning';
@@ -42,10 +44,14 @@ export const DunningSection: React.FC = () => {
   const {
     schedule,
     reminders,
+    overdueProjects,
     isLoading,
+    isLoadingOverdue,
     error,
     fetchSchedule,
+    fetchOverdueProjects,
     saveSchedule,
+    sendManualReminder,
   } = useDunning();
 
   const [isActive, setIsActive] = useState(false);
@@ -54,6 +60,9 @@ export const DunningSection: React.FC = () => {
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [showOverdue, setShowOverdue] = useState(true);
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [selectedTemplates, setSelectedTemplates] = useState<Record<string, TemplateType>>({});
 
   // Load schedule data
   useEffect(() => {
@@ -123,6 +132,27 @@ export const DunningSection: React.FC = () => {
     return TEMPLATE_OPTIONS.find(t => t.value === template)?.label || template;
   };
 
+  const formatMoney = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  };
+
+  const handleSendReminder = async (projectId: string) => {
+    const template = selectedTemplates[projectId] || 'friendly_reminder';
+    setSendingReminder(projectId);
+
+    const result = await sendManualReminder(projectId, template);
+
+    setSendingReminder(null);
+
+    if (result.success) {
+      setSaveMessage({ type: 'success', text: result.emailSent ? 'Reminder sent!' : 'Reminder logged (email not sent)' });
+    } else {
+      setSaveMessage({ type: 'error', text: result.error || 'Failed to send reminder' });
+    }
+
+    setTimeout(() => setSaveMessage(null), 3000);
+  };
+
   if (isLoading) {
     return (
       <motion.div
@@ -186,6 +216,126 @@ export const DunningSection: React.FC = () => {
             />
           </button>
         </div>
+      </SettingsCard>
+
+      {/* Overdue Invoices */}
+      <SettingsCard className="p-6">
+        <button
+          onClick={() => setShowOverdue(!showOverdue)}
+          className="w-full flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <DollarSign className="w-5 h-5 text-red-400" />
+            <h3 className="text-white font-semibold">Overdue Invoices</h3>
+            {overdueProjects.length > 0 && (
+              <span className="px-2 py-0.5 bg-red-500/20 rounded-full text-xs text-red-400">
+                {overdueProjects.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                fetchOverdueProjects();
+              }}
+              disabled={isLoadingOverdue}
+              className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 text-gray-500 ${isLoadingOverdue ? 'animate-spin' : ''}`} />
+            </button>
+            {showOverdue ? (
+              <ChevronUp className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            )}
+          </div>
+        </button>
+
+        <AnimatePresence>
+          {showOverdue && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 pt-4 border-t border-white/10">
+                {isLoadingOverdue ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-6 h-6 text-[#F6B45A] animate-spin" />
+                  </div>
+                ) : overdueProjects.length === 0 ? (
+                  <div className="text-center py-6">
+                    <CheckCircle className="w-10 h-10 text-green-500/50 mx-auto mb-2" />
+                    <p className="text-gray-400">No overdue invoices!</p>
+                    <p className="text-sm text-gray-500">All your clients are up to date</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {overdueProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="p-4 bg-white/5 border border-white/10 rounded-xl"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h4 className="text-white font-medium">{project.name}</h4>
+                            <p className="text-sm text-gray-500">{project.client_name}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-white font-semibold">{formatMoney(project.quote_value)}</p>
+                            <p className={`text-xs ${
+                              project.days_overdue > 30 ? 'text-red-400' :
+                              project.days_overdue > 14 ? 'text-orange-400' :
+                              'text-yellow-400'
+                            }`}>
+                              {project.days_overdue} day{project.days_overdue !== 1 ? 's' : ''} overdue
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={selectedTemplates[project.id] || 'friendly_reminder'}
+                            onChange={(e) => setSelectedTemplates(prev => ({
+                              ...prev,
+                              [project.id]: e.target.value as TemplateType
+                            }))}
+                            className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-[#F6B45A]/50"
+                          >
+                            {TEMPLATE_OPTIONS.map((template) => (
+                              <option key={template.value} value={template.value}>
+                                {template.label}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => handleSendReminder(project.id)}
+                            disabled={sendingReminder === project.id || !project.client_email}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#F6B45A] hover:bg-[#F6B45A]/90 disabled:opacity-50 disabled:cursor-not-allowed text-black rounded-lg text-sm font-medium transition-colors"
+                          >
+                            {sendingReminder === project.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Send className="w-4 h-4" />
+                            )}
+                            Send
+                          </button>
+                        </div>
+
+                        {!project.client_email && (
+                          <p className="text-xs text-red-400 mt-2">No email address on file</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </SettingsCard>
 
       {/* Reminder Schedule */}

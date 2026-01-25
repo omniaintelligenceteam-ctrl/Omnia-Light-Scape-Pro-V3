@@ -3,5 +3,15 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/follow-ups",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/dunning-reminders",
+      "schedule": "0 10 * * *"
+    }
   ]
 }

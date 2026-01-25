@@ -32,6 +32,17 @@ export interface InvoiceReminder {
   paid_at?: string;
 }
 
+export interface OverdueProject {
+  id: string;
+  name: string;
+  client_name: string;
+  client_email: string;
+  quote_value: number;
+  due_date: string;
+  days_overdue: number;
+  status: string;
+}
+
 export const DEFAULT_DUNNING_STEPS: DunningStep[] = [
   { days_after_due: 1, template: 'friendly_reminder', subject: 'Friendly Reminder: Invoice Due', channel: 'email' },
   { days_after_due: 7, template: 'second_reminder', subject: 'Second Notice: Invoice Past Due', channel: 'email' },
@@ -66,7 +77,9 @@ export function useDunning() {
   const { user } = useUser();
   const [schedule, setSchedule] = useState<DunningSchedule | null>(null);
   const [reminders, setReminders] = useState<InvoiceReminder[]>([]);
+  const [overdueProjects, setOverdueProjects] = useState<OverdueProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingOverdue, setIsLoadingOverdue] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch dunning schedule
@@ -94,6 +107,63 @@ export function useDunning() {
     }
   }, [user?.id]);
 
+  // Fetch overdue projects (invoices past due date)
+  const fetchOverdueProjects = useCallback(async () => {
+    if (!user?.id) return;
+
+    setIsLoadingOverdue(true);
+
+    try {
+      const res = await fetch(`/api/projects?userId=${user.id}`);
+      const data = await res.json();
+
+      if (data.projects) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const overdue: OverdueProject[] = data.projects
+          .filter((p: any) => {
+            // Only consider projects with 'sent' status (invoice sent but not paid)
+            if (p.status !== 'sent') return false;
+
+            // Check if invoice has a due date
+            const invoiceData = p.invoice_data || {};
+            const dueDate = invoiceData.dueDate;
+            if (!dueDate) return false;
+
+            // Check if past due
+            const dueDateObj = new Date(dueDate);
+            dueDateObj.setHours(0, 0, 0, 0);
+            return dueDateObj < today;
+          })
+          .map((p: any) => {
+            const invoiceData = p.invoice_data || {};
+            const dueDate = new Date(invoiceData.dueDate);
+            dueDate.setHours(0, 0, 0, 0);
+            const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            return {
+              id: p.id,
+              name: p.name || p.project_name || 'Unnamed Project',
+              client_name: p.client_name || p.clientName || 'Unknown Client',
+              client_email: p.client_email || p.clientEmail || '',
+              quote_value: invoiceData.total || p.quote_value || 0,
+              due_date: invoiceData.dueDate,
+              days_overdue: daysOverdue,
+              status: p.status,
+            };
+          })
+          .sort((a: OverdueProject, b: OverdueProject) => b.days_overdue - a.days_overdue);
+
+        setOverdueProjects(overdue);
+      }
+    } catch (err) {
+      console.error('Error fetching overdue projects:', err);
+    } finally {
+      setIsLoadingOverdue(false);
+    }
+  }, [user?.id]);
+
   // Save dunning schedule
   const saveSchedule = useCallback(async (steps: DunningStep[], isActive: boolean): Promise<{ success: boolean; error?: string }> => {
     if (!user?.id) return { success: false, error: 'Not authenticated' };
@@ -118,28 +188,29 @@ export function useDunning() {
   }, [user?.id]);
 
   // Send manual reminder
-  const sendManualReminder = useCallback(async (projectId: string, templateType: string): Promise<{ success: boolean; error?: string }> => {
+  const sendManualReminder = useCallback(async (projectId: string, templateType: string): Promise<{ success: boolean; error?: string; emailSent?: boolean }> => {
     if (!user?.id) return { success: false, error: 'Not authenticated' };
 
     try {
       const res = await fetch(`/api/dunning/send?userId=${user.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: projectId, template: templateType }),
+        body: JSON.stringify({ projectId, template: templateType }),
       });
       const result = await res.json();
 
       if (result.success) {
-        // Refresh reminders
+        // Refresh reminders and overdue projects
         await fetchSchedule();
-        return { success: true };
+        await fetchOverdueProjects();
+        return { success: true, emailSent: result.emailSent };
       }
       return { success: false, error: result.error || 'Failed to send reminder' };
     } catch (err) {
       console.error('Error sending reminder:', err);
       return { success: false, error: 'Failed to send reminder' };
     }
-  }, [user?.id, fetchSchedule]);
+  }, [user?.id, fetchSchedule, fetchOverdueProjects]);
 
   // Get reminder history for a project
   const getProjectReminders = useCallback((projectId: string): InvoiceReminder[] => {
@@ -149,14 +220,18 @@ export function useDunning() {
   // Fetch on mount
   useEffect(() => {
     fetchSchedule();
-  }, [fetchSchedule]);
+    fetchOverdueProjects();
+  }, [fetchSchedule, fetchOverdueProjects]);
 
   return {
     schedule,
     reminders,
+    overdueProjects,
     isLoading,
+    isLoadingOverdue,
     error,
     fetchSchedule,
+    fetchOverdueProjects,
     saveSchedule,
     sendManualReminder,
     getProjectReminders,

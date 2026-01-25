@@ -1,5 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { Resend } from 'resend';
 import { getSupabase } from '../lib/supabase.js';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email templates for payment reminders
 const REMINDER_TEMPLATES: Record<string, { subject: string; getBody: (data: TemplateData) => string }> = {
@@ -182,21 +185,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'No client email found for this project' });
     }
 
-    // Send the email using the existing send-email infrastructure
-    // Note: This assumes you have a Resend or similar email service configured
-    const emailResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/send-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    // Send the email using Resend
+    let emailSent = false;
+    let emailError: string | null = null;
+
+    if (process.env.RESEND_API_KEY) {
+      const fromAddress = `${companyName} <noreply@omnialightscapepro.com>`;
+
+      const { error } = await resend.emails.send({
+        from: fromAddress,
         to: clientEmail,
-        from: fromEmail,
+        replyTo: fromEmail,
         subject,
         html: htmlBody,
-        replyTo: fromEmail,
-      }),
-    });
+      });
 
-    const emailSent = emailResponse.ok;
+      if (error) {
+        console.error('Resend error:', error);
+        emailError = error.message;
+      } else {
+        emailSent = true;
+      }
+    } else {
+      console.warn('RESEND_API_KEY not configured, email not sent');
+      emailError = 'Email service not configured';
+    }
 
     // Log the reminder
     const { data: reminder, error: reminderError } = await supabase
@@ -204,6 +217,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .insert({
         user_id: supabaseUserId,
         project_id: projectId,
+        project_name: project.name || project.project_name || 'Unnamed Project',
+        client_name: templateData.clientName,
         reminder_type: template,
         sent_to: clientEmail,
         sent_at: new Date().toISOString(),
@@ -219,8 +234,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       success: true,
       emailSent,
+      emailError,
       reminder: reminder || { template, sent_to: clientEmail },
-      message: emailSent ? 'Reminder sent successfully' : 'Reminder logged but email may not have been delivered',
+      message: emailSent ? 'Reminder sent successfully' : `Reminder logged but email not sent${emailError ? `: ${emailError}` : ''}`,
     });
 
   } catch (error: unknown) {
