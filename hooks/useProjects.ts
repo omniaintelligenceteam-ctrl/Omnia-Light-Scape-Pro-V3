@@ -128,6 +128,7 @@ export function useProjects() {
           name: data.data.name,
           date: new Date(data.data.created_at).toLocaleDateString(),
           image: data.data.generated_image_url,
+          originalImage: data.data.original_image_url || undefined,
           images: data.data.prompt_config?.images || undefined,
           quote: data.data.prompt_config?.quote || null,
           bom: data.data.prompt_config?.bom || null,

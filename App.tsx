@@ -2317,6 +2317,7 @@ const App: React.FC = () => {
           discount: project.quote.discount || 0,
           total: project.quote.total,
           projectImageUrl: project.image?.startsWith('http') ? project.image : undefined,
+          originalImageUrl: project.originalImage?.startsWith('http') ? project.originalImage : undefined,
           portalLink: shareUrl
         })
       });
@@ -2663,11 +2664,13 @@ Notes: ${invoice.notes || 'N/A'}
       setInvoiceEmailError(null);
       setInvoiceEmailSent(false);
 
-      // Find the project to get the image URL
+      // Find the project to get the image URLs
       // Only include if it's a valid HTTP(S) URL (not a base64 data URL)
       const project = projects.find(p => p.id === currentInvoice.projectId);
       const rawImageUrl = project?.image || null;
       const projectImageUrl = rawImageUrl && rawImageUrl.startsWith('http') ? rawImageUrl : null;
+      const rawOriginalImageUrl = project?.originalImage || null;
+      const originalImageUrl = rawOriginalImageUrl && rawOriginalImageUrl.startsWith('http') ? rawOriginalImageUrl : null;
 
       try {
           // Generate share token to get payment URL
@@ -2728,6 +2731,7 @@ Notes: ${invoice.notes || 'N/A'}
                   total: currentInvoice.total,
                   notes: currentInvoice.notes,
                   projectImageUrl: projectImageUrl || undefined,
+                  originalImageUrl: originalImageUrl || undefined,
                   customMessage: invoiceEmailMessage || undefined,
                   paymentUrl
               })
@@ -7155,6 +7159,7 @@ Notes: ${invoice.notes || 'N/A'}
                                      <button onClick={() => setClientPage(p => Math.min(totalClientPages, p + 1))} disabled={clientPage === totalClientPages} className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"><ChevronRight className="w-4 h-4" /></button>
                                  </div>
                              )}
+                            </>
                          )}
                      </>
                  )}
