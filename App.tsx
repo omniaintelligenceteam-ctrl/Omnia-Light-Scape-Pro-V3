@@ -2050,6 +2050,15 @@ const App: React.FC = () => {
       // Now save the project with the client ID and current location
       const projectName = clientData.name;
       const quoteData = generateQuoteFromSelections();
+
+      // Populate client details in the quote from the newly created client
+      quoteData.clientDetails = {
+        name: newClient.name || clientData.name || '',
+        email: newClient.email || clientData.email || '',
+        phone: newClient.phone || clientData.phone || '',
+        address: newClient.address || clientData.address || ''
+      };
+
       const result = await saveProject(projectName, generatedImage, quoteData, null, newClient.id, newClient.name, selectedLocationId);
 
       if (result) {
@@ -4516,8 +4525,11 @@ Notes: ${invoice.notes || 'N/A'}
                             </AnimatePresence>
                         </div>
 
+                        {/* Responsive container - Generate button above notes on mobile */}
+                        <div className="flex flex-col">
+
                         {/* Premium Custom Notes Input */}
-                        <div className="relative mt-1 md:mt-2">
+                        <div className="relative mt-1 md:mt-2 order-2 md:order-1">
                             {/* Section Header */}
                             <div className="flex items-center justify-between mb-3 md:mb-4">
                                 <div className="flex items-center gap-3">
@@ -4559,6 +4571,7 @@ Notes: ${invoice.notes || 'N/A'}
                         </div>
 
                         {/* Error Message */}
+                        <div className="order-3 md:order-2">
                         <AnimatePresence>
                             {error && (
                                 <motion.div
@@ -4576,6 +4589,7 @@ Notes: ${invoice.notes || 'N/A'}
                                 </motion.div>
                             )}
                         </AnimatePresence>
+                        </div>
 
                         {/* ✨ HERO Generate Button - The Core Action */}
                         <motion.button
@@ -4593,7 +4607,7 @@ Notes: ${invoice.notes || 'N/A'}
                             disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
                             aria-label={isLoading ? 'Generating lighting design, please wait' : generationComplete ? 'Generation complete' : 'Generate lighting scene design'}
                             aria-busy={isLoading}
-                            className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2"
+                            className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2 order-1 md:order-3"
                             whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.02, y: -4 } : {}}
                             whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.97 } : {}}
                         >
@@ -4835,6 +4849,7 @@ Notes: ${invoice.notes || 'N/A'}
                             {/* Border highlight */}
                             <div className="absolute inset-0 rounded-2xl border border-white/40 pointer-events-none" />
                         </motion.button>
+                        </div>
                     </div>
                 </motion.div>
                 )}

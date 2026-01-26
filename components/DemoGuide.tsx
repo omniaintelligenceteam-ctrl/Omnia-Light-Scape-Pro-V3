@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { Check, X, GripVertical, Rocket, Mail } from 'lucide-react';
+import { Check, X, GripVertical, Rocket } from 'lucide-react';
 
 export interface DemoStep {
   id: number;
@@ -8,19 +8,25 @@ export interface DemoStep {
   note?: string;
 }
 
-// Simplified 3-step checklist
+// Full 9-step demo checklist
 export const DEMO_STEPS: DemoStep[] = [
-  { id: 1, title: 'Create your first AI mockup', note: 'Upload a photo and generate a design' },
-  { id: 2, title: 'View a demo project', note: 'Check out the sample projects we created' },
-  { id: 3, title: 'Check out Analytics', note: 'See revenue and pipeline metrics' },
+  { id: 1, title: 'Upload a Daytime Photo', note: 'Drop or select a property photo' },
+  { id: 2, title: 'Select Fixtures and Quantities', note: 'Choose lighting types to visualize' },
+  { id: 3, title: 'Generate Design', note: 'AI creates a nighttime preview' },
+  { id: 4, title: 'Save & Generate Quote', note: 'Save your design and create a quote' },
+  { id: 5, title: 'Email Quote for Approval', note: 'Send quote to your email for demo' },
+  { id: 6, title: 'Approve Quote', note: 'Approve the quote to move forward' },
+  { id: 7, title: 'Schedule Quote', note: 'Set an installation date' },
+  { id: 8, title: 'Invoice Job', note: 'Create an invoice for the project' },
+  { id: 9, title: 'Explore and Set Up', note: 'Check out analytics and settings' },
 ];
 
 interface DemoGuideProps {
   currentStep: number;
   completedSteps: number[];
   onSkip: () => void;
-  onFinish: () => void;
-  isChecklistComplete: boolean;
+  onFinish?: () => void;
+  isChecklistComplete?: boolean;
   isVisible: boolean;
 }
 
@@ -29,169 +35,238 @@ const DemoGuide: React.FC<DemoGuideProps> = ({
   completedSteps,
   onSkip,
   onFinish,
-  isChecklistComplete,
+  isChecklistComplete = false,
   isVisible,
 }) => {
   const dragControls = useDragControls();
   const progress = (completedSteps.length / DEMO_STEPS.length) * 100;
 
+  // Get current step data
+  const currentStepData = DEMO_STEPS.find(s => s.id === currentStep) || DEMO_STEPS[0];
+  const isCurrentCompleted = completedSteps.includes(currentStep);
+
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
-          drag
-          dragControls={dragControls}
-          dragListener={false}
-          dragMomentum={false}
-          dragElastic={0}
-          initial={{ opacity: 0, scale: 0.9, x: -20 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          exit={{ opacity: 0, scale: 0.9, x: -20 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-          className="fixed left-4 top-24 z-[100] w-72 select-none"
-          style={{ touchAction: 'none' }}
-        >
-          {/* Glassmorphism container */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
-            {/* Gradient glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#F6B45A]/5 via-transparent to-purple-500/5 pointer-events-none" />
+        <>
+          {/* MOBILE: Compact single-step hint at bottom */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="md:hidden fixed bottom-20 left-4 right-4 z-[100]"
+          >
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-2xl">
+              {/* Gradient accent */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#F6B45A]/10 via-transparent to-transparent pointer-events-none" />
 
-            {/* Header with drag handle */}
-            <motion.div
-              onPointerDown={(e) => dragControls.start(e)}
-              className="relative flex items-center justify-between px-4 py-3 border-b border-white/10 cursor-grab active:cursor-grabbing"
-            >
-              <div className="flex items-center gap-2">
-                <GripVertical className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-semibold text-white">Getting Started</span>
-              </div>
-              <button
-                onClick={onSkip}
-                className="text-gray-500 hover:text-white transition-colors p-1 -mr-1 rounded-lg hover:bg-white/10"
-                title="Skip tutorial"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </motion.div>
+              <div className="relative flex items-center gap-3 p-3">
+                {/* Step number indicator */}
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#F6B45A] to-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  {isCurrentCompleted ? (
+                    <Check className="w-5 h-5 text-black" strokeWidth={3} />
+                  ) : (
+                    <span className="text-lg font-bold text-black">{currentStep}</span>
+                  )}
+                </div>
 
-            {/* Progress bar */}
-            <div className="px-4 py-2 border-b border-white/5">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] uppercase tracking-wider text-gray-500 font-medium">Progress</span>
-                <span className="text-xs text-gray-400">{completedSteps.length}/{DEMO_STEPS.length}</span>
+                {/* Step content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-amber-400/70 font-medium">
+                      Step {currentStep} of {DEMO_STEPS.length}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-white truncate">
+                    {currentStepData.title}
+                  </p>
+                  {currentStepData.note && (
+                    <p className="text-xs text-gray-400 truncate mt-0.5">
+                      {currentStepData.note}
+                    </p>
+                  )}
+                </div>
+
+                {/* Skip button */}
+                <button
+                  onClick={onSkip}
+                  className="flex-shrink-0 p-2 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  title="Skip tutorial"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+
+              {/* Progress bar */}
+              <div className="h-1 bg-white/5">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                  className="h-full bg-gradient-to-r from-[#F6B45A] to-amber-400 rounded-full"
+                  className="h-full bg-gradient-to-r from-[#F6B45A] to-amber-400"
                 />
               </div>
             </div>
+          </motion.div>
 
-            {/* Steps list */}
-            <div className="p-2">
-              {DEMO_STEPS.map((step, index) => {
-                const isCompleted = completedSteps.includes(step.id);
-                const isCurrent = step.id === currentStep && !isCompleted;
+          {/* DESKTOP: Full draggable panel */}
+          <motion.div
+            drag
+            dragControls={dragControls}
+            dragListener={false}
+            dragMomentum={false}
+            dragElastic={0}
+            initial={{ opacity: 0, scale: 0.9, x: -20 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.9, x: -20 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="hidden md:block fixed left-4 top-24 z-[100] w-72 select-none"
+            style={{ touchAction: 'none' }}
+          >
+            {/* Glassmorphism container */}
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+              {/* Gradient glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#F6B45A]/5 via-transparent to-purple-500/5 pointer-events-none" />
 
-                return (
+              {/* Header with drag handle */}
+              <motion.div
+                onPointerDown={(e) => dragControls.start(e)}
+                className="relative flex items-center justify-between px-4 py-3 border-b border-white/10 cursor-grab active:cursor-grabbing"
+              >
+                <div className="flex items-center gap-2">
+                  <GripVertical className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-semibold text-white">Getting Started</span>
+                </div>
+                <button
+                  onClick={onSkip}
+                  className="text-gray-500 hover:text-white transition-colors p-1 -mr-1 rounded-lg hover:bg-white/10"
+                  title="Skip tutorial"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+
+              {/* Progress bar */}
+              <div className="px-4 py-2 border-b border-white/5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500 font-medium">Progress</span>
+                  <span className="text-xs text-gray-400">{completedSteps.length}/{DEMO_STEPS.length}</span>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <motion.div
-                    key={step.id}
-                    initial={false}
-                    animate={{
-                      backgroundColor: isCurrent ? 'rgba(246, 180, 90, 0.1)' : 'transparent',
-                    }}
-                    className={`relative flex items-start gap-2.5 px-3 py-2.5 rounded-xl transition-all ${
-                      isCurrent ? 'ring-1 ring-[#F6B45A]/30' : ''
-                    }`}
-                  >
-                    {/* Step number/check indicator */}
-                    <div
-                      className={`relative flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                        isCompleted
-                          ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/30'
-                          : isCurrent
-                          ? 'bg-gradient-to-br from-[#F6B45A] to-amber-500 text-black shadow-lg shadow-amber-500/20'
-                          : 'bg-white/5 text-gray-600 ring-1 ring-white/10'
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    className="h-full bg-gradient-to-r from-[#F6B45A] to-amber-400 rounded-full"
+                  />
+                </div>
+              </div>
+
+              {/* Steps list - scrollable for 9 steps */}
+              <div className="p-2 max-h-[400px] overflow-y-auto">
+                {DEMO_STEPS.map((step, index) => {
+                  const isCompleted = completedSteps.includes(step.id);
+                  const isCurrent = step.id === currentStep && !isCompleted;
+
+                  return (
+                    <motion.div
+                      key={step.id}
+                      initial={false}
+                      animate={{
+                        backgroundColor: isCurrent ? 'rgba(246, 180, 90, 0.1)' : 'transparent',
+                      }}
+                      className={`relative flex items-start gap-2.5 px-3 py-2 rounded-xl transition-all ${
+                        isCurrent ? 'ring-1 ring-[#F6B45A]/30' : ''
                       }`}
                     >
-                      {isCompleted ? (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                        >
-                          <Check className="w-3.5 h-3.5" strokeWidth={3} />
-                        </motion.div>
-                      ) : (
-                        step.id
-                      )}
-                    </div>
-
-                    {/* Step content */}
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <p
-                        className={`text-sm leading-tight transition-colors ${
+                      {/* Step number/check indicator */}
+                      <div
+                        className={`relative flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                           isCompleted
-                            ? 'text-gray-500 line-through decoration-gray-600'
+                            ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/30'
                             : isCurrent
-                            ? 'text-white font-medium'
-                            : 'text-gray-400'
+                            ? 'bg-gradient-to-br from-[#F6B45A] to-amber-500 text-black shadow-lg shadow-amber-500/20'
+                            : 'bg-white/5 text-gray-600 ring-1 ring-white/10'
                         }`}
                       >
-                        {step.title}
-                      </p>
-                      {step.note && (
-                        <p className={`text-[10px] mt-0.5 ${isCurrent ? 'text-amber-400/70' : 'text-gray-600'}`}>
-                          {step.note}
+                        {isCompleted ? (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                          >
+                            <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                          </motion.div>
+                        ) : (
+                          step.id
+                        )}
+                      </div>
+
+                      {/* Step content */}
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <p
+                          className={`text-sm leading-tight transition-colors ${
+                            isCompleted
+                              ? 'text-gray-500 line-through decoration-gray-600'
+                              : isCurrent
+                              ? 'text-white font-medium'
+                              : 'text-gray-400'
+                          }`}
+                        >
+                          {step.title}
                         </p>
+                        {step.note && isCurrent && (
+                          <p className="text-[10px] mt-0.5 text-amber-400/70">
+                            {step.note}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Connecting line to next step */}
+                      {index < DEMO_STEPS.length - 1 && (
+                        <div
+                          className={`absolute left-[22px] top-9 w-0.5 h-2 rounded-full transition-colors ${
+                            isCompleted ? 'bg-green-500/30' : 'bg-white/5'
+                          }`}
+                        />
                       )}
-                    </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
 
-                    {/* Connecting line to next step */}
-                    {index < DEMO_STEPS.length - 1 && (
-                      <div
-                        className={`absolute left-[22px] top-10 w-0.5 h-3 rounded-full transition-colors ${
-                          isCompleted ? 'bg-green-500/30' : 'bg-white/5'
-                        }`}
-                      />
-                    )}
-                  </motion.div>
-                );
-              })}
+              {/* Footer */}
+              <div className="px-4 py-3 border-t border-white/5 space-y-2">
+                {/* Finish Demo Mode button - only show if onFinish provided */}
+                {onFinish && (
+                  <motion.button
+                    onClick={onFinish}
+                    disabled={!isChecklistComplete}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                      isChecklistComplete
+                        ? 'bg-gradient-to-r from-[#F6B45A] to-amber-500 text-black hover:shadow-lg hover:shadow-amber-500/20 hover:scale-[1.02]'
+                        : 'bg-white/5 text-gray-500 cursor-not-allowed'
+                    }`}
+                    whileHover={isChecklistComplete ? { scale: 1.02 } : {}}
+                    whileTap={isChecklistComplete ? { scale: 0.98 } : {}}
+                  >
+                    <Rocket className="w-4 h-4" />
+                    Finish Demo Mode
+                  </motion.button>
+                )}
+
+                {/* Skip tutorial text */}
+                <button
+                  onClick={onSkip}
+                  className="w-full text-center text-xs text-gray-500 hover:text-white transition-colors py-1"
+                >
+                  Skip Tutorial
+                </button>
+              </div>
             </div>
-
-            {/* Footer with Finish button */}
-            <div className="px-4 py-3 border-t border-white/5 space-y-2">
-              {/* Finish Demo Mode button */}
-              <motion.button
-                onClick={onFinish}
-                disabled={!isChecklistComplete}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  isChecklistComplete
-                    ? 'bg-gradient-to-r from-[#F6B45A] to-amber-500 text-black hover:shadow-lg hover:shadow-amber-500/20 hover:scale-[1.02]'
-                    : 'bg-white/5 text-gray-500 cursor-not-allowed'
-                }`}
-                whileHover={isChecklistComplete ? { scale: 1.02 } : {}}
-                whileTap={isChecklistComplete ? { scale: 0.98 } : {}}
-              >
-                <Rocket className="w-4 h-4" />
-                Finish Demo Mode
-              </motion.button>
-
-              {/* Support link */}
-              <a
-                href="mailto:omniaintelligenceteam@gmail.com"
-                className="flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors py-1"
-              >
-                <Mail className="w-3 h-3" />
-                Need help? Email support
-              </a>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

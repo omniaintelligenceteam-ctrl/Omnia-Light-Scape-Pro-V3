@@ -2,9 +2,9 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Upload, X, Camera, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Track app opens for showing samples prominently
-const STORAGE_KEY = 'omnia_app_opens';
-const SHOW_SAMPLES_THRESHOLD = 5;
+// Track first sign-in date for showing samples (only for first week)
+const STORAGE_KEY = 'omnia_first_signin_date';
+const SHOW_SAMPLES_DAYS = 7; // Show samples for first 7 days after sign up
 
 // Check if device supports touch
 const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -100,20 +100,27 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const [loadingSampleId, setLoadingSampleId] = useState<string | null>(null);
   const [showSamplesProminent, setShowSamplesProminent] = useState(false);
 
-  // Track app opens and show samples prominently for first 5 visits
+  // Track first sign-in and show samples prominently for first week
   useEffect(() => {
     try {
-      const storedOpens = localStorage.getItem(STORAGE_KEY);
-      const opens = storedOpens ? parseInt(storedOpens, 10) : 0;
+      const storedDate = localStorage.getItem(STORAGE_KEY);
+      const now = Date.now();
 
-      // Show samples prominently if under threshold
-      if (opens < SHOW_SAMPLES_THRESHOLD) {
+      if (!storedDate) {
+        // First sign-in - store current date and show samples
+        localStorage.setItem(STORAGE_KEY, String(now));
         setShowSamplesProminent(true);
-        // Increment counter
-        localStorage.setItem(STORAGE_KEY, String(opens + 1));
+      } else {
+        // Check if within first week
+        const firstSignIn = parseInt(storedDate, 10);
+        const daysSinceSignIn = (now - firstSignIn) / (1000 * 60 * 60 * 24);
+
+        if (daysSinceSignIn < SHOW_SAMPLES_DAYS) {
+          setShowSamplesProminent(true);
+        }
       }
     } catch {
-      // localStorage not available, show samples anyway
+      // localStorage not available, show samples anyway for new users
       setShowSamplesProminent(true);
     }
   }, []);
@@ -340,33 +347,33 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           onChange={handleFileChange}
         />
 
-        {/* Content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-6">
+        {/* Content - pushed up on mobile for better visibility */}
+        <div className="absolute inset-0 flex flex-col items-center justify-start pt-4 sm:pt-6 md:justify-center md:pt-0 p-4 sm:p-6">
 
-          {/* Icon */}
+          {/* Icon - smaller on mobile to save space */}
           <motion.div
-            className={`relative mb-4 sm:mb-6 transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
+            className={`relative mb-2 sm:mb-4 md:mb-6 transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
             animate={isDragging ? { y: [0, -8, 0] } : {}}
             transition={{ repeat: isDragging ? Infinity : 0, duration: 1.5 }}
           >
-            <div className={`w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
+            <div className={`w-10 h-10 sm:w-14 sm:h-14 md:w-20 md:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
               isDragging
                 ? 'bg-[#F6B45A]/20 border-[#F6B45A]/30'
                 : 'bg-white/[0.03] border-white/5'
             } border`}>
-              <ImageIcon className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 transition-colors duration-300 ${
+              <ImageIcon className={`w-5 h-5 sm:w-7 sm:h-7 md:w-10 md:h-10 transition-colors duration-300 ${
                 isDragging ? 'text-[#F6B45A]' : 'text-gray-400'
               }`} />
             </div>
 
-            {/* Decorative ring - hidden on small mobile */}
-            <div className={`hidden sm:block absolute -inset-2 rounded-3xl border transition-all duration-300 ${
+            {/* Decorative ring - hidden on mobile */}
+            <div className={`hidden md:block absolute -inset-2 rounded-3xl border transition-all duration-300 ${
               isDragging ? 'border-[#F6B45A]/30' : 'border-white/5'
             }`} />
           </motion.div>
 
           {/* Text */}
-          <div className="text-center mb-4 sm:mb-6">
+          <div className="text-center mb-2 sm:mb-4 md:mb-6">
             <h3 className={`text-sm sm:text-base md:text-lg font-semibold mb-1 transition-colors duration-300 ${
               isDragging ? 'text-[#F6B45A]' : 'text-white'
             }`}>
@@ -374,7 +381,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             </h3>
           </div>
 
-          {/* Buttons - optimized touch targets */}
+          {/* Buttons - optimized touch targets, compact on mobile */}
           <div className="flex flex-row items-center gap-2 sm:gap-3 w-full max-w-xs sm:max-w-sm px-2 sm:px-0">
             <motion.button
               onClick={() => {
@@ -382,7 +389,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 cameraInputRef.current?.click();
               }}
               disabled={isProcessing}
-              className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3.5 sm:py-4 min-h-[48px] bg-[#F6B45A] hover:bg-[#ffc67a] disabled:opacity-50 text-black rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-lg shadow-[#F6B45A]/20 touch-manipulation select-none"
+              className="flex-1 flex items-center justify-center gap-2 px-3 sm:px-6 py-3 sm:py-4 min-h-[44px] sm:min-h-[48px] bg-[#F6B45A] hover:bg-[#ffc67a] disabled:opacity-50 text-black rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-lg shadow-[#F6B45A]/20 touch-manipulation select-none"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -396,7 +403,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 galleryInputRef.current?.click();
               }}
               disabled={isProcessing}
-              className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3.5 sm:py-4 min-h-[48px] bg-white/5 hover:bg-white/10 disabled:opacity-50 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white rounded-xl font-semibold text-xs sm:text-sm transition-all touch-manipulation select-none"
+              className="flex-1 flex items-center justify-center gap-2 px-3 sm:px-6 py-3 sm:py-4 min-h-[44px] sm:min-h-[48px] bg-white/5 hover:bg-white/10 disabled:opacity-50 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white rounded-xl font-semibold text-xs sm:text-sm transition-all touch-manipulation select-none"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -405,13 +412,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             </motion.button>
           </div>
 
-          {/* Sample photos section - prominent for first 5 visits */}
+          {/* Sample photos section - prominent for first week after signup */}
+          {showSamplesProminent && (
           <motion.div
-            className={`mt-4 sm:mt-5 w-full max-w-xs sm:max-w-sm px-2 sm:px-0 ${
-              showSamplesProminent ? 'relative' : ''
-            }`}
-            initial={showSamplesProminent ? { opacity: 0, y: 20 } : false}
-            animate={showSamplesProminent ? { opacity: 1, y: 0 } : false}
+            className="mt-3 sm:mt-4 md:mt-5 w-full max-w-xs sm:max-w-sm px-2 sm:px-0 relative"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
           >
             {/* Prominent glow effect for first 5 visits */}
@@ -489,6 +495,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               ))}
             </div>
           </motion.div>
+          )}
 
           {/* Processing overlay */}
           <AnimatePresence>
