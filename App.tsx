@@ -1541,7 +1541,18 @@ const App: React.FC = () => {
                      const opt = allOptionsList.find(o => o.id === id);
                      return opt ? `YES DO THIS: ${opt.prompt}` : '';
                  }).join('\n');
-                 p += `\nINSTRUCTIONS:\n${positives}\n`;
+                 
+                 // Add existence verification rule
+                 p += `\n*** FEATURE EXISTENCE VERIFICATION (CRITICAL) ***\n`;
+                 p += `Before lighting ANY feature below, you MUST verify it EXISTS in the source photo:\n`;
+                 p += `- Columns: Only light columns if the home HAS columns in the source photo\n`;
+                 p += `- Trees: Only light trees that are VISIBLE in the source photo\n`;
+                 p += `- Dormers: Only light dormers if the roof HAS dormers in the source photo\n`;
+                 p += `- Entryway: Only light entryway features that EXIST in the source photo\n`;
+                 p += `IF A FEATURE DOES NOT EXIST: Skip that lighting instruction entirely. Do NOT add the feature.\n`;
+                 p += `Remember: You are a LIGHTING tool, not an architecture tool. Never add structures.\n\n`;
+                 
+                 p += `INSTRUCTIONS:\n${positives}\n`;
 
                  // 4. Add Explicit Negatives for UNSELECTED items
                  const unselected = allSubIds.filter(id => !selectedSubs.includes(id));
@@ -1600,6 +1611,11 @@ const App: React.FC = () => {
                          p += "- COUNT THE DORMERS: If 2 dormers exist, use exactly 2 lights. If 3 dormers, exactly 3 lights.\n";
                          p += "- FORBIDDEN: Multiple lights per dormer, lights between dormers, lights on roof shingles, lights on dormer itself\n";
                          p += "- CENTERING IS CRITICAL: The fixture must be horizontally centered under each dormer\n";
+                         p += "\n*** CRITICAL EXISTENCE CHECK ***\n";
+                         p += "- FIRST: Scan the source photo to verify dormers ACTUALLY EXIST on this home\n";
+                         p += "- IF NO DORMERS EXIST in the source photo: SKIP dormer lighting entirely - do NOT add dormers to the image\n";
+                         p += "- ONLY light dormers that are VISIBLE in the original daytime photo\n";
+                         p += "- Remember: You are FORBIDDEN from adding architectural features. If no dormers exist, no dormer lights.\n";
                      }
                      p += "\n\nGENERAL SAFETY: Lights must shine UP from the gutter line. Do not shine down.";
                  }
@@ -1638,6 +1654,8 @@ const App: React.FC = () => {
     activePrompt += "[ ] TREES: Does output have the SAME trees in the SAME positions as source? If not, FIX.\n";
     activePrompt += "[ ] LANDSCAPING: Does output have the SAME bushes and plants as source? If not, FIX.\n";
     activePrompt += "[ ] ARCHITECTURE: Does output have the SAME house shape, roof, dormers as source? If not, FIX.\n";
+    activePrompt += "[ ] FEATURE EXISTENCE: Did you add lights to features that DON'T EXIST in source (e.g., dormers, columns)? If yes, REMOVE those lights.\n";
+    activePrompt += "[ ] NO NEW STRUCTURES: Did you accidentally ADD any structures (dormers, columns, trees) that weren't in source? If yes, REMOVE them.\n";
     activePrompt += "[ ] LIGHT PLACEMENT: Are lights ONLY on surfaces listed in ALLOWED sections above? If not, REMOVE.\n";
     activePrompt += "[ ] FORBIDDEN SURFACES: Are all surfaces listed in EXCLUSIONS/FORBIDDEN sections dark? If not, FIX.\n";
     activePrompt += "[ ] SKY: Is the sky natural twilight (no giant artificial moon)? If not, FIX.\n";
@@ -3119,6 +3137,9 @@ Notes: ${invoice.notes || 'N/A'}
                             {getActiveFixtureTitle()}
                         </h3>
                         <p className="text-xs text-gray-500 mt-0.5">Choose placement areas</p>
+                        <p className="text-[10px] text-amber-500/70 mt-1 flex items-center gap-1">
+                            <span>💡</span> Only select features that exist on this home
+                        </p>
                       </div>
                       <motion.button
                         onClick={() => setActiveConfigFixture(null)}
