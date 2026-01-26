@@ -1,15 +1,19 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { Upload, X, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { Upload, X, Camera, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Track app opens for showing samples prominently
+const STORAGE_KEY = 'omnia_app_opens';
+const SHOW_SAMPLES_THRESHOLD = 5;
 
 // Check if device supports touch
 const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
 
 // Sample photos for demo mode
 const SAMPLE_PHOTOS = [
-  { id: 'sample1', name: 'Modern Home', url: '/samples/house1.jpg' },
-  { id: 'sample2', name: 'Colonial Estate', url: '/samples/house2.jpg' },
-  { id: 'sample3', name: 'Ranch House', url: '/samples/house3.jpg' },
+  { id: 'sample1', name: 'Modern Home', url: '/samples/house1.jpg.webp' },
+  { id: 'sample2', name: 'Colonial Estate', url: '/samples/house2.jpg.webp' },
+  { id: 'sample3', name: 'Ranch House', url: '/samples/house3.jpg.webp' },
 ];
 
 // Haptic feedback helper
@@ -94,6 +98,25 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [loadingSampleId, setLoadingSampleId] = useState<string | null>(null);
+  const [showSamplesProminent, setShowSamplesProminent] = useState(false);
+
+  // Track app opens and show samples prominently for first 5 visits
+  useEffect(() => {
+    try {
+      const storedOpens = localStorage.getItem(STORAGE_KEY);
+      const opens = storedOpens ? parseInt(storedOpens, 10) : 0;
+
+      // Show samples prominently if under threshold
+      if (opens < SHOW_SAMPLES_THRESHOLD) {
+        setShowSamplesProminent(true);
+        // Increment counter
+        localStorage.setItem(STORAGE_KEY, String(opens + 1));
+      }
+    } catch {
+      // localStorage not available, show samples anyway
+      setShowSamplesProminent(true);
+    }
+  }, []);
 
   // Handle sample photo selection
   const handleSampleSelect = useCallback(async (sampleUrl: string, name: string, id: string) => {
@@ -382,32 +405,67 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             </motion.button>
           </div>
 
-          {/* Sample photos section */}
-          <div className="mt-4 sm:mt-5 w-full max-w-xs sm:max-w-sm px-2 sm:px-0">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-[10px] sm:text-xs text-gray-500 whitespace-nowrap">Or try a sample</span>
-              <div className="flex-1 h-px bg-white/10" />
+          {/* Sample photos section - prominent for first 5 visits */}
+          <motion.div
+            className={`mt-4 sm:mt-5 w-full max-w-xs sm:max-w-sm px-2 sm:px-0 ${
+              showSamplesProminent ? 'relative' : ''
+            }`}
+            initial={showSamplesProminent ? { opacity: 0, y: 20 } : false}
+            animate={showSamplesProminent ? { opacity: 1, y: 0 } : false}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            {/* Prominent glow effect for first 5 visits */}
+            {showSamplesProminent && (
+              <motion.div
+                className="absolute -inset-3 bg-[#F6B45A]/10 blur-xl rounded-3xl pointer-events-none"
+                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+              />
+            )}
+
+            <div className={`relative flex items-center gap-2 mb-3 ${showSamplesProminent ? 'mb-4' : ''}`}>
+              <div className={`flex-1 h-px ${showSamplesProminent ? 'bg-[#F6B45A]/30' : 'bg-white/10'}`} />
+              <span className={`flex items-center gap-1.5 whitespace-nowrap ${
+                showSamplesProminent
+                  ? 'text-xs sm:text-sm text-[#F6B45A] font-medium'
+                  : 'text-[10px] sm:text-xs text-gray-500'
+              }`}>
+                {showSamplesProminent && <Sparkles className="w-3.5 h-3.5" />}
+                {showSamplesProminent ? 'Quick Start - Try a Sample!' : 'Or try a sample'}
+              </span>
+              <div className={`flex-1 h-px ${showSamplesProminent ? 'bg-[#F6B45A]/30' : 'bg-white/10'}`} />
             </div>
 
-            <div className="flex gap-2 sm:gap-3 justify-center">
-              {SAMPLE_PHOTOS.map((sample) => (
+            <div className="relative flex gap-2 sm:gap-3 justify-center">
+              {SAMPLE_PHOTOS.map((sample, index) => (
                 <motion.button
                   key={sample.id}
                   onClick={() => handleSampleSelect(sample.url, sample.name, sample.id)}
                   disabled={isProcessing || loadingSampleId !== null}
-                  className="relative group flex flex-col items-center gap-1.5 p-1.5 sm:p-2 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 transition-all disabled:opacity-50 touch-manipulation"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  className={`relative group flex flex-col items-center gap-1.5 p-1.5 sm:p-2 rounded-xl transition-all disabled:opacity-50 touch-manipulation ${
+                    showSamplesProminent
+                      ? 'bg-white/[0.05] hover:bg-white/[0.08] border border-[#F6B45A]/20 hover:border-[#F6B45A]/40'
+                      : 'bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-white/10'
+                  }`}
+                  initial={showSamplesProminent ? { opacity: 0, scale: 0.8 } : false}
+                  animate={showSamplesProminent ? { opacity: 1, scale: 1 } : false}
+                  transition={showSamplesProminent ? { delay: 0.4 + index * 0.1, type: 'spring' } : undefined}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  {/* Thumbnail placeholder with loading state */}
-                  <div className="relative w-14 h-10 sm:w-16 sm:h-12 rounded-lg bg-white/5 overflow-hidden">
+                  {/* Thumbnail with enhanced styling */}
+                  <div className={`relative rounded-lg overflow-hidden ${
+                    showSamplesProminent
+                      ? 'w-20 h-14 sm:w-24 sm:h-16'
+                      : 'w-14 h-10 sm:w-16 sm:h-12'
+                  } bg-white/5`}>
                     <img
                       src={sample.url}
                       alt={sample.name}
-                      className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                      className={`w-full h-full object-cover transition-opacity ${
+                        showSamplesProminent ? 'opacity-90' : 'opacity-70'
+                      } group-hover:opacity-100`}
                       onError={(e) => {
-                        // Hide broken image, show placeholder
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
@@ -417,14 +475,20 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                         <Loader2 className="w-4 h-4 text-[#F6B45A] animate-spin" />
                       </div>
                     )}
+                    {/* Hover shine effect */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <span className="text-[9px] sm:text-[10px] text-gray-400 group-hover:text-gray-300 transition-colors">
+                  <span className={`transition-colors ${
+                    showSamplesProminent
+                      ? 'text-[10px] sm:text-xs text-gray-300 group-hover:text-white font-medium'
+                      : 'text-[9px] sm:text-[10px] text-gray-400 group-hover:text-gray-300'
+                  }`}>
                     {sample.name}
                   </span>
                 </motion.button>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Processing overlay */}
           <AnimatePresence>
