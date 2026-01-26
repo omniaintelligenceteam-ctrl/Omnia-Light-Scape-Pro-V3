@@ -130,6 +130,8 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   onFontSizeChange,
   highContrast = false,
   onHighContrastChange,
+  enableBeforeAfter = true,
+  onEnableBeforeAfterChange,
   notifications,
   onNotificationsChange,
   followUpSettings,
@@ -493,6 +495,16 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
               description="Increase visibility for better readability"
               checked={highContrast}
               onChange={(v) => onHighContrastChange?.(v)}
+            />
+          </div>
+
+          {/* Before/After Comparison */}
+          <div className="pt-2">
+            <ToggleRow
+              title="Before/After Comparison"
+              description="Show side-by-side comparison when viewing designs"
+              checked={enableBeforeAfter}
+              onChange={(v) => onEnableBeforeAfterChange?.(v)}
             />
           </div>
         </div>

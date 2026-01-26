@@ -56,7 +56,7 @@ import { useOnboarding } from './hooks/useOnboarding';
 import { useDemoMode } from './hooks/useDemoMode';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
@@ -440,6 +440,9 @@ const App: React.FC = () => {
 
   // Full Screen State
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+  
+  // Before/After Comparison State
+  const [showComparison, setShowComparison] = useState<boolean>(false);
 
   // Feedback State
   const [lastUsedPrompt, setLastUsedPrompt] = useState<string>('');
@@ -593,6 +596,9 @@ const App: React.FC = () => {
   const [accentColor, setAccentColor] = useState<AccentColor>('gold');
   const [fontSize, setFontSize] = useState<FontSize>('normal');
   const [highContrast, setHighContrast] = useState<boolean>(false);
+  
+  // Feature Preferences
+  const [enableBeforeAfter, setEnableBeforeAfter] = useState<boolean>(true);
 
   // Notification Preferences State
   const [notifications, setNotifications] = useState<NotificationPreferences>({
@@ -673,6 +679,7 @@ const App: React.FC = () => {
         if (prefs.accentColor) setAccentColor(prefs.accentColor);
         if (prefs.fontSize) setFontSize(prefs.fontSize);
         if (typeof prefs.highContrast === 'boolean') setHighContrast(prefs.highContrast);
+        if (typeof prefs.enableBeforeAfter === 'boolean') setEnableBeforeAfter(prefs.enableBeforeAfter);
       }
       const savedNotifs = localStorage.getItem('omnia_notifications');
       if (savedNotifs) {
@@ -689,8 +696,8 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-accent', accentColor);
     document.documentElement.setAttribute('data-fontsize', fontSize);
     document.documentElement.setAttribute('data-high-contrast', String(highContrast));
-    localStorage.setItem('omnia_theme', JSON.stringify({ theme, accentColor, fontSize, highContrast }));
-  }, [theme, accentColor, fontSize, highContrast]);
+    localStorage.setItem('omnia_theme', JSON.stringify({ theme, accentColor, fontSize, highContrast, enableBeforeAfter }));
+  }, [theme, accentColor, fontSize, highContrast, enableBeforeAfter]);
 
   // Persist notification preferences
   useEffect(() => {
@@ -1245,6 +1252,7 @@ const App: React.FC = () => {
     setFeedbackText('');
     setIsLiked(false);
     setIsFullScreen(false);
+    setShowComparison(false);
   }
 
   const toggleFixture = (fixtureId: string) => {
@@ -1557,7 +1565,18 @@ const App: React.FC = () => {
                      const opt = allOptionsList.find(o => o.id === id);
                      return opt ? `YES DO THIS: ${opt.prompt}` : '';
                  }).join('\n');
-                 p += `\nINSTRUCTIONS:\n${positives}\n`;
+                 
+                 // Add existence verification rule
+                 p += `\n*** FEATURE EXISTENCE VERIFICATION (CRITICAL) ***\n`;
+                 p += `Before lighting ANY feature below, you MUST verify it EXISTS in the source photo:\n`;
+                 p += `- Columns: Only light columns if the home HAS columns in the source photo\n`;
+                 p += `- Trees: Only light trees that are VISIBLE in the source photo\n`;
+                 p += `- Dormers: Only light dormers if the roof HAS dormers in the source photo\n`;
+                 p += `- Entryway: Only light entryway features that EXIST in the source photo\n`;
+                 p += `IF A FEATURE DOES NOT EXIST: Skip that lighting instruction entirely. Do NOT add the feature.\n`;
+                 p += `Remember: You are a LIGHTING tool, not an architecture tool. Never add structures.\n\n`;
+                 
+                 p += `INSTRUCTIONS:\n${positives}\n`;
 
                  // 4. Add Explicit Negatives for UNSELECTED items
                  const unselected = allSubIds.filter(id => !selectedSubs.includes(id));
@@ -1616,6 +1635,11 @@ const App: React.FC = () => {
                          p += "- COUNT THE DORMERS: If 2 dormers exist, use exactly 2 lights. If 3 dormers, exactly 3 lights.\n";
                          p += "- FORBIDDEN: Multiple lights per dormer, lights between dormers, lights on roof shingles, lights on dormer itself\n";
                          p += "- CENTERING IS CRITICAL: The fixture must be horizontally centered under each dormer\n";
+                         p += "\n*** CRITICAL EXISTENCE CHECK ***\n";
+                         p += "- FIRST: Scan the source photo to verify dormers ACTUALLY EXIST on this home\n";
+                         p += "- IF NO DORMERS EXIST in the source photo: SKIP dormer lighting entirely - do NOT add dormers to the image\n";
+                         p += "- ONLY light dormers that are VISIBLE in the original daytime photo\n";
+                         p += "- Remember: You are FORBIDDEN from adding architectural features. If no dormers exist, no dormer lights.\n";
                      }
                      p += "\n\nGENERAL SAFETY: Lights must shine UP from the gutter line. Do not shine down.";
                  }
@@ -1654,6 +1678,8 @@ const App: React.FC = () => {
     activePrompt += "[ ] TREES: Does output have the SAME trees in the SAME positions as source? If not, FIX.\n";
     activePrompt += "[ ] LANDSCAPING: Does output have the SAME bushes and plants as source? If not, FIX.\n";
     activePrompt += "[ ] ARCHITECTURE: Does output have the SAME house shape, roof, dormers as source? If not, FIX.\n";
+    activePrompt += "[ ] FEATURE EXISTENCE: Did you add lights to features that DON'T EXIST in source (e.g., dormers, columns)? If yes, REMOVE those lights.\n";
+    activePrompt += "[ ] NO NEW STRUCTURES: Did you accidentally ADD any structures (dormers, columns, trees) that weren't in source? If yes, REMOVE them.\n";
     activePrompt += "[ ] LIGHT PLACEMENT: Are lights ONLY on surfaces listed in ALLOWED sections above? If not, REMOVE.\n";
     activePrompt += "[ ] FORBIDDEN SURFACES: Are all surfaces listed in EXCLUSIONS/FORBIDDEN sections dark? If not, FIX.\n";
     activePrompt += "[ ] SKY: Is the sky natural twilight (no giant artificial moon)? If not, FIX.\n";
@@ -1936,9 +1962,21 @@ const App: React.FC = () => {
          }
 
          // Priority 0 (HIGHEST): Use user-specified counts from fixture count UI
-         const userSpecifiedCount = fixtureCounts[def.fixtureType];
-         if (userSpecifiedCount !== null && userSpecifiedCount !== undefined && selectedFixtures.includes(def.fixtureType)) {
-             return { ...def, quantity: userSpecifiedCount };
+         // Sum up all user-specified counts for sub-options of this fixture type
+         if (selectedFixtures.includes(def.fixtureType)) {
+             const selectedSubOpts = fixtureSubOptions[def.fixtureType] || [];
+             let totalUserCount = 0;
+             let hasUserCounts = false;
+             selectedSubOpts.forEach(subOptId => {
+                 const count = fixtureCounts[subOptId];
+                 if (count !== null && count !== undefined) {
+                     totalUserCount += count;
+                     hasUserCounts = true;
+                 }
+             });
+             if (hasUserCounts && totalUserCount > 0) {
+                 return { ...def, quantity: totalUserCount };
+             }
          }
 
          // Priority 1: Use explicit counts from custom notes if provided
@@ -3414,23 +3452,57 @@ Notes: ${invoice.notes || 'N/A'}
                         onTouchStart={handleTouchStart}
                         onTouchEnd={handleTouchEnd}
                     >
-                        <img
-                            src={generatedImage}
-                            alt="Generated Result"
-                            className="w-full h-full object-contain cursor-zoom-in transition-transform duration-500 group-hover:scale-[1.02]"
-                            onClick={() => setIsFullScreen(true)}
-                        />
+                        {/* Before/After Comparison Mode */}
+                        {showComparison && previewUrl ? (
+                            <div className="w-full h-full flex">
+                                {/* Before (Original) */}
+                                <div className="w-1/2 h-full relative border-r border-white/20">
+                                    <img
+                                        src={previewUrl}
+                                        alt="Before - Original"
+                                        className="w-full h-full object-contain"
+                                    />
+                                    <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg">
+                                        <span className="text-xs font-bold text-white/80 uppercase tracking-wider">Before</span>
+                                    </div>
+                                </div>
+                                {/* After (Generated) */}
+                                <div className="w-1/2 h-full relative">
+                                    <img
+                                        src={generatedImage}
+                                        alt="After - With Lighting"
+                                        className="w-full h-full object-contain cursor-zoom-in"
+                                        onClick={() => setIsFullScreen(true)}
+                                    />
+                                    <div className="absolute bottom-4 right-4 px-3 py-1.5 bg-[#F6B45A]/90 backdrop-blur-sm rounded-lg">
+                                        <span className="text-xs font-bold text-black uppercase tracking-wider">After</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Single Image Mode */
+                            <img
+                                src={generatedImage}
+                                alt="Generated Result"
+                                className="w-full h-full object-contain cursor-zoom-in transition-transform duration-500 group-hover:scale-[1.02]"
+                                onClick={() => setIsFullScreen(true)}
+                            />
+                        )}
 
-                        {/* Subtle vignette */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+                        {/* Subtle vignette - only show when not in comparison mode */}
+                        {!showComparison && (
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+                        )}
 
-                        {/* Corner accents */}
-                        <div className="absolute inset-0 pointer-events-none">
-                            <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-[#F6B45A]/30 rounded-tl" />
-                            <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-[#F6B45A]/30 rounded-tr" />
-                            <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-[#F6B45A]/30 rounded-bl" />
-                            <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-[#F6B45A]/30 rounded-br" />
-                        </div>
+                        {/* Corner accents - only show when not in comparison mode */}
+                        {!showComparison && (
+                            <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-[#F6B45A]/30 rounded-tl" />
+                                <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-[#F6B45A]/30 rounded-tr" />
+                                <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-[#F6B45A]/30 rounded-bl" />
+                                <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-[#F6B45A]/30 rounded-br" />
+                            </div>
+                        )}
 
                         {/* Feedback / Loading Overlay */}
                         {isLoading && (
@@ -3619,13 +3691,28 @@ Notes: ${invoice.notes || 'N/A'}
                             </button>
                         </div>
 
-                         <button 
-                            onClick={() => setIsFullScreen(true)}
-                            className="flex items-center gap-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/50 hover:text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
-                        >
-                            <Maximize2 className="w-3 h-3" />
-                            Expand View
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {enableBeforeAfter && (
+                                <button 
+                                    onClick={() => setShowComparison(!showComparison)}
+                                    className={`flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                        showComparison 
+                                            ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30' 
+                                            : 'bg-black/40 hover:bg-black/60 text-white/50 hover:text-white'
+                                    }`}
+                                >
+                                    <SplitSquareHorizontal className="w-3 h-3" />
+                                    Before / After
+                                </button>
+                            )}
+                            <button 
+                                onClick={() => setIsFullScreen(true)}
+                                className="flex items-center gap-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/50 hover:text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+                            >
+                                <Maximize2 className="w-3 h-3" />
+                                Expand View
+                            </button>
+                        </div>
                     </div>
 
                     {/* Feedback Modal Overlay */}
@@ -7397,6 +7484,9 @@ Notes: ${invoice.notes || 'N/A'}
                 onFontSizeChange={setFontSize}
                 highContrast={highContrast}
                 onHighContrastChange={setHighContrast}
+                // Before/After comparison
+                enableBeforeAfter={enableBeforeAfter}
+                onEnableBeforeAfterChange={setEnableBeforeAfter}
                 // Notification props
                 notifications={notifications}
                 onNotificationsChange={setNotifications}
