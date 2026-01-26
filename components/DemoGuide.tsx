@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { Check, X, GripVertical } from 'lucide-react';
+import { Check, X, GripVertical, Rocket, Mail } from 'lucide-react';
 
 export interface DemoStep {
   id: number;
@@ -8,22 +8,19 @@ export interface DemoStep {
   note?: string;
 }
 
+// Simplified 3-step checklist
 export const DEMO_STEPS: DemoStep[] = [
-  { id: 1, title: 'Upload a Daytime Photo' },
-  { id: 2, title: 'Select Fixtures and Quantities' },
-  { id: 3, title: 'Generate Design' },
-  { id: 4, title: 'Save & Generate Quote' },
-  { id: 5, title: 'Email Quote for Approval', note: 'Demo to your email' },
-  { id: 6, title: 'Approve Quote' },
-  { id: 7, title: 'Schedule Quote' },
-  { id: 8, title: 'Invoice Job' },
-  { id: 9, title: 'Explore and Set Up Settings' },
+  { id: 1, title: 'Create your first AI mockup', note: 'Upload a photo and generate a design' },
+  { id: 2, title: 'View a demo project', note: 'Check out the sample projects we created' },
+  { id: 3, title: 'Check out Analytics', note: 'See revenue and pipeline metrics' },
 ];
 
 interface DemoGuideProps {
   currentStep: number;
   completedSteps: number[];
   onSkip: () => void;
+  onFinish: () => void;
+  isChecklistComplete: boolean;
   isVisible: boolean;
 }
 
@@ -31,15 +28,16 @@ const DemoGuide: React.FC<DemoGuideProps> = ({
   currentStep,
   completedSteps,
   onSkip,
+  onFinish,
+  isChecklistComplete,
   isVisible,
 }) => {
   const dragControls = useDragControls();
-  const allCompleted = completedSteps.length >= DEMO_STEPS.length;
   const progress = (completedSteps.length / DEMO_STEPS.length) * 100;
 
   return (
     <AnimatePresence>
-      {isVisible && !allCompleted && (
+      {isVisible && (
         <motion.div
           drag
           dragControls={dragControls}
@@ -93,11 +91,10 @@ const DemoGuide: React.FC<DemoGuideProps> = ({
             </div>
 
             {/* Steps list */}
-            <div className="p-2 max-h-[400px] overflow-y-auto">
+            <div className="p-2">
               {DEMO_STEPS.map((step, index) => {
                 const isCompleted = completedSteps.includes(step.id);
                 const isCurrent = step.id === currentStep && !isCompleted;
-                const isPending = !isCompleted && !isCurrent;
 
                 return (
                   <motion.div
@@ -106,7 +103,7 @@ const DemoGuide: React.FC<DemoGuideProps> = ({
                     animate={{
                       backgroundColor: isCurrent ? 'rgba(246, 180, 90, 0.1)' : 'transparent',
                     }}
-                    className={`relative flex items-start gap-2.5 px-3 py-2 rounded-xl transition-all ${
+                    className={`relative flex items-start gap-2.5 px-3 py-2.5 rounded-xl transition-all ${
                       isCurrent ? 'ring-1 ring-[#F6B45A]/30' : ''
                     }`}
                   >
@@ -156,7 +153,7 @@ const DemoGuide: React.FC<DemoGuideProps> = ({
                     {/* Connecting line to next step */}
                     {index < DEMO_STEPS.length - 1 && (
                       <div
-                        className={`absolute left-[22px] top-8 w-0.5 h-4 rounded-full transition-colors ${
+                        className={`absolute left-[22px] top-10 w-0.5 h-3 rounded-full transition-colors ${
                           isCompleted ? 'bg-green-500/30' : 'bg-white/5'
                         }`}
                       />
@@ -166,14 +163,32 @@ const DemoGuide: React.FC<DemoGuideProps> = ({
               })}
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-3 border-t border-white/5">
-              <button
-                onClick={onSkip}
-                className="w-full text-xs text-gray-500 hover:text-white transition-colors py-1.5 rounded-lg hover:bg-white/5"
+            {/* Footer with Finish button */}
+            <div className="px-4 py-3 border-t border-white/5 space-y-2">
+              {/* Finish Demo Mode button */}
+              <motion.button
+                onClick={onFinish}
+                disabled={!isChecklistComplete}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  isChecklistComplete
+                    ? 'bg-gradient-to-r from-[#F6B45A] to-amber-500 text-black hover:shadow-lg hover:shadow-amber-500/20 hover:scale-[1.02]'
+                    : 'bg-white/5 text-gray-500 cursor-not-allowed'
+                }`}
+                whileHover={isChecklistComplete ? { scale: 1.02 } : {}}
+                whileTap={isChecklistComplete ? { scale: 0.98 } : {}}
               >
-                Skip Tutorial
-              </button>
+                <Rocket className="w-4 h-4" />
+                Finish Demo Mode
+              </motion.button>
+
+              {/* Support link */}
+              <a
+                href="mailto:omniaintelligenceteam@gmail.com"
+                className="flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors py-1"
+              >
+                <Mail className="w-3 h-3" />
+                Need help? Email support
+              </a>
             </div>
           </div>
         </motion.div>

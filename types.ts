@@ -87,7 +87,8 @@ export interface SavedProject {
   id: string;
   name: string;
   date: string;
-  image: string | null;           // Primary image (backwards compatible)
+  image: string | null;           // Generated/AI image (backwards compatible)
+  originalImage?: string | null;  // Original uploaded photo before AI generation
   images?: ProjectImage[];        // Multiple images support
   quote: QuoteData | null;
   bom: BOMData | null;

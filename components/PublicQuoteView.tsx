@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, Loader2,
   AlertCircle, Check, XCircle, Shield, ChevronDown, ChevronUp, Sparkles,
-  CreditCard, Calendar, Play, FileText as DocumentIcon, Receipt
+  CreditCard, Calendar, Play, FileText as DocumentIcon, Receipt, Clock, Package,
+  MessageCircle, Send
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { SignatureCapture } from './SignatureCapture';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { QuoteVideoPlayer } from './remotion/QuoteVideoPlayer';
 import type { QuoteVideoProps } from './remotion/QuoteReveal';
-import { QuoteCoverSection, InteractivePricingTable } from './quote';
+import { QuoteCoverSection, InteractivePricingTable, QuoteProgressStepper, ExpirationCountdown } from './quote';
 import { QuotePageSkeleton } from './shared/PremiumSkeleton';
 
 interface QuoteProject {
@@ -114,6 +115,10 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
   const [approved, setApproved] = useState(false);
   const [approvalDate, setApprovalDate] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showFloatingCTA, setShowFloatingCTA] = useState(false);
+
+  // Ref for approval section to track visibility
+  const approvalSectionRef = useRef<HTMLDivElement>(null);
 
   // Approval form state
   const [signature, setSignature] = useState<string | null>(null);
@@ -123,6 +128,11 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
 
   // View mode: document or video
   const [viewMode, setViewMode] = useState<'document' | 'video'>('document');
+
+  // Client question state
+  const [clientQuestion, setClientQuestion] = useState('');
+  const [sendingQuestion, setSendingQuestion] = useState(false);
+  const [questionSent, setQuestionSent] = useState(false);
 
   useEffect(() => {
     async function fetchQuote() {
@@ -149,6 +159,35 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
 
     fetchQuote();
   }, [token]);
+
+  // Track approval section visibility for floating CTA
+  useEffect(() => {
+    // Calculate if expired from data
+    const quoteExpired = data?.project?.quoteExpiresAt
+      ? new Date(data.project.quoteExpiresAt) < new Date()
+      : false;
+
+    if (!approvalSectionRef.current || approved || quoteExpired) {
+      setShowFloatingCTA(false);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Show floating CTA when approval section is NOT visible
+        setShowFloatingCTA(!entry.isIntersecting);
+      },
+      {
+        root: null,
+        rootMargin: '-100px 0px 0px 0px',
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(approvalSectionRef.current);
+
+    return () => observer.disconnect();
+  }, [approved, data]);
 
   const handleApprove = async () => {
     if (!signature || !termsAccepted) return;
@@ -187,6 +226,38 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
     }
   };
 
+  // Send client question to contractor
+  const handleSendQuestion = async () => {
+    if (!clientQuestion.trim() || sendingQuestion) return;
+
+    try {
+      setSendingQuestion(true);
+      const response = await fetch(`/api/public/quote/${token}/question`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: clientQuestion.trim()
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send question');
+      }
+
+      setQuestionSent(true);
+      setClientQuestion('');
+      // Reset after showing success
+      setTimeout(() => setQuestionSent(false), 5000);
+    } catch (err: any) {
+      console.error('Failed to send question:', err);
+      // Show error but don't throw - questions are optional
+    } finally {
+      setSendingQuestion(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -204,9 +275,26 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
     }).format(amount);
   };
 
+  // Scroll to approval section
+  const scrollToApproval = () => {
+    approvalSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   // Get total from quote if available
   const quoteTotal = data?.project?.promptConfig?.quote?.total || 0;
   const depositAmount = quoteTotal * 0.5;
+  const lineItems = data?.project?.promptConfig?.quote?.lineItems || [];
+  const lineItemCount = lineItems.length;
+
+  // Calculate days until expiry
+  const getDaysUntilExpiry = () => {
+    if (!data?.project.quoteExpiresAt) return null;
+    const expires = new Date(data.project.quoteExpiresAt);
+    const now = new Date();
+    const diff = expires.getTime() - now.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+  const daysUntilExpiry = getDaysUntilExpiry();
 
   // Build video props from quote data
   const buildVideoProps = (): QuoteVideoProps | null => {
@@ -386,6 +474,88 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
             </motion.div>
           )}
         </motion.div>
+
+        {/* Progress Stepper - Shows approval journey */}
+        {!approved && !isExpired && viewMode === 'document' && (
+          <QuoteProgressStepper
+            hasSignature={!!signature}
+            termsAccepted={termsAccepted}
+            isApproved={approved}
+          />
+        )}
+
+        {/* Quick Summary Card - Shows key info at a glance */}
+        {!approved && viewMode === 'document' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="grid grid-cols-3 gap-3 mb-8"
+          >
+            {/* Total */}
+            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] rounded-2xl p-4 text-center border border-white/10 hover:border-[#F6B45A]/20 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-[#F6B45A]/10 flex items-center justify-center mx-auto mb-2">
+                <CreditCard className="w-5 h-5 text-[#F6B45A]" />
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-white font-mono">{formatCurrency(quoteTotal)}</p>
+              <p className="text-[10px] md:text-xs text-gray-500 uppercase tracking-wider mt-1">Total</p>
+            </div>
+
+            {/* Items */}
+            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] rounded-2xl p-4 text-center border border-white/10 hover:border-[#F6B45A]/20 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-[#F6B45A]/10 flex items-center justify-center mx-auto mb-2">
+                <Package className="w-5 h-5 text-[#F6B45A]" />
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-white">{lineItemCount}</p>
+              <p className="text-[10px] md:text-xs text-gray-500 uppercase tracking-wider mt-1">{lineItemCount === 1 ? 'Item' : 'Items'}</p>
+            </div>
+
+            {/* Days Left / Status */}
+            <div className={`bg-gradient-to-b from-white/[0.06] to-white/[0.02] rounded-2xl p-4 text-center border transition-colors ${
+              isExpired ? 'border-red-500/30' : daysUntilExpiry !== null && daysUntilExpiry <= 3 ? 'border-amber-500/30' : 'border-white/10 hover:border-[#F6B45A]/20'
+            }`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2 ${
+                isExpired ? 'bg-red-500/10' : daysUntilExpiry !== null && daysUntilExpiry <= 3 ? 'bg-amber-500/10' : 'bg-[#F6B45A]/10'
+              }`}>
+                <Clock className={`w-5 h-5 ${
+                  isExpired ? 'text-red-400' : daysUntilExpiry !== null && daysUntilExpiry <= 3 ? 'text-amber-400' : 'text-[#F6B45A]'
+                }`} />
+              </div>
+              {isExpired ? (
+                <>
+                  <p className="text-xl md:text-2xl font-bold text-red-400">Expired</p>
+                  <p className="text-[10px] md:text-xs text-red-400/70 uppercase tracking-wider mt-1">Contact Us</p>
+                </>
+              ) : daysUntilExpiry !== null ? (
+                <>
+                  <p className={`text-xl md:text-2xl font-bold ${daysUntilExpiry <= 3 ? 'text-amber-400' : 'text-white'}`}>
+                    {daysUntilExpiry}
+                  </p>
+                  <p className={`text-[10px] md:text-xs uppercase tracking-wider mt-1 ${daysUntilExpiry <= 3 ? 'text-amber-400/70' : 'text-gray-500'}`}>
+                    {daysUntilExpiry === 1 ? 'Day Left' : 'Days Left'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xl md:text-2xl font-bold text-emerald-400">Open</p>
+                  <p className="text-[10px] md:text-xs text-emerald-400/70 uppercase tracking-wider mt-1">No Expiry</p>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Live Countdown Timer - Shows when quote has expiration */}
+        {!approved && !isExpired && project.quoteExpiresAt && viewMode === 'document' && daysUntilExpiry !== null && daysUntilExpiry <= 7 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-8 p-5 bg-gradient-to-b from-white/[0.06] to-white/[0.02] rounded-2xl border border-white/10"
+          >
+            <ExpirationCountdown expiresAt={project.quoteExpiresAt} />
+          </motion.div>
+        )}
 
         {/* Video Player */}
         <AnimatePresence mode="wait">
@@ -617,7 +787,7 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
 
           {/* Approval Section - Only if not approved and not expired */}
           {!approved && !isExpired && (
-            <div className="p-6 md:p-8 space-y-6">
+            <div ref={approvalSectionRef} className="p-6 md:p-8 space-y-6">
               {/* Payment Options */}
               {quoteTotal > 0 && (
                 <div>
@@ -672,6 +842,67 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
                   </div>
                 </div>
               )}
+
+              {/* Client Question Box */}
+              <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
+                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-[#F6B45A]" />
+                  Have a Question?
+                </h3>
+                {questionSent ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg"
+                  >
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                    <p className="text-sm text-emerald-400">
+                      Question sent! {company.name} will get back to you soon.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <>
+                    <textarea
+                      value={clientQuestion}
+                      onChange={(e) => setClientQuestion(e.target.value)}
+                      placeholder="Ask about this quote before approving..."
+                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 text-sm resize-none focus:outline-none focus:border-[#F6B45A]/30 transition-colors"
+                      rows={2}
+                      maxLength={500}
+                    />
+                    <AnimatePresence>
+                      {clientQuestion.trim() && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-3"
+                        >
+                          <motion.button
+                            onClick={handleSendQuestion}
+                            disabled={sendingQuestion}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#F6B45A]/10 border border-[#F6B45A]/30 rounded-lg text-[#F6B45A] text-sm font-medium hover:bg-[#F6B45A]/20 transition-colors disabled:opacity-50"
+                            whileHover={sendingQuestion ? {} : { scale: 1.02 }}
+                            whileTap={sendingQuestion ? {} : { scale: 0.98 }}
+                          >
+                            {sendingQuestion ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4" />
+                                Send Question
+                              </>
+                            )}
+                          </motion.button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
+              </div>
 
               {/* Terms Acceptance */}
               <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
@@ -849,11 +1080,48 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="text-center text-gray-600 text-xs mt-8"
+          className="text-center text-gray-600 text-xs mt-8 pb-20 md:pb-0"
         >
           Powered by Omnia LightScape
         </motion.p>
       </div>
+
+      {/* Floating Approve CTA - Mobile Only */}
+      <AnimatePresence>
+        {showFloatingCTA && !approved && !isExpired && viewMode === 'document' && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-0 left-0 right-0 p-4 bg-black/95 backdrop-blur-xl border-t border-white/10 z-50 md:hidden safe-area-pb"
+          >
+            <div className="flex items-center justify-between gap-4 max-w-xl mx-auto">
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-bold text-lg truncate">{formatCurrency(quoteTotal)}</p>
+                <p className="text-xs text-gray-400">
+                  {termsAccepted && signature ? 'Ready to approve' : 'Review & sign to approve'}
+                </p>
+              </div>
+              <motion.button
+                onClick={scrollToApproval}
+                className="flex-shrink-0 px-6 py-3 bg-gradient-to-r from-[#F6B45A] to-[#E09A3A] rounded-xl font-bold text-black shadow-lg shadow-[#F6B45A]/25"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {termsAccepted && signature ? (
+                  <span className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    Approve
+                  </span>
+                ) : (
+                  'Approve Now'
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

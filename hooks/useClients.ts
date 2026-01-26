@@ -378,6 +378,48 @@ export function useClients() {
     );
   }, [effectiveClients]);
 
+  // Sort clients by different criteria
+  const sortClients = useCallback((clientList: Client[], sortBy: 'name-asc' | 'name-desc' | 'projects' | 'recent' | 'revenue'): Client[] => {
+    const sorted = [...clientList];
+    switch (sortBy) {
+      case 'name-asc':
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      case 'name-desc':
+        return sorted.sort((a, b) => b.name.localeCompare(a.name));
+      case 'projects':
+        return sorted.sort((a, b) => (b.projectCount || 0) - (a.projectCount || 0));
+      case 'recent':
+        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      case 'revenue':
+        return sorted.sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0));
+      default:
+        return sorted;
+    }
+  }, []);
+
+  // Filter clients by lead source
+  const filterByLeadSource = useCallback((clientList: Client[], source: string): Client[] => {
+    if (source === 'all') return clientList;
+    return clientList.filter(c => c.leadSource === source);
+  }, []);
+
+  // Filter clients by first letter of name
+  const filterByLetter = useCallback((clientList: Client[], letter: string): Client[] => {
+    if (letter === 'all') return clientList;
+    return clientList.filter(c => c.name.toUpperCase().startsWith(letter.toUpperCase()));
+  }, []);
+
+  // Get letters that have clients (for highlighting available letters)
+  const getAvailableLetters = useCallback((clientList: Client[]): Set<string> => {
+    const letters = new Set<string>();
+    clientList.forEach(c => {
+      if (c.name) {
+        letters.add(c.name[0].toUpperCase());
+      }
+    });
+    return letters;
+  }, []);
+
   return {
     clients: effectiveClients,
     isLoading,
@@ -387,6 +429,10 @@ export function useClients() {
     updateClient,
     deleteClient,
     searchClients: searchEffectiveClients,
-    importClients
+    importClients,
+    sortClients,
+    filterByLeadSource,
+    filterByLetter,
+    getAvailableLetters
   };
 }

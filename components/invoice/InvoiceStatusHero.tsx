@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Clock, AlertTriangle, AlertCircle, Calendar, Copy, Check } from 'lucide-react';
+import { CheckCircle2, Clock, AlertTriangle, AlertCircle, Calendar, Copy, Check, CreditCard, Loader2 } from 'lucide-react';
 
 type InvoiceStatus = 'pending' | 'due_soon' | 'overdue' | 'paid';
 
@@ -11,6 +11,10 @@ interface InvoiceStatusHeroProps {
   paidDate?: string | null;
   invoiceNumber: string;
   onCopy?: () => void;
+  // Payment props
+  onPay?: () => void;
+  isPaying?: boolean;
+  canPay?: boolean;
 }
 
 // Calculate days until due or overdue
@@ -86,7 +90,10 @@ export const InvoiceStatusHero: React.FC<InvoiceStatusHeroProps> = ({
   dueDate,
   paidDate,
   invoiceNumber,
-  onCopy
+  onCopy,
+  onPay,
+  isPaying = false,
+  canPay = true
 }) => {
   const [copied, setCopied] = useState(false);
   const [displayAmount, setDisplayAmount] = useState(0);
@@ -271,6 +278,48 @@ export const InvoiceStatusHero: React.FC<InvoiceStatusHeroProps> = ({
               )}
             </motion.button>
           </motion.div>
+
+          {/* Hero Pay Now Button - Only for unpaid invoices */}
+          {status !== 'paid' && onPay && canPay && (
+            <motion.button
+              onClick={onPay}
+              disabled={isPaying}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              whileHover={isPaying ? {} : { scale: 1.02 }}
+              whileTap={isPaying ? {} : { scale: 0.98 }}
+              className={`mt-6 relative overflow-hidden w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-lg transition-all ${
+                isPaying
+                  ? 'bg-blue-500/50 cursor-wait'
+                  : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35'
+              }`}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-3 text-white">
+                {isPaying ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5" />
+                    Pay {formatCurrency(amount)} Now
+                  </>
+                )}
+              </span>
+
+              {/* Shimmer effect */}
+              {!isPaying && (
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg]"
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '200%' }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                />
+              )}
+            </motion.button>
+          )}
         </div>
       </div>
 

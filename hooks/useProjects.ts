@@ -36,6 +36,7 @@ export function useProjects() {
             name: p.name,
             date: new Date(p.created_at).toLocaleDateString(),
             image: p.generated_image_url,
+            originalImage: p.original_image_url || undefined,
             images: p.prompt_config?.images || undefined,
             quote: p.prompt_config?.quote || null,
             bom: p.prompt_config?.bom || null,

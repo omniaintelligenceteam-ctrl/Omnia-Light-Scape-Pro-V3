@@ -1,8 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, XCircle, DollarSign, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, XCircle, DollarSign, Clock, Share2, Copy, Check } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { InvoiceStatusHero, getInvoiceStatus, PaymentSection } from './invoice';
 import { InvoicePageSkeleton } from './shared/PremiumSkeleton';
+
+// Celebration confetti burst (blue theme for invoices)
+const triggerCelebration = () => {
+  const duration = 3000;
+  const colors = ['#3B82F6', '#60A5FA', '#93C5FD', '#10B981', '#34D399', '#FFFFFF'];
+
+  // First burst
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors
+  });
+
+  // Side bursts
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.6 },
+      colors
+    });
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.6 },
+      colors
+    });
+  }, 250);
+
+  // Final shower
+  const end = Date.now() + duration;
+  const frame = () => {
+    confetti({
+      particleCount: 2,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.5 },
+      colors
+    });
+    confetti({
+      particleCount: 2,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.5 },
+      colors
+    });
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  };
+  frame();
+};
 
 interface InvoiceProject {
   id: string;
@@ -71,12 +127,22 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
   const [error, setError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const celebrationTriggered = useRef(false);
 
-  // Check for payment success/cancel query params
+  // Check for payment success/cancel query params and trigger celebration
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('paid') === 'true') {
       setPaymentSuccess(true);
+      // Trigger celebration only once
+      if (!celebrationTriggered.current) {
+        celebrationTriggered.current = true;
+        setShowCelebration(true);
+        triggerCelebration();
+        setTimeout(() => setShowCelebration(false), 2500);
+      }
     }
   }, []);
 
@@ -146,6 +212,30 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
     }).format(amount);
   };
 
+  // Share invoice handler
+  const handleShare = async () => {
+    const shareData = {
+      title: `Invoice from ${data?.company.name || 'Company'}`,
+      text: `Invoice ${data?.invoiceData?.invoiceNumber || ''} - ${formatCurrency(data?.invoiceData?.total || 0)}`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      }
+    } catch (err) {
+      // Fallback to clipboard
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
+
   // Loading State - Premium Skeleton
   if (loading) {
     return <InvoicePageSkeleton />;
@@ -185,6 +275,49 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
       <div className="fixed top-[-20%] right-[-10%] w-[50%] h-[600px] bg-blue-500/5 blur-[150px] rounded-full pointer-events-none" />
       <div className="fixed bottom-[-20%] left-[-10%] w-[40%] h-[500px] bg-blue-500/3 blur-[120px] rounded-full pointer-events-none" />
 
+      {/* Payment Success Celebration Overlay */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-center"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-500/30"
+              >
+                <CheckCircle2 className="w-12 h-12 text-white" />
+              </motion.div>
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-3xl font-bold text-white font-serif mb-2"
+              >
+                Payment Successful!
+              </motion.h2>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="text-gray-400"
+              >
+                Thank you for your payment
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-3xl mx-auto relative z-10">
         {/* Header */}
         <motion.div
@@ -207,6 +340,33 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
             <p className="text-blue-500/80 text-sm font-medium tracking-wider uppercase">Invoice</p>
             <div className="h-px w-12 bg-gradient-to-l from-transparent to-blue-500/50" />
           </div>
+
+          {/* Share Button */}
+          <motion.button
+            onClick={handleShare}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
+              linkCopied
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+            }`}
+          >
+            {linkCopied ? (
+              <>
+                <Check className="w-4 h-4" />
+                <span className="text-sm">Link Copied!</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4" />
+                <span className="text-sm">Share Invoice</span>
+              </>
+            )}
+          </motion.button>
         </motion.div>
 
         {/* Premium Invoice Status Hero */}
@@ -215,6 +375,9 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
             status={getInvoiceStatus(invoiceData?.dueDate || project.invoiceExpiresAt || null, isPaid)}
             amount={invoiceTotal}
             dueDate={invoiceData?.dueDate || project.invoiceExpiresAt}
+            onPay={handlePay}
+            isPaying={paying}
+            canPay={canAcceptPayment && !isExpired && invoiceTotal > 0}
             paidDate={project.invoicePaidAt}
             invoiceNumber={invoiceData?.invoiceNumber || `INV-${project.id.slice(0, 8).toUpperCase()}`}
           />

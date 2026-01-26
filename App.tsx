@@ -56,7 +56,7 @@ import { useOnboarding } from './hooks/useOnboarding';
 import { useDemoMode } from './hooks/useDemoMode';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
@@ -182,7 +182,7 @@ const App: React.FC = () => {
   const { projects, isLoading: projectsLoading, isDemo, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject } = useProjects();
 
   // Load/save clients from Supabase
-  const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients } = useClients();
+  const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients, sortClients, filterByLeadSource, filterByLetter, getAvailableLetters } = useClients();
 
   // Load/save business goals from Supabase
   const { goals: businessGoals, createGoal, isLoading: goalsLoading } = useBusinessGoals();
@@ -328,6 +328,13 @@ const App: React.FC = () => {
   const [clientImportData, setClientImportData] = useState<{ valid: ParsedClientRow[]; invalid: ParsedClientRow[] } | null>(null);
   const [clientImportProgress, setClientImportProgress] = useState<{ current: number; total: number } | null>(null);
   const [clientImportResult, setClientImportResult] = useState<ImportResult | null>(null);
+  // Client directory filtering, sorting, and view state
+  const [clientSort, setClientSort] = useState<'name-asc' | 'name-desc' | 'projects' | 'recent' | 'revenue'>('name-asc');
+  const [clientLeadSourceFilter, setClientLeadSourceFilter] = useState<LeadSource | 'all'>('all');
+  const [clientLetterFilter, setClientLetterFilter] = useState<string>('all');
+  const [clientViewMode, setClientViewMode] = useState<'grid' | 'list'>('grid');
+  const [clientPage, setClientPage] = useState(1);
+  const CLIENTS_PER_PAGE = 50;
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'all' | 'draft' | 'sent' | 'paid' | 'overdue'>('all');
 
@@ -1120,9 +1127,29 @@ const App: React.FC = () => {
     }
   };
 
-  const filteredClients = clientSearchTerm
-    ? searchClients(clientSearchTerm)
-    : clients;
+  // Apply all client filters: search, letter, lead source, then sort
+  const processedClients = useMemo(() => {
+    let result = clientSearchTerm ? searchClients(clientSearchTerm) : clients;
+    result = filterByLetter(result, clientLetterFilter);
+    result = filterByLeadSource(result, clientLeadSourceFilter);
+    result = sortClients(result, clientSort);
+    return result;
+  }, [clients, clientSearchTerm, clientLetterFilter, clientLeadSourceFilter, clientSort, searchClients, filterByLetter, filterByLeadSource, sortClients]);
+
+  // Get available letters for the alphabet bar
+  const availableLetters = useMemo(() => getAvailableLetters(clients), [clients, getAvailableLetters]);
+
+  // Paginate clients
+  const totalClientPages = Math.ceil(processedClients.length / CLIENTS_PER_PAGE);
+  const filteredClients = processedClients.slice(
+    (clientPage - 1) * CLIENTS_PER_PAGE,
+    clientPage * CLIENTS_PER_PAGE
+  );
+
+  // Reset page when filters change
+  useEffect(() => {
+    setClientPage(1);
+  }, [clientSearchTerm, clientLetterFilter, clientLeadSourceFilter, clientSort]);
 
   // Helper to check if invoice is overdue
   const isInvoiceOverdue = (invoice: InvoiceData): boolean => {
@@ -6830,15 +6857,15 @@ Notes: ${invoice.notes || 'N/A'}
                  {/* SUB-TAB: CLIENTS */}
                  {projectsSubTab === 'clients' && (
                      <>
-                         {/* Clients Header - Desktop */}
-                         <div className="hidden md:flex items-center justify-between mb-6">
+                         {/* Clients Header - Title Row */}
+                         <div className="flex items-center justify-between mb-4">
                              <div className="flex items-center gap-4">
                                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 flex items-center justify-center">
                                      <Users className="w-6 h-6 text-purple-400" />
                                  </div>
                                  <div>
-                                     <h3 className="text-xl font-bold text-white font-serif">Client Directory</h3>
-                                     <p className="text-sm text-gray-400">{clients.length} clients</p>
+                                     <h3 className="text-lg md:text-xl font-bold text-white font-serif">Client Directory</h3>
+                                     <p className="text-xs md:text-sm text-gray-400">{processedClients.length} clients{clientLetterFilter !== 'all' || clientLeadSourceFilter !== 'all' || clientSearchTerm ? ' (filtered)' : ''}</p>
                                  </div>
                              </div>
                              <div className="flex items-center gap-3">
@@ -6857,7 +6884,7 @@ Notes: ${invoice.notes || 'N/A'}
                                      onClick={() => setShowCompletedJobsModal(true)}
                                      whileHover={{ scale: 1.02 }}
                                      whileTap={{ scale: 0.98 }}
-                                     className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-emerald-500/20 transition-colors"
+                                     className="hidden md:flex px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl font-semibold text-sm items-center gap-2 hover:bg-emerald-500/20 transition-colors"
                                  >
                                      <Check className="w-4 h-4" />
                                      Completed Jobs
@@ -6871,7 +6898,7 @@ Notes: ${invoice.notes || 'N/A'}
                                      }}
                                      whileHover={{ scale: 1.02 }}
                                      whileTap={{ scale: 0.98 }}
-                                     className="px-4 py-2.5 bg-white/5 border border-white/10 text-gray-300 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-white/10 transition-colors"
+                                     className="hidden md:flex px-4 py-2.5 bg-white/5 border border-white/10 text-gray-300 rounded-xl font-semibold text-sm items-center gap-2 hover:bg-white/10 transition-colors"
                                  >
                                      <Upload className="w-4 h-4" />
                                      Import CSV
@@ -6888,7 +6915,65 @@ Notes: ${invoice.notes || 'N/A'}
                              </div>
                          </div>
 
-                         {/* Clients Header - Mobile */}
+                         {/* Search Bar Row - Full Width */}
+                        <div className="relative mb-4">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                                type="text"
+                                value={clientSearchTerm}
+                                onChange={(e) => setClientSearchTerm(e.target.value)}
+                                placeholder="Search by name, email, or phone..."
+                                className="w-full pl-12 pr-4 py-3 bg-[#111] border border-white/10 rounded-xl text-base text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+                            />
+                            {clientSearchTerm && (
+                                <button onClick={() => setClientSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
+                            )}
+                        </div>
+
+                        {/* A-Z Alphabet Quick Jump Bar */}
+                        <div className="mb-4 overflow-x-auto scrollbar-hide">
+                            <div className="flex items-center gap-1 min-w-max">
+                                <button onClick={() => setClientLetterFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${clientLetterFilter === 'all' ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}>All</button>
+                                {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => {
+                                    const hasClients = availableLetters.has(letter);
+                                    return (<button key={letter} onClick={() => setClientLetterFilter(letter)} disabled={!hasClients} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${clientLetterFilter === letter ? 'bg-purple-500 text-white' : hasClients ? 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white' : 'bg-transparent text-gray-600 cursor-not-allowed'}`}>{letter}</button>);
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Filter Controls Row */}
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4">
+                            <select value={clientSort} onChange={(e) => setClientSort(e.target.value as typeof clientSort)} className="px-3 py-2 bg-[#111] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-purple-500/50">
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="projects">Most Projects</option>
+                                <option value="recent">Recently Added</option>
+                                <option value="revenue">Highest Revenue</option>
+                            </select>
+                            <select value={clientLeadSourceFilter} onChange={(e) => setClientLeadSourceFilter(e.target.value as typeof clientLeadSourceFilter)} className="px-3 py-2 bg-[#111] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-purple-500/50">
+                                <option value="all">All Sources</option>
+                                <option value="google">Google</option>
+                                <option value="referral">Referral</option>
+                                <option value="angi">Angi</option>
+                                <option value="thumbtack">Thumbtack</option>
+                                <option value="website">Website</option>
+                                <option value="social">Social</option>
+                                <option value="yard_sign">Yard Sign</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <div className="hidden md:flex items-center gap-1 ml-auto">
+                                <button onClick={() => setClientViewMode('grid')} className={`p-2 rounded-lg transition-all ${clientViewMode === 'grid' ? 'bg-purple-500/20 text-purple-400' : 'text-gray-400 hover:bg-white/5'}`} title="Grid View"><LayoutGrid className="w-4 h-4" /></button>
+                                <button onClick={() => setClientViewMode('list')} className={`p-2 rounded-lg transition-all ${clientViewMode === 'list' ? 'bg-purple-500/20 text-purple-400' : 'text-gray-400 hover:bg-white/5'}`} title="List View"><List className="w-4 h-4" /></button>
+                            </div>
+                        </div>
+
+                        {/* Mobile Action Buttons */}
+                        <div className="md:hidden flex items-center gap-2 mb-4">
+                            <motion.button onClick={() => setShowCompletedJobsModal(true)} whileTap={{ scale: 0.95 }} className="flex-1 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5"><Check className="w-4 h-4" />Completed</motion.button>
+                            <motion.button onClick={() => { setClientImportData(null); setClientImportProgress(null); setClientImportResult(null); setShowClientImportModal(true); }} whileTap={{ scale: 0.95 }} className="flex-1 py-2.5 bg-white/5 border border-white/10 text-gray-300 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5"><Upload className="w-4 h-4" />Import</motion.button>
+                        </div>
+
+                        {/* Clients Header - Mobile */}
                          <div className="md:hidden mb-4 space-y-3">
                              {/* Title Row */}
                              <div className="flex items-center justify-between">
@@ -6967,7 +7052,8 @@ Notes: ${invoice.notes || 'N/A'}
                                      Add Client
                                  </button>
                              </motion.div>
-                         ) : (
+                        ) : (
+                            <>
                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                  {filteredClients.map((client, index) => {
                                      const clientProjectCount = projects.filter(p => p.clientId === client.id).length;
@@ -7061,6 +7147,14 @@ Notes: ${invoice.notes || 'N/A'}
                                      );
                                  })}
                              </div>
+                            {/* Pagination Controls */}
+                             {totalClientPages > 1 && (
+                                 <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-white/5">
+                                     <button onClick={() => setClientPage(p => Math.max(1, p - 1))} disabled={clientPage === 1} className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"><ChevronLeft className="w-4 h-4" /></button>
+                                     <span className="px-4 py-2 text-sm text-gray-400">Page {clientPage} of {totalClientPages}</span>
+                                     <button onClick={() => setClientPage(p => Math.min(totalClientPages, p + 1))} disabled={clientPage === totalClientPages} className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"><ChevronRight className="w-4 h-4" /></button>
+                                 </div>
+                             )}
                          )}
                      </>
                  )}

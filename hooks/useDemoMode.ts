@@ -3,9 +3,17 @@ import { useUser } from '@clerk/clerk-react';
 
 const DEMO_MODE_KEY_PREFIX = 'omnia_demo_mode';
 
+// Total number of demo steps (simplified checklist)
+const TOTAL_DEMO_STEPS = 3;
+
 interface DemoModeState {
   isDismissed: boolean;
   dismissedAt: string | null;
+  // Welcome modal tracking
+  hasSeenWelcome: boolean;
+  // Checklist state (unified with DemoGuide)
+  demoStep: number;
+  demoCompletedSteps: number[];
 }
 
 interface UseDemoModeReturn {
@@ -14,21 +22,41 @@ interface UseDemoModeReturn {
   dismissDemoData: () => void;
   restoreDemoData: () => void;
   shouldInjectDemoData: (realDataCount: number) => boolean;
+  // Welcome modal
+  hasSeenWelcome: boolean;
+  markWelcomeSeen: () => void;
+  showWelcomeModal: boolean;
+  // Checklist (DemoGuide) controls
+  isDemoGuideActive: boolean;
+  demoStep: number;
+  demoCompletedSteps: number[];
+  completeDemoStep: (stepId: number) => void;
+  isChecklistComplete: boolean;
+  finishDemoMode: () => void;
 }
 
+const getDefaultState = (): DemoModeState => ({
+  isDismissed: false,
+  dismissedAt: null,
+  hasSeenWelcome: false,
+  demoStep: 1,
+  demoCompletedSteps: [],
+});
+
 const getStoredState = (userId: string | null): DemoModeState => {
-  if (!userId) return { isDismissed: false, dismissedAt: null };
+  if (!userId) return getDefaultState();
 
   try {
     const key = `${DEMO_MODE_KEY_PREFIX}_${userId}`;
     const stored = localStorage.getItem(key);
     if (stored) {
-      return JSON.parse(stored);
+      // Merge with defaults to handle missing fields from older versions
+      return { ...getDefaultState(), ...JSON.parse(stored) };
     }
   } catch (e) {
     console.error('Error reading demo mode state:', e);
   }
-  return { isDismissed: false, dismissedAt: null };
+  return getDefaultState();
 };
 
 const setStoredState = (userId: string | null, state: DemoModeState): void => {
@@ -58,18 +86,26 @@ export function useDemoMode(): UseDemoModeReturn {
     setStoredState(userId, state);
   }, [userId, state]);
 
-  const dismissDemoData = useCallback(() => {
-    setState({
-      isDismissed: true,
-      dismissedAt: new Date().toISOString(),
-    });
+  // Mark welcome modal as seen
+  const markWelcomeSeen = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      hasSeenWelcome: true,
+    }));
   }, []);
 
+  // Dismiss demo mode completely
+  const dismissDemoData = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      isDismissed: true,
+      dismissedAt: new Date().toISOString(),
+    }));
+  }, []);
+
+  // Restore demo data (for testing or settings)
   const restoreDemoData = useCallback(() => {
-    setState({
-      isDismissed: false,
-      dismissedAt: null,
-    });
+    setState(getDefaultState());
   }, []);
 
   // Determine if we should inject demo data based on real data count
@@ -91,12 +127,62 @@ export function useDemoMode(): UseDemoModeReturn {
     return !state.isDismissed;
   }, [state.isDismissed]);
 
+  // Complete a demo checklist step (1, 2, or 3)
+  const completeDemoStep = useCallback((stepId: number) => {
+    setState(prev => {
+      if (prev.demoCompletedSteps.includes(stepId)) return prev;
+      const newCompleted = [...prev.demoCompletedSteps, stepId];
+      const nextStep = [1, 2, 3].find(s => !newCompleted.includes(s)) || 3;
+
+      return {
+        ...prev,
+        demoCompletedSteps: newCompleted,
+        demoStep: nextStep,
+      };
+    });
+  }, []);
+
+  // Check if all 3 steps are complete
+  const isChecklistComplete = useMemo(() => {
+    return state.demoCompletedSteps.length >= TOTAL_DEMO_STEPS;
+  }, [state.demoCompletedSteps]);
+
+  // Finish demo mode (called when user clicks "Finish Demo Mode" button)
+  const finishDemoMode = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      isDismissed: true,
+      dismissedAt: new Date().toISOString(),
+    }));
+  }, []);
+
+  // Check if checklist should be visible (seen welcome, not dismissed, and not all steps complete)
+  const isDemoGuideActive = useMemo(() => {
+    return state.hasSeenWelcome && !state.isDismissed;
+  }, [state.hasSeenWelcome, state.isDismissed]);
+
+  // Show welcome modal if demo mode is active and user hasn't seen welcome yet
+  const showWelcomeModal = useMemo(() => {
+    return !state.isDismissed && !state.hasSeenWelcome;
+  }, [state.isDismissed, state.hasSeenWelcome]);
+
   return {
     isDemoMode,
     isDemoDataDismissed: state.isDismissed,
     dismissDemoData,
     restoreDemoData,
     shouldInjectDemoData,
+    // Welcome modal
+    hasSeenWelcome: state.hasSeenWelcome,
+    markWelcomeSeen,
+    showWelcomeModal,
+    // Checklist (DemoGuide) controls
+    isDemoGuideActive,
+    demoStep: state.demoStep,
+    demoCompletedSteps: state.demoCompletedSteps,
+    completeDemoStep,
+    isChecklistComplete,
+    finishDemoMode,
   };
 }
 
