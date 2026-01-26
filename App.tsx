@@ -394,6 +394,8 @@ const App: React.FC = () => {
   // Modal Configuration State
   const [activeConfigFixture, setActiveConfigFixture] = useState<string | null>(null); // 'up', 'path', 'coredrill', 'gutter', 'soffit', 'hardscape' or null
   const [pendingOptions, setPendingOptions] = useState<string[]>([]);
+  // Pending counts being configured in the modal (null = auto, number = manual)
+  const [pendingCounts, setPendingCounts] = useState<Record<string, number | null>>({});
 
   // Lifted Setting State
   const [colorTemp, setColorTemp] = useState<string>('3000k');
@@ -1253,7 +1255,14 @@ const App: React.FC = () => {
             setSelectedFixtures(prev => prev.filter(id => id !== fixtureId));
         } else {
             // Toggle ON -> Open Config
-            setPendingOptions(fixtureSubOptions[fixtureId] || []);
+            const existingSubOpts = fixtureSubOptions[fixtureId] || [];
+            setPendingOptions(existingSubOpts);
+            // Initialize pending counts from existing fixtureCounts
+            const initialCounts: Record<string, number | null> = {};
+            existingSubOpts.forEach(optId => {
+                initialCounts[optId] = fixtureCounts[optId] ?? null;
+            });
+            setPendingCounts(initialCounts);
             setActiveConfigFixture(fixtureId);
         }
     } else {
@@ -1271,8 +1280,19 @@ const App: React.FC = () => {
   const togglePendingOption = (optId: string) => {
     setPendingOptions(prev => {
         if (prev.includes(optId)) {
+            // Deselecting - also remove from pendingCounts
+            setPendingCounts(counts => {
+                const newCounts = { ...counts };
+                delete newCounts[optId];
+                return newCounts;
+            });
             return prev.filter(id => id !== optId);
         } else {
+            // Selecting - initialize count to null (auto mode)
+            setPendingCounts(counts => ({
+                ...counts,
+                [optId]: null
+            }));
             return [...prev, optId];
         }
     });
@@ -1313,22 +1333,18 @@ const App: React.FC = () => {
       if (activeConfigFixture) {
           setFixtureSubOptions(prev => ({ ...prev, [activeConfigFixture]: pendingOptions }));
 
-          // Set default counts for newly selected sub-options
-          const defaultCounts: Record<string, number> = {};
-          pendingOptions.forEach(optId => {
-              if (fixtureCounts[optId] === undefined || fixtureCounts[optId] === null) {
-                  defaultCounts[optId] = getDefaultCount(activeConfigFixture, optId);
-              }
-          });
-          if (Object.keys(defaultCounts).length > 0) {
-              setFixtureCounts(prev => ({ ...prev, ...defaultCounts }));
-          }
+          // Apply pending counts directly (null = auto, number = manual)
+          setFixtureCounts(prev => ({
+              ...prev,
+              ...pendingCounts
+          }));
 
           // Ensure fixture is in selectedFixtures
           if (!selectedFixtures.includes(activeConfigFixture)) {
               setSelectedFixtures(prev => [...prev, activeConfigFixture]);
           }
           setActiveConfigFixture(null);
+          setPendingCounts({});  // Clear pending counts
       }
   };
 
@@ -3131,10 +3147,10 @@ Notes: ${invoice.notes || 'N/A'}
                         <h3 className="text-lg font-semibold text-white tracking-tight">
                             {getActiveFixtureTitle()}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-0.5">Choose placement areas</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Choose fixture types and quantities</p>
                       </div>
                       <motion.button
-                        onClick={() => setActiveConfigFixture(null)}
+                        onClick={() => { setActiveConfigFixture(null); setPendingCounts({}); }}
                         className="p-2 rounded-full text-gray-500 hover:text-white hover:bg-white/10 transition-all"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
@@ -3166,11 +3182,13 @@ Notes: ${invoice.notes || 'N/A'}
                         <div className="space-y-2 max-w-lg mx-auto md:max-w-none">
                             {getCurrentSubOptions().map((opt, index) => {
                                 const isSelected = pendingOptions.includes(opt.id);
+                                const currentCount = pendingCounts[opt.id];
+                                const isAutoMode = currentCount === null;
+                                const displayCount = currentCount ?? getDefaultCount(activeConfigFixture!, opt.id);
                                 return (
-                                    <motion.button
+                                    <motion.div
                                       key={opt.id}
-                                      onClick={() => togglePendingOption(opt.id)}
-                                      className={`group w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
+                                      className={`w-full rounded-xl border transition-all duration-200 overflow-hidden ${
                                           isSelected
                                               ? 'bg-[#F6B45A] border-[#F6B45A] shadow-[0_0_20px_rgba(246,180,90,0.3)]'
                                               : 'bg-[#0d0d0d] border-white/5 hover:border-[#F6B45A]/40 hover:bg-[#F6B45A]/5'
@@ -3178,38 +3196,141 @@ Notes: ${invoice.notes || 'N/A'}
                                       initial={{ opacity: 0, x: -20 }}
                                       animate={{ opacity: 1, x: 0 }}
                                       transition={{ delay: index * 0.05 }}
-                                      whileTap={{ scale: 0.98 }}
                                     >
-                                        <div className="flex flex-col items-start text-left">
-                                            <span className={`text-sm font-semibold transition-colors ${
-                                                isSelected ? 'text-black' : 'text-white group-hover:text-[#F6B45A]'
+                                        {/* Main clickable area for selection toggle */}
+                                        <motion.button
+                                          onClick={() => togglePendingOption(opt.id)}
+                                          className="group w-full flex items-center justify-between p-4"
+                                          whileTap={{ scale: 0.98 }}
+                                        >
+                                            <div className="flex flex-col items-start text-left">
+                                                <span className={`text-sm font-semibold transition-colors ${
+                                                    isSelected ? 'text-black' : 'text-white group-hover:text-[#F6B45A]'
+                                                }`}>
+                                                    {opt.label}
+                                                </span>
+                                                <span className={`text-xs mt-0.5 transition-colors ${
+                                                    isSelected ? 'text-black/60' : 'text-gray-500'
+                                                }`}>
+                                                    {opt.description}
+                                                </span>
+                                            </div>
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all ${
+                                                isSelected
+                                                    ? 'bg-black/20'
+                                                    : 'border border-white/20 group-hover:border-[#F6B45A]/50'
                                             }`}>
-                                                {opt.label}
-                                            </span>
-                                            <span className={`text-xs mt-0.5 transition-colors ${
-                                                isSelected ? 'text-black/60' : 'text-gray-500'
-                                            }`}>
-                                                {opt.description}
-                                            </span>
-                                        </div>
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all ${
-                                            isSelected
-                                                ? 'bg-black/20'
-                                                : 'border border-white/20 group-hover:border-[#F6B45A]/50'
-                                        }`}>
-                                            <AnimatePresence>
-                                                {isSelected && (
-                                                    <motion.div
-                                                        initial={{ scale: 0 }}
-                                                        animate={{ scale: 1 }}
-                                                        exit={{ scale: 0 }}
-                                                    >
-                                                        <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                    </motion.button>
+                                                <AnimatePresence>
+                                                    {isSelected && (
+                                                        <motion.div
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            exit={{ scale: 0 }}
+                                                        >
+                                                            <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </motion.button>
+
+                                        {/* Inline Quantity Selector - Shows when selected */}
+                                        <AnimatePresence>
+                                            {isSelected && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="overflow-hidden"
+                                                >
+                                                    <div className="px-4 pb-4 pt-0">
+                                                        <div className="flex items-center justify-between bg-black/20 rounded-lg p-3">
+                                                            <span className="text-xs font-medium text-black/70">
+                                                                Quantity
+                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                {/* Auto Toggle Button */}
+                                                                <motion.button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (isAutoMode) {
+                                                                            // Switch to manual mode with default count
+                                                                            setPendingCounts(prev => ({
+                                                                                ...prev,
+                                                                                [opt.id]: getDefaultCount(activeConfigFixture!, opt.id)
+                                                                            }));
+                                                                        } else {
+                                                                            // Switch to auto mode
+                                                                            setPendingCounts(prev => ({
+                                                                                ...prev,
+                                                                                [opt.id]: null
+                                                                            }));
+                                                                        }
+                                                                    }}
+                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                                        isAutoMode
+                                                                            ? 'bg-black/30 text-black'
+                                                                            : 'bg-black/10 text-black/50 hover:bg-black/20'
+                                                                    }`}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                >
+                                                                    Auto
+                                                                </motion.button>
+
+                                                                {/* Manual Controls - Only show when not in auto mode */}
+                                                                {!isAutoMode && (
+                                                                    <>
+                                                                        {/* Minus Button */}
+                                                                        <motion.button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setPendingCounts(prev => ({
+                                                                                    ...prev,
+                                                                                    [opt.id]: Math.max(1, (prev[opt.id] ?? displayCount) - 1)
+                                                                                }));
+                                                                            }}
+                                                                            className="w-8 h-8 flex items-center justify-center bg-black/20 rounded-lg text-black/70 hover:bg-black/30 transition-colors"
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                        >
+                                                                            <Minus className="w-4 h-4" />
+                                                                        </motion.button>
+
+                                                                        {/* Count Display */}
+                                                                        <span className="w-10 text-center text-sm font-bold text-black">
+                                                                            {displayCount}
+                                                                        </span>
+
+                                                                        {/* Plus Button */}
+                                                                        <motion.button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setPendingCounts(prev => ({
+                                                                                    ...prev,
+                                                                                    [opt.id]: Math.min(50, (prev[opt.id] ?? displayCount) + 1)
+                                                                                }));
+                                                                            }}
+                                                                            className="w-8 h-8 flex items-center justify-center bg-black/20 rounded-lg text-black/70 hover:bg-black/30 transition-colors"
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                        >
+                                                                            <Plus className="w-4 h-4" />
+                                                                        </motion.button>
+                                                                    </>
+                                                                )}
+
+                                                                {/* Auto mode indicator */}
+                                                                {isAutoMode && (
+                                                                    <span className="text-xs text-black/50 ml-1">
+                                                                        ~{displayCount}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
                                 )
                             })}
                         </div>
@@ -3220,7 +3341,7 @@ Notes: ${invoice.notes || 'N/A'}
                   <div className="shrink-0 p-4 border-t border-white/10 bg-[#0a0a0a]" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
                       <div className="flex items-center gap-3 max-w-lg mx-auto">
                           <motion.button
-                            onClick={() => setActiveConfigFixture(null)}
+                            onClick={() => { setActiveConfigFixture(null); setPendingCounts({}); }}
                             className="flex-1 py-3.5 rounded-xl border border-white/10 text-gray-400 font-medium text-sm hover:bg-white/5 hover:text-white transition-all"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -4248,7 +4369,7 @@ Notes: ${invoice.notes || 'N/A'}
                                         </div>
                                         <div>
                                             <h3 className="text-sm font-semibold text-white tracking-tight">Select Fixtures</h3>
-                                            <p className="text-xs text-gray-500">Choose lighting types to include</p>
+                                            <p className="text-xs text-gray-500">Choose fixture types and quantities</p>
                                         </div>
                                     </div>
                                     <span className="text-[10px] font-medium text-gray-500 bg-white/5 px-2.5 py-1 rounded-full">
@@ -4434,9 +4555,9 @@ Notes: ${invoice.notes || 'N/A'}
                                 })}
                             </div>
 
-                            {/* Fixture Count Controls - Expandable Section */}
+                            {/* Fixture Summary - Shows configured quantities */}
                             <AnimatePresence>
-                                {selectedFixtures.length > 0 && (
+                                {selectedFixtures.length > 0 && selectedFixtures.some(fId => (fixtureSubOptions[fId] || []).length > 0) && (
                                     <motion.div
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: 'auto' }}
@@ -4447,18 +4568,14 @@ Notes: ${invoice.notes || 'N/A'}
                                         <div className="bg-[#0d0d0d] rounded-xl border border-white/10 p-4">
                                             <div className="flex items-center gap-2 mb-3">
                                                 <Hash className="w-4 h-4 text-[#F6B45A]" />
-                                                <span className="text-xs font-semibold text-white uppercase tracking-wider">Fixture Quantities</span>
-                                                <span className="text-[10px] text-gray-500 ml-auto">Auto = AI determines count</span>
+                                                <span className="text-xs font-semibold text-white uppercase tracking-wider">Fixture Summary</span>
                                             </div>
-                                            <div className="space-y-3">
+                                            <div className="space-y-2">
                                                 {selectedFixtures.flatMap((fixtureId) => {
                                                     const fixture = FIXTURE_TYPES.find(f => f.id === fixtureId);
                                                     if (!fixture) return [];
 
-                                                    // Get selected sub-options for this fixture
                                                     const selectedSubOpts = fixtureSubOptions[fixtureId] || [];
-
-                                                    // If no sub-options selected, show nothing for this fixture
                                                     if (selectedSubOpts.length === 0) return [];
 
                                                     return selectedSubOpts.map((subOptId) => {
@@ -4467,58 +4584,22 @@ Notes: ${invoice.notes || 'N/A'}
 
                                                         const count = fixtureCounts[subOptId];
                                                         const isAuto = count === null || count === undefined;
+                                                        const displayCount = count ?? getDefaultCount(fixtureId, subOptId);
 
                                                         return (
-                                                            <div key={subOptId} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 last:border-b-0">
+                                                            <div key={subOptId} className="flex items-center justify-between py-1.5">
                                                                 <span className="text-sm text-gray-300">{subOpt.label}</span>
-                                                                <div className="flex items-center gap-2">
-                                                                    {/* Auto/Manual Toggle */}
-                                                                    <button
-                                                                        onClick={() => setFixtureCounts(prev => ({
-                                                                            ...prev,
-                                                                            [subOptId]: isAuto ? getDefaultCount(fixtureId, subOptId) : null
-                                                                        }))}
-                                                                        className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-                                                                            isAuto
-                                                                                ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
-                                                                                : 'bg-white/5 text-gray-500 border border-white/10 hover:border-white/20'
-                                                                        }`}
-                                                                    >
-                                                                        Auto
-                                                                    </button>
-
-                                                                    {/* Stepper Controls */}
-                                                                    {!isAuto && (
-                                                                        <div className="flex items-center gap-1 bg-white/5 rounded-lg border border-white/10">
-                                                                            <button
-                                                                                onClick={() => setFixtureCounts(prev => ({
-                                                                                    ...prev,
-                                                                                    [subOptId]: Math.max(1, (prev[subOptId] || 4) - 1)
-                                                                                }))}
-                                                                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-l-lg transition-colors"
-                                                                            >
-                                                                                <Minus className="w-4 h-4" />
-                                                                            </button>
-                                                                            <span className="w-10 text-center text-sm font-bold text-[#F6B45A]">
-                                                                                {count}
-                                                                            </span>
-                                                                            <button
-                                                                                onClick={() => setFixtureCounts(prev => ({
-                                                                                    ...prev,
-                                                                                    [subOptId]: Math.min(50, (prev[subOptId] || 4) + 1)
-                                                                                }))}
-                                                                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-r-lg transition-colors"
-                                                                            >
-                                                                                <Plus className="w-4 h-4" />
-                                                                            </button>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                                <span className={`text-sm font-semibold ${isAuto ? 'text-gray-500' : 'text-[#F6B45A]'}`}>
+                                                                    {isAuto ? `~${displayCount}` : displayCount}
+                                                                </span>
                                                             </div>
                                                         );
                                                     });
                                                 })}
                                             </div>
+                                            <p className="text-[10px] text-gray-500 mt-3 text-center">
+                                                Tap fixture above to adjust quantities
+                                            </p>
                                         </div>
                                     </motion.div>
                                 )}
