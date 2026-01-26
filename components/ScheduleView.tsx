@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star, CheckCircle2, DollarSign, Route } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, User, Home, CalendarDays, Sun, Sunset, Moon, Plus, Edit3, Trash2, Briefcase, Users, Eye, MessageSquare, Star, CheckCircle2, DollarSign, Route, ArrowLeft, X } from 'lucide-react';
 import { SavedProject, TimeSlot, CalendarEvent, EventType, Technician } from '../types';
 import RoutePlanner from './RoutePlanner';
 
@@ -491,6 +491,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
   const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const [isFullScreenDayView, setIsFullScreenDayView] = useState(false);
 
   // Get all scheduled projects (including approved projects that have a schedule)
   const scheduledProjects = useMemo(() => {
@@ -577,19 +578,271 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     setCurrentMonth(newMonth);
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-            <CalendarDays className="w-5 h-5 text-blue-400" />
-          </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-white">Schedule</h2>
-            <p className="text-sm text-gray-400">Manage your installation appointments</p>
+  // Full-screen day view component
+  const FullScreenDayView = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
+    >
+      <div className="min-h-screen">
+        {/* Header with back button */}
+        <div className="sticky top-0 z-10 bg-gradient-to-b from-black via-black/95 to-transparent pb-4">
+          <div className="px-4 md:px-6 pt-4 md:pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <motion.button
+                onClick={() => setIsFullScreenDayView(false)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-white font-medium"
+                whileHover={{ scale: 1.02, x: -2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back to Calendar</span>
+              </motion.button>
+              <motion.button
+                onClick={() => setIsFullScreenDayView(false)}
+                className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <X className="w-5 h-5 text-white" />
+              </motion.button>
+            </div>
+
+            {/* Date display */}
+            <div className="text-center">
+              <motion.h1
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-2xl md:text-4xl font-bold text-white mb-2"
+              >
+                {formatDate(selectedDate)}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-gray-400"
+              >
+                {jobsForSelectedDate.length} job{jobsForSelectedDate.length !== 1 ? 's' : ''} · {eventsForSelectedDate.length} event{eventsForSelectedDate.length !== 1 ? 's' : ''}
+              </motion.p>
+            </div>
           </div>
         </div>
+
+        {/* Content */}
+        <div className="px-4 md:px-6 pb-8">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {!hasItemsForSelectedDate ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] border border-white/10 rounded-2xl p-8 md:p-12 text-center"
+              >
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                  className="w-20 h-20 rounded-full bg-[#F6B45A]/10 flex items-center justify-center mx-auto mb-6"
+                >
+                  <CalendarDays className="w-10 h-10 text-[#F6B45A]" />
+                </motion.div>
+                <h3 className="text-xl font-semibold text-white mb-2">No Jobs Scheduled</h3>
+                <p className="text-gray-400 max-w-md mx-auto">
+                  This day is free. Schedule an installation or create an event to fill this day.
+                </p>
+              </motion.div>
+            ) : (
+              <>
+                {/* Morning Section */}
+                {(jobsByTimeSlot.morning.length > 0 || eventsByTimeSlot.morning.length > 0) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center gap-3 px-2">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                        <Sun className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Morning</h3>
+                        <p className="text-sm text-gray-400">8 AM - 12 PM</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {jobsByTimeSlot.morning.map(job => (
+                        <JobCard
+                          key={job.id}
+                          project={job}
+                          onViewProject={() => onViewProject(job)}
+                          onReschedule={() => onReschedule(job)}
+                          onComplete={() => onComplete(job)}
+                          onEditTeam={onEditTeam ? () => onEditTeam(job) : undefined}
+                        />
+                      ))}
+                      {eventsByTimeSlot.morning.map(event => (
+                        <EventCard
+                          key={event.id}
+                          event={event}
+                          onEdit={() => onEditEvent?.(event)}
+                          onDelete={() => onDeleteEvent?.(event.id)}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Afternoon Section */}
+                {(jobsByTimeSlot.afternoon.length > 0 || eventsByTimeSlot.afternoon.length > 0) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center gap-3 px-2">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                        <Sunset className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Afternoon</h3>
+                        <p className="text-sm text-gray-400">12 PM - 5 PM</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {jobsByTimeSlot.afternoon.map(job => (
+                        <JobCard
+                          key={job.id}
+                          project={job}
+                          onViewProject={() => onViewProject(job)}
+                          onReschedule={() => onReschedule(job)}
+                          onComplete={() => onComplete(job)}
+                          onEditTeam={onEditTeam ? () => onEditTeam(job) : undefined}
+                        />
+                      ))}
+                      {eventsByTimeSlot.afternoon.map(event => (
+                        <EventCard
+                          key={event.id}
+                          event={event}
+                          onEdit={() => onEditEvent?.(event)}
+                          onDelete={() => onDeleteEvent?.(event.id)}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Evening Section */}
+                {(jobsByTimeSlot.evening.length > 0 || eventsByTimeSlot.evening.length > 0) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center gap-3 px-2">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                        <Moon className="w-5 h-5 text-indigo-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Evening</h3>
+                        <p className="text-sm text-gray-400">5 PM - 8 PM</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {jobsByTimeSlot.evening.map(job => (
+                        <JobCard
+                          key={job.id}
+                          project={job}
+                          onViewProject={() => onViewProject(job)}
+                          onReschedule={() => onReschedule(job)}
+                          onComplete={() => onComplete(job)}
+                          onEditTeam={onEditTeam ? () => onEditTeam(job) : undefined}
+                        />
+                      ))}
+                      {eventsByTimeSlot.evening.map(event => (
+                        <EventCard
+                          key={event.id}
+                          event={event}
+                          onEdit={() => onEditEvent?.(event)}
+                          onDelete={() => onDeleteEvent?.(event.id)}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Custom Time Section */}
+                {(jobsByTimeSlot.custom.length > 0 || eventsByTimeSlot.custom.length > 0) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center gap-3 px-2">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-cyan-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Custom Time</h3>
+                        <p className="text-sm text-gray-400">Scheduled times</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {jobsByTimeSlot.custom.map(job => (
+                        <JobCard
+                          key={job.id}
+                          project={job}
+                          onViewProject={() => onViewProject(job)}
+                          onReschedule={() => onReschedule(job)}
+                          onComplete={() => onComplete(job)}
+                          onEditTeam={onEditTeam ? () => onEditTeam(job) : undefined}
+                        />
+                      ))}
+                      {eventsByTimeSlot.custom.map(event => (
+                        <EventCard
+                          key={event.id}
+                          event={event}
+                          onEdit={() => onEditEvent?.(event)}
+                          onDelete={() => onDeleteEvent?.(event.id)}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  return (
+    <>
+      {/* Full-screen day view overlay */}
+      <AnimatePresence>
+        {isFullScreenDayView && <FullScreenDayView />}
+      </AnimatePresence>
+
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <CalendarDays className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-white">Schedule</h2>
+              <p className="text-sm text-gray-400">Manage your installation appointments</p>
+            </div>
+          </div>
 
         <div className="flex items-center gap-3">
           {/* View Mode Toggle */}
@@ -679,6 +932,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 if (date.getMonth() !== currentMonth.getMonth() || date.getFullYear() !== currentMonth.getFullYear()) {
                   setCurrentMonth(new Date(date));
                 }
+                // Enter full-screen day view
+                setIsFullScreenDayView(true);
               }}
               onMonthChange={handleMonthChange}
             />
@@ -962,6 +1217,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       )}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 };
