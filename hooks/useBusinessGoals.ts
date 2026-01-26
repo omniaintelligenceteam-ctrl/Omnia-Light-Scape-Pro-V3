@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { BusinessGoal, GoalType, PeriodType } from '../types';
+import { useDemoMode } from './useDemoMode';
+import { generateDemoGoals } from './useDemoData';
 
 export function useBusinessGoals() {
   const { user } = useUser();
   const [goals, setGoals] = useState<BusinessGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { shouldInjectDemoData, dismissDemoData } = useDemoMode();
 
   // Load goals from API
   useEffect(() => {
@@ -169,6 +172,19 @@ export function useBusinessGoals() {
     }
   }, [user]);
 
+  // Determine if we should show demo data
+  const isDemo = useMemo(() => {
+    return !isLoading && shouldInjectDemoData(goals.length);
+  }, [isLoading, goals.length, shouldInjectDemoData]);
+
+  // Get effective goals (real or demo)
+  const effectiveGoals = useMemo(() => {
+    if (isDemo) {
+      return generateDemoGoals();
+    }
+    return goals;
+  }, [isDemo, goals]);
+
   // Get goal for a specific period
   const getGoalForPeriod = useCallback((
     goalType: GoalType,
@@ -177,14 +193,14 @@ export function useBusinessGoals() {
     month?: number,
     quarter?: number
   ): BusinessGoal | undefined => {
-    return goals.find(g =>
+    return effectiveGoals.find(g =>
       g.goalType === goalType &&
       g.periodType === periodType &&
       g.year === year &&
       (periodType !== 'monthly' || g.month === month) &&
       (periodType !== 'quarterly' || g.quarter === quarter)
     );
-  }, [goals]);
+  }, [effectiveGoals]);
 
   // Get current month's goal
   const getCurrentMonthGoal = useCallback((goalType: GoalType): BusinessGoal | undefined => {
@@ -198,11 +214,22 @@ export function useBusinessGoals() {
     return getGoalForPeriod(goalType, 'yearly', now.getFullYear());
   }, [getGoalForPeriod]);
 
+  // Wrapped create that dismisses demo mode
+  const createGoalWithDemoCheck = useCallback(async (
+    goalData: Omit<BusinessGoal, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<BusinessGoal | null> => {
+    if (isDemo) {
+      dismissDemoData();
+    }
+    return createGoal(goalData);
+  }, [createGoal, isDemo, dismissDemoData]);
+
   return {
-    goals,
+    goals: effectiveGoals,
     isLoading,
     error,
-    createGoal,
+    isDemo,
+    createGoal: createGoalWithDemoCheck,
     updateGoal,
     deleteGoal,
     getGoalForPeriod,

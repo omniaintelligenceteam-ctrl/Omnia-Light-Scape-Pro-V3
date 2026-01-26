@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { CalendarEvent, EventType, TimeSlot, RecurrencePattern } from '../types';
+import { useDemoMode } from './useDemoMode';
+import { generateDemoCalendarEvents } from './useDemoData';
 
 export function useCalendarEvents() {
   const { user } = useUser();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { shouldInjectDemoData, dismissDemoData } = useDemoMode();
 
   // Load events from API
   useEffect(() => {
@@ -190,11 +193,35 @@ export function useCalendarEvents() {
     }
   }, [user]);
 
+  // Determine if we should show demo data
+  const isDemo = useMemo(() => {
+    return !isLoading && shouldInjectDemoData(events.length);
+  }, [isLoading, events.length, shouldInjectDemoData]);
+
+  // Get effective events (real or demo)
+  const effectiveEvents = useMemo(() => {
+    if (isDemo) {
+      return generateDemoCalendarEvents();
+    }
+    return events;
+  }, [isDemo, events]);
+
+  // Wrapped create that dismisses demo mode
+  const createEventWithDemoCheck = useCallback(async (
+    eventData: Omit<CalendarEvent, 'id' | 'createdAt'>
+  ): Promise<CalendarEvent | null> => {
+    if (isDemo) {
+      dismissDemoData();
+    }
+    return createEvent(eventData);
+  }, [createEvent, isDemo, dismissDemoData]);
+
   return {
-    events,
+    events: effectiveEvents,
     isLoading,
     error,
-    createEvent,
+    isDemo,
+    createEvent: createEventWithDemoCheck,
     updateEvent,
     deleteEvent,
     setEvents

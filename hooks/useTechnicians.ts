@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Technician, TechnicianRole } from '../types';
+import { useDemoMode } from './useDemoMode';
+import { generateDemoTechnicians } from './useDemoData';
 
 interface UseTechniciansResult {
   technicians: Technician[];
   isLoading: boolean;
   error: string | null;
+  isDemo: boolean;
   createTechnician: (technician: Omit<Technician, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Technician | null>;
   updateTechnician: (id: string, updates: Partial<Technician>) => Promise<Technician | null>;
   deleteTechnician: (id: string) => Promise<boolean>;
@@ -20,6 +23,7 @@ export function useTechnicians(): UseTechniciansResult {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { shouldInjectDemoData, dismissDemoData } = useDemoMode();
 
   const fetchTechnicians = useCallback(async () => {
     if (!user?.id) {
@@ -176,21 +180,45 @@ export function useTechnicians(): UseTechniciansResult {
     }
   };
 
+  // Determine if we should show demo data
+  const isDemo = useMemo(() => {
+    return !isLoading && shouldInjectDemoData(technicians.length);
+  }, [isLoading, technicians.length, shouldInjectDemoData]);
+
+  // Get effective technicians (real or demo)
+  const effectiveTechnicians = useMemo(() => {
+    if (isDemo) {
+      return generateDemoTechnicians();
+    }
+    return technicians;
+  }, [isDemo, technicians]);
+
   const getTechnician = (id: string): Technician | undefined => {
-    return technicians.find(tech => tech.id === id);
+    return effectiveTechnicians.find(tech => tech.id === id);
   };
 
   const getTechniciansByLocation = (locationId: string): Technician[] => {
-    return technicians.filter(tech => tech.locationId === locationId);
+    return effectiveTechnicians.filter(tech => tech.locationId === locationId);
   };
 
-  const activeTechnicians = technicians.filter(tech => tech.isActive);
+  const activeTechnicians = effectiveTechnicians.filter(tech => tech.isActive);
+
+  // Wrapped create that dismisses demo mode
+  const createTechnicianWithDemoCheck = useCallback(async (
+    technician: Omit<Technician, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<Technician | null> => {
+    if (isDemo) {
+      dismissDemoData();
+    }
+    return createTechnician(technician);
+  }, [createTechnician, isDemo, dismissDemoData]);
 
   return {
-    technicians,
+    technicians: effectiveTechnicians,
     isLoading,
     error,
-    createTechnician,
+    isDemo,
+    createTechnician: createTechnicianWithDemoCheck,
     updateTechnician,
     deleteTechnician,
     getTechnician,

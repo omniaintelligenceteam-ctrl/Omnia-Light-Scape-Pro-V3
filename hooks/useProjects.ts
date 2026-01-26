@@ -1,13 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { uploadImage } from '../services/uploadService';
 import { SavedProject, QuoteData, BOMData, ProjectStatus, ScheduleData, ProjectImage } from '../types';
+import { useDemoMode } from './useDemoMode';
+import { generateDemoProjects } from './useDemoData';
 
 export function useProjects() {
   const { user } = useUser();
   const [projects, setProjects] = useState<SavedProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { shouldInjectDemoData, dismissDemoData } = useDemoMode();
 
   // Load projects from API on mount
   useEffect(() => {
@@ -352,11 +355,42 @@ export function useProjects() {
     return updateProject(projectId, { images: updatedImages });
   }, [projects, updateProject]);
 
+  // Determine if we should show demo data
+  const isDemo = useMemo(() => {
+    return !isLoading && shouldInjectDemoData(projects.length);
+  }, [isLoading, projects.length, shouldInjectDemoData]);
+
+  // Get effective projects (real or demo)
+  const effectiveProjects = useMemo(() => {
+    if (isDemo) {
+      return generateDemoProjects();
+    }
+    return projects;
+  }, [isDemo, projects]);
+
+  // Wrapped save that dismisses demo mode
+  const saveProjectWithDemoCheck = useCallback(async (
+    name: string,
+    generatedImage: string,
+    quote: QuoteData | null = null,
+    bom: BOMData | null = null,
+    clientId?: string,
+    clientName?: string,
+    locationId?: string | null
+  ): Promise<SavedProject | null> => {
+    // Dismiss demo data when user creates real data
+    if (isDemo) {
+      dismissDemoData();
+    }
+    return saveProject(name, generatedImage, quote, bom, clientId, clientName, locationId);
+  }, [saveProject, isDemo, dismissDemoData]);
+
   return {
-    projects,
+    projects: effectiveProjects,
     isLoading,
     error,
-    saveProject,
+    isDemo,
+    saveProject: saveProjectWithDemoCheck,
     deleteProject,
     updateProject,
     updateProjectStatus,

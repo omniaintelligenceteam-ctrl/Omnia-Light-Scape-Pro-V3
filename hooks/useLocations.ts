@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Location } from '../types';
+import { useDemoMode } from './useDemoMode';
+import { generateDemoLocations } from './useDemoData';
 
 interface UseLocationsResult {
   locations: Location[];
   isLoading: boolean;
   error: string | null;
+  isDemo: boolean;
   createLocation: (location: Omit<Location, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Location | null>;
   updateLocation: (id: string, updates: Partial<Location>) => Promise<Location | null>;
   deleteLocation: (id: string) => Promise<boolean>;
@@ -19,6 +22,7 @@ export function useLocations(): UseLocationsResult {
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { shouldInjectDemoData, dismissDemoData } = useDemoMode();
 
   const fetchLocations = useCallback(async () => {
     if (!user?.id) {
@@ -170,17 +174,41 @@ export function useLocations(): UseLocationsResult {
     }
   };
 
+  // Determine if we should show demo data
+  const isDemo = useMemo(() => {
+    return !isLoading && shouldInjectDemoData(locations.length);
+  }, [isLoading, locations.length, shouldInjectDemoData]);
+
+  // Get effective locations (real or demo)
+  const effectiveLocations = useMemo(() => {
+    if (isDemo) {
+      return generateDemoLocations();
+    }
+    return locations;
+  }, [isDemo, locations]);
+
   const getLocation = (id: string): Location | undefined => {
-    return locations.find(loc => loc.id === id);
+    return effectiveLocations.find(loc => loc.id === id);
   };
 
-  const activeLocations = locations.filter(loc => loc.isActive);
+  const activeLocations = effectiveLocations.filter(loc => loc.isActive);
+
+  // Wrapped create that dismisses demo mode
+  const createLocationWithDemoCheck = useCallback(async (
+    location: Omit<Location, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<Location | null> => {
+    if (isDemo) {
+      dismissDemoData();
+    }
+    return createLocation(location);
+  }, [createLocation, isDemo, dismissDemoData]);
 
   return {
-    locations,
+    locations: effectiveLocations,
     isLoading,
     error,
-    createLocation,
+    isDemo,
+    createLocation: createLocationWithDemoCheck,
     updateLocation,
     deleteLocation,
     getLocation,

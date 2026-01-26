@@ -51,7 +51,9 @@ import { AcceptInvite } from './components/AcceptInvite';
 import { KanbanBoard } from './components/pipeline';
 import { useToast } from './components/Toast';
 import DemoGuide from './components/DemoGuide';
+import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
+import { useDemoMode } from './hooks/useDemoMode';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash } from 'lucide-react';
@@ -170,11 +172,14 @@ const App: React.FC = () => {
   // Toast notifications
   const { showToast } = useToast();
 
+  // Demo mode controls
+  const { dismissDemoData } = useDemoMode();
+
   // Subscription and usage tracking
   const subscription = useSubscription();
 
   // Load/save projects from Supabase
-  const { projects, isLoading: projectsLoading, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject } = useProjects();
+  const { projects, isLoading: projectsLoading, isDemo, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject } = useProjects();
 
   // Load/save clients from Supabase
   const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients } = useClients();
@@ -3006,7 +3011,14 @@ Notes: ${invoice.notes || 'N/A'}
         }}
         hideLogoForAnimation={isLoading}
       />
-      
+
+      {/* Demo Mode Banner */}
+      <DemoModeBanner
+        isVisible={isDemo && !projectsLoading}
+        onDismiss={dismissDemoData}
+        onStartFresh={dismissDemoData}
+      />
+
       {/* Hidden PDF Generation Container */}
       <div style={{ position: 'absolute', left: '-5000px', top: 0, width: '1000px', height: '0', overflow: 'hidden' }}>
           {pdfProject && pdfProject.quote && (

@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Client } from '../types';
+import { useDemoMode } from './useDemoMode';
+import { generateDemoClients } from './useDemoData';
 
 // CSV parsing utility
 export interface ParsedClientRow {
@@ -91,6 +93,7 @@ export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { shouldInjectDemoData, dismissDemoData } = useDemoMode();
 
   // Load clients from API on mount
   useEffect(() => {
@@ -329,14 +332,49 @@ export function useClients() {
     return result;
   }, [user]);
 
+  // Determine if we should show demo data
+  const isDemo = useMemo(() => {
+    return !isLoading && shouldInjectDemoData(clients.length);
+  }, [isLoading, clients.length, shouldInjectDemoData]);
+
+  // Get effective clients (real or demo)
+  const effectiveClients = useMemo(() => {
+    if (isDemo) {
+      return generateDemoClients();
+    }
+    return clients;
+  }, [isDemo, clients]);
+
+  // Wrapped create that dismisses demo mode
+  const createClientWithDemoCheck = useCallback(async (
+    clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<Client | null> => {
+    if (isDemo) {
+      dismissDemoData();
+    }
+    return createClient(clientData);
+  }, [createClient, isDemo, dismissDemoData]);
+
+  // Search in effective clients
+  const searchEffectiveClients = useCallback((query: string): Client[] => {
+    if (!query.trim()) return effectiveClients;
+    const q = query.toLowerCase();
+    return effectiveClients.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q) ||
+      c.phone?.includes(query)
+    );
+  }, [effectiveClients]);
+
   return {
-    clients,
+    clients: effectiveClients,
     isLoading,
     error,
-    createClient,
+    isDemo,
+    createClient: createClientWithDemoCheck,
     updateClient,
     deleteClient,
-    searchClients,
+    searchClients: searchEffectiveClients,
     importClients
   };
 }

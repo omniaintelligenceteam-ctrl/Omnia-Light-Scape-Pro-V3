@@ -156,7 +156,7 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
       {/* Active Location Switcher */}
       {locations.filter(loc => loc.isActive).length > 0 && (
         <SettingsCard className="p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-[#F6B45A]/10">
                 <Globe className="w-5 h-5 text-[#F6B45A]" />
@@ -265,7 +265,7 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
                         </button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <CardInput
                         label="Location Name"
                         value={formData.name || ''}
@@ -321,15 +321,15 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
                             <p className="text-sm text-gray-500 mt-0.5">{location.address}</p>
                           )}
                           {location.managerName && (
-                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-gray-400">
                               <span className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                {location.managerName}
+                                <User className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{location.managerName}</span>
                               </span>
                               {location.managerEmail && (
                                 <span className="flex items-center gap-1">
-                                  <Mail className="w-3 h-3" />
-                                  {location.managerEmail}
+                                  <Mail className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{location.managerEmail}</span>
                                 </span>
                               )}
                             </div>
@@ -472,7 +472,7 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({
                     </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <CardInput
                     label="Location Name"
                     value={formData.name || ''}
