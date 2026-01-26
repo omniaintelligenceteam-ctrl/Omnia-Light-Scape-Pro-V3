@@ -1903,9 +1903,9 @@ const App: React.FC = () => {
              return { ...def, quantity: estimatedCounts[def.id] };
          }
 
-         // Priority 3: If fixture is selected but no estimate, use a minimal default
+         // Priority 3: If fixture is selected but no estimate, use a default of 10
          if (selectedFixtures.includes(def.fixtureType)) {
-             return { ...def, quantity: 4 }; // Minimal default
+             return { ...def, quantity: 10 }; // Default quantity when no specific count provided
          }
 
          // Not selected - quantity 0 (will be filtered out)
