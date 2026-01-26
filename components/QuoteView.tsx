@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, Receipt, Hash, Pencil, Share2, ChevronDown } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
@@ -74,6 +74,16 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [clientEmail, setClientEmail] = useState(initialData?.clientDetails.email || "");
   const [clientPhone, setClientPhone] = useState(initialData?.clientDetails.phone || "");
   const [projectAddress, setProjectAddress] = useState(initialData?.clientDetails.address || "");
+
+  // Sync client details when initialData changes (e.g., after creating a new client)
+  useEffect(() => {
+    if (initialData?.clientDetails) {
+      setClientName(initialData.clientDetails.name || "");
+      setClientEmail(initialData.clientDetails.email || "");
+      setClientPhone(initialData.clientDetails.phone || "");
+      setProjectAddress(initialData.clientDetails.address || "");
+    }
+  }, [initialData?.clientDetails?.name, initialData?.clientDetails?.email, initialData?.clientDetails?.phone, initialData?.clientDetails?.address]);
 
   const handleUpdateItem = (index: number, field: keyof LineItem, value: any) => {
     const newItems = [...lineItems];
