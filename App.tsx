@@ -594,6 +594,9 @@ const App: React.FC = () => {
   const [accentColor, setAccentColor] = useState<AccentColor>('gold');
   const [fontSize, setFontSize] = useState<FontSize>('normal');
   const [highContrast, setHighContrast] = useState<boolean>(false);
+  
+  // Feature Preferences
+  const [enableBeforeAfter, setEnableBeforeAfter] = useState<boolean>(true);
 
   // Notification Preferences State
   const [notifications, setNotifications] = useState<NotificationPreferences>({
@@ -674,6 +677,7 @@ const App: React.FC = () => {
         if (prefs.accentColor) setAccentColor(prefs.accentColor);
         if (prefs.fontSize) setFontSize(prefs.fontSize);
         if (typeof prefs.highContrast === 'boolean') setHighContrast(prefs.highContrast);
+        if (typeof prefs.enableBeforeAfter === 'boolean') setEnableBeforeAfter(prefs.enableBeforeAfter);
       }
       const savedNotifs = localStorage.getItem('omnia_notifications');
       if (savedNotifs) {
@@ -690,8 +694,8 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-accent', accentColor);
     document.documentElement.setAttribute('data-fontsize', fontSize);
     document.documentElement.setAttribute('data-high-contrast', String(highContrast));
-    localStorage.setItem('omnia_theme', JSON.stringify({ theme, accentColor, fontSize, highContrast }));
-  }, [theme, accentColor, fontSize, highContrast]);
+    localStorage.setItem('omnia_theme', JSON.stringify({ theme, accentColor, fontSize, highContrast, enableBeforeAfter }));
+  }, [theme, accentColor, fontSize, highContrast, enableBeforeAfter]);
 
   // Persist notification preferences
   useEffect(() => {
@@ -3557,17 +3561,19 @@ Notes: ${invoice.notes || 'N/A'}
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <button 
-                                onClick={() => setShowComparison(!showComparison)}
-                                className={`flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                                    showComparison 
-                                        ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30' 
-                                        : 'bg-black/40 hover:bg-black/60 text-white/50 hover:text-white'
-                                }`}
-                            >
-                                <SplitSquareHorizontal className="w-3 h-3" />
-                                Before / After
-                            </button>
+                            {enableBeforeAfter && (
+                                <button 
+                                    onClick={() => setShowComparison(!showComparison)}
+                                    className={`flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                        showComparison 
+                                            ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30' 
+                                            : 'bg-black/40 hover:bg-black/60 text-white/50 hover:text-white'
+                                    }`}
+                                >
+                                    <SplitSquareHorizontal className="w-3 h-3" />
+                                    Before / After
+                                </button>
+                            )}
                             <button 
                                 onClick={() => setIsFullScreen(true)}
                                 className="flex items-center gap-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/50 hover:text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
@@ -7383,6 +7389,9 @@ Notes: ${invoice.notes || 'N/A'}
                 onFontSizeChange={setFontSize}
                 highContrast={highContrast}
                 onHighContrastChange={setHighContrast}
+                // Before/After comparison
+                enableBeforeAfter={enableBeforeAfter}
+                onEnableBeforeAfterChange={setEnableBeforeAfter}
                 // Notification props
                 notifications={notifications}
                 onNotificationsChange={setNotifications}
