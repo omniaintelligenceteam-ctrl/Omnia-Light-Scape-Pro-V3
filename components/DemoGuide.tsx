@@ -46,11 +46,11 @@ const DemoGuide: React.FC<DemoGuideProps> = ({
           dragListener={false}
           dragMomentum={false}
           dragElastic={0}
-          initial={{ opacity: 0, scale: 0.9, x: 20 }}
+          initial={{ opacity: 0, scale: 0.9, x: -20 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
-          exit={{ opacity: 0, scale: 0.9, x: 20 }}
+          exit={{ opacity: 0, scale: 0.9, x: -20 }}
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-          className="fixed right-4 top-24 z-[100] w-72 select-none"
+          className="fixed left-4 top-24 z-[100] w-72 select-none"
           style={{ touchAction: 'none' }}
         >
           {/* Glassmorphism container */}

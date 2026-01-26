@@ -117,6 +117,12 @@ export function useTechnicians(): UseTechniciansResult {
   const updateTechnician = async (id: string, updates: Partial<Technician>): Promise<Technician | null> => {
     if (!user?.id) return null;
 
+    // Guard against modifying demo data
+    if (id.startsWith('demo_')) {
+      setError('Cannot modify demo technicians. Create your own team member to get started!');
+      return null;
+    }
+
     try {
       const response = await fetch(`/api/technicians/${id}?userId=${user.id}`, {
         method: 'PATCH',
@@ -161,6 +167,12 @@ export function useTechnicians(): UseTechniciansResult {
 
   const deleteTechnician = async (id: string): Promise<boolean> => {
     if (!user?.id) return false;
+
+    // Guard against deleting demo data
+    if (id.startsWith('demo_')) {
+      setError('Cannot delete demo technicians. Create your own team member to get started!');
+      return false;
+    }
 
     try {
       const response = await fetch(`/api/technicians/${id}?userId=${user.id}`, {

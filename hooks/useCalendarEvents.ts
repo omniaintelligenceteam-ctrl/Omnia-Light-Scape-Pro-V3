@@ -136,6 +136,12 @@ export function useCalendarEvents() {
   ): Promise<boolean> => {
     if (!user) return false;
 
+    // Guard against modifying demo data
+    if (eventId.startsWith('demo_')) {
+      setError('Cannot modify demo events. Create your own event to get started!');
+      return false;
+    }
+
     try {
       const response = await fetch(`/api/events/${eventId}?userId=${user.id}`, {
         method: 'PATCH',
@@ -176,6 +182,12 @@ export function useCalendarEvents() {
   // Delete event
   const deleteEvent = useCallback(async (eventId: string): Promise<boolean> => {
     if (!user) return false;
+
+    // Guard against deleting demo data
+    if (eventId.startsWith('demo_')) {
+      setError('Cannot delete demo events. Create your own event to get started!');
+      return false;
+    }
 
     try {
       const response = await fetch(`/api/events/${eventId}?userId=${user.id}`, {

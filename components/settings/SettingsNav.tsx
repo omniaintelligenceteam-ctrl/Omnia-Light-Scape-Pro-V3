@@ -1,8 +1,8 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Palette, Bell, DollarSign, Package, Lightbulb,
-  CreditCard, HelpCircle, LogOut, Clock, Target, MapPin, Users, UserPlus, Warehouse, BarChart3, FileText, Receipt, Building2, BellRing
+  CreditCard, HelpCircle, LogOut, Clock, Target, MapPin, Users, UserPlus, Warehouse, BarChart3, FileText, Receipt, Building2, BellRing, ChevronDown
 } from 'lucide-react';
 
 export type SettingsSection =
@@ -68,6 +68,36 @@ export const SettingsNav: React.FC<SettingsNavProps> = ({
   onSectionChange,
   onSignOut
 }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+  const [canScrollDown, setCanScrollDown] = useState(true);
+
+  // Check if there's more content to scroll
+  useEffect(() => {
+    const checkScroll = () => {
+      if (scrollRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 20;
+        setCanScrollDown(!isAtBottom);
+        setShowScrollIndicator(!isAtBottom && scrollTop < 50);
+      }
+    };
+
+    checkScroll();
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScroll);
+      window.addEventListener('resize', checkScroll);
+    }
+
+    return () => {
+      if (el) {
+        el.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      }
+    };
+  }, []);
+
   // Group nav items
   const groups = navItems.reduce((acc, item) => {
     if (!acc[item.group]) acc[item.group] = [];
@@ -75,13 +105,19 @@ export const SettingsNav: React.FC<SettingsNavProps> = ({
     return acc;
   }, {} as Record<string, NavItem[]>);
 
+  const handleScrollDown = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ top: 200, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <nav className="w-60 shrink-0 bg-[#0a0a0a] border-r border-white/5 flex flex-col h-full">
+    <nav className="w-60 shrink-0 bg-[#0a0a0a] border-r border-white/5 flex flex-col h-full relative">
       <div className="p-6 border-b border-white/5">
         <h2 className="text-xl font-bold text-white">Settings</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4 px-3 pb-24">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 px-3 pb-24 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {Object.entries(groups).map(([groupName, items]) => (
           <div key={groupName} className="mb-6">
             <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">
@@ -120,6 +156,35 @@ export const SettingsNav: React.FC<SettingsNavProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Scroll indicator gradient + button */}
+      <AnimatePresence>
+        {canScrollDown && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute left-0 right-0 bottom-[140px] pointer-events-none"
+          >
+            {/* Gradient fade */}
+            <div className="h-16 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
+
+            {/* Scroll indicator button */}
+            {showScrollIndicator && (
+              <motion.button
+                onClick={handleScrollDown}
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 text-gray-400 hover:text-white text-xs font-medium transition-all backdrop-blur-sm border border-white/5"
+              >
+                <span>More</span>
+                <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
+              </motion.button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sign Out - Always visible, positioned above the bottom navigation */}
       <div className="p-3 border-t border-white/5 mb-24">

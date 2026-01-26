@@ -113,6 +113,12 @@ export function useLocations(): UseLocationsResult {
   const updateLocation = async (id: string, updates: Partial<Location>): Promise<Location | null> => {
     if (!user?.id) return null;
 
+    // Guard against modifying demo data
+    if (id.startsWith('demo_')) {
+      setError('Cannot modify demo locations. Create your own location to get started!');
+      return null;
+    }
+
     try {
       const response = await fetch(`/api/locations/${id}?userId=${user.id}`, {
         method: 'PATCH',
@@ -155,6 +161,12 @@ export function useLocations(): UseLocationsResult {
 
   const deleteLocation = async (id: string): Promise<boolean> => {
     if (!user?.id) return false;
+
+    // Guard against deleting demo data
+    if (id.startsWith('demo_')) {
+      setError('Cannot delete demo locations. Create your own location to get started!');
+      return false;
+    }
 
     try {
       const response = await fetch(`/api/locations/${id}?userId=${user.id}`, {

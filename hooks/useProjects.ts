@@ -155,6 +155,12 @@ export function useProjects() {
       return false;
     }
 
+    // Guard against deleting demo data
+    if (projectId.startsWith('demo_')) {
+      setError('Cannot delete demo projects. Create your own project to get started!');
+      return false;
+    }
+
     try {
       const response = await fetch(`/api/projects/${projectId}?userId=${user.id}`, {
         method: 'DELETE',
@@ -180,6 +186,12 @@ export function useProjects() {
   ): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
+      return false;
+    }
+
+    // Guard against modifying demo data
+    if (projectId.startsWith('demo_')) {
+      setError('Cannot modify demo projects. Create your own project to get started!');
       return false;
     }
 

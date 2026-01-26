@@ -197,6 +197,12 @@ export function useClients() {
       return false;
     }
 
+    // Guard against modifying demo data
+    if (id.startsWith('demo_')) {
+      setError('Cannot modify demo clients. Create your own client to get started!');
+      return false;
+    }
+
     try {
       const response = await fetch(`/api/clients/${id}?userId=${user.id}`, {
         method: 'PUT',
@@ -235,6 +241,12 @@ export function useClients() {
   const deleteClient = useCallback(async (id: string): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
+      return false;
+    }
+
+    // Guard against deleting demo data
+    if (id.startsWith('demo_')) {
+      setError('Cannot delete demo clients. Create your own client to get started!');
       return false;
     }
 

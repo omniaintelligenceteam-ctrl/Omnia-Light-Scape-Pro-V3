@@ -117,6 +117,12 @@ export function useBusinessGoals() {
       return false;
     }
 
+    // Guard against modifying demo data
+    if (goalId.startsWith('demo_')) {
+      setError('Cannot modify demo goals. Create your own goal to get started!');
+      return false;
+    }
+
     try {
       const response = await fetch(`/api/goals/${goalId}?userId=${user.id}`, {
         method: 'PATCH',
@@ -151,6 +157,12 @@ export function useBusinessGoals() {
   const deleteGoal = useCallback(async (goalId: string): Promise<boolean> => {
     if (!user) {
       setError('User not logged in');
+      return false;
+    }
+
+    // Guard against deleting demo data
+    if (goalId.startsWith('demo_')) {
+      setError('Cannot delete demo goals. Create your own goal to get started!');
       return false;
     }
 
