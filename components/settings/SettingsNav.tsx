@@ -147,7 +147,7 @@ export const SettingsNav: React.FC<SettingsNavProps> = ({
                       />
                     )}
 
-                    <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-[#F6B45A]' : ''}`} />
+                    <Icon className="w-4.5 h-4.5 text-[#F6B45A]" />
                     <span className="text-sm font-medium">{item.label}</span>
                   </button>
                 );
