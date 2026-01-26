@@ -17,6 +17,8 @@ interface AppearanceSectionProps {
   onFontSizeChange?: (size: FontSize) => void;
   highContrast?: boolean;
   onHighContrastChange?: (enabled: boolean) => void;
+  enableBeforeAfter?: boolean;
+  onEnableBeforeAfterChange?: (enabled: boolean) => void;
 }
 
 const contentVariants = {
@@ -31,7 +33,9 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({
   fontSize = 'normal',
   onFontSizeChange,
   highContrast = false,
-  onHighContrastChange
+  onHighContrastChange,
+  enableBeforeAfter = true,
+  onEnableBeforeAfterChange
 }) => {
   return (
     <motion.div
@@ -102,6 +106,14 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({
           description="Increase visibility for better readability"
           checked={highContrast}
           onChange={(v) => onHighContrastChange?.(v)}
+        />
+
+        {/* Before/After Comparison */}
+        <ToggleRow
+          title="Before/After Comparison"
+          description="Show side-by-side comparison option when viewing generated designs"
+          checked={enableBeforeAfter}
+          onChange={(v) => onEnableBeforeAfterChange?.(v)}
         />
       </SettingsCard>
     </motion.div>

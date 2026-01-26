@@ -61,6 +61,8 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   onFontSizeChange,
   highContrast = false,
   onHighContrastChange,
+  enableBeforeAfter = true,
+  onEnableBeforeAfterChange,
   notifications,
   onNotificationsChange,
   followUpSettings,
@@ -232,6 +234,8 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 onFontSizeChange={onFontSizeChange}
                 highContrast={highContrast}
                 onHighContrastChange={onHighContrastChange}
+                enableBeforeAfter={enableBeforeAfter}
+                onEnableBeforeAfterChange={onEnableBeforeAfterChange}
               />
             )}
 

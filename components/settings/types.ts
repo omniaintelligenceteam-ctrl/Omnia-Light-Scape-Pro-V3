@@ -54,6 +54,9 @@ export interface SettingsViewProps {
   onFontSizeChange?: (size: FontSize) => void;
   highContrast?: boolean;
   onHighContrastChange?: (enabled: boolean) => void;
+  // Before/After comparison feature
+  enableBeforeAfter?: boolean;
+  onEnableBeforeAfterChange?: (enabled: boolean) => void;
   // Notification props
   notifications?: NotificationPreferences;
   onNotificationsChange?: (prefs: NotificationPreferences) => void;
