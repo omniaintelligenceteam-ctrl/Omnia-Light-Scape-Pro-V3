@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useUser } from '@clerk/clerk-react';
 
-const DEMO_MODE_KEY = 'omnia_demo_mode';
+const DEMO_MODE_KEY_PREFIX = 'omnia_demo_mode';
 
 interface DemoModeState {
   isDismissed: boolean;
@@ -15,9 +16,12 @@ interface UseDemoModeReturn {
   shouldInjectDemoData: (realDataCount: number) => boolean;
 }
 
-const getStoredState = (): DemoModeState => {
+const getStoredState = (userId: string | null): DemoModeState => {
+  if (!userId) return { isDismissed: false, dismissedAt: null };
+
   try {
-    const stored = localStorage.getItem(DEMO_MODE_KEY);
+    const key = `${DEMO_MODE_KEY_PREFIX}_${userId}`;
+    const stored = localStorage.getItem(key);
     if (stored) {
       return JSON.parse(stored);
     }
@@ -27,21 +31,32 @@ const getStoredState = (): DemoModeState => {
   return { isDismissed: false, dismissedAt: null };
 };
 
-const setStoredState = (state: DemoModeState): void => {
+const setStoredState = (userId: string | null, state: DemoModeState): void => {
+  if (!userId) return;
+
   try {
-    localStorage.setItem(DEMO_MODE_KEY, JSON.stringify(state));
+    const key = `${DEMO_MODE_KEY_PREFIX}_${userId}`;
+    localStorage.setItem(key, JSON.stringify(state));
   } catch (e) {
     console.error('Error saving demo mode state:', e);
   }
 };
 
 export function useDemoMode(): UseDemoModeReturn {
-  const [state, setState] = useState<DemoModeState>(getStoredState);
+  const { user } = useUser();
+  const userId = user?.id || null;
+
+  const [state, setState] = useState<DemoModeState>(() => getStoredState(userId));
+
+  // Re-initialize state when user changes
+  useEffect(() => {
+    setState(getStoredState(userId));
+  }, [userId]);
 
   // Sync state changes to localStorage
   useEffect(() => {
-    setStoredState(state);
-  }, [state]);
+    setStoredState(userId, state);
+  }, [userId, state]);
 
   const dismissDemoData = useCallback(() => {
     setState({
