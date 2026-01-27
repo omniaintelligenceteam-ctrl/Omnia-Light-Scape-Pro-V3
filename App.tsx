@@ -1294,10 +1294,11 @@ const App: React.FC = () => {
             });
             return prev.filter(id => id !== optId);
         } else {
-            // Selecting - initialize count to null (auto mode)
+            // Selecting - initialize with default count (manual mode shows plus/minus)
+            const defaultCount = activeConfigFixture ? getDefaultCount(activeConfigFixture, optId) : 6;
             setPendingCounts(counts => ({
                 ...counts,
-                [optId]: null
+                [optId]: defaultCount
             }));
             return [...prev, optId];
         }
@@ -3281,11 +3282,11 @@ Notes: ${invoice.notes || 'N/A'}
                                                     className="overflow-hidden"
                                                 >
                                                     <div className="px-4 pb-4 pt-0">
-                                                        <div className="flex items-center justify-between bg-black/20 rounded-lg p-3">
-                                                            <span className="text-xs font-medium text-black/70">
+                                                        <div className="flex items-center justify-between bg-[#C4974A] rounded-lg px-4 py-3">
+                                                            <span className="text-sm font-medium text-black/80">
                                                                 Quantity
                                                             </span>
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-1.5">
                                                                 {/* Auto Toggle Button */}
                                                                 <motion.button
                                                                     onClick={(e) => {
@@ -3306,8 +3307,8 @@ Notes: ${invoice.notes || 'N/A'}
                                                                     }}
                                                                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                                                                         isAutoMode
-                                                                            ? 'bg-black/30 text-black'
-                                                                            : 'bg-black/10 text-black/50 hover:bg-black/20'
+                                                                            ? 'bg-[#E8C78A] text-black/90'
+                                                                            : 'bg-[#D4A85A] text-black/70 hover:bg-[#DDB86A]'
                                                                     }`}
                                                                     whileTap={{ scale: 0.95 }}
                                                                 >
@@ -3315,51 +3316,52 @@ Notes: ${invoice.notes || 'N/A'}
                                                                 </motion.button>
 
                                                                 {/* Manual Controls - Only show when not in auto mode */}
-                                                                {!isAutoMode && (
-                                                                    <>
-                                                                        {/* Minus Button */}
-                                                                        <motion.button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                setPendingCounts(prev => ({
-                                                                                    ...prev,
-                                                                                    [opt.id]: Math.max(1, (prev[opt.id] ?? displayCount) - 1)
-                                                                                }));
-                                                                            }}
-                                                                            className="w-8 h-8 flex items-center justify-center bg-black/20 rounded-lg text-black/70 hover:bg-black/30 transition-colors"
-                                                                            whileTap={{ scale: 0.95 }}
+                                                                <AnimatePresence>
+                                                                    {!isAutoMode && (
+                                                                        <motion.div
+                                                                            initial={{ width: 0, opacity: 0 }}
+                                                                            animate={{ width: 'auto', opacity: 1 }}
+                                                                            exit={{ width: 0, opacity: 0 }}
+                                                                            transition={{ duration: 0.15 }}
+                                                                            className="flex items-center gap-1.5 overflow-hidden"
                                                                         >
-                                                                            <Minus className="w-4 h-4" />
-                                                                        </motion.button>
+                                                                            {/* Minus Button */}
+                                                                            <motion.button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setPendingCounts(prev => ({
+                                                                                        ...prev,
+                                                                                        [opt.id]: Math.max(1, (prev[opt.id] ?? displayCount) - 1)
+                                                                                    }));
+                                                                                }}
+                                                                                className="w-9 h-9 flex items-center justify-center bg-[#3A3A3A] rounded-lg text-gray-300 hover:bg-[#4A4A4A] transition-colors"
+                                                                                whileTap={{ scale: 0.9 }}
+                                                                            >
+                                                                                <Minus className="w-4 h-4" />
+                                                                            </motion.button>
 
-                                                                        {/* Count Display */}
-                                                                        <span className="w-10 text-center text-sm font-bold text-black">
-                                                                            {displayCount}
-                                                                        </span>
+                                                                            {/* Count Display */}
+                                                                            <span className="w-8 text-center text-base font-bold text-black">
+                                                                                {displayCount}
+                                                                            </span>
 
-                                                                        {/* Plus Button */}
-                                                                        <motion.button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                setPendingCounts(prev => ({
-                                                                                    ...prev,
-                                                                                    [opt.id]: Math.min(50, (prev[opt.id] ?? displayCount) + 1)
-                                                                                }));
-                                                                            }}
-                                                                            className="w-8 h-8 flex items-center justify-center bg-black/20 rounded-lg text-black/70 hover:bg-black/30 transition-colors"
-                                                                            whileTap={{ scale: 0.95 }}
-                                                                        >
-                                                                            <Plus className="w-4 h-4" />
-                                                                        </motion.button>
-                                                                    </>
-                                                                )}
-
-                                                                {/* Auto mode indicator */}
-                                                                {isAutoMode && (
-                                                                    <span className="text-xs text-black/50 ml-1">
-                                                                        ~{displayCount}
-                                                                    </span>
-                                                                )}
+                                                                            {/* Plus Button */}
+                                                                            <motion.button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setPendingCounts(prev => ({
+                                                                                        ...prev,
+                                                                                        [opt.id]: Math.min(50, (prev[opt.id] ?? displayCount) + 1)
+                                                                                    }));
+                                                                                }}
+                                                                                className="w-9 h-9 flex items-center justify-center bg-[#3A3A3A] rounded-lg text-gray-300 hover:bg-[#4A4A4A] transition-colors"
+                                                                                whileTap={{ scale: 0.9 }}
+                                                                            >
+                                                                                <Plus className="w-4 h-4" />
+                                                                            </motion.button>
+                                                                        </motion.div>
+                                                                    )}
+                                                                </AnimatePresence>
                                                             </div>
                                                         </div>
                                                     </div>
