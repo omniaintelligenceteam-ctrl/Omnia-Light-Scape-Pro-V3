@@ -38,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
       <div className="absolute top-[1px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
 
       {/* Main Content */}
-      <div className="relative px-4 md:px-6 py-4 md:py-2">
+      <div className="relative px-4 md:px-6 py-4 md:py-1">
         {/* Mobile: Stacked layout */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
@@ -97,7 +97,7 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-3 md:mt-1 pt-2 md:pt-1 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-2">
+        <div className="mt-3 md:mt-0 pt-2 md:pt-1 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-2">
           {/* Copyright */}
           <p className="text-[9px] text-gray-600 font-mono tracking-wider text-center md:text-left">
             &copy; {currentYear} Omnia Intelligence. All rights reserved.
