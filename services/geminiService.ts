@@ -1,6 +1,15 @@
 
 import { GoogleGenAI } from "@google/genai";
 import type { UserPreferences, PropertyAnalysis, FixtureSelections, LightingPlan, FixturePlacement } from "../types";
+import type { FixtureType, SystemPromptConfig } from "../constants";
+
+// Type for validation response
+export interface PromptValidationResult {
+  valid: boolean;
+  fixedPrompt?: string;
+  issues?: string[];
+  confidence: number; // 0-100
+}
 
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
 const MODEL_NAME = 'gemini-3-pro-image-preview';
@@ -405,8 +414,391 @@ function hasTextureDescription(materials: string[]): string {
   return descriptions.length > 0 ? descriptions.join(', ') : 'smooth surface rendering';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// NEW AI-POWERED PIPELINE FUNCTIONS (Stages 2-4)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const PLANNING_TIMEOUT_MS = 60000; // 1 minute for planning
+
 /**
- * Stage 3: PROMPTING
+ * Stage 2: PLANNING (AI-Powered)
+ * Uses AI to create intelligent lighting plan based on property analysis
+ * Replaces hardcoded TypeScript logic with contextual AI reasoning
+ */
+export const planLightingWithAI = async (
+  analysis: PropertyAnalysis,
+  userSelections: FixtureSelections,
+  fixtureTypes: FixtureType[]
+): Promise<LightingPlan> => {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  // Build fixture type descriptions for AI context
+  const fixtureDescriptions = fixtureTypes
+    .filter(ft => userSelections.fixtures.includes(ft.id))
+    .map(ft => {
+      const selectedSubOpts = userSelections.subOptions[ft.id] || [];
+      const subOptDescriptions = ft.subOptions
+        .filter(so => selectedSubOpts.includes(so.id))
+        .map(so => `    - ${so.id}: ${so.description}`)
+        .join('\n');
+      return `- ${ft.id} (${ft.label}): ${ft.description}\n${subOptDescriptions}`;
+    })
+    .join('\n');
+
+  // Build user count constraints
+  const userCountConstraints = Object.entries(userSelections.counts || {})
+    .filter(([, v]) => v !== null && v !== undefined)
+    .map(([k, v]) => `- ${k}: EXACTLY ${v} fixtures (user specified - DO NOT CHANGE)`)
+    .join('\n') || '- All counts set to Auto (you decide based on property)';
+
+  const planningPrompt = `You are an expert landscape lighting designer. Based on the property analysis and user's fixture selections, create an optimal lighting plan.
+
+=== PROPERTY ANALYSIS ===
+${JSON.stringify(analysis, null, 2)}
+
+=== USER'S SELECTED FIXTURES ===
+${fixtureDescriptions}
+
+=== USER'S COUNT CONSTRAINTS ===
+${userCountConstraints}
+
+=== YOUR TASK ===
+Create a detailed lighting plan that:
+1. Places fixtures in optimal positions for THIS SPECIFIC property
+2. Respects user-specified counts EXACTLY (non-negotiable)
+3. For auto counts, recommend based on:
+   - Property size and features
+   - Wall height (taller = may need more fixtures)
+   - Number of windows, columns, trees
+   - Walkway length
+4. Choose intensity based on wall height:
+   - 8-12ft walls: 40-50% intensity
+   - 18-25ft walls: 60-70% intensity
+   - 25+ft walls: 80-90% intensity
+5. Choose beam angle based on materials:
+   - Brick/stone: 15-30° (narrow for texture grazing)
+   - Smooth siding/stucco: 30-45° (wider for even wash)
+
+Return ONLY a valid JSON object (no markdown, no code blocks):
+
+{
+  "placements": [
+    {
+      "fixtureType": "<fixture id>",
+      "subOption": "<sub-option id>",
+      "count": <number>,
+      "positions": ["<specific position 1>", "<specific position 2>", "..."],
+      "spacing": "<spacing description>"
+    }
+  ],
+  "settings": {
+    "intensity": <number 0-100>,
+    "beamAngle": <15, 30, 45, or 60>,
+    "reasoning": "<1-2 sentences explaining your choices>"
+  },
+  "priorityOrder": ["<most important area>", "<second>", "..."]
+}
+
+CRITICAL RULES:
+- positions array must have EXACTLY the same length as count
+- Be specific about positions (e.g., "centered below window 1", "left corner of facade")
+- User-specified counts are NON-NEGOTIABLE
+- Only include fixtures/sub-options the user selected`;
+
+  try {
+    const planPromise = ai.models.generateContent({
+      model: ANALYSIS_MODEL_NAME,
+      contents: {
+        parts: [{ text: planningPrompt }],
+      },
+    });
+
+    const response = await withTimeout(
+      planPromise,
+      PLANNING_TIMEOUT_MS,
+      'Lighting plan generation timed out. Please try again.'
+    );
+
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+      if (candidate.content && candidate.content.parts) {
+        const textPart = candidate.content.parts.find(p => p.text);
+        if (textPart && textPart.text) {
+          let jsonText = textPart.text.trim();
+          if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+          }
+
+          try {
+            const plan: LightingPlan = JSON.parse(jsonText);
+            console.log('✓ AI Lighting Plan generated:', plan);
+            return plan;
+          } catch (parseError) {
+            console.error('Failed to parse lighting plan JSON:', parseError);
+            console.error('Raw response:', textPart.text);
+            // Fallback to legacy function
+            console.warn('Falling back to legacy planning function');
+            return buildLightingPlan(analysis, userSelections);
+          }
+        }
+      }
+    }
+
+    // Fallback to legacy function
+    console.warn('No AI plan generated, falling back to legacy function');
+    return buildLightingPlan(analysis, userSelections);
+  } catch (error) {
+    console.error('AI Planning Error:', error);
+    // Fallback to legacy function
+    console.warn('Falling back to legacy planning function due to error');
+    return buildLightingPlan(analysis, userSelections);
+  }
+};
+
+const PROMPTING_TIMEOUT_MS = 60000; // 1 minute for prompt crafting
+
+/**
+ * Stage 3: PROMPTING (AI-Powered)
+ * Uses AI to craft the optimal prompt for the image generation model
+ * Replaces simple string concatenation with intelligent prompt engineering
+ */
+export const craftPromptWithAI = async (
+  analysis: PropertyAnalysis,
+  plan: LightingPlan,
+  systemPrompt: SystemPromptConfig,
+  fixtureTypes: FixtureType[],
+  colorTemp: string,
+  userPreferences?: UserPreferences | null
+): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  // Get relevant fixture prompts for selected fixtures
+  const selectedFixturePrompts = plan.placements.map(placement => {
+    const fixtureType = fixtureTypes.find(ft => ft.id === placement.fixtureType);
+    const subOption = fixtureType?.subOptions.find(so => so.id === placement.subOption);
+    return {
+      fixture: placement.fixtureType,
+      subOption: placement.subOption,
+      count: placement.count,
+      positions: placement.positions,
+      positivePrompt: subOption?.prompt || fixtureType?.positivePrompt || '',
+      negativePrompt: subOption?.negativePrompt || fixtureType?.negativePrompt || '',
+    };
+  });
+
+  // Build preference context
+  const preferenceContext = userPreferences ? `
+User has these preferences from past feedback:
+- Style keywords: ${userPreferences.style_keywords?.join(', ') || 'none'}
+- Avoid: ${userPreferences.avoid_keywords?.join(', ') || 'none'}
+- Preferred intensity: ${userPreferences.preferred_intensity_range?.min || 30}-${userPreferences.preferred_intensity_range?.max || 70}%
+` : '';
+
+  const craftingPrompt = `You are an expert at writing prompts for AI image generation. Your task is to craft the PERFECT prompt for generating a nighttime landscape lighting image.
+
+=== PROPERTY CONTEXT ===
+${JSON.stringify(analysis, null, 2)}
+
+=== LIGHTING PLAN TO IMPLEMENT ===
+${JSON.stringify(plan, null, 2)}
+
+=== FIXTURE-SPECIFIC INSTRUCTIONS ===
+${selectedFixturePrompts.map(fp => `
+### ${fp.fixture.toUpperCase()} - ${fp.subOption.toUpperCase()} (${fp.count} fixtures)
+Positions: ${fp.positions.join(', ')}
+Instructions: ${fp.positivePrompt}
+Avoid: ${fp.negativePrompt}
+`).join('\n')}
+
+=== MASTER RULES (MUST INCLUDE) ===
+${systemPrompt.masterInstruction}
+
+=== GLOBAL PROHIBITIONS ===
+${systemPrompt.globalNegativePrompt}
+
+=== COLOR TEMPERATURE ===
+${colorTemp}
+
+${preferenceContext}
+
+=== YOUR TASK ===
+Craft a comprehensive, clear prompt that:
+1. Describes THIS SPECIFIC property in detail
+2. Specifies EXACT fixture placements with counts
+3. Includes all relevant DO and DO NOT rules
+4. Is structured for optimal image model comprehension
+5. Emphasizes fixture quantity enforcement
+6. Includes the closing reinforcement rules
+
+Return ONLY the final prompt text (no JSON, no code blocks, just the prompt).
+The prompt should be detailed but focused - around 1500-2500 words.
+Structure it with clear sections using # headers.`;
+
+  try {
+    const craftPromise = ai.models.generateContent({
+      model: ANALYSIS_MODEL_NAME,
+      contents: {
+        parts: [{ text: craftingPrompt }],
+      },
+    });
+
+    const response = await withTimeout(
+      craftPromise,
+      PROMPTING_TIMEOUT_MS,
+      'Prompt crafting timed out. Please try again.'
+    );
+
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+      if (candidate.content && candidate.content.parts) {
+        const textPart = candidate.content.parts.find(p => p.text);
+        if (textPart && textPart.text) {
+          const craftedPrompt = textPart.text.trim();
+          console.log('✓ AI-crafted prompt generated (length:', craftedPrompt.length, 'chars)');
+          return craftedPrompt;
+        }
+      }
+    }
+
+    // Fallback to legacy function
+    console.warn('No AI prompt generated, falling back to legacy function');
+    return buildFinalPrompt(analysis, plan, colorTemp, userPreferences);
+  } catch (error) {
+    console.error('AI Prompt Crafting Error:', error);
+    console.warn('Falling back to legacy prompt function due to error');
+    return buildFinalPrompt(analysis, plan, colorTemp, userPreferences);
+  }
+};
+
+const VALIDATION_TIMEOUT_MS = 45000; // 45 seconds for validation
+
+/**
+ * Stage 4: VALIDATING (AI-Powered) - NEW STAGE
+ * Reviews the final prompt before sending to image generation
+ * Catches contradictions, unclear instructions, and potential hallucination triggers
+ */
+export const validatePrompt = async (
+  finalPrompt: string,
+  analysis: PropertyAnalysis,
+  plan: LightingPlan
+): Promise<PromptValidationResult> => {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  const validationPrompt = `You are a quality assurance expert for AI image generation prompts. Review the following prompt and check for issues.
+
+=== PROMPT TO VALIDATE ===
+${finalPrompt}
+
+=== EXPECTED LIGHTING PLAN ===
+${JSON.stringify(plan, null, 2)}
+
+=== PROPERTY ANALYSIS ===
+${JSON.stringify(analysis, null, 2)}
+
+=== VALIDATION CHECKLIST ===
+Check for these issues:
+
+1. CONTRADICTIONS:
+   - Are there any "DO" instructions that conflict with "DO NOT" instructions?
+   - Are there conflicting quantity specifications?
+   - Are there placement instructions that contradict each other?
+
+2. FIXTURE COUNT ACCURACY:
+   - Does the prompt specify the EXACT counts from the plan?
+   - Are all selected fixtures mentioned with their counts?
+
+3. CLARITY:
+   - Are fixture positions clearly described?
+   - Is the color temperature clearly specified?
+   - Are the intensity and beam angle mentioned?
+
+4. COMPLETENESS:
+   - Are all fixtures from the plan included?
+   - Are the master rules (preservation, no additions) included?
+   - Are prohibited elements clearly listed?
+
+5. HALLUCINATION RISKS:
+   - Are there vague instructions that could be misinterpreted?
+   - Are there mentions of features not in the property analysis?
+
+Return ONLY a valid JSON object:
+
+{
+  "valid": <true if no critical issues, false otherwise>,
+  "confidence": <0-100 confidence score>,
+  "issues": ["<issue 1>", "<issue 2>", "..."],
+  "fixedPrompt": "<corrected prompt if issues found, otherwise null>"
+}
+
+If the prompt is good, return:
+{
+  "valid": true,
+  "confidence": <85-100>,
+  "issues": [],
+  "fixedPrompt": null
+}`;
+
+  try {
+    const validatePromise = ai.models.generateContent({
+      model: ANALYSIS_MODEL_NAME,
+      contents: {
+        parts: [{ text: validationPrompt }],
+      },
+    });
+
+    const response = await withTimeout(
+      validatePromise,
+      VALIDATION_TIMEOUT_MS,
+      'Prompt validation timed out.'
+    );
+
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+      if (candidate.content && candidate.content.parts) {
+        const textPart = candidate.content.parts.find(p => p.text);
+        if (textPart && textPart.text) {
+          let jsonText = textPart.text.trim();
+          if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+          }
+
+          try {
+            const result: PromptValidationResult = JSON.parse(jsonText);
+            console.log('✓ Prompt validation complete:', {
+              valid: result.valid,
+              confidence: result.confidence,
+              issueCount: result.issues?.length || 0,
+            });
+
+            if (result.issues && result.issues.length > 0) {
+              console.warn('Validation issues found:', result.issues);
+            }
+
+            return result;
+          } catch (parseError) {
+            console.error('Failed to parse validation JSON:', parseError);
+            // Return valid by default if parsing fails
+            return { valid: true, confidence: 70, issues: ['Validation response parse error'] };
+          }
+        }
+      }
+    }
+
+    // Default to valid if no response
+    return { valid: true, confidence: 60, issues: ['No validation response'] };
+  } catch (error) {
+    console.error('Prompt Validation Error:', error);
+    // Don't block generation if validation fails
+    return { valid: true, confidence: 50, issues: ['Validation error - proceeding anyway'] };
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEGACY FUNCTIONS (Kept for fallback)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Stage 3: PROMPTING (LEGACY)
  * Creates the perfect final prompt by combining analysis, plan, and user preferences
  */
 export const buildFinalPrompt = (

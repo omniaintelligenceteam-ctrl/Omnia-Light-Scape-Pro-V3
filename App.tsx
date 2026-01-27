@@ -57,7 +57,7 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, analyzePropertyArchitecture, buildLightingPlan, buildFinalPrompt, verifyFixturesBeforeGeneration } from './services/geminiService';
+import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
@@ -416,7 +416,7 @@ const App: React.FC = () => {
 
   // Auto-prompt feature: Property analysis state
   const [, setPropertyAnalysis] = useState<PropertyAnalysis | null>(null);
-  const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'generating'>('idle');
+  const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'validating' | 'generating'>('idle');
   const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
 
   // Generation History for Undo with Settings
@@ -809,9 +809,15 @@ const App: React.FC = () => {
         ];
       case 'prompting':
         return [
-          "Building Smart Prompt",
-          "Calibrating Physics",
-          "Finalizing Instructions"
+          "Crafting AI Prompt",
+          "Optimizing Instructions",
+          "Finalizing Details"
+        ];
+      case 'validating':
+        return [
+          "Validating Prompt",
+          "Checking Consistency",
+          "Verifying Instructions"
         ];
       case 'generating':
         return [
@@ -836,7 +842,7 @@ const App: React.FC = () => {
     if (isLoading && !showLoadingCelebration) {
       // Faster cycling for analysis (3s), planning/prompting (2s), generating (5s)
       const duration = generationStage === 'analyzing' ? 3000 :
-                       generationStage === 'planning' || generationStage === 'prompting' ? 2000 : 5000;
+                       generationStage === 'planning' || generationStage === 'prompting' || generationStage === 'validating' ? 2000 : 5000;
       const timeout = setTimeout(() => {
         setStatusMessageIndex(prev => (prev + 1) % statusMessages.length);
       }, duration);
@@ -1794,14 +1800,18 @@ const App: React.FC = () => {
           return;
         }
 
-        // STAGE 2: PLANNING - Build lighting plan with exact placements
+        // STAGE 2: PLANNING (AI-Powered) - Build lighting plan with AI reasoning
         setGenerationStage('planning');
-        const plan = buildLightingPlan(analysis, {
-          fixtures: selectedFixtures,
-          subOptions: fixtureSubOptions,
-          counts: fixtureCounts
-        });
-        console.log('Stage 2 complete - Lighting plan:', plan);
+        const plan = await planLightingWithAI(
+          analysis,
+          {
+            fixtures: selectedFixtures,
+            subOptions: fixtureSubOptions,
+            counts: fixtureCounts
+          },
+          FIXTURE_TYPES
+        );
+        console.log('Stage 2 complete - AI Lighting plan:', plan);
 
         // Use optimized settings from plan
         finalIntensity = plan.settings.intensity;
@@ -1814,9 +1824,16 @@ const App: React.FC = () => {
           return;
         }
 
-        // STAGE 3: PROMPTING - Create the perfect final prompt
+        // STAGE 3: PROMPTING (AI-Powered) - Craft the optimal prompt with AI
         setGenerationStage('prompting');
-        const smartPrompt = buildFinalPrompt(analysis, plan, colorPrompt, userPreferences);
+        const smartPrompt = await craftPromptWithAI(
+          analysis,
+          plan,
+          SYSTEM_PROMPT,
+          FIXTURE_TYPES,
+          colorPrompt,
+          userPreferences
+        );
 
         // VERIFICATION STEP: Double-check fixtures match Fixture Summary before generating
         const verifiedSummary = verifyFixturesBeforeGeneration(plan, {
@@ -1826,9 +1843,28 @@ const App: React.FC = () => {
         });
         console.log('VERIFICATION COMPLETE:', verifiedSummary);
 
+        // Check if cancelled
+        if (generationCancelledRef.current) {
+          generationCancelledRef.current = false;
+          setGenerationStage('idle');
+          return;
+        }
+
+        // STAGE 4: VALIDATING (AI-Powered) - Review prompt before image generation
+        setGenerationStage('validating');
+        const validation = await validatePrompt(smartPrompt, analysis, plan);
+        console.log('Stage 4 complete - Validation result:', validation);
+
+        if (validation.issues && validation.issues.length > 0) {
+          console.warn('Prompt validation found issues:', validation.issues);
+        }
+
+        // Use fixed prompt if validation provided one, otherwise use original
+        const validatedPrompt = validation.fixedPrompt || smartPrompt;
+
         // Merge with verified summary and user's custom notes
-        finalPrompt = smartPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
-        console.log('Stage 3 complete - Final prompt built with verified fixtures');
+        finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
+        console.log('Stage 4 complete - Final prompt validated and built');
 
       } catch (pipelineError) {
         // If any stage fails, continue with standard generation (graceful fallback)
@@ -1844,7 +1880,7 @@ const App: React.FC = () => {
         return;
       }
 
-      // STAGE 4: GENERATING - Execute and create the image
+      // STAGE 5: GENERATING - Execute and create the image
       setGenerationStage('generating');
       let result = await generateNightScene(
         base64,
