@@ -418,6 +418,23 @@ function hasTextureDescription(materials: string[]): string {
 // NEW AI-POWERED PIPELINE FUNCTIONS (Stages 2-4)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Helper: Get description of what a fixture type looks like when "dark" (not selected)
+ * This helps the AI understand what to render for prohibited fixtures
+ */
+function getDarkDescription(fixtureId: string): string {
+  const descriptions: Record<string, string> = {
+    'up': 'Ground areas near foundation remain unlit - NO vertical light beams on walls',
+    'path': 'Walkways and paths remain in darkness - NO ground-level path lighting',
+    'gutter': 'Roofline and gutters appear as dark silhouette - NO edge illumination',
+    'soffit': 'Eave undersides appear as dark shadow - NO downward recessed lighting',
+    'hardscape': 'Walls, steps, and retaining walls remain unlit - NO accent lighting',
+    'coredrill': 'Ground surfaces remain dark - NO in-ground well lights or markers',
+    'holiday': 'Roofline remains dark - NO colored lights, NO string lights, NO RGB illumination',
+  };
+  return descriptions[fixtureId] || 'This fixture type remains completely dark and unlit';
+}
+
 const PLANNING_TIMEOUT_MS = 60000; // 1 minute for planning
 
 /**
@@ -463,21 +480,30 @@ ${fixtureDescriptions}
 ${userCountConstraints}
 
 === YOUR TASK ===
-Create a detailed lighting plan that:
-1. Places fixtures in optimal positions for THIS SPECIFIC property
-2. Respects user-specified counts EXACTLY (non-negotiable)
-3. For auto counts, recommend based on:
-   - Property size and features
-   - Wall height (taller = may need more fixtures)
-   - Number of windows, columns, trees
-   - Walkway length
-4. Choose intensity based on wall height:
-   - 8-12ft walls: 40-50% intensity
-   - 18-25ft walls: 60-70% intensity
-   - 25+ft walls: 80-90% intensity
-5. Choose beam angle based on materials:
-   - Brick/stone: 15-30° (narrow for texture grazing)
-   - Smooth siding/stucco: 30-45° (wider for even wash)
+Create a detailed lighting plan with VISUAL ANCHORS for each fixture position.
+
+CRITICAL: Use VISUAL ANCHORS instead of vague descriptions. Research shows AI image generators achieve only ~30% accuracy with counts alone, but ~80% accuracy with specific position anchors.
+
+GOOD position examples (with visual anchors):
+- "Far LEFT corner of facade, in landscaping bed"
+- "Centered below first-floor window #1"
+- "Wall section BETWEEN window 1 and entry door"
+- "At base of large oak tree on left side of yard"
+- "Far RIGHT corner of facade"
+
+BAD position examples (too vague):
+- "On the siding"
+- "Near the windows"
+- "Along the walkway"
+
+INTENSITY based on wall height:
+- 8-12ft walls: 40-50%
+- 18-25ft walls: 60-70%
+- 25+ft walls: 80-90%
+
+BEAM ANGLE based on materials:
+- Brick/stone: 15-30° (narrow for texture grazing)
+- Smooth siding/stucco: 30-45° (wider for even wash)
 
 Return ONLY a valid JSON object (no markdown, no code blocks):
 
@@ -487,7 +513,7 @@ Return ONLY a valid JSON object (no markdown, no code blocks):
       "fixtureType": "<fixture id>",
       "subOption": "<sub-option id>",
       "count": <number>,
-      "positions": ["<specific position 1>", "<specific position 2>", "..."],
+      "positions": ["<SPECIFIC position with visual anchor 1>", "<SPECIFIC position with visual anchor 2>", "..."],
       "spacing": "<spacing description>"
     }
   ],
@@ -500,10 +526,11 @@ Return ONLY a valid JSON object (no markdown, no code blocks):
 }
 
 CRITICAL RULES:
-- positions array must have EXACTLY the same length as count
-- Be specific about positions (e.g., "centered below window 1", "left corner of facade")
+- positions array MUST have EXACTLY the same length as count (e.g., 6 count = 6 positions)
+- EVERY position MUST reference a specific architectural feature or location
+- Use ordinal references: "window 1", "window 2", "tree on left", "corner of facade"
 - User-specified counts are NON-NEGOTIABLE
-- Only include fixtures/sub-options the user selected`;
+- ONLY include fixtures for sub-options the user selected - NO OTHERS`;
 
   try {
     const planPromise = ai.models.generateContent({
@@ -572,19 +599,32 @@ export const craftPromptWithAI = async (
 ): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
-  // Get relevant fixture prompts for selected fixtures
-  const selectedFixturePrompts = plan.placements.map(placement => {
+  // Get selected fixture types and sub-options
+  const selectedFixtureIds = [...new Set(plan.placements.map(p => p.fixtureType))];
+
+  // Build ALLOWLIST - fixtures that ARE selected
+  const allowlistItems = plan.placements.map(placement => {
     const fixtureType = fixtureTypes.find(ft => ft.id === placement.fixtureType);
     const subOption = fixtureType?.subOptions.find(so => so.id === placement.subOption);
     return {
       fixture: placement.fixtureType,
+      fixtureLabel: fixtureType?.label || placement.fixtureType,
       subOption: placement.subOption,
+      subOptionLabel: subOption?.label || placement.subOption,
       count: placement.count,
       positions: placement.positions,
       positivePrompt: subOption?.prompt || fixtureType?.positivePrompt || '',
-      negativePrompt: subOption?.negativePrompt || fixtureType?.negativePrompt || '',
     };
   });
+
+  // Build PROHIBITION list - fixtures that are NOT selected
+  const prohibitedFixtures = fixtureTypes
+    .filter(ft => !selectedFixtureIds.includes(ft.id))
+    .map(ft => ({
+      id: ft.id,
+      label: ft.label,
+      darkDescription: getDarkDescription(ft.id), // How this looks when "off"
+    }));
 
   // Build preference context
   const preferenceContext = userPreferences ? `
@@ -594,27 +634,35 @@ User has these preferences from past feedback:
 - Preferred intensity: ${userPreferences.preferred_intensity_range?.min || 30}-${userPreferences.preferred_intensity_range?.max || 70}%
 ` : '';
 
-  const craftingPrompt = `You are an expert at writing prompts for AI image generation. Your task is to craft the PERFECT prompt for generating a nighttime landscape lighting image.
+  const craftingPrompt = `You are an expert at writing prompts for AI image generation. Your task is to craft a prompt for generating a nighttime landscape lighting image with STRICT FIXTURE CONTROL.
+
+CRITICAL RESEARCH FINDINGS (you MUST apply these):
+1. Use ALL CAPS for critical rules - research shows Gemini follows caps better
+2. Use markdown dashed lists for rules - Gemini follows structured lists better
+3. Include explicit ALLOWLIST of fixtures that MAY appear
+4. Include explicit PROHIBITION list of fixtures that MUST NOT appear
+5. For prohibited fixtures, describe what "DARK" looks like
+6. For fixture counts, list EACH position individually with visual anchors
+7. Add VALIDATION language at the end with consequences
 
 === PROPERTY CONTEXT ===
 ${JSON.stringify(analysis, null, 2)}
 
-=== LIGHTING PLAN TO IMPLEMENT ===
-${JSON.stringify(plan, null, 2)}
-
-=== FIXTURE-SPECIFIC INSTRUCTIONS ===
-${selectedFixturePrompts.map(fp => `
-### ${fp.fixture.toUpperCase()} - ${fp.subOption.toUpperCase()} (${fp.count} fixtures)
-Positions: ${fp.positions.join(', ')}
-Instructions: ${fp.positivePrompt}
-Avoid: ${fp.negativePrompt}
+=== EXCLUSIVE FIXTURE ALLOWLIST (Only these may appear) ===
+${allowlistItems.map(item => `
+- ${item.fixtureLabel.toUpperCase()} / ${item.subOptionLabel.toUpperCase()}:
+  - Count: ${item.count} fixtures
+  - Positions: ${item.positions.map((pos, i) => `FIXTURE ${i + 1}: ${pos}`).join('; ')}
+  - Instructions: ${item.positivePrompt}
 `).join('\n')}
 
-=== MASTER RULES (MUST INCLUDE) ===
-${systemPrompt.masterInstruction}
+=== ABSOLUTE PROHIBITION LIST (These MUST remain DARK) ===
+${prohibitedFixtures.map(pf => `
+- ${pf.label.toUpperCase()}: ${pf.darkDescription}
+`).join('\n')}
 
-=== GLOBAL PROHIBITIONS ===
-${systemPrompt.globalNegativePrompt}
+=== MASTER PRESERVATION RULES ===
+${systemPrompt.masterInstruction}
 
 === COLOR TEMPERATURE ===
 ${colorTemp}
@@ -622,17 +670,35 @@ ${colorTemp}
 ${preferenceContext}
 
 === YOUR TASK ===
-Craft a comprehensive, clear prompt that:
-1. Describes THIS SPECIFIC property in detail
-2. Specifies EXACT fixture placements with counts
-3. Includes all relevant DO and DO NOT rules
-4. Is structured for optimal image model comprehension
-5. Emphasizes fixture quantity enforcement
-6. Includes the closing reinforcement rules
+Craft a prompt with this EXACT structure:
 
-Return ONLY the final prompt text (no JSON, no code blocks, just the prompt).
-The prompt should be detailed but focused - around 1500-2500 words.
-Structure it with clear sections using # headers.`;
+## EXCLUSIVE FIXTURE ALLOWLIST
+ONLY the following fixture types may appear in this image:
+- [List each selected fixture with description]
+
+## ABSOLUTE PROHIBITION - MUST REMAIN DARK
+The following fixtures are FORBIDDEN:
+- [List each non-selected fixture with description of how it looks when dark/off]
+
+## EXACT FIXTURE PLACEMENTS
+For each selected fixture type, list:
+### [Fixture Type] - [Count] FIXTURES TOTAL
+FIXTURE 1: [Exact position with visual anchor]
+FIXTURE 2: [Exact position with visual anchor]
+...
+
+## SCENE PRESERVATION
+[Property and composition rules]
+
+## VALIDATION
+CRITICAL: Before finalizing, verify:
+- ONLY fixtures from ALLOWLIST appear
+- Fixture counts match EXACTLY
+- All PROHIBITED fixtures remain completely dark
+Any violation = INVALID IMAGE
+
+Return ONLY the final prompt text (no JSON, no code blocks).
+Use ALL CAPS for critical rules. Use markdown dashed lists.`;
 
   try {
     const craftPromise = ai.models.generateContent({
@@ -684,59 +750,64 @@ export const validatePrompt = async (
 ): Promise<PromptValidationResult> => {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
-  const validationPrompt = `You are a quality assurance expert for AI image generation prompts. Review the following prompt and check for issues.
+  // Extract expected fixture types from plan
+  const expectedFixtureTypes = [...new Set(plan.placements.map(p => p.fixtureType))];
+  const expectedCounts = plan.placements.map(p => ({
+    type: p.fixtureType,
+    subOption: p.subOption,
+    count: p.count,
+    positionsCount: p.positions?.length || 0,
+  }));
+
+  const validationPrompt = `You are a quality assurance expert for AI image generation prompts. Your job is to catch issues that could cause the AI to generate wrong fixtures or wrong counts.
 
 === PROMPT TO VALIDATE ===
 ${finalPrompt}
 
-=== EXPECTED LIGHTING PLAN ===
-${JSON.stringify(plan, null, 2)}
+=== PROPERTY CONTEXT ===
+Windows: ${analysis.architecture?.windows?.first_floor_count || 'unknown'} first floor, ${analysis.architecture?.windows?.second_floor_count || 0} second floor
+Trees: ${analysis.landscaping?.trees?.count || 'unknown'}
+Wall height: ${analysis.architecture?.wall_height_estimate || 'unknown'}
 
-=== PROPERTY ANALYSIS ===
-${JSON.stringify(analysis, null, 2)}
+=== EXPECTED LIGHTING PLAN ===
+Selected fixture types: ${expectedFixtureTypes.join(', ')}
+Expected counts:
+${expectedCounts.map(c => `- ${c.type}/${c.subOption}: ${c.count} fixtures (${c.positionsCount} positions listed)`).join('\n')}
 
 === VALIDATION CHECKLIST ===
-Check for these issues:
 
-1. CONTRADICTIONS:
-   - Are there any "DO" instructions that conflict with "DO NOT" instructions?
-   - Are there conflicting quantity specifications?
-   - Are there placement instructions that contradict each other?
+## CRITICAL CHECK 1: FIXTURE TYPE CONTROL
+- Does the prompt have an ALLOWLIST section listing ONLY these fixture types: ${expectedFixtureTypes.join(', ')}?
+- Does the prompt have a PROHIBITION section for fixture types NOT in the plan?
+- Are prohibited fixtures described as "dark", "unlit", "no illumination"?
+- FAIL if: The prompt mentions placing fixtures that are NOT in the allowlist
 
-2. FIXTURE COUNT ACCURACY:
-   - Does the prompt specify the EXACT counts from the plan?
-   - Are all selected fixtures mentioned with their counts?
+## CRITICAL CHECK 2: FIXTURE COUNT ACCURACY
+For each fixture type, verify:
+${expectedCounts.map(c => `- ${c.type}/${c.subOption}: Does prompt specify EXACTLY ${c.count} fixtures with ${c.count} individual position descriptions?`).join('\n')}
+- FAIL if: Count number doesn't match number of position descriptions
+- FAIL if: Positions are vague (e.g., "along the wall" instead of "between window 1 and window 2")
 
-3. CLARITY:
-   - Are fixture positions clearly described?
-   - Is the color temperature clearly specified?
-   - Are the intensity and beam angle mentioned?
+## CHECK 3: VISUAL ANCHORS
+- Does each fixture position reference a specific architectural feature?
+- Good: "centered below window 1", "far left corner of facade", "between entry door and window 2"
+- Bad: "on the siding", "near the windows", "along the walkway"
 
-4. COMPLETENESS:
-   - Are all fixtures from the plan included?
-   - Are the master rules (preservation, no additions) included?
-   - Are prohibited elements clearly listed?
-
-5. HALLUCINATION RISKS:
-   - Are there vague instructions that could be misinterpreted?
-   - Are there mentions of features not in the property analysis?
+## CHECK 4: STRUCTURE
+- Does the prompt use ALL CAPS for critical rules?
+- Does the prompt use markdown dashed lists for rules?
+- Is there a VALIDATION section at the end?
 
 Return ONLY a valid JSON object:
 
 {
-  "valid": <true if no critical issues, false otherwise>,
-  "confidence": <0-100 confidence score>,
-  "issues": ["<issue 1>", "<issue 2>", "..."],
+  "valid": <true if passes all critical checks, false otherwise>,
+  "confidence": <0-100 score>,
+  "issues": ["<specific issue 1>", "<specific issue 2>", "..."],
   "fixedPrompt": "<corrected prompt if issues found, otherwise null>"
 }
 
-If the prompt is good, return:
-{
-  "valid": true,
-  "confidence": <85-100>,
-  "issues": [],
-  "fixedPrompt": null
-}`;
+Be STRICT about fixture type control and count accuracy. These are the most important checks.`;
 
   try {
     const validatePromise = ai.models.generateContent({
