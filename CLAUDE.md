@@ -9,9 +9,17 @@ Vite, React, TypeScript, Tailwind, Supabase, Clerk, Stripe, Gemini API
 - npm run typecheck
 
 ## Key Files
-- src/constants.ts: Fixture types and prompts
-- src/lib/supabase.ts: Database
-- src/lib/gemini.ts: AI image generation
+- constants.ts: Fixture types and prompts
+- services/geminiService.ts: AI image generation pipeline (5-stage)
+- docs/AI_IMAGE_GENERATION_RESEARCH.md: Research on AI prompt engineering
+
+## AI Image Generation Guidelines
+See `docs/AI_IMAGE_GENERATION_RESEARCH.md` for research-backed best practices:
+- Use ALLOWLIST + PROHIBITION structure for fixture type control
+- Use visual anchors (not just counts) for fixture quantity accuracy
+- Use ALL CAPS for critical rules
+- Use markdown dashed lists for structured rules
+- Describe what "dark" looks like for forbidden fixtures
 
 ## Rules
 - TypeScript strict
