@@ -124,6 +124,17 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
    - Light color temperature and beam characteristics follow active prompt specs
    - Unlit areas should remain in deep shadow for maximum contrast
 
+8. DRAMATIC LIGHTING STYLE (CRITICAL FOR REALISM):
+   - Each fixture creates a DISTINCT, ISOLATED pool of light - NOT a uniform wash
+   - DARK GAPS must exist between fixture illumination zones
+   - Light does NOT blend into continuous wall wash - each fixture has SEPARATION
+   - Narrow beam angles (15-30°) create tight columns, not wide floods
+   - Inverse square law applies: brightness decreases rapidly with distance from source
+   - Beam edges are SOFT and FEATHERED (6-12 inch transition), never crisp circles
+   - Unlit wall sections between fixtures remain in DEEP SHADOW
+   - The dramatic interplay of LIGHT and DARK is the primary visual goal
+   - Professional landscape lighting has intentional dark areas - shadows are as important as light
+
 VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - Source image FRAMING = Output image FRAMING (IDENTICAL - whole house in frame)
 - Source image architecture = Output image architecture (IDENTICAL)
@@ -176,6 +187,17 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - The light should "kiss" the soffit - illuminating its underside before falling off
 - The soffit directly above each up light should show visible illumination on its underside
 - This creates the proper "wall wash" effect that terminates at the architectural soffit line
+
+*** CRITICAL - DRAMATIC CONTRAST WITH DARK GAPS ***:
+- Each up light creates a DISTINCT vertical column of light
+- DARK GAPS must be visible between each fixture's illumination zone
+- Do NOT create uniform wall wash - fixtures must have VISIBLE SEPARATION
+- Professional landscape lighting has intentional dark areas for drama
+- The wall between light pools should show the material (brick/siding) in shadow
+- If all lights blend together into continuous wash = WRONG
+- If lights have dark gaps between them = CORRECT
+- Beam edges should be SOFT and FEATHERED, never crisp circles
+- Inverse square law: light is brightest near fixture, dims rapidly with distance
 
 FINAL REMINDER:
 You are converting a daytime photo to nighttime and adding ONLY the specified lighting fixtures.

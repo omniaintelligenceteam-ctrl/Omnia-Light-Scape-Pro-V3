@@ -62,6 +62,57 @@ VERIFICATION: Count fixtures before finalizing. Must be EXACTLY 6.
 
 ---
 
+### PROBLEM 3: Lighting Looks Flat/Unrealistic (No Dark Gaps)
+
+**Why it happens:** AI defaults to "complete" lighting that fills in shadows, creating uniform wall wash instead of dramatic pools with dark gaps between fixtures.
+
+**Solution: Explicit Dramatic Contrast Instructions**
+
+```markdown
+## LIGHTING STYLE - DRAMATIC CONTRAST WITH DARK GAPS (CRITICAL)
+
+### BEAM CHARACTERISTICS (NARROW SPOT - 15-30°)
+- Each up light creates a DISTINCT, TIGHT column of light
+- Light cone spreads approximately 2.5-5 feet at 10 feet height
+- Hot center with SOFT (not crisp) falloff to edges
+- Edge transition zone: 6-12 inches with soft diffusion
+- Beam boundary is DEFINED but FEATHERED, never sharp
+
+### DARK GAPS BETWEEN FIXTURES (MANDATORY)
+- Fixtures are spaced with INTENTIONAL DARK GAPS between illumination zones
+- Unlit wall sections between fixtures remain in DEEP SHADOW
+- Dark gaps are COMPOSITIONAL ELEMENTS that create drama
+- Do NOT blend fixtures into continuous uniform wash
+
+### INVERSE SQUARE LAW (PHYSICS)
+Light intensity MUST follow: brightness = 1/(distance squared)
+- Brightest at fixture source, rapid falloff with distance
+- Creates natural-looking gradients, NOT uniform brightness
+
+### WHAT TO AVOID
+- Uniform brightness across entire wall surface
+- Light pools that blend/overlap into continuous wash
+- Fill light that softens shadows between fixtures
+- Crisp, hard-edged circular light boundaries
+
+VALIDATION: Fixtures must have VISIBLE DARK GAPS between them.
+Uniform wall wash = INVALID. Distinct pools with shadows = VALID.
+```
+
+**Key Techniques:**
+- Specify NARROW beam angles (15-30°) not wide flood
+- Explicitly require DARK GAPS between fixtures
+- Describe inverse square law falloff
+- Use language like "DISTINCT pools" and "ISOLATED zones"
+- Describe what dark gaps look like (shadow, unlit wall sections)
+
+**Research Sources:**
+- [CAST Lighting - Wall Washing vs Wall Grazing](https://cast-lighting.com/blog/post/outdoor-lighting-101-wall-washing-vs-wall-grazing)
+- [Palmetto Outdoor Lighting - The Art of Darkness](https://palmettooutdoorlighting.com/the-art-of-darkness-the-role-of-shadows-in-outdoor-lighting-design/)
+- [ProGrade Digital - Inverse Square Law](https://progradedigital.com/understanding-and-using-the-inverse-square-law-in-photography/)
+
+---
+
 ## Best Practices Summary
 
 ### 1. ALL CAPS for Critical Rules
@@ -81,6 +132,13 @@ Adding consequence language improves compliance: "Any violation = INVALID IMAGE"
 
 ### 6. Multi-Stage Validation
 Have AI verify fixture types and counts before image generation.
+
+### 7. Dramatic Contrast with Dark Gaps
+Professional lighting has intentional dark areas between fixtures. Specify:
+- Narrow beam angles (15-30°) for distinct light pools
+- DARK GAPS as compositional elements
+- Inverse square law for realistic falloff
+- Soft, feathered beam edges (never crisp circles)
 
 ---
 
@@ -119,13 +177,3 @@ Any violation = INVALID IMAGE.
 
 
 
-AI Landscape Lighting Generation Pipeline
-Stage 1 - Scene Analysis: When a daytime house photo is uploaded, immediately extract four critical maps that will anchor the entire generation process: a depth map using Depth Anything V2 (outdoor model) to understand the 3D structure of the scene, semantic segmentation using SAM 3 to identify and label every element (house, windows, lawn, trees, walkway, etc.), surface normals to understand which direction each surface faces, and edge detection using MLSD for architectural lines combined with Canny for organic shapes. These four maps become the "ground truth" that prevents the AI from hallucinating or changing anything about the original house structure throughout the entire pipeline.
-
-Stage 2 - Fixture Placement & Radiance Hints: When the user selects fixture types and quantities (e.g., "4 uplights, 6 path lights"), use the scene analysis to suggest optimal placements based on detected surfaces and features. For each placed fixture, generate physics-based "radiance hints" - mathematically calculated light maps showing exactly how that fixture's light should spread based on real parameters: position derived from depth map, beam angle, intensity falloff using inverse-square law (I=I₀/d²), and shadow casting using ray-tracing against the depth map. Combine all individual fixture contributions into a 16-channel tensor containing diffuse lighting, specular highlights at multiple roughness levels, and shadow masks. These radiance hints become hard constraints telling the AI exactly where and how light should appear.
-
-Stage 3 - Day-to-Night Base Conversion: Convert the original photo to a nighttime base image WITHOUT any artificial lighting yet. Replace the sky region (identified via segmentation) with an appropriate night sky, apply global darkening with a cooler color temperature shift, and maintain subtle ambient moonlight/twilight levels. Critically, apply heavy ControlNet conditioning during this conversion - depth ControlNet at 0.85 weight, edge ControlNet at 0.70, segmentation ControlNet at 0.60 - to absolutely lock the house structure and prevent any changes to the building or landscaping. The output should look like the house at night with no lights on.
-
-Stage 4 - Lighting Synthesis with Regional Control: Feed the diffusion model (fine-tuned SDXL or Flux) with multiple conditions: the nighttime base as background, the radiance hints as lighting instructions, and the structure maps as geometry locks. The critical technique here is regional denoising strength - areas where fixtures are placed get denoising strength of 0.70-0.75 allowing the AI to render realistic lighting effects, while areas with NO fixtures get denoising strength of only 0.20-0.25 preventing any changes or unwanted lights from appearing. The sky can have higher denoising (0.90) for natural variation. This ensures lights appear ONLY where the user specified fixtures, with physically accurate falloff and shadows, while the rest of the image remains essentially untouched.
-
-Stage 5 - Validation & Output: Before delivering results, run automated validation checks: compare edge maps between original and generated (require >95% similarity to ensure structure preservation), verify all detected bright regions in the output fall within the defined fixture influence zones (light containment check), and scan for typical AI artifacts or impossible geometry. If validation fails, either selectively inpaint problem areas or regenerate with adjusted parameters. Output the final high-resolution image along with 2-3 variations at different intensity levels, giving users options while maintaining confidence that every generated image accurately represents the specified lighting design without hallucinated elements or structural changes to the original photograph.

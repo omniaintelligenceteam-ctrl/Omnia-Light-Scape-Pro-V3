@@ -501,9 +501,11 @@ INTENSITY based on wall height:
 - 18-25ft walls: 60-70%
 - 25+ft walls: 80-90%
 
-BEAM ANGLE based on materials:
-- Brick/stone: 15-30° (narrow for texture grazing)
-- Smooth siding/stucco: 30-45° (wider for even wash)
+BEAM ANGLE (DEFAULT TO NARROW FOR DRAMATIC CONTRAST):
+- ALL materials: 15-25° (narrow for dramatic contrast and texture grazing)
+- Creates DISTINCT light pools with DARK GAPS between fixtures
+- Wider angles (45-60°) create flat, uniform wash - AVOID for professional look
+- The goal is dramatic interplay of light and shadow, NOT uniform illumination
 
 Return ONLY a valid JSON object (no markdown, no code blocks):
 
@@ -519,7 +521,7 @@ Return ONLY a valid JSON object (no markdown, no code blocks):
   ],
   "settings": {
     "intensity": <number 0-100>,
-    "beamAngle": <15, 30, 45, or 60>,
+    "beamAngle": <15 or 20 for dramatic contrast - AVOID 45/60>,
     "reasoning": "<1-2 sentences explaining your choices>"
   },
   "priorityOrder": ["<most important area>", "<second>", "..."]
@@ -644,6 +646,19 @@ CRITICAL RESEARCH FINDINGS (you MUST apply these):
 5. For prohibited fixtures, describe what "DARK" looks like
 6. For fixture counts, list EACH position individually with visual anchors
 7. Add VALIDATION language at the end with consequences
+8. Include DRAMATIC CONTRAST section for realistic professional lighting
+
+=== LIGHTING STYLE REQUIREMENT (CRITICAL FOR REALISM) ===
+The final prompt MUST include a section titled "## LIGHTING STYLE - DRAMATIC CONTRAST" with:
+1. NARROW BEAM specification (15-30° tight spots, not wide flood)
+2. DARK GAPS requirement (intentional unlit areas between fixtures)
+3. INVERSE SQUARE LAW (brightness = 1/distance², creates natural falloff)
+4. SOFT BEAM EDGES (feathered 6-12 inch transition, never crisp circles)
+5. ISOLATED LIGHT POOLS (each fixture's zone is distinct, not blending)
+6. TEXTURE GRAZING (narrow angle reveals brick/stone/siding texture)
+
+The lighting must look PROFESSIONAL with dramatic interplay of light and shadow.
+Uniform wall wash = WRONG. Distinct pools with dark gaps = CORRECT.
 
 === PROPERTY CONTEXT ===
 ${JSON.stringify(analysis, null, 2)}
@@ -680,6 +695,24 @@ ONLY the following fixture types may appear in this image:
 The following fixtures are FORBIDDEN:
 - [List each non-selected fixture with description of how it looks when dark/off]
 
+## LIGHTING STYLE - DRAMATIC CONTRAST (CRITICAL FOR REALISM)
+BEAM ANGLE: 15-25° (narrow spot for texture grazing, NOT wide flood)
+DARK GAPS: Intentional unlit areas MUST exist between each fixture's illumination zone
+LIGHT PHYSICS: Inverse square law - brightness = 1/(distance squared), rapid falloff
+BEAM EDGES: Soft, feathered transition (6-12 inches), NEVER crisp circles
+EFFECT: Each fixture creates an ISOLATED vertical column of light
+TEXTURE: Narrow angle reveals brick mortar joints / stone texture / siding lines
+SEPARATION: Light pools do NOT blend together - visible dark wall sections between
+
+WHAT TO AVOID:
+- Uniform brightness across entire wall (looks flat/fake)
+- Light pools that blend into continuous wash
+- Crisp, hard-edged circular light boundaries
+- Fill light that softens shadows between fixtures
+
+VALIDATION: Fixtures MUST have VISIBLE DARK GAPS between them.
+Uniform wall wash = INVALID. Distinct pools with shadows = VALID.
+
 ## EXACT FIXTURE PLACEMENTS
 For each selected fixture type, list:
 ### [Fixture Type] - [Count] FIXTURES TOTAL
@@ -695,6 +728,7 @@ CRITICAL: Before finalizing, verify:
 - ONLY fixtures from ALLOWLIST appear
 - Fixture counts match EXACTLY
 - All PROHIBITED fixtures remain completely dark
+- DARK GAPS visible between each fixture's light pool
 Any violation = INVALID IMAGE
 
 Return ONLY the final prompt text (no JSON, no code blocks).
