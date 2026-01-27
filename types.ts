@@ -315,6 +315,7 @@ export interface FixtureSelections {
   fixtures: string[];
   subOptions: Record<string, string[]>;
   counts?: Record<string, number | null>;
+  placementNotes?: Record<string, string>;
 }
 
 // === LIGHTING PLAN TYPES (Stage 2 of 4-Stage Pipeline) ===

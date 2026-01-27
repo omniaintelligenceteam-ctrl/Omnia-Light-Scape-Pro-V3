@@ -468,6 +468,12 @@ export const planLightingWithAI = async (
     .map(([k, v]) => `- ${k}: EXACTLY ${v} fixtures (user specified - DO NOT CHANGE)`)
     .join('\n') || '- All counts set to Auto (you decide based on property)';
 
+  // Build user placement notes
+  const userPlacementNotes = Object.entries(userSelections.placementNotes || {})
+    .filter(([, v]) => v && v.trim())
+    .map(([k, v]) => `- ${k}: "${v}"`)
+    .join('\n') || '- No specific placement notes provided';
+
   const planningPrompt = `You are an expert landscape lighting designer. Based on the property analysis and user's fixture selections, create an optimal lighting plan.
 
 === PROPERTY ANALYSIS ===
@@ -478,6 +484,11 @@ ${fixtureDescriptions}
 
 === USER'S COUNT CONSTRAINTS ===
 ${userCountConstraints}
+
+=== USER'S PLACEMENT NOTES (CRITICAL - FOLLOW THESE) ===
+${userPlacementNotes}
+
+IMPORTANT: If the user provided placement notes, use their descriptions as the PRIMARY guide for fixture positions. Their notes override default placement logic.
 
 === YOUR TASK ===
 Create a detailed lighting plan with VISUAL ANCHORS for each fixture position.
@@ -597,7 +608,8 @@ export const craftPromptWithAI = async (
   systemPrompt: SystemPromptConfig,
   fixtureTypes: FixtureType[],
   colorTemp: string,
-  userPreferences?: UserPreferences | null
+  userPreferences?: UserPreferences | null,
+  placementNotes?: Record<string, string>
 ): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
@@ -608,6 +620,7 @@ export const craftPromptWithAI = async (
   const allowlistItems = plan.placements.map(placement => {
     const fixtureType = fixtureTypes.find(ft => ft.id === placement.fixtureType);
     const subOption = fixtureType?.subOptions.find(so => so.id === placement.subOption);
+    const userNote = placementNotes?.[placement.subOption] || '';
     return {
       fixture: placement.fixtureType,
       fixtureLabel: fixtureType?.label || placement.fixtureType,
@@ -616,6 +629,7 @@ export const craftPromptWithAI = async (
       count: placement.count,
       positions: placement.positions,
       positivePrompt: subOption?.prompt || fixtureType?.positivePrompt || '',
+      userPlacementNote: userNote,
     };
   });
 
@@ -668,7 +682,8 @@ ${allowlistItems.map(item => `
 - ${item.fixtureLabel.toUpperCase()} / ${item.subOptionLabel.toUpperCase()}:
   - Count: ${item.count} fixtures
   - Positions: ${item.positions.map((pos, i) => `FIXTURE ${i + 1}: ${pos}`).join('; ')}
-  - Instructions: ${item.positivePrompt}
+  - Instructions: ${item.positivePrompt}${item.userPlacementNote ? `
+  - USER NOTE (PRIORITY): "${item.userPlacementNote}"` : ''}
 `).join('\n')}
 
 === ABSOLUTE PROHIBITION LIST (These MUST remain DARK) ===

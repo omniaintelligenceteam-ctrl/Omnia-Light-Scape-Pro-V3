@@ -369,6 +369,8 @@ const App: React.FC = () => {
   const [fixtureSubOptions, setFixtureSubOptions] = useState<Record<string, string[]>>({});
   // Fixture Count State (null = auto/AI determines, number = user-specified exact count)
   const [fixtureCounts, setFixtureCounts] = useState<Record<string, number | null>>({});
+  // Placement Notes State (user describes where they want fixtures)
+  const [fixturePlacementNotes, setFixturePlacementNotes] = useState<Record<string, string>>({});
 
   // Favorite Presets State
   interface FixturePreset {
@@ -1378,6 +1380,45 @@ const App: React.FC = () => {
       return 4; // Generic default
   };
 
+  // Helper function for context-specific placement note placeholders
+  const getPlacementPlaceholder = (fixtureId: string, subOptId: string): string => {
+    const placeholders: Record<string, Record<string, string>> = {
+      up: {
+        siding: 'e.g., Focus on brick sections, skip garage',
+        windows: 'e.g., Below bedroom windows only',
+        columns: 'e.g., Front porch columns',
+        entryway: 'e.g., Either side of front door',
+        trees: 'e.g., Large oak on left, maple on right',
+      },
+      path: {
+        pathway: 'e.g., Along front walkway to door',
+        driveway: 'e.g., Both sides of driveway entrance',
+      },
+      gutter: {
+        dormers: 'e.g., All 3 dormers on front facade',
+        peaks: 'e.g., Center peak over garage',
+        secondStoryFacade: 'e.g., Upper windows above entry',
+      },
+      coredrill: {
+        statues: 'e.g., Fountain in front yard',
+        focalPoints: 'e.g., Flag pole and garden statue',
+      },
+      soffit: {
+        porchEntry: 'e.g., Under front porch overhang',
+        perimeter: 'e.g., Around entire roofline',
+      },
+      hardscape: {
+        retainingWalls: 'e.g., Stone wall along driveway',
+        steps: 'e.g., Front porch steps only',
+      },
+      holiday: {
+        roofline: 'e.g., Along front roofline only',
+        windows: 'e.g., All front-facing windows',
+      },
+    };
+    return placeholders[fixtureId]?.[subOptId] || 'e.g., Describe specific placement';
+  };
+
   const confirmFixtureSelection = () => {
       if (activeConfigFixture) {
           setFixtureSubOptions(prev => ({ ...prev, [activeConfigFixture]: pendingOptions }));
@@ -1807,7 +1848,8 @@ const App: React.FC = () => {
           {
             fixtures: selectedFixtures,
             subOptions: fixtureSubOptions,
-            counts: fixtureCounts
+            counts: fixtureCounts,
+            placementNotes: fixturePlacementNotes
           },
           FIXTURE_TYPES
         );
@@ -1832,7 +1874,8 @@ const App: React.FC = () => {
           SYSTEM_PROMPT,
           FIXTURE_TYPES,
           colorPrompt,
-          userPreferences
+          userPreferences,
+          fixturePlacementNotes
         );
 
         // VERIFICATION STEP: Double-check fixtures match Fixture Summary before generating
@@ -4837,11 +4880,24 @@ Notes: ${invoice.notes || 'N/A'}
                                                         const displayCount = count ?? getDefaultCount(fixtureId, subOptId);
 
                                                         return (
-                                                            <div key={subOptId} className="flex items-center justify-between py-1.5">
-                                                                <span className="text-sm text-gray-300">{fixture.label} - {subOpt.label}</span>
-                                                                <span className={`text-sm font-semibold ${isAuto ? 'text-gray-500' : 'text-[#F6B45A]'}`}>
-                                                                    {isAuto ? `~${displayCount}` : displayCount}
-                                                                </span>
+                                                            <div key={subOptId} className="space-y-2 py-2 border-b border-white/5 last:border-0">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-sm text-gray-300">{fixture.label} - {subOpt.label}</span>
+                                                                    <span className={`text-sm font-semibold ${isAuto ? 'text-gray-500' : 'text-[#F6B45A]'}`}>
+                                                                        {isAuto ? `~${displayCount}` : displayCount}
+                                                                    </span>
+                                                                </div>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder={getPlacementPlaceholder(fixtureId, subOptId)}
+                                                                    value={fixturePlacementNotes[subOptId] || ''}
+                                                                    onChange={(e) => setFixturePlacementNotes(prev => ({
+                                                                        ...prev,
+                                                                        [subOptId]: e.target.value
+                                                                    }))}
+                                                                    className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 placeholder-gray-600 focus:border-[#F6B45A]/50 focus:outline-none"
+                                                                    maxLength={100}
+                                                                />
                                                             </div>
                                                         );
                                                     });
