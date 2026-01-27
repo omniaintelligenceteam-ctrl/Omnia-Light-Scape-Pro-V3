@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
 
-const FREE_TRIAL_LIMIT = 25;
+const FREE_TRIAL_LIMIT = 10;
 
 export interface SubscriptionStatus {
   hasActiveSubscription: boolean;

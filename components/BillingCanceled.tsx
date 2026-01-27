@@ -33,7 +33,7 @@ export const BillingCanceled: React.FC<BillingCanceledProps> = ({ onContinue, on
           <ul className="space-y-2 text-sm text-gray-400">
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-[#F6B45A] rounded-full" />
-              25 free generations to try the app
+              10 free generations to try the app
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-[#F6B45A] rounded-full" />
