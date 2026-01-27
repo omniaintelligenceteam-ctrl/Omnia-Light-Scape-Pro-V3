@@ -9,9 +9,11 @@ import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/settings';
 import AuthWrapper from './components/AuthWrapper';
-import { InventoryView } from './components/InventoryView';
+// InventoryView - currently unused, can re-enable when needed
+// import { InventoryView } from './components/InventoryView';
 import { ScheduleView } from './components/ScheduleView';
-import { BOMView } from './components/BOMView';
+// BOMView - currently unused, can re-enable when needed
+// import { BOMView } from './components/BOMView';
 import { Pricing } from './components/Pricing';
 import { BillingSuccess } from './components/BillingSuccess';
 import { BillingCanceled } from './components/BillingCanceled';
@@ -32,9 +34,10 @@ import { usePipelineForecast } from './hooks/usePipelineForecast';
 import { useTeamPerformance } from './hooks/useTeamPerformance';
 import { useCapacityPlanning } from './hooks/useCapacityPlanning';
 import { AnalyticsDashboard, ExecutiveDashboard, BusinessHealthScore, PipelineForecast, TeamPerformanceMatrix, CapacityDashboard } from './components/analytics';
-import { LeadSourceROIDashboard } from './components/analytics/LeadSourceROIDashboard';
-import { CashFlowDashboard } from './components/analytics/CashFlowDashboard';
-import { ExportMenu } from './components/reports/ExportMenu';
+// LeadSourceROIDashboard, CashFlowDashboard, ExportMenu - currently unused
+// import { LeadSourceROIDashboard } from './components/analytics/LeadSourceROIDashboard';
+// import { CashFlowDashboard } from './components/analytics/CashFlowDashboard';
+// import { ExportMenu } from './components/reports/ExportMenu';
 import { DateRangePickerAdvanced, DateRangeValue } from './components/reports/DateRangePickerAdvanced';
 import { ComparisonView, ComparisonData } from './components/reports/ComparisonView';
 import { useLocations } from './hooks/useLocations';
@@ -53,12 +56,11 @@ import { useToast } from './components/Toast';
 import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
-import { useDemoMode } from './hooks/useDemoMode';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -172,14 +174,11 @@ const App: React.FC = () => {
   // Toast notifications
   const { showToast } = useToast();
 
-  // Demo mode controls
-  const { dismissDemoData } = useDemoMode();
-
   // Subscription and usage tracking
   const subscription = useSubscription();
 
-  // Load/save projects from Supabase
-  const { projects, isLoading: projectsLoading, isDemo, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject } = useProjects();
+  // Load/save projects from Supabase (includes dismissDemoData to exit demo mode)
+  const { projects, isLoading: projectsLoading, isDemo, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject, dismissDemoData } = useProjects();
 
   // Load/save clients from Supabase
   const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients, sortClients, filterByLeadSource, filterByLetter, getAvailableLetters } = useClients();
@@ -493,7 +492,6 @@ const App: React.FC = () => {
     endDate: new Date(),
     label: 'Last 30 Days'
   });
-  const [showComparison, setShowComparison] = useState(true);
 
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [inlineEditQuote, setInlineEditQuote] = useState<{ [key: string]: { clientName: string; total: number; notes: string } }>({});
@@ -3110,7 +3108,7 @@ Notes: ${invoice.notes || 'N/A'}
       <DemoModeBanner
         isVisible={isDemo && !projectsLoading}
         onDismiss={dismissDemoData}
-        onStartFresh={dismissDemoData}
+        onEndDemo={dismissDemoData}
       />
 
       {/* Hidden PDF Generation Container */}

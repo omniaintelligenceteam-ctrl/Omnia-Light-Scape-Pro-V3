@@ -1,17 +1,17 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Rocket, Eye } from 'lucide-react';
+import { Sparkles, X, LogOut, Eye } from 'lucide-react';
 
 interface DemoModeBannerProps {
   isVisible: boolean;
   onDismiss: () => void;
-  onStartFresh?: () => void;
+  onEndDemo?: () => void;
 }
 
 const DemoModeBanner: React.FC<DemoModeBannerProps> = ({
   isVisible,
   onDismiss,
-  onStartFresh,
+  onEndDemo,
 }) => {
   return (
     <AnimatePresence>
@@ -57,15 +57,15 @@ const DemoModeBanner: React.FC<DemoModeBannerProps> = ({
 
               {/* Right: Actions */}
               <div className="flex items-center gap-2">
-                {onStartFresh && (
+                {onEndDemo && (
                   <motion.button
-                    onClick={onStartFresh}
+                    onClick={onEndDemo}
                     className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg border border-amber-500/20 transition-colors"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Rocket className="w-3.5 h-3.5" />
-                    Start Fresh
+                    <LogOut className="w-3.5 h-3.5" />
+                    End Demo
                   </motion.button>
                 )}
                 <motion.button

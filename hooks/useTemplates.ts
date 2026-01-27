@@ -133,7 +133,7 @@ const saveTemplates = (templates: ProjectTemplate[]) => {
 
 export const useTemplates = () => {
   const [templates, setTemplates] = useState<ProjectTemplate[]>(() => loadTemplates());
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   // Save whenever templates change
   useEffect(() => {
@@ -172,15 +172,15 @@ export const useTemplates = () => {
     description: string,
     category: TemplateCategory
   ): ProjectTemplate => {
-    // Extract fixtures from project
+    // Extract fixtures from project quote line items
     const fixtures: TemplateFixture[] = [];
 
-    if (project.quote?.fixtures) {
-      project.quote.fixtures.forEach(fixture => {
+    if (project.quote?.lineItems) {
+      project.quote.lineItems.forEach(item => {
         fixtures.push({
-          type: fixture.type,
-          quantity: fixture.quantity,
-          notes: fixture.notes,
+          type: item.name,
+          quantity: item.quantity,
+          notes: item.description,
         });
       });
     }
@@ -194,7 +194,7 @@ export const useTemplates = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       usageCount: 0,
-      thumbnail: project.generatedImage || project.image,
+      thumbnail: project.image || undefined,
     };
 
     setTemplates(prev => [...prev, newTemplate]);

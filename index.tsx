@@ -46,7 +46,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <ClerkProvider publishableKey={PUBLISHABLE_KEY} tokenCache={tokenCache}>
+      <ClerkProvider
+        publishableKey={PUBLISHABLE_KEY}
+        // @ts-expect-error - tokenCache helps mobile session persistence but isn't in Clerk's types
+        tokenCache={tokenCache}
+      >
         <ToastProvider>
           <App />
         </ToastProvider>

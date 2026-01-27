@@ -113,17 +113,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? `${companyName} - ${invoiceNumber}`
         : `${companyName} - Invoice for ${project.name}`;
     } else {
-      // Fallback to quote data or request body
+      // Fallback to quote data only - NEVER accept amount from client
       const quoteData = project.prompt_config?.quote || project.quote_data;
       if (quoteData?.total) {
         invoiceAmount = Math.round(quoteData.total * 100);
         invoiceDescription = `${companyName} - Invoice for ${project.name}`;
-      } else {
-        const { amount } = req.body || {};
-        if (amount && typeof amount === 'number') {
-          invoiceAmount = Math.round(amount * 100);
-        }
       }
+      // If no invoice or quote data, invoiceAmount stays 0 and will fail validation below
     }
 
     if (invoiceAmount <= 0) {

@@ -412,6 +412,7 @@ export function useProjects() {
     completeProject,
     addImageToProject,
     removeImageFromProject,
-    setProjects
+    setProjects,
+    dismissDemoData
   };
 }

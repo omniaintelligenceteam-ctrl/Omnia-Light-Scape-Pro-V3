@@ -314,8 +314,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Main drop zone */}
-      <div className={`relative aspect-[16/10] sm:aspect-[16/10] md:aspect-[16/9] rounded-2xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
+      {/* Main drop zone - taller on mobile to fit sample photos */}
+      <div className={`relative aspect-[3/4] sm:aspect-[16/10] md:aspect-[16/9] rounded-2xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
         isDragging
           ? 'border-[#F6B45A] bg-[#F6B45A]/5'
           : 'border-white/10 hover:border-white/20 bg-gradient-to-b from-white/[0.02] to-black/20'
@@ -347,8 +347,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           onChange={handleFileChange}
         />
 
-        {/* Content - pushed up on mobile for better visibility */}
-        <div className="absolute inset-0 flex flex-col items-center justify-start pt-4 sm:pt-6 md:justify-center md:pt-0 p-4 sm:p-6">
+        {/* Content - centered on all devices */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-6">
 
           {/* Icon - smaller on mobile to save space */}
           <motion.div
@@ -462,7 +462,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                   {/* Thumbnail with enhanced styling */}
                   <div className={`relative rounded-lg overflow-hidden ${
                     showSamplesProminent
-                      ? 'w-20 h-14 sm:w-24 sm:h-16'
+                      ? 'w-[72px] h-12 sm:w-24 sm:h-16'
                       : 'w-14 h-10 sm:w-16 sm:h-12'
                   } bg-white/5`}>
                     <img

@@ -83,6 +83,11 @@ export function useExpenses() {
       if (filters?.projectId) params.append('projectId', filters.projectId);
 
       const response = await fetch(`/api/expenses?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -104,6 +109,11 @@ export function useExpenses() {
 
     try {
       const response = await fetch(`/api/expenses?userId=${user.id}&type=categories`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data.success) {
