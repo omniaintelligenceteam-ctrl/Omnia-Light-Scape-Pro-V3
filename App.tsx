@@ -4883,9 +4883,30 @@ Notes: ${invoice.notes || 'N/A'}
                                                             <div key={subOptId} className="space-y-2 py-2 border-b border-white/5 last:border-0">
                                                                 <div className="flex items-center justify-between">
                                                                     <span className="text-sm text-gray-300">{fixture.label} - {subOpt.label}</span>
-                                                                    <span className={`text-sm font-semibold ${isAuto ? 'text-gray-500' : 'text-[#F6B45A]'}`}>
-                                                                        {isAuto ? `~${displayCount}` : displayCount}
-                                                                    </span>
+                                                                    {/* Inline quantity controls */}
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button
+                                                                            onClick={() => setFixtureCounts(prev => ({
+                                                                                ...prev,
+                                                                                [subOptId]: Math.max(1, (prev[subOptId] ?? displayCount) - 1)
+                                                                            }))}
+                                                                            className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-gray-300 text-sm"
+                                                                        >
+                                                                            -
+                                                                        </button>
+                                                                        <span className={`text-sm font-semibold min-w-[20px] text-center ${isAuto ? 'text-gray-500' : 'text-[#F6B45A]'}`}>
+                                                                            {displayCount}
+                                                                        </span>
+                                                                        <button
+                                                                            onClick={() => setFixtureCounts(prev => ({
+                                                                                ...prev,
+                                                                                [subOptId]: (prev[subOptId] ?? displayCount) + 1
+                                                                            }))}
+                                                                            className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-gray-300 text-sm"
+                                                                        >
+                                                                            +
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                                 <input
                                                                     type="text"
