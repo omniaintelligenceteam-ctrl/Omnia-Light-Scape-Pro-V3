@@ -63,7 +63,6 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
 0. FRAMING & COMPOSITION PRESERVATION (CRITICAL):
    - The output image must have the EXACT SAME framing and composition as the source image
    - Keep the ENTIRE house in frame - do NOT crop, zoom in, or cut off any part of the home
-   - Do NOT change the camera angle, perspective, or viewpoint
    - All edges of the property visible in the source must remain visible in the output
    - The aspect ratio and boundaries must match the source image exactly
    - If the source shows the full front facade, the output MUST show the full front facade
@@ -71,28 +70,18 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
 
 1. ARCHITECTURAL PRESERVATION (ZERO TOLERANCE):
    - The home's structure, shape, roofline, windows, doors, columns, and ALL architectural features must remain EXACTLY as shown in the source image
-   - Do NOT add, remove, move, or modify ANY architectural element
-   - Do NOT add windows, doors, shutters, trim, or decorative features
-   - Do NOT change siding material, brick pattern, stone texture, or paint colors
-   - Do NOT alter roof shape, pitch, dormers, or gables
-   - Do NOT add or remove porches, decks, balconies, or overhangs
 
 2. HARDSCAPE PRESERVATION (ZERO TOLERANCE):
    - Driveways must remain EXACTLY as shown - same shape, length, width, material
    - Sidewalks and walkways must remain EXACTLY as shown - do NOT add new paths
    - Patios, steps, and retaining walls must remain EXACTLY as shown
-   - Do NOT add, extend, or reshape any concrete, paver, or stone surface
-   - If NO driveway exists in the source image, do NOT create one
-   - If NO sidewalk exists in the source image, do NOT create one
 
 3. LANDSCAPE PRESERVATION (ZERO TOLERANCE):
    - Trees must remain EXACTLY as shown - same size, shape, position, species
    - Shrubs, bushes, and plants must remain EXACTLY as shown
    - Lawn areas must remain EXACTLY as shown - same shape and boundaries
    - Flower beds and mulch areas must remain EXACTLY as shown
-   - Do NOT add trees, remove trees, or change tree appearance
-   - Do NOT add landscaping, planters, or garden features
-   - Do NOT change the season or foliage appearance
+
 
 4. ENVIRONMENTAL PRESERVATION:
    - Neighboring structures, fences, and property elements remain unchanged
@@ -127,13 +116,11 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
 7. LIGHT GENERATION RULES:
    - Generate ONLY the fixture types that are explicitly ENABLED
    - Place fixtures ONLY in locations specified by active sub-option prompts
-   - If a fixture category is DISABLED, that area receives ZERO light from fixtures
    - The moon provides ONLY subtle edge/outline lighting on roofline and tree silhouettes
    - Moonlight should NOT illuminate surfaces - only create faint silhouette outlines
    - Do NOT add decorative string lights unless explicitly requested
    - Do NOT add interior lights glowing through windows unless explicitly requested
    - Do NOT add street lights, car headlights, or ambient city glow
-   - ABSOLUTE PROHIBITION: NO SECURITY LIGHTS - even if security lights/floodlights exist on the home in the source image, they must remain OFF and DARK in the output
    - Light color temperature and beam characteristics follow active prompt specs
    - Unlit areas should remain in deep shadow for maximum contrast
 
@@ -153,19 +140,15 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - If up lights are NOT selected, there must be ZERO up lights in the image
 - NEVER add fixtures "for realism" or "to complete the design"
 - ABSENCE of a category selection means ABSOLUTE PROHIBITION of that fixture type
-- When in doubt, DO NOT ADD the fixture
 
 *** CRITICAL SUB-OPTION RULE ***:
 - Within each fixture category, ONLY the SELECTED sub-options receive lights
-- Unselected sub-options MUST remain COMPLETELY DARK - NO EXCEPTIONS
 - Example: If "Up Lights" is enabled with ONLY "Trees" selected, then:
   * Trees = LIT
   * Siding, Windows, Columns, Landscaping = MUST REMAIN DARK
-- Do NOT light unselected sub-options to "balance" or "complete" the design
 - This rule is ABSOLUTE and NON-NEGOTIABLE
 
 *** STRICT RULE - NO SECURITY LIGHTS ***:
-- SECURITY LIGHTS, FLOODLIGHTS, and MOTION SENSOR LIGHTS must NEVER be illuminated
 - Even if security fixtures exist on the home in the source image, they MUST remain OFF and DARK
 - Do NOT turn on, activate, or show light emanating from ANY existing security fixtures
 - This applies regardless of what other lighting is selected
@@ -175,14 +158,11 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
 - ALL up lights MUST be placed WITHIN 6 INCHES of the home's foundation
 - EXCEPTION: Tree up lights - these are placed at the base of trees, not the foundation
 - For siding, windows, columns, entry, and all other up light sub-options: fixtures MUST be tight against the foundation
-- Do NOT place non-tree up lights far out in the landscaping away from the home
 - The fixture base should be nearly touching the foundation - 6 inches MAX distance
 
 *** STRICT RULE - UP LIGHT BEAM HEIGHT ***:
 - ALL up lights on siding AND 1st story windows MUST shine ALL THE WAY UP to the soffit line above them
 - The light beam must travel the FULL HEIGHT of the wall section from ground to soffit
-- Do NOT create short beams that stop partway up the wall
-- Do NOT create beams that fade out before reaching the soffit
 - The up light effect should wash the ENTIRE vertical surface from foundation to soffit
 - This applies to EVERY up light on siding and windows, regardless of how many fixtures there are
 - Each up light creates a vertical column of light that reaches the soffit line above it
@@ -194,8 +174,6 @@ VALIDATION CHECK (PERFORM BEFORE GENERATING):
   * Shorter walls = softer/lower wattage appearance
 - The UNDERSIDE OF THE SOFFIT must be NOTICEABLY LIT by the up light
 - The light should "kiss" the soffit - illuminating its underside before falling off
-- Do NOT let the beam stop short of the soffit
-- Do NOT let the beam blast past the soffit onto the roof
 - The soffit directly above each up light should show visible illumination on its underside
 - This creates the proper "wall wash" effect that terminates at the architectural soffit line
 
@@ -412,14 +390,8 @@ HOT SPOT AVOIDANCE & WATTAGE:
 - Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
 
 STRICT EXCLUSION ZONES:
-- Do NOT place fixtures directly UNDER window glass -- windows are skipped
-- Do NOT place fixtures on walkways, driveways, or any hardscape surface
-- Do NOT place fixtures in open lawn areas away from foundation
-- Do NOT aim light at window glass -- wall piers only
-- Do NOT create downlighting from soffit (this is UP lighting only)
-- Do NOT skip corner sections -- corners are critical anchor points
 - Wall sections immediately adjacent to windows receive SPILL light only, not direct fixtures`,
-  negativePrompt: `ABSOLUTE PROHIBITION (SIDING): Do NOT skip the corners/ends of the home - both left and right ends MUST have up lights. Do NOT start placement in the middle of the facade. Do NOT place up lights directly under windows. Do NOT place on concrete, hardscape, or open lawn - ONLY in landscaping beds. Do NOT aim beams at window glass.`
+  negativePrompt: `ABSOLUTE PROHIBITION (SIDING): skip the corners/ends of the home - both left and right ends MUST have up lights. start placement in the middle of the facade.place up lights directly under windows.  place on concrete, hardscape, or open lawn - ONLY in landscaping beds.  aim beams at window glass.`
 
       },
       {
