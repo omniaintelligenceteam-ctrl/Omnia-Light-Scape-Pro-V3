@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 // Price ID to monthly limit mapping
 const PRICE_TO_LIMIT_MAP: Record<string, number> = {
-    'price_1SrNHIQ1tit8mwraqKGAf2GL': 50,    // STARTER_MONTHLY
+    'price_1SrNHlQ1tit8mwraqKGAf2GL': 50,    // STARTER_MONTHLY
     'price_1SrNJdQ1tit8mwraqbC4ihcM': 50,    // STARTER_YEARLY (50/month)
     'price_1SrNK5Q1tit8mwraTa5UHFWD': 125,   // PRO_MONTHLY
     'price_1SrNKfQ1tit8mwrajmlqx1ak': 125,   // PRO_YEARLY (125/month)

@@ -4,6 +4,28 @@ import { getSupabase } from '../lib/supabase.js';
 
 const FREE_TRIAL_LIMIT = 10;
 
+// Check if it's time for a monthly reset based on subscription anniversary
+function shouldResetMonthly(createdAt: Date, lastResetAt: Date | null): boolean {
+    const now = new Date();
+    const anniversaryDay = createdAt.getDate();
+
+    // Get this month's anniversary date
+    let anniversaryThisMonth = new Date(now.getFullYear(), now.getMonth(), anniversaryDay);
+
+    // Handle months with fewer days (e.g., Jan 31 → Feb 28)
+    if (anniversaryThisMonth.getMonth() !== now.getMonth()) {
+        anniversaryThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of month
+    }
+
+    // Reset if we've passed anniversary and haven't reset this cycle
+    if (now >= anniversaryThisMonth) {
+        if (!lastResetAt || lastResetAt < anniversaryThisMonth) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     let supabase: SupabaseClient;
     try {
@@ -54,13 +76,26 @@ async function handleStatus(req: VercelRequest, res: VercelResponse, supabase: S
         // Check for active subscription
         const { data: subData } = await supabase
             .from('subscriptions')
-            .select('status, plan_id, monthly_limit')
+            .select('id, status, plan_id, monthly_limit, created_at, last_reset_at')
             .eq('user_id', userData.id)
             .eq('status', 'active')
             .maybeSingle();
 
         const hasActiveSubscription = !!subData;
-        const generationCount = userData.generation_count || 0;
+        let generationCount = userData.generation_count || 0;
+
+        // Check for monthly reset (for both monthly and yearly plans)
+        if (subData && subData.monthly_limit !== -1 && subData.created_at) {
+            const createdAt = new Date(subData.created_at);
+            const lastResetAt = subData.last_reset_at ? new Date(subData.last_reset_at) : null;
+
+            if (shouldResetMonthly(createdAt, lastResetAt)) {
+                // Reset generation count
+                await supabase.from('users').update({ generation_count: 0 }).eq('id', userData.id);
+                await supabase.from('subscriptions').update({ last_reset_at: new Date().toISOString() }).eq('id', subData.id);
+                generationCount = 0;
+            }
+        }
 
         let remainingFreeGenerations = 0;
         let canGenerate = false;
@@ -197,13 +232,26 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supaba
         // Check for active subscription
         const { data: subData } = await supabase
             .from('subscriptions')
-            .select('status, plan_id, monthly_limit')
+            .select('id, status, plan_id, monthly_limit, created_at, last_reset_at')
             .eq('user_id', userData.id)
             .eq('status', 'active')
             .maybeSingle();
 
         const hasActiveSubscription = !!subData;
-        const generationCount = userData.generation_count || 0;
+        let generationCount = userData.generation_count || 0;
+
+        // Check for monthly reset (for both monthly and yearly plans)
+        if (subData && subData.monthly_limit !== -1 && subData.created_at) {
+            const createdAt = new Date(subData.created_at);
+            const lastResetAt = subData.last_reset_at ? new Date(subData.last_reset_at) : null;
+
+            if (shouldResetMonthly(createdAt, lastResetAt)) {
+                // Reset generation count
+                await supabase.from('users').update({ generation_count: 0 }).eq('id', userData.id);
+                await supabase.from('subscriptions').update({ last_reset_at: new Date().toISOString() }).eq('id', subData.id);
+                generationCount = 0;
+            }
+        }
 
         let remainingFreeGenerations = 0;
         let canGenerate = false;
