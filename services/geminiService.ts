@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import type { UserPreferences } from "../types";
+import type { UserPreferences, PropertyAnalysis, FixtureSelections, LightingPlan, FixturePlacement } from "../types";
 
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
 const MODEL_NAME = 'gemini-3-pro-image-preview';
@@ -68,6 +68,388 @@ function buildPreferenceContext(preferences: UserPreferences | null | undefined)
 
   return contextLines.join('\n');
 }
+
+// Analysis model - Gemini 3 Pro for best reasoning + multimodal understanding (USER PREFERENCE: ALWAYS USE THE BEST)
+const ANALYSIS_MODEL_NAME = 'gemini-3-pro-preview';
+const ANALYSIS_TIMEOUT_MS = 60000; // 1 minute for analysis
+
+/**
+ * Stage 1: ANALYZING
+ * Analyzes property photo AND user's fixture selections to extract architectural details
+ */
+export const analyzePropertyArchitecture = async (
+  imageBase64: string,
+  imageMimeType: string = 'image/jpeg',
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>
+): Promise<PropertyAnalysis> => {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  // Build user's fixture selection summary
+  const fixtureSelectionSummary = selectedFixtures.length > 0
+    ? selectedFixtures.map(f => {
+        const subOpts = fixtureSubOptions[f] || [];
+        const subOptStr = subOpts.length > 0 ? ` (${subOpts.join(', ')})` : '';
+        return `- ${f}${subOptStr}`;
+      }).join('\n')
+    : '- general landscape lighting';
+
+  // Build user's quantity summary
+  const quantitySummary = Object.entries(fixtureCounts)
+    .filter(([, v]) => v !== null)
+    .map(([k, v]) => `- ${k}: ${v} fixtures`)
+    .join('\n') || '- Auto (let AI recommend)';
+
+  const analysisPrompt = `Analyze this property photo for landscape lighting design.
+
+=== USER'S FIXTURE SELECTIONS ===
+${fixtureSelectionSummary}
+
+=== USER'S QUANTITY SETTINGS ===
+${quantitySummary}
+
+Analyze the photo and return ONLY a valid JSON object (no markdown, no code blocks, no explanation).
+
+Your analysis should:
+1. Identify architecture details to validate/adjust user's selections
+2. Count actual features that match user's fixture choices
+3. Recommend placement positions for the selected fixtures
+4. Suggest optimal settings based on the property
+
+Return this exact structure:
+
+{
+  "architecture": {
+    "story_count": <1 or 2 or 3>,
+    "wall_height_estimate": "<8-12ft or 18-25ft or 25+ft>",
+    "facade_materials": ["<brick, siding, stone, stucco, wood, or vinyl>"],
+    "windows": {
+      "first_floor_count": <number>,
+      "second_floor_count": <number>,
+      "positions": "<describe window layout: e.g., '3 evenly spaced on left, 2 flanking door on right'>"
+    },
+    "columns": { "present": <true/false>, "count": <number> },
+    "dormers": { "present": <true/false>, "count": <number> },
+    "gables": { "present": <true/false>, "count": <number> },
+    "entryway": {
+      "type": "<single, double, or grand>",
+      "has_overhang": <true/false>
+    }
+  },
+  "landscaping": {
+    "trees": {
+      "count": <number>,
+      "sizes": ["<small, medium, or large>"],
+      "positions": "<describe tree locations: e.g., '1 large oak on left, 2 small ornamentals by entry'>"
+    },
+    "planting_beds": {
+      "present": <true/false>,
+      "locations": ["<front, sides, foundation, etc>"]
+    }
+  },
+  "hardscape": {
+    "driveway": {
+      "present": <true/false>,
+      "width_estimate": "<narrow, standard, or wide>",
+      "position": "<left, right, or center>"
+    },
+    "walkway": {
+      "present": <true/false>,
+      "length_estimate": "<short, medium, or long>",
+      "style": "<straight or curved>",
+      "description": "<describe path: e.g., 'curved 30ft path from driveway to front door'>"
+    },
+    "patio": { "present": <true/false> },
+    "sidewalk": { "present": <true/false> }
+  },
+  "recommendations": {
+    "optimal_intensity": "<subtle, moderate, bright, or high_power>",
+    "optimal_beam_angle": <15, 30, 45, or 60>,
+    "fixture_counts": {
+      "up_siding": <count based on wall sections between windows>,
+      "up_windows": <count based on first floor windows>,
+      "up_columns": <count if columns present>,
+      "up_trees": <count based on significant trees>,
+      "up_entryway": <1-2 for entry>,
+      "path_walkway": <count based on walkway length / 6-8ft spacing>,
+      "path_driveway": <count based on driveway edges>,
+      "soffit_windows": <count for soffit above windows>,
+      "gutter_peaks": <count for gable peaks>
+    },
+    "fixture_positions": {
+      "up_siding": ["<position 1>", "<position 2>", "..."],
+      "up_windows": ["<position 1>", "<position 2>", "..."],
+      "path_walkway": ["<position 1>", "<position 2>", "..."]
+    },
+    "priority_areas": ["<ordered list of areas to light first>"],
+    "notes": "<2-3 sentences of specific recommendations for this property's lighting>"
+  }
+}
+
+Base your analysis on:
+- Wall height determines intensity (taller = brighter)
+- Brick/stone needs narrow beam (15-30°) for texture grazing
+- Smooth siding works with wider beams (30-45°)
+- Walkway spacing: path light every 6-8 feet
+- Window up lights: one centered below each first-floor window
+- Siding up lights: one in each wall section between windows`;
+
+  try {
+    const analyzePromise = ai.models.generateContent({
+      model: ANALYSIS_MODEL_NAME,
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: imageBase64,
+              mimeType: imageMimeType,
+            },
+          },
+          {
+            text: analysisPrompt,
+          },
+        ],
+      },
+    });
+
+    const response = await withTimeout(
+      analyzePromise,
+      ANALYSIS_TIMEOUT_MS,
+      'Property analysis timed out. Please try again.'
+    );
+
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+      if (candidate.content && candidate.content.parts) {
+        const textPart = candidate.content.parts.find(p => p.text);
+        if (textPart && textPart.text) {
+          // Clean up the response - remove any markdown code blocks if present
+          let jsonText = textPart.text.trim();
+          if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+          }
+
+          try {
+            const analysis: PropertyAnalysis = JSON.parse(jsonText);
+            return analysis;
+          } catch (parseError) {
+            console.error('Failed to parse analysis JSON:', parseError);
+            console.error('Raw response:', textPart.text);
+            throw new Error('Failed to parse property analysis. Please try again.');
+          }
+        }
+      }
+    }
+
+    throw new Error('No analysis generated. Please try again.');
+  } catch (error) {
+    console.error('Property Analysis Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Stage 2: PLANNING
+ * Builds lighting plan with exact placements, optimal settings, and validated counts
+ */
+export const buildLightingPlan = (
+  analysis: PropertyAnalysis,
+  userSelections: FixtureSelections
+): LightingPlan => {
+  const { architecture, recommendations } = analysis;
+
+  // Auto-select intensity based on wall height
+  let intensity: number;
+  switch (architecture.wall_height_estimate) {
+    case '25+ft':
+      intensity = 85;
+      break;
+    case '18-25ft':
+      intensity = 65;
+      break;
+    default:
+      intensity = 45;
+  }
+
+  // Auto-select beam angle based on materials
+  const hasTexturedMaterial = architecture.facade_materials.some(
+    m => m === 'brick' || m === 'stone'
+  );
+  const beamAngle = hasTexturedMaterial ? 15 : 30;
+
+  // Build placements for each selected fixture/sub-option
+  const placements: FixturePlacement[] = [];
+
+  userSelections.fixtures.forEach(fixtureType => {
+    const subOptions = userSelections.subOptions[fixtureType] || [];
+    subOptions.forEach(subOption => {
+      const key = `${fixtureType}_${subOption}`;
+      const recommendedCount = (recommendations.fixture_counts as Record<string, number>)[key] || 0;
+      const userCount = userSelections.counts?.[`${fixtureType}-${subOption}`];
+
+      // Use user count if specified, otherwise use AI recommendation
+      const count = userCount ?? recommendedCount;
+
+      if (typeof count === 'number' && count > 0) {
+        // Get positions from analysis if available
+        const positions = (recommendations.fixture_positions as Record<string, string[]>)?.[key] ||
+          generateDefaultPositions(fixtureType, subOption, count, analysis);
+
+        // Determine spacing based on fixture type
+        const spacing = getSpacingForFixture(fixtureType, subOption);
+
+        placements.push({
+          fixtureType,
+          subOption,
+          count,
+          positions,
+          spacing,
+        });
+      }
+    });
+  });
+
+  return {
+    placements,
+    settings: {
+      intensity,
+      beamAngle,
+      reasoning: `${intensity}% intensity for ${architecture.wall_height_estimate} walls, ${beamAngle}° beam for ${architecture.facade_materials.join('/')} texture`,
+    },
+    priorityOrder: recommendations.priority_areas,
+  };
+};
+
+/**
+ * Helper: Generate default positions based on fixture type and count
+ */
+function generateDefaultPositions(
+  fixtureType: string,
+  subOption: string,
+  count: number,
+  analysis: PropertyAnalysis
+): string[] {
+  const positions: string[] = [];
+
+  if (fixtureType === 'up' && subOption === 'siding') {
+    for (let i = 1; i <= count; i++) {
+      positions.push(`wall section ${i} between windows`);
+    }
+  } else if (fixtureType === 'up' && subOption === 'windows') {
+    for (let i = 1; i <= count; i++) {
+      positions.push(`centered below window ${i}`);
+    }
+  } else if (fixtureType === 'up' && subOption === 'trees') {
+    const treeDesc = analysis.landscaping.trees.positions || '';
+    for (let i = 1; i <= count; i++) {
+      positions.push(`at base of tree ${i}${treeDesc ? ` (${treeDesc})` : ''}`);
+    }
+  } else if (fixtureType === 'path' && subOption === 'walkway') {
+    const walkwayDesc = analysis.hardscape.walkway.description || 'along walkway';
+    for (let i = 1; i <= count; i++) {
+      positions.push(`${walkwayDesc} - position ${i} of ${count}`);
+    }
+  } else if (fixtureType === 'path' && subOption === 'driveway') {
+    for (let i = 1; i <= count; i++) {
+      positions.push(`driveway edge - position ${i}`);
+    }
+  } else {
+    for (let i = 1; i <= count; i++) {
+      positions.push(`${subOption} position ${i}`);
+    }
+  }
+
+  return positions;
+}
+
+/**
+ * Helper: Get recommended spacing for fixture type
+ */
+function getSpacingForFixture(fixtureType: string, subOption: string): string {
+  if (fixtureType === 'path') {
+    return '6-8 feet apart';
+  } else if (fixtureType === 'up' && subOption === 'siding') {
+    return '8-10 feet apart (between windows)';
+  } else if (fixtureType === 'up' && subOption === 'windows') {
+    return 'one per window, centered';
+  } else if (fixtureType === 'soffit') {
+    return '4-6 feet apart';
+  } else if (fixtureType === 'gutter') {
+    return 'one per gable peak';
+  }
+  return 'as needed for coverage';
+}
+
+/**
+ * Helper: Get texture description for materials
+ */
+function hasTextureDescription(materials: string[]): string {
+  const descriptions: string[] = [];
+  if (materials.includes('brick')) descriptions.push('brick shows mortar joint shadows');
+  if (materials.includes('stone')) descriptions.push('stone shows irregular surface texture');
+  if (materials.includes('siding')) descriptions.push('siding shows horizontal shadow lines');
+  if (materials.includes('stucco')) descriptions.push('stucco shows subtle texture patterns');
+  return descriptions.length > 0 ? descriptions.join(', ') : 'smooth surface rendering';
+}
+
+/**
+ * Stage 3: PROMPTING
+ * Creates the perfect final prompt by combining analysis, plan, and user preferences
+ */
+export const buildFinalPrompt = (
+  analysis: PropertyAnalysis,
+  plan: LightingPlan,
+  colorTemp: string,
+  userPreferences?: UserPreferences | null
+): string => {
+  const { architecture, landscaping, hardscape, recommendations } = analysis;
+
+  // Build placement instructions with exact positions
+  const placementInstructions = plan.placements.map(p => `
+## ${p.fixtureType.toUpperCase()} LIGHTS - ${p.subOption.toUpperCase()}
+- Quantity: Place EXACTLY ${p.count} fixtures (count them!)
+- Positions: ${p.positions.join('; ')}
+- Spacing: ${p.spacing}
+`).join('\n');
+
+  // Build preference context if available
+  const preferenceContext = buildPreferenceContext(userPreferences);
+
+  return `
+# PROPERTY-SPECIFIC CONTEXT (From AI Analysis)
+This is a ${architecture.story_count}-story ${architecture.facade_materials.join('/')} home.
+- Wall Height: ${architecture.wall_height_estimate}
+- Windows: ${architecture.windows.first_floor_count} first floor${architecture.windows.second_floor_count > 0 ? `, ${architecture.windows.second_floor_count} second floor` : ''} - ${architecture.windows.positions}
+- Columns: ${architecture.columns.present ? `${architecture.columns.count} columns` : 'none'}
+- Entryway: ${architecture.entryway.type} door${architecture.entryway.has_overhang ? ' with overhang' : ''}
+- Trees: ${landscaping.trees.count > 0 ? `${landscaping.trees.count} (${landscaping.trees.sizes.join(', ')})` : 'none significant'}
+- Walkway: ${hardscape.walkway.present ? `${hardscape.walkway.length_estimate} ${hardscape.walkway.style} path` : 'none visible'}
+
+# EXACT FIXTURE PLACEMENTS (Follow precisely!)
+${placementInstructions}
+
+# OPTIMIZED LIGHTING SETTINGS
+- Intensity: ${plan.settings.intensity}% - ${plan.settings.reasoning}
+- Beam Angle: ${plan.settings.beamAngle}°
+- Color Temperature: ${colorTemp}
+
+# SHADOW REALISM FOR THIS PROPERTY
+Based on ${architecture.wall_height_estimate} walls:
+- Light must travel full height (${architecture.story_count === 1 ? '8-12ft' : architecture.story_count === 2 ? '18-25ft' : '25+ft'}) to soffit
+- Intensity falloff: gradual dimming over full wall height
+- Between fixtures: GRADUAL TRANSITION shadows (NOT uniform darkness)
+- Ambient scatter: soft glow extends 2-3 feet beyond beam edge
+- Material rendering: ${hasTextureDescription(architecture.facade_materials)}
+
+# PRIORITY ORDER
+Light these areas first: ${plan.priorityOrder.join(' → ')}
+
+# AI RECOMMENDATIONS
+${recommendations.notes}
+${preferenceContext}
+`;
+};
 
 export const generateNightScene = async (
   imageBase64: string,
