@@ -125,8 +125,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
 
                 // Map price ID to monthly limit
                 const priceToLimitMap: Record<string, number> = {
-                    'price_1SrNHIQ1tit8mwraqKGAf2GL': 10,    // STARTER_MONTHLY
-                    'price_1SrNJdQ1tit8mwraqbC4ihcM': 10,    // STARTER_YEARLY (10/month)
+                    'price_1SrNHIQ1tit8mwraqKGAf2GL': 50,    // STARTER_MONTHLY
+                    'price_1SrNJdQ1tit8mwraqbC4ihcM': 50,    // STARTER_YEARLY (50/month)
                     'price_1SrNK5Q1tit8mwraTa5UHFWD': 125,   // PRO_MONTHLY
                     'price_1SrNKfQ1tit8mwrajmlqx1ak': 125,   // PRO_YEARLY (125/month)
                     'price_1SrNLUQ1tit8mwraV4J0nB6T': -1,    // BUSINESS_MONTHLY (unlimited)

@@ -2300,14 +2300,14 @@ export const STRIPE_CONFIG = {
   PLANS: {
     STARTER_MONTHLY: {
       id: 'price_1SrNHIQ1tit8mwraqKGAf2GL',
-      price: 25,
-      generations: 10,
+      price: 175,
+      generations: 50,
       label: 'Starter'
     },
     STARTER_YEARLY: {
       id: 'price_1SrNJdQ1tit8mwraqbC4ihcM',
-      price: 250,
-      generations: 120, // 10 per month * 12
+      price: 1750,
+      generations: 600, // 50 per month * 12
       label: 'Starter'
     },
     PRO_MONTHLY: {

@@ -71,7 +71,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       yearlyPrice: STRIPE_CONFIG.PLANS.STARTER_YEARLY.price,
       generations: STRIPE_CONFIG.PLANS.STARTER_MONTHLY.generations,
       features: [
-        '10 generations per month',
+        '50 generations per month',
         '4K exports & PDF downloads',
         'Quotes & proposals',
         'Basic support',
