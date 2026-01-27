@@ -29,7 +29,7 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
   return (
     <footer className="hidden md:block relative bg-gradient-to-b from-[#0a0a0a] to-[#030303] border-t border-white/5 overflow-hidden">
       {/* Ambient top glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-24 bg-[#F6B45A]/5 blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-12 bg-[#F6B45A]/5 blur-[60px] pointer-events-none"></div>
 
       {/* Top gradient line */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F6B45A]/40 to-transparent"></div>
@@ -38,33 +38,33 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
       <div className="absolute top-[1px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
 
       {/* Main Content */}
-      <div className="relative px-4 md:px-8 py-8 md:py-10">
+      <div className="relative px-4 md:px-6 py-4 md:py-5">
         {/* Mobile: Stacked layout */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
           {/* Brand Section */}
-          <div className="flex items-center justify-center md:justify-start gap-4">
+          <div className="flex items-center justify-center md:justify-start gap-2.5">
             {/* Logo Mark */}
             <motion.div
-              className="relative w-12 h-12 flex items-center justify-center"
+              className="relative w-8 h-8 flex items-center justify-center"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
               <motion.div
-                className="absolute inset-0 rounded-xl border border-[#F6B45A]/30"
+                className="absolute inset-0 rounded-lg border border-[#F6B45A]/30"
                 style={{ rotate: 45 }}
                 animate={{ rotate: [45, 405] }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
               />
-              <div className="absolute inset-1 rounded-lg bg-gradient-to-br from-[#F6B45A]/20 via-[#F6B45A]/5 to-transparent rotate-45"></div>
-              <Sun className="w-5 h-5 text-[#F6B45A] relative z-10" strokeWidth={2.5} />
-              <div className="absolute inset-0 bg-[#F6B45A]/20 blur-xl -z-10 rounded-full"></div>
+              <div className="absolute inset-0.5 rounded-md bg-gradient-to-br from-[#F6B45A]/20 via-[#F6B45A]/5 to-transparent rotate-45"></div>
+              <Sun className="w-3.5 h-3.5 text-[#F6B45A] relative z-10" strokeWidth={2.5} />
+              <div className="absolute inset-0 bg-[#F6B45A]/20 blur-lg -z-10 rounded-full"></div>
             </motion.div>
 
             {/* Brand Text */}
             <div className="flex flex-col">
               <span
-                className="text-xl font-black tracking-tight"
+                className="text-base font-black tracking-tight"
                 style={{
                   fontFamily: "'Playfair Display', Georgia, serif",
                   background: 'linear-gradient(135deg, #F6B45A 0%, #FFD700 50%, #F6B45A 100%)',
@@ -75,21 +75,21 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
               >
                 OMNIA
               </span>
-              <span className="text-[8px] text-gray-500 font-medium tracking-[0.25em] uppercase -mt-0.5">
+              <span className="text-[7px] text-gray-500 font-medium tracking-[0.2em] uppercase -mt-0.5">
                 Light Scape Pro
               </span>
             </div>
           </div>
 
           {/* Trust Badges - Glassmorphism Style */}
-          <div className="flex items-center justify-center gap-3 md:gap-4 flex-wrap">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
             <TrustBadge icon={Shield} label="Secure" />
             <TrustBadge icon={Sparkles} label="AI Powered" />
             <TrustBadge icon={Zap} label="Lightning Fast" />
           </div>
 
           {/* Premium Links */}
-          <div className="flex items-center justify-center md:justify-end gap-2 md:gap-3">
+          <div className="flex items-center justify-center md:justify-end gap-1.5">
             <FooterLink href="#" icon={KeyRound}>Privacy</FooterLink>
             <FooterLink href="#" icon={FileText}>Terms</FooterLink>
             <FooterLink href="#" icon={Headphones}>Support</FooterLink>
@@ -97,17 +97,17 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-8 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="mt-4 pt-3 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-2">
           {/* Copyright */}
-          <p className="text-[10px] text-gray-600 font-mono tracking-wider text-center md:text-left">
+          <p className="text-[9px] text-gray-600 font-mono tracking-wider text-center md:text-left">
             &copy; {currentYear} Omnia Intelligence. All rights reserved.
           </p>
 
           {/* Version Badge - Premium Style */}
-          <div className="flex items-center gap-3">
-            <span className="text-[9px] text-gray-600 font-mono">v2.0.0</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[8px] text-gray-600 font-mono">v2.0.0</span>
             <motion.div
-              className="relative flex items-center gap-2 px-3 py-1.5 rounded-full overflow-hidden"
+              className="relative flex items-center gap-1.5 px-2 py-1 rounded-full overflow-hidden"
               whileHover={{ scale: 1.02 }}
             >
               {/* Glassmorphism background */}
@@ -118,11 +118,11 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
                 <div className="absolute inset-[-1px] rounded-full bg-gradient-to-r from-emerald-500/0 via-emerald-500/50 to-emerald-500/0 animate-pulse"></div>
               </div>
 
-              <span className="relative flex h-2 w-2">
+              <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]"></span>
               </span>
-              <span className="relative text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
+              <span className="relative text-[8px] font-bold text-emerald-400 uppercase tracking-wider">
                 Online
               </span>
             </motion.div>
@@ -131,8 +131,8 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
       </div>
 
       {/* Decorative bottom corners */}
-      <div className="absolute bottom-4 left-4 w-4 h-4 border-l-2 border-b-2 border-[#F6B45A]/20 hidden md:block"></div>
-      <div className="absolute bottom-4 right-4 w-4 h-4 border-r-2 border-b-2 border-[#F6B45A]/20 hidden md:block"></div>
+      <div className="absolute bottom-2 left-2 w-3 h-3 border-l border-b border-[#F6B45A]/20 hidden md:block"></div>
+      <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-[#F6B45A]/20 hidden md:block"></div>
     </footer>
   );
 };
@@ -140,8 +140,8 @@ export const Footer: React.FC<FooterProps> = ({ variant = 'full' }) => {
 // Premium Trust Badge Component with Pill Shape
 const TrustBadge: React.FC<{ icon: React.ElementType; label: string }> = ({ icon: Icon, label }) => (
   <motion.div
-    className="relative flex items-center gap-2.5 px-4 py-2 rounded-full overflow-hidden shrink-0 group cursor-default"
-    whileHover={{ scale: 1.05, y: -2 }}
+    className="relative flex items-center gap-1.5 px-2.5 py-1 rounded-full overflow-hidden shrink-0 group cursor-default"
+    whileHover={{ scale: 1.05, y: -1 }}
     transition={{ type: "spring", stiffness: 400, damping: 20 }}
   >
     {/* Background with subtle border */}
@@ -151,11 +151,11 @@ const TrustBadge: React.FC<{ icon: React.ElementType; label: string }> = ({ icon
     <div className="absolute inset-0 bg-gradient-to-t from-[#F6B45A]/0 to-[#F6B45A]/0 group-hover:from-[#F6B45A]/10 group-hover:to-transparent rounded-full transition-all duration-500"></div>
 
     {/* Icon container - circular */}
-    <div className="relative w-6 h-6 rounded-full bg-[#F6B45A]/15 border border-[#F6B45A]/30 flex items-center justify-center group-hover:bg-[#F6B45A]/25 group-hover:scale-110 transition-all duration-300">
-      <Icon className="w-3 h-3 text-[#F6B45A]" />
+    <div className="relative w-4 h-4 rounded-full bg-[#F6B45A]/15 border border-[#F6B45A]/30 flex items-center justify-center group-hover:bg-[#F6B45A]/25 group-hover:scale-110 transition-all duration-300">
+      <Icon className="w-2 h-2 text-[#F6B45A]" />
     </div>
 
-    <span className="relative text-[11px] font-medium text-white tracking-wide">
+    <span className="relative text-[9px] font-medium text-white tracking-wide">
       {label}
     </span>
   </motion.div>
@@ -166,7 +166,7 @@ const FooterLink: React.FC<{ href: string; icon: React.ElementType; children: Re
   <motion.a
     href={href}
     className="relative group"
-    whileHover={{ scale: 1.05, y: -2 }}
+    whileHover={{ scale: 1.05, y: -1 }}
     whileTap={{ scale: 0.95 }}
     transition={{ type: "spring", stiffness: 400, damping: 20 }}
   >
@@ -188,7 +188,7 @@ const FooterLink: React.FC<{ href: string; icon: React.ElementType; children: Re
     />
 
     {/* Button container - Pill shape */}
-    <div className="relative flex items-center gap-2.5 px-5 py-2 rounded-full overflow-hidden">
+    <div className="relative flex items-center gap-1.5 px-3 py-1 rounded-full overflow-hidden">
       {/* Dark background */}
       <div className="absolute inset-0 bg-[#0a0a0a] rounded-full border border-white/5 group-hover:border-transparent transition-all duration-300"></div>
 
@@ -196,8 +196,8 @@ const FooterLink: React.FC<{ href: string; icon: React.ElementType; children: Re
       <div className="absolute inset-0 bg-gradient-to-t from-[#F6B45A]/0 to-[#F6B45A]/0 group-hover:from-[#F6B45A]/5 group-hover:to-transparent rounded-full transition-all duration-500"></div>
 
       {/* Content - White font */}
-      <Icon className="relative w-4 h-4 text-white/70 group-hover:text-[#F6B45A] transition-colors duration-300" />
-      <span className="relative text-[11px] font-medium text-white tracking-wide group-hover:text-white transition-colors duration-300">
+      <Icon className="relative w-3 h-3 text-white/70 group-hover:text-[#F6B45A] transition-colors duration-300" />
+      <span className="relative text-[9px] font-medium text-white tracking-wide group-hover:text-white transition-colors duration-300">
         {children}
       </span>
     </div>
