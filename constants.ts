@@ -2299,7 +2299,7 @@ export const DEFAULT_PRICING: FixturePricing[] = [
 export const STRIPE_CONFIG = {
   PLANS: {
     STARTER_MONTHLY: {
-      id: 'price_1SrNHIQ1tit8mwraqKGAf2GL',
+      id: 'price_1SrNHlQ1tit8mwraqKGAf2GL',
       price: 175,
       generations: 50,
       label: 'Starter'

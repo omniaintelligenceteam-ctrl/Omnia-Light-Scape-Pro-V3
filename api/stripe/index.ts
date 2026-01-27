@@ -10,7 +10,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://omnialightscape.vercel
 
 // Allowed price IDs (all 6 tiers)
 const ALLOWED_PRICE_IDS = [
-    'price_1SrNHIQ1tit8mwraqKGAf2GL', // STARTER_MONTHLY
+    'price_1SrNHlQ1tit8mwraqKGAf2GL', // STARTER_MONTHLY
     'price_1SrNJdQ1tit8mwraqbC4ihcM', // STARTER_YEARLY
     'price_1SrNK5Q1tit8mwraTa5UHFWD', // PRO_MONTHLY
     'price_1SrNKfQ1tit8mwrajmlqx1ak', // PRO_YEARLY
