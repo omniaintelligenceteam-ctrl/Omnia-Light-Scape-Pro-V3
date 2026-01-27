@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js';
 
 const router = Router();
 
-const FREE_TRIAL_LIMIT = 25;
+const FREE_TRIAL_LIMIT = 10;
 
 interface UsageCheckRequest {
     userId: string;

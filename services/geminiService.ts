@@ -89,51 +89,71 @@ export const generateNightScene = async (
     - Faint accent glow, minimal brightness
     - Light barely reaches first story soffit
     - Soft pools of light at fixture base
+    - Beam edges extremely soft and diffused
+    - Minimal atmospheric scatter visible
+    - Very subtle lens glow at fixture
     - Best for: Ambient mood, pathway marking`;
 
     if (val < 50) return `Lighting Intensity: MODERATE (4-5W LED equivalent).
     - Standard 1st story reach (8-12 ft walls)
     - Light reaches soffit with gentle falloff
     - Visible wall grazing without hot spots
+    - Soft beam edges with 6-8 inch feather zone
+    - Subtle atmospheric glow near fixture
+    - Visible lens glow, tiny bloom halo
+    - Some bounce light on adjacent surfaces
     - Best for: Single-story homes, accent features`;
 
     if (val < 75) return `Lighting Intensity: BRIGHT (6-8W LED equivalent).
     - 2nd story reach (18-25 ft walls)
     - Strong wall grazing to higher soffits
     - More pronounced beam visibility
+    - Visible light cone in air near fixture (subtle)
+    - Noticeable bloom around fixture lens
+    - Clear bounce light on ground/adjacent areas
+    - Beam feathers over 8-12 inch transition zone
     - Best for: Two-story facades, tall trees`;
 
     return `Lighting Intensity: HIGH POWER (10-15W LED equivalent).
     - Full 2-3 story reach (25+ ft walls)
     - Intense beams reaching tall soffits
     - Maximum wall coverage
+    - Pronounced atmospheric scatter near fixture
+    - Strong lens bloom and halo effect
+    - Significant bounce/fill light contribution
+    - Beam still feathers at edges (10-15 inch zone)
     - Best for: Tall facades, commercial, dramatic effect`;
   };
 
   const getBeamAnglePrompt = (angle: number) => {
     if (angle <= 15) return `Beam Angle: 15 DEGREES (NARROW SPOT).
-    - Tight, focused columns of light with sharp edges
-    - Creates dramatic accent lighting on narrow targets
+    - Tight, focused columns of light
     - Light cone spreads ~2.5 feet at 10 feet distance
-    - Hot spot visible at center, rapid falloff at edges
+    - Hot center with rapid but SOFT falloff to edges
+    - Edge transition zone: 3-4 inches (still soft, not sharp)
+    - Creates dramatic accent with defined but feathered boundary
     - Best for: Architectural columns, narrow trees, specific focal points`;
 
     if (angle <= 30) return `Beam Angle: 30 DEGREES (SPOT).
     - Defined beam with moderate spread
     - Light cone spreads ~5 feet at 10 feet distance
-    - Visible beam edges with gradual falloff
+    - Hot center transitioning to soft edges over 6-8 inches
+    - Visible beam definition but edges are diffused, not crisp
     - Best for: Accent lighting on facades, medium trees, entry features`;
 
     if (angle >= 60) return `Beam Angle: 60 DEGREES (WIDE FLOOD).
     - Broad, even wash of light
     - Light cone spreads ~11 feet at 10 feet distance
-    - Soft edges, gradual transitions, no harsh shadows
+    - Very soft, gradual edge transitions (12+ inches)
+    - No distinct beam boundary - blends smoothly into darkness
+    - Creates seamless wall wash effect
     - Best for: Wall washing, large facades, area lighting`;
 
     return `Beam Angle: 45 DEGREES (FLOOD).
     - Standard professional landscape spread
     - Light cone spreads ~8 feet at 10 feet distance
-    - Balanced between accent and wash
+    - Balanced hot center with 8-10 inch feathered edges
+    - Soft but discernible beam shape
     - Best for: General facade lighting, medium wall areas`;
   };
 
@@ -142,8 +162,8 @@ export const generateNightScene = async (
 
   // Simplified prompt structure to avoid adversarial trigger patterns while maintaining instruction density.
   const systemPrompt = `
-    You are a professional Architectural Lighting Designer and Photo Retoucher.
-    Task: Transform the provided daylight photograph into a realistic, high-end night-time landscape lighting scene.
+    You are a professional Architectural Lighting Designer and Night Photography Specialist.
+    Task: Transform the provided daylight photograph into an ULTRA-REALISTIC 1AM nighttime landscape lighting scene with CINEMATIC QUALITY. The result must look like a professional photograph taken at 1AM with high-end camera equipment (Sony A7R IV or Canon R5 quality).
 ${preferenceContext}
 
     # STEP 0: FRAMING & COMPOSITION PRESERVATION (CRITICAL)
@@ -180,9 +200,16 @@ ${preferenceContext}
        - If source photo shows GRASS leading to front door, output MUST show GRASS (no path).
        - Do NOT "complete" or "add" hardscape that seems missing. It is not missing.
 
-    4. **Sky**: Transform to realistic twilight/dusk. Natural darkening sky with subtle ambient starlight. NO artificial moon unless clearly visible in source photo.
+    4. **Sky & Darkness Level**: Transform to DEEP 1AM NIGHTTIME - NOT twilight, NOT dusk, but TRUE NIGHT.
+       - Sky must be PITCH BLACK with no gradients, no blue tones, no ambient glow
+       - This is 1AM darkness - the deepest, darkest part of night
+       - Unlit areas should be so dark you can BARELY make out shapes and forms
+       - Only the landscape lighting fixtures provide meaningful illumination
+       - The darkness should feel authentic, atmospheric, and cinematic
+       - Include a realistic full moon that provides EXTREMELY SUBTLE edge lighting only
+       - Moon should NOT act as a spotlight - just the faintest silhouette definition on rooflines and trees
 
-    5. **Background**: Trees in background remain dark silhouettes. Do not add trees.
+    5. **Background**: Trees in background remain as barely-visible dark silhouettes against the black sky. Do not add trees.
 
     # STEP 3: EXCLUSIVE LIGHTING RULES
     - **PLACEMENT PRIORITY**: The "DESIGN REQUEST" below contains a strict ALLOW-LIST.
@@ -192,7 +219,7 @@ ${preferenceContext}
     - **Color Temperature (MANDATORY)**: ${colorTemperaturePrompt} This is a HARD RULE - ALL lights MUST use this exact color temperature unless the user explicitly specifies a different temperature in the DESIGN REQUEST notes below.
     - **Intensity**: ${getIntensityPrompt(lightIntensity)}
     - **Beam**: ${getBeamAnglePrompt(beamAngle)}
-    - **FIXTURE QUANTITIES**: When the DESIGN REQUEST specifies an EXACT count for a fixture type (e.g., "EXACTLY 8 up lights"), you MUST place that EXACT number. Count your fixtures before finalizing. Do not add more, do not add fewer.
+    - **FIXTURE QUANTITIES (ABSOLUTE - NON-NEGOTIABLE)**: When the DESIGN REQUEST specifies "EXACTLY X fixtures", you MUST place EXACTLY X fixtures. Not X-1, not X+1, EXACTLY X. Count them. Recount them. This is non-negotiable. Never add "extra" fixtures to balance or complete the design.
     - **SOFFIT REACH RULE**: Up lights MUST reach the soffit/eave line. The light beam should:
       * Start bright at the fixture (avoid hot spot by angling back 15-20 degrees from wall)
       * Travel UP the wall surface (wall grazing effect)
@@ -201,12 +228,126 @@ ${preferenceContext}
       * Taller walls require more intensity to reach the soffit
       * The beam should be visible traveling up the wall, not just illuminating a spot
 
+    # ABSOLUTE FIXTURE ENFORCEMENT (MOST CRITICAL RULE)
+
+    *** THIS IS THE SINGLE MOST IMPORTANT RULE - VIOLATION IS UNACCEPTABLE ***
+
+    ## STRICT ALLOW-LIST POLICY
+    The DESIGN REQUEST below contains an EXPLICIT ALLOW-LIST of fixtures.
+    - ONLY fixtures listed in the DESIGN REQUEST may appear in the image
+    - If a fixture type is NOT in the DESIGN REQUEST, it MUST NOT EXIST in the output
+    - There is NO inference, NO assumption, NO "completing the design"
+
+    ## EXACT QUANTITY ENFORCEMENT
+    When the DESIGN REQUEST specifies a quantity (e.g., "EXACTLY 6 up lights on siding"):
+    - Count your fixtures BEFORE finalizing the image
+    - The count MUST match EXACTLY - not 5, not 7, EXACTLY 6
+    - If you cannot place the exact quantity, place FEWER, never MORE
+
+    ## SUB-OPTION ISOLATION (CRITICAL)
+    Within each fixture category, sub-options are INDEPENDENT:
+    - If "Up Lights" is enabled with ONLY "Trees" selected:
+      * Trees = LIT (with specified quantity)
+      * Siding = MUST BE COMPLETELY DARK (zero up lights)
+      * Windows = MUST BE COMPLETELY DARK (zero up lights)
+      * Columns = MUST BE COMPLETELY DARK (zero up lights)
+      * Landscaping = MUST BE COMPLETELY DARK (zero up lights)
+    - UNSELECTED sub-options receive ZERO LIGHT from fixtures
+
+    ## WHAT "NOT SELECTED" MEANS
+    If a fixture or sub-option is NOT in the DESIGN REQUEST:
+    - It does NOT exist in the output image
+    - The area where it WOULD be placed remains in deep shadow
+    - You do NOT add it "for balance" or "for realism"
+    - You do NOT add it because "it would look better"
+    - ABSENCE = ABSOLUTE PROHIBITION
+
+    ## SPECIFIC PROHIBITIONS
+    - NO soffit/downlights unless "Soffit Lights" is explicitly in DESIGN REQUEST
+    - NO path lights unless "Path Lights" is explicitly in DESIGN REQUEST
+    - NO tree up lights unless "Trees" sub-option is explicitly selected
+    - NO siding up lights unless "Siding" sub-option is explicitly selected
+    - NO window up lights unless "Windows" sub-option is explicitly selected
+    - NO string lights, holiday lights, or decorative lights EVER (unless explicitly requested)
+    - NO interior window glow (unless explicitly requested)
+    - NO security lights, floodlights, or motion lights EVER
+
+    ## VERIFICATION CHECKLIST (DO THIS BEFORE OUTPUT)
+    1. List every fixture type in the DESIGN REQUEST
+    2. For each fixture type, list every sub-option that is ENABLED
+    3. Count the specified quantity for each
+    4. Verify your output matches this list EXACTLY
+    5. Verify areas NOT in this list are COMPLETELY DARK
+
     # YOUR ONLY PERMITTED MODIFICATIONS:
-    1. Darken the overall scene to simulate nighttime
+    1. Convert to TRUE 1AM DARKNESS - pitch black night, not twilight or dusk
     2. Add ONLY the specific light fixtures listed in DESIGN REQUEST
-    3. Add realistic light beams/glow from those fixtures
-    4. Subtle ambient starlight in sky (NO MOON unless in source)
+    3. Add realistic light beams/glow from those fixtures with physically accurate falloff
+    4. Add full moon with EXTREMELY SUBTLE edge lighting on rooflines and tree silhouettes only
     EVERYTHING ELSE must remain pixel-for-pixel identical to the source image.
+
+    # PHOTO-REALISM REQUIREMENTS (CRITICAL)
+    - The output must look like a REAL PHOTOGRAPH taken at 1AM, NOT a digital rendering or CGI
+    - Achieve the look of professional night photography with high-end full-frame camera
+    - Light falloff must be physically accurate - inverse square law applies
+    - The contrast between lit and unlit must be DRAMATIC - this is what makes night photography stunning
+    - Lit areas: warm, inviting glow that looks natural, not artificially bright
+    - The interplay of light and deep shadow creates the cinematic atmosphere
+    - Overall mood: mysterious, dramatic, professional - like an architectural magazine night shoot
+
+    # ADVANCED LIGHT PHYSICS (CRITICAL FOR REALISM)
+
+    ## BEAM CHARACTERISTICS
+    - Every light beam has a HOT CENTER (brightest point) that gradually FEATHERS to soft edges
+    - Beam edges should never be sharp/crisp - LED sources create soft, diffused boundaries
+    - The transition from lit to unlit should span 6-12 inches, not a hard line
+    - Light intensity follows inverse square law: brightness = 1/(distance squared)
+
+    ## ATMOSPHERIC LIGHT SCATTER
+    - Night air has subtle particulates that catch and scatter light
+    - Create extremely subtle VISIBLE LIGHT CONES in the air (not fog, just atmosphere)
+    - Brightest near fixture, fading to invisible within 2-3 feet
+    - This is what gives professional night photography its "magic"
+
+    ## FIXTURE SOURCE POINT
+    - Each fixture should have a tiny, bright LENS GLOW at the source point
+    - Add subtle BLOOM/HALO effect around bright fixture lenses (1-2 inch radius)
+    - The fixture housing may be barely visible as a dark silhouette
+
+    ## SURFACE MATERIAL INTERACTION
+    - BRICK/STONE: Light catches texture, creates micro-shadows in mortar joints
+    - VINYL/ALUMINUM SIDING: Slight sheen, horizontal shadow lines from overlap
+    - STUCCO: Diffuse reflection, soft appearance, minimal texture shadows
+    - WOOD: Warm absorption, grain may be visible, natural material feel
+    - PAINTED SURFACES: Color temperature affects perceived paint color
+
+    ## SECONDARY/BOUNCE LIGHT
+    - Lit surfaces reflect a small amount of light back into the scene
+    - Ground near up lights receives subtle AMBIENT GLOW from wall reflection
+    - Adjacent unlit surfaces receive faint FILL LIGHT from nearby lit areas
+    - This prevents the "floating light in void" artificial look
+
+    ## SHADOW QUALITY (LED SOURCES)
+    - LED fixtures create SOFT SHADOWS with gradual edges (penumbra)
+    - Shadow edges should transition over 2-4 inches, not be razor sharp
+    - Multiple fixtures create multiple overlapping, semi-transparent shadows
+    - Shadow darkness varies: deepest at center, lighter at edges
+
+    ## GROUND PLANE INTERACTION
+    - Light pools on ground from path lights should have soft, feathered edges
+    - Hard surfaces (concrete, pavers) reflect slightly more than grass/mulch
+    - Create subtle gradation from bright center to dark perimeter
+
+    # SHADOW CONSISTENCY (CRITICAL - NO BRIGHT SPOTS)
+    - ALL unlit areas must have UNIFORM DARKNESS throughout the entire image
+    - NO bright spots, NO lighter patches, NO inconsistent shadow levels in unlit areas
+    - The DARKEST shadow sets the standard - ALL other shadows must match this darkness level
+    - Eliminate any areas that appear brighter than others in the shadows
+    - Grass, siding, roof, trees - if not lit by a fixture, they should all be the SAME level of dark
+    - Think of it like a consistent "black floor" - nothing unlit should be brighter than this floor
+    - Even areas that would naturally catch ambient light (like white siding) must be uniformly dark
+    - The ONLY variation in brightness should come from the landscape lighting fixtures
+    - Shadows do NOT have varying levels of darkness - they are all equally deep and dark
 
     # DESIGN REQUEST
     Apply the following specific configuration to the scene. These instructions override default placement rules if they conflict:

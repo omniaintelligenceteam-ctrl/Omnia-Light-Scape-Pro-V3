@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from '../lib/supabase.js';
 
-const FREE_TRIAL_LIMIT = 25;
+const FREE_TRIAL_LIMIT = 10;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     let supabase: SupabaseClient;
