@@ -86,36 +86,58 @@ export const analyzePropertyArchitecture = async (
 ): Promise<PropertyAnalysis> => {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
-  // Build user's fixture selection summary
+  // Build user's fixture selection summary (from Fixture Summary box)
   const fixtureSelectionSummary = selectedFixtures.length > 0
     ? selectedFixtures.map(f => {
         const subOpts = fixtureSubOptions[f] || [];
         const subOptStr = subOpts.length > 0 ? ` (${subOpts.join(', ')})` : '';
         return `- ${f}${subOptStr}`;
       }).join('\n')
-    : '- general landscape lighting';
+    : '- No fixtures selected';
 
-  // Build user's quantity summary
+  // Build DYNAMIC fixture_counts schema from ONLY user's selections
+  const fixtureCountsSchema: string[] = [];
+  const fixturePositionsSchema: string[] = [];
+
+  selectedFixtures.forEach(fixtureId => {
+    const subOpts = fixtureSubOptions[fixtureId] || [];
+    subOpts.forEach(subOptId => {
+      const key = `${fixtureId}_${subOptId}`;
+      const userCount = fixtureCounts[subOptId];
+      if (userCount !== null && userCount !== undefined) {
+        // User specified exact count - AI must use this
+        fixtureCountsSchema.push(`"${key}": ${userCount}`);
+      } else {
+        // Auto mode - AI recommends based on property features
+        fixtureCountsSchema.push(`"${key}": <recommend count based on property>`);
+      }
+      fixturePositionsSchema.push(`"${key}": ["<position 1>", "<position 2>", "..."]`);
+    });
+  });
+
+  // Build user's quantity summary (only show user-specified counts)
   const quantitySummary = Object.entries(fixtureCounts)
     .filter(([, v]) => v !== null)
-    .map(([k, v]) => `- ${k}: ${v} fixtures`)
-    .join('\n') || '- Auto (let AI recommend)';
+    .map(([k, v]) => `- ${k}: EXACTLY ${v} fixtures (do not change)`)
+    .join('\n') || '- All set to Auto (AI recommends based on property)';
 
   const analysisPrompt = `Analyze this property photo for landscape lighting design.
 
-=== USER'S FIXTURE SELECTIONS ===
+=== USER'S FIXTURE SELECTIONS (from Fixture Summary) ===
 ${fixtureSelectionSummary}
 
 === USER'S QUANTITY SETTINGS ===
 ${quantitySummary}
 
+CRITICAL: Only analyze fixtures the user has selected above. Do NOT suggest additional fixtures.
+
 Analyze the photo and return ONLY a valid JSON object (no markdown, no code blocks, no explanation).
 
 Your analysis should:
-1. Identify architecture details to validate/adjust user's selections
-2. Count actual features that match user's fixture choices
-3. Recommend placement positions for the selected fixtures
-4. Suggest optimal settings based on the property
+1. Identify architecture details relevant to the SELECTED fixtures only
+2. For user-specified counts, use EXACTLY that number
+3. For auto counts, recommend based on property features
+4. Provide placement positions for ONLY the selected fixtures
 
 Return this exact structure:
 
@@ -127,7 +149,7 @@ Return this exact structure:
     "windows": {
       "first_floor_count": <number>,
       "second_floor_count": <number>,
-      "positions": "<describe window layout: e.g., '3 evenly spaced on left, 2 flanking door on right'>"
+      "positions": "<describe window layout>"
     },
     "columns": { "present": <true/false>, "count": <number> },
     "dormers": { "present": <true/false>, "count": <number> },
@@ -141,7 +163,7 @@ Return this exact structure:
     "trees": {
       "count": <number>,
       "sizes": ["<small, medium, or large>"],
-      "positions": "<describe tree locations: e.g., '1 large oak on left, 2 small ornamentals by entry'>"
+      "positions": "<describe tree locations>"
     },
     "planting_beds": {
       "present": <true/false>,
@@ -158,7 +180,7 @@ Return this exact structure:
       "present": <true/false>,
       "length_estimate": "<short, medium, or long>",
       "style": "<straight or curved>",
-      "description": "<describe path: e.g., 'curved 30ft path from driveway to front door'>"
+      "description": "<describe path>"
     },
     "patio": { "present": <true/false> },
     "sidewalk": { "present": <true/false> }
@@ -167,23 +189,13 @@ Return this exact structure:
     "optimal_intensity": "<subtle, moderate, bright, or high_power>",
     "optimal_beam_angle": <15, 30, 45, or 60>,
     "fixture_counts": {
-      "up_siding": <count based on wall sections between windows>,
-      "up_windows": <count based on first floor windows>,
-      "up_columns": <count if columns present>,
-      "up_trees": <count based on significant trees>,
-      "up_entryway": <1-2 for entry>,
-      "path_walkway": <count based on walkway length / 6-8ft spacing>,
-      "path_driveway": <count based on driveway edges>,
-      "soffit_windows": <count for soffit above windows>,
-      "gutter_peaks": <count for gable peaks>
+      ${fixtureCountsSchema.length > 0 ? fixtureCountsSchema.join(',\n      ') : '"none": 0'}
     },
     "fixture_positions": {
-      "up_siding": ["<position 1>", "<position 2>", "..."],
-      "up_windows": ["<position 1>", "<position 2>", "..."],
-      "path_walkway": ["<position 1>", "<position 2>", "..."]
+      ${fixturePositionsSchema.length > 0 ? fixturePositionsSchema.join(',\n      ') : '"none": []'}
     },
-    "priority_areas": ["<ordered list of areas to light first>"],
-    "notes": "<2-3 sentences of specific recommendations for this property's lighting>"
+    "priority_areas": ["<ordered list based on selected fixtures>"],
+    "notes": "<2-3 sentences about placement for the selected fixtures>"
   }
 }
 
@@ -449,6 +461,83 @@ Light these areas first: ${plan.priorityOrder.join(' → ')}
 ${recommendations.notes}
 ${preferenceContext}
 `;
+};
+
+/**
+ * VERIFICATION STEP: Double-check fixtures match Fixture Summary before generating
+ * This runs right before Stage 4 to ensure the prompt matches user's selections
+ */
+export interface VerifiedFixtureSummary {
+  verified: boolean;
+  fixtures: {
+    fixtureType: string;
+    subOption: string;
+    count: number;
+    source: 'user' | 'ai';  // 'user' if user specified count, 'ai' if auto-recommended
+  }[];
+  totalFixtures: number;
+  summary: string;
+}
+
+export const verifyFixturesBeforeGeneration = (
+  plan: LightingPlan,
+  userSelections: FixtureSelections
+): VerifiedFixtureSummary => {
+  const verifiedFixtures: VerifiedFixtureSummary['fixtures'] = [];
+  let totalFixtures = 0;
+
+  // Double-check each placement matches user's selections
+  plan.placements.forEach(placement => {
+    const { fixtureType, subOption, count } = placement;
+
+    // Verify fixture type is in user's selections
+    if (!userSelections.fixtures.includes(fixtureType)) {
+      console.warn(`VERIFICATION WARNING: ${fixtureType} not in user's selected fixtures`);
+      return; // Skip this fixture - user didn't select it
+    }
+
+    // Verify sub-option is in user's selections for this fixture
+    const userSubOptions = userSelections.subOptions[fixtureType] || [];
+    if (!userSubOptions.includes(subOption)) {
+      console.warn(`VERIFICATION WARNING: ${subOption} not in user's sub-options for ${fixtureType}`);
+      return; // Skip this sub-option - user didn't select it
+    }
+
+    // Determine if count came from user or AI
+    const userCount = userSelections.counts?.[subOption];
+    const source: 'user' | 'ai' = (userCount !== null && userCount !== undefined) ? 'user' : 'ai';
+
+    verifiedFixtures.push({
+      fixtureType,
+      subOption,
+      count,
+      source,
+    });
+
+    totalFixtures += count;
+
+    console.log(`✓ VERIFIED: ${fixtureType} - ${subOption}: ${count} fixtures (${source} specified)`);
+  });
+
+  // Build summary string for final prompt
+  const summaryLines = verifiedFixtures.map(f =>
+    `- ${f.fixtureType.toUpperCase()} LIGHTS - ${f.subOption}: ${f.count} fixtures`
+  );
+
+  const summary = `
+=== VERIFIED FIXTURE SUMMARY (Double-Checked) ===
+${summaryLines.join('\n')}
+TOTAL FIXTURES: ${totalFixtures}
+===================================================`;
+
+  console.log(summary);
+
+  return {
+    verified: true,
+    fixtures: verifiedFixtures,
+    totalFixtures,
+    summary,
+  };
 };
 
 export const generateNightScene = async (

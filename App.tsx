@@ -57,7 +57,7 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, analyzePropertyArchitecture, buildLightingPlan, buildFinalPrompt } from './services/geminiService';
+import { generateNightScene, analyzePropertyArchitecture, buildLightingPlan, buildFinalPrompt, verifyFixturesBeforeGeneration } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
@@ -1818,9 +1818,17 @@ const App: React.FC = () => {
         setGenerationStage('prompting');
         const smartPrompt = buildFinalPrompt(analysis, plan, colorPrompt, userPreferences);
 
-        // Merge with user's custom notes if any
-        finalPrompt = smartPrompt + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
-        console.log('Stage 3 complete - Final prompt built');
+        // VERIFICATION STEP: Double-check fixtures match Fixture Summary before generating
+        const verifiedSummary = verifyFixturesBeforeGeneration(plan, {
+          fixtures: selectedFixtures,
+          subOptions: fixtureSubOptions,
+          counts: fixtureCounts
+        });
+        console.log('VERIFICATION COMPLETE:', verifiedSummary);
+
+        // Merge with verified summary and user's custom notes
+        finalPrompt = smartPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
+        console.log('Stage 3 complete - Final prompt built with verified fixtures');
 
       } catch (pipelineError) {
         // If any stage fails, continue with standard generation (graceful fallback)
@@ -4794,7 +4802,7 @@ Notes: ${invoice.notes || 'N/A'}
 
                                                         return (
                                                             <div key={subOptId} className="flex items-center justify-between py-1.5">
-                                                                <span className="text-sm text-gray-300">{subOpt.label}</span>
+                                                                <span className="text-sm text-gray-300">{fixture.label} - {subOpt.label}</span>
                                                                 <span className={`text-sm font-semibold ${isAuto ? 'text-gray-500' : 'text-[#F6B45A]'}`}>
                                                                     {isAuto ? `~${displayCount}` : displayCount}
                                                                 </span>
