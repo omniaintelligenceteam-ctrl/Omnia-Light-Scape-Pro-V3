@@ -57,10 +57,10 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene } from './services/geminiService';
+import { generateNightScene, analyzePropertyArchitecture, buildLightingPlan, buildFinalPrompt } from './services/geminiService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -413,6 +413,10 @@ const App: React.FC = () => {
   const [showLoadingCelebration, setShowLoadingCelebration] = useState<boolean>(false);
   const [showRipple, setShowRipple] = useState<boolean>(false);
   const [statusMessageIndex, setStatusMessageIndex] = useState<number>(0);
+
+  // Auto-prompt feature: Property analysis state
+  const [, setPropertyAnalysis] = useState<PropertyAnalysis | null>(null);
+  const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'generating'>('idle');
   const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
 
   // Generation History for Undo with Settings
@@ -787,20 +791,52 @@ const App: React.FC = () => {
     }
   };
 
-  // Status messages for loading screen - first 5 at 8s, last one at 30s
-  const statusMessages = [
-    "Processing Image",
-    "Analyzing Geometry",
-    "Generating Design",
-    "Placing Lights",
-    "Illuminating",
-    "Final Touches"
-  ];
+  // Status messages for loading screen - 4-stage AI pipeline
+  const statusMessages = useMemo(() => {
+    switch (generationStage) {
+      case 'analyzing':
+        return [
+          "Analyzing Property",
+          "Detecting Architecture",
+          "Counting Features",
+          "Measuring Walls"
+        ];
+      case 'planning':
+        return [
+          "Planning Placement",
+          "Calculating Positions",
+          "Optimizing Settings"
+        ];
+      case 'prompting':
+        return [
+          "Building Smart Prompt",
+          "Calibrating Physics",
+          "Finalizing Instructions"
+        ];
+      case 'generating':
+        return [
+          "Generating Design",
+          "Placing Lights",
+          "Rendering Shadows",
+          "Final Touches"
+        ];
+      default:
+        return [
+          "Processing..."
+        ];
+    }
+  }, [generationStage]);
+
+  // Reset status message index when generation stage changes
+  useEffect(() => {
+    setStatusMessageIndex(0);
+  }, [generationStage]);
 
   useEffect(() => {
     if (isLoading && !showLoadingCelebration) {
-      // First 5 messages: 8 seconds each, last message: 30 seconds
-      const duration = statusMessageIndex < 5 ? 8000 : 30000;
+      // Faster cycling for analysis (3s), planning/prompting (2s), generating (5s)
+      const duration = generationStage === 'analyzing' ? 3000 :
+                       generationStage === 'planning' || generationStage === 'prompting' ? 2000 : 5000;
       const timeout = setTimeout(() => {
         setStatusMessageIndex(prev => (prev + 1) % statusMessages.length);
       }, duration);
@@ -808,7 +844,7 @@ const App: React.FC = () => {
     } else if (!isLoading) {
       setStatusMessageIndex(0); // Reset when not loading
     }
-  }, [isLoading, showLoadingCelebration, statusMessageIndex, statusMessages.length]);
+  }, [isLoading, showLoadingCelebration, statusMessageIndex, statusMessages.length, generationStage]);
 
   // Load saved settings (company profile, pricing, catalog, lighting) on mount
   useEffect(() => {
@@ -1730,14 +1766,97 @@ const App: React.FC = () => {
 
     try {
       const base64 = await fileToBase64(file);
-      let result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt, userPreferences);
+
+      // === 4-STAGE AI PIPELINE ===
+      let finalPrompt = activePrompt;
+      let finalIntensity = lightIntensity;
+      let finalBeamAngle = beamAngle;
+
+      // STAGE 1: ANALYZING - Analyze property photo AND user's fixture selections
+      setGenerationStage('analyzing');
+      let analysis: PropertyAnalysis | null = null;
+
+      try {
+        analysis = await analyzePropertyArchitecture(
+          base64,
+          file.type,
+          selectedFixtures,
+          fixtureSubOptions,
+          fixtureCounts
+        );
+        setPropertyAnalysis(analysis);
+        console.log('Stage 1 complete - Property analysis:', analysis);
+
+        // Check if cancelled
+        if (generationCancelledRef.current) {
+          generationCancelledRef.current = false;
+          setGenerationStage('idle');
+          return;
+        }
+
+        // STAGE 2: PLANNING - Build lighting plan with exact placements
+        setGenerationStage('planning');
+        const plan = buildLightingPlan(analysis, {
+          fixtures: selectedFixtures,
+          subOptions: fixtureSubOptions,
+          counts: fixtureCounts
+        });
+        console.log('Stage 2 complete - Lighting plan:', plan);
+
+        // Use optimized settings from plan
+        finalIntensity = plan.settings.intensity;
+        finalBeamAngle = plan.settings.beamAngle;
+
+        // Check if cancelled
+        if (generationCancelledRef.current) {
+          generationCancelledRef.current = false;
+          setGenerationStage('idle');
+          return;
+        }
+
+        // STAGE 3: PROMPTING - Create the perfect final prompt
+        setGenerationStage('prompting');
+        const smartPrompt = buildFinalPrompt(analysis, plan, colorPrompt, userPreferences);
+
+        // Merge with user's custom notes if any
+        finalPrompt = smartPrompt + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
+        console.log('Stage 3 complete - Final prompt built');
+
+      } catch (pipelineError) {
+        // If any stage fails, continue with standard generation (graceful fallback)
+        console.warn('AI pipeline failed, using standard generation:', pipelineError);
+        setPropertyAnalysis(null);
+        // Keep original prompt and settings
+      }
+
+      // Check if generation was cancelled during pipeline
+      if (generationCancelledRef.current) {
+        generationCancelledRef.current = false;
+        setGenerationStage('idle');
+        return;
+      }
+
+      // STAGE 4: GENERATING - Execute and create the image
+      setGenerationStage('generating');
+      let result = await generateNightScene(
+        base64,
+        finalPrompt,
+        file.type,
+        targetRatio,
+        finalIntensity,
+        finalBeamAngle,
+        colorPrompt,
+        userPreferences
+      );
 
       // Check if generation was cancelled while waiting for API
       if (generationCancelledRef.current) {
         generationCancelledRef.current = false;
+        setGenerationStage('idle');
         return;
       }
 
+      setGenerationStage('idle');
       setGeneratedImage(result);
 
       // Trigger loading screen celebration FIRST (before hiding loading)

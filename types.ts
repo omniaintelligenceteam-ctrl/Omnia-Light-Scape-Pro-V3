@@ -241,6 +241,103 @@ export interface UserPreferences {
   updated_at: string;
 }
 
+// === PROPERTY ANALYSIS TYPES (Auto-Prompt Feature) ===
+export interface PropertyArchitecture {
+  story_count: 1 | 2 | 3;
+  wall_height_estimate: '8-12ft' | '18-25ft' | '25+ft';
+  facade_materials: ('brick' | 'siding' | 'stone' | 'stucco' | 'wood' | 'vinyl')[];
+  windows: {
+    first_floor_count: number;
+    second_floor_count: number;
+    positions: string;
+  };
+  columns: { present: boolean; count: number };
+  dormers: { present: boolean; count: number };
+  gables: { present: boolean; count: number };
+  entryway: {
+    type: 'single' | 'double' | 'grand';
+    has_overhang: boolean;
+  };
+}
+
+export interface PropertyLandscaping {
+  trees: {
+    count: number;
+    sizes: ('small' | 'medium' | 'large')[];
+    positions?: string;  // Optional: description of tree locations
+  };
+  planting_beds: {
+    present: boolean;
+    locations: string[];
+  };
+}
+
+export interface PropertyHardscape {
+  driveway: {
+    present: boolean;
+    width_estimate: 'narrow' | 'standard' | 'wide';
+    position?: 'left' | 'right' | 'center';  // Optional: driveway position
+  };
+  walkway: {
+    present: boolean;
+    length_estimate: 'short' | 'medium' | 'long';
+    style: 'straight' | 'curved';
+    description?: string;  // Optional: detailed walkway description
+  };
+  patio: { present: boolean };
+  sidewalk: { present: boolean };
+}
+
+export interface PropertyRecommendations {
+  optimal_intensity: 'subtle' | 'moderate' | 'bright' | 'high_power';
+  optimal_beam_angle: 15 | 30 | 45 | 60;
+  fixture_counts: Record<string, number>;
+  fixture_positions?: Record<string, string[]>;  // Optional: AI-suggested positions
+  priority_areas: string[];
+  notes: string;
+}
+
+export interface PropertyAnalysis {
+  architecture: PropertyArchitecture;
+  landscaping: PropertyLandscaping;
+  hardscape: PropertyHardscape;
+  recommendations: PropertyRecommendations;
+}
+
+export interface OptimizedPromptData {
+  intensity: number;
+  beamAngle: number;
+  userInstructions: string;
+  analysisContext: string;
+}
+
+export interface FixtureSelections {
+  fixtures: string[];
+  subOptions: Record<string, string[]>;
+  counts?: Record<string, number | null>;
+}
+
+// === LIGHTING PLAN TYPES (Stage 2 of 4-Stage Pipeline) ===
+export interface FixturePlacement {
+  fixtureType: string;
+  subOption: string;
+  count: number;
+  positions: string[];  // e.g., ["left of window 1", "between windows 2-3"]
+  spacing: string;      // e.g., "6-8 feet apart"
+}
+
+export interface LightingSettings {
+  intensity: number;
+  beamAngle: number;
+  reasoning: string;  // e.g., "65% intensity for 2-story walls"
+}
+
+export interface LightingPlan {
+  placements: FixturePlacement[];
+  settings: LightingSettings;
+  priorityOrder: string[];  // Order of importance for lighting
+}
+
 export interface SettingsSnapshot {
   selectedFixtures?: string[];
   fixtureSubOptions?: Record<string, string[]>;
