@@ -8,12 +8,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 // Price ID to monthly limit mapping
 const PRICE_TO_LIMIT_MAP: Record<string, number> = {
-    'price_1SrNHlQ1tit8mwraqKGAf2GL': 50,    // STARTER_MONTHLY
+    'price_1SuSG3Q1tit8mwraWdgBHUUQ': 10,    // LITE_MONTHLY (10/month)
+    'price_1SuSHNQ1tit8mwrauHW3CLCn': 10,    // LITE_YEARLY (10/month)
+    'price_1SuSSmQ1tit8mwralY1OAL5Xz': 50,   // STARTER_MONTHLY (50/month)
     'price_1SrNJdQ1tit8mwraqbC4ihcM': 50,    // STARTER_YEARLY (50/month)
-    'price_1SrNK5Q1tit8mwraTa5UHFWD': 125,   // PRO_MONTHLY
+    'price_1SrNK5Q1tit8mwraTa5UHFWD': 125,   // PRO_MONTHLY (125/month)
     'price_1SrNKfQ1tit8mwrajmlqx1ak': 125,   // PRO_YEARLY (125/month)
-    'price_1SrNLUQ1tit8mwraV4J0nB6T': -1,    // BUSINESS_MONTHLY (unlimited)
-    'price_1SrNM8Q1tit8mwraPzrGelaH': -1,    // BUSINESS_YEARLY (unlimited)
+    'price_1SrNLUQ1tit8mwraV4J0nB6T': -1,    // ENTERPRISE_MONTHLY (unlimited)
+    'price_1SrNM8Q1tit8mwraPzrGelaH': -1,    // ENTERPRISE_YEARLY (unlimited)
 };
 
 // Disable body parsing - we need the raw body for signature verification

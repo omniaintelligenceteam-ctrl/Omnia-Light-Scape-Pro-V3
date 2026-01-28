@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { STRIPE_CONFIG } from '../constants';
-import { X, Loader2, Sparkles, ShieldCheck, Zap, Check, Crown, Building2, Plus } from 'lucide-react';
+import { X, Loader2, Sparkles, ShieldCheck, Zap, Check, Crown, Building2, Plus, Lightbulb } from 'lucide-react';
 import { createCheckoutSession } from '../services/stripeservice';
 
 interface PricingProps {
@@ -11,7 +11,7 @@ interface PricingProps {
 }
 
 type BillingCycle = 'monthly' | 'yearly';
-type PlanTier = 'starter' | 'pro' | 'business';
+type PlanTier = 'lite' | 'starter' | 'pro' | 'enterprise';
 
 export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
   const { user } = useUser();
@@ -42,12 +42,14 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
     try {
       // Map tier + billing cycle to price ID
       const priceIdMap: Record<string, string> = {
+        'lite-monthly': STRIPE_CONFIG.PLANS.LITE_MONTHLY.id,
+        'lite-yearly': STRIPE_CONFIG.PLANS.LITE_YEARLY.id,
         'starter-monthly': STRIPE_CONFIG.PLANS.STARTER_MONTHLY.id,
         'starter-yearly': STRIPE_CONFIG.PLANS.STARTER_YEARLY.id,
         'pro-monthly': STRIPE_CONFIG.PLANS.PRO_MONTHLY.id,
         'pro-yearly': STRIPE_CONFIG.PLANS.PRO_YEARLY.id,
-        'business-monthly': STRIPE_CONFIG.PLANS.BUSINESS_MONTHLY.id,
-        'business-yearly': STRIPE_CONFIG.PLANS.BUSINESS_YEARLY.id,
+        'enterprise-monthly': STRIPE_CONFIG.PLANS.ENTERPRISE_MONTHLY.id,
+        'enterprise-yearly': STRIPE_CONFIG.PLANS.ENTERPRISE_YEARLY.id,
       };
 
       const priceId = priceIdMap[`${tier}-${billingCycle}`];
@@ -63,6 +65,22 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
   };
 
   const plans = [
+    {
+      id: 'lite' as PlanTier,
+      name: 'Lite',
+      icon: Lightbulb,
+      monthlyPrice: STRIPE_CONFIG.PLANS.LITE_MONTHLY.price,
+      yearlyPrice: STRIPE_CONFIG.PLANS.LITE_YEARLY.price,
+      generations: STRIPE_CONFIG.PLANS.LITE_MONTHLY.generations,
+      features: [
+        '10 generations per month',
+        '4K exports & PDF downloads',
+        'Basic quotes',
+        'Email support',
+        'No watermark'
+      ],
+      highlighted: false
+    },
     {
       id: 'starter' as PlanTier,
       name: 'Starter',
@@ -99,11 +117,11 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       highlighted: true
     },
     {
-      id: 'business' as PlanTier,
-      name: 'Business',
+      id: 'enterprise' as PlanTier,
+      name: 'Enterprise',
       icon: Building2,
-      monthlyPrice: STRIPE_CONFIG.PLANS.BUSINESS_MONTHLY.price,
-      yearlyPrice: STRIPE_CONFIG.PLANS.BUSINESS_YEARLY.price,
+      monthlyPrice: STRIPE_CONFIG.PLANS.ENTERPRISE_MONTHLY.price,
+      yearlyPrice: STRIPE_CONFIG.PLANS.ENTERPRISE_YEARLY.price,
       generations: -1,
       features: [
         'Unlimited generations',
@@ -143,7 +161,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="relative bg-[#111] border border-white/10 w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            className="relative bg-[#111] border border-white/10 w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="p-8 pb-4 text-center border-b border-white/10">
@@ -199,7 +217,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
             </div>
 
             {/* Plans Grid */}
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {plans.map((plan, index) => {
                 const Icon = plan.icon;
                 const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
@@ -281,8 +299,8 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                         )}
                       </motion.button>
 
-                      {/* Create Item Button - Only for Business plan */}
-                      {plan.id === 'business' && (
+                      {/* Create Item Button - Only for Enterprise plan */}
+                      {plan.id === 'enterprise' && (
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}

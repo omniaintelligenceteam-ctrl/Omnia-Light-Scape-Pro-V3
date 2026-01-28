@@ -9,11 +9,9 @@ import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
 import { SettingsView } from './components/settings';
 import AuthWrapper from './components/AuthWrapper';
-// InventoryView - currently unused, can re-enable when needed
-// import { InventoryView } from './components/InventoryView';
+import { InventoryView } from './components/InventoryView';
 import { ScheduleView } from './components/ScheduleView';
-// BOMView - currently unused, can re-enable when needed
-// import { BOMView } from './components/BOMView';
+import { BOMView } from './components/BOMView';
 import { Pricing } from './components/Pricing';
 import { BillingSuccess } from './components/BillingSuccess';
 import { BillingCanceled } from './components/BillingCanceled';
@@ -34,10 +32,9 @@ import { usePipelineForecast } from './hooks/usePipelineForecast';
 import { useTeamPerformance } from './hooks/useTeamPerformance';
 import { useCapacityPlanning } from './hooks/useCapacityPlanning';
 import { AnalyticsDashboard, ExecutiveDashboard, BusinessHealthScore, PipelineForecast, TeamPerformanceMatrix, CapacityDashboard } from './components/analytics';
-// LeadSourceROIDashboard, CashFlowDashboard, ExportMenu - currently unused
-// import { LeadSourceROIDashboard } from './components/analytics/LeadSourceROIDashboard';
-// import { CashFlowDashboard } from './components/analytics/CashFlowDashboard';
-// import { ExportMenu } from './components/reports/ExportMenu';
+import { LeadSourceROIDashboard } from './components/analytics/LeadSourceROIDashboard';
+import { CashFlowDashboard } from './components/analytics/CashFlowDashboard';
+import { ExportMenu } from './components/reports/ExportMenu';
 import { DateRangePickerAdvanced, DateRangeValue } from './components/reports/DateRangePickerAdvanced';
 import { ComparisonView, ComparisonData } from './components/reports/ComparisonView';
 import { useLocations } from './hooks/useLocations';
@@ -56,11 +53,12 @@ import { useToast } from './components/Toast';
 import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
+import { useDemoMode } from './hooks/useDemoMode';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
+import { generateNightScene } from './services/geminiService';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, ClipboardList, Package, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, ProjectImage, UserPreferences, SettingsSnapshot, Client, LeadSource } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -174,11 +172,14 @@ const App: React.FC = () => {
   // Toast notifications
   const { showToast } = useToast();
 
+  // Demo mode controls
+  const { dismissDemoData } = useDemoMode();
+
   // Subscription and usage tracking
   const subscription = useSubscription();
 
-  // Load/save projects from Supabase (includes dismissDemoData to exit demo mode)
-  const { projects, isLoading: projectsLoading, isDemo, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject, dismissDemoData } = useProjects();
+  // Load/save projects from Supabase
+  const { projects, isLoading: projectsLoading, isDemo, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject } = useProjects();
 
   // Load/save clients from Supabase
   const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients, sortClients, filterByLeadSource, filterByLetter, getAvailableLetters } = useClients();
@@ -369,8 +370,6 @@ const App: React.FC = () => {
   const [fixtureSubOptions, setFixtureSubOptions] = useState<Record<string, string[]>>({});
   // Fixture Count State (null = auto/AI determines, number = user-specified exact count)
   const [fixtureCounts, setFixtureCounts] = useState<Record<string, number | null>>({});
-  // Placement Notes State (user describes where they want fixtures)
-  const [fixturePlacementNotes, setFixturePlacementNotes] = useState<Record<string, string>>({});
 
   // Favorite Presets State
   interface FixturePreset {
@@ -395,8 +394,6 @@ const App: React.FC = () => {
   // Modal Configuration State
   const [activeConfigFixture, setActiveConfigFixture] = useState<string | null>(null); // 'up', 'path', 'coredrill', 'gutter', 'soffit', 'hardscape' or null
   const [pendingOptions, setPendingOptions] = useState<string[]>([]);
-  // Pending counts being configured in the modal (null = auto, number = manual)
-  const [pendingCounts, setPendingCounts] = useState<Record<string, number | null>>({});
 
   // Lifted Setting State
   const [colorTemp, setColorTemp] = useState<string>('3000k');
@@ -415,10 +412,6 @@ const App: React.FC = () => {
   const [showLoadingCelebration, setShowLoadingCelebration] = useState<boolean>(false);
   const [showRipple, setShowRipple] = useState<boolean>(false);
   const [statusMessageIndex, setStatusMessageIndex] = useState<number>(0);
-
-  // Auto-prompt feature: Property analysis state
-  const [, setPropertyAnalysis] = useState<PropertyAnalysis | null>(null);
-  const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'validating' | 'generating'>('idle');
   const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
 
   // Generation History for Undo with Settings
@@ -498,6 +491,7 @@ const App: React.FC = () => {
     endDate: new Date(),
     label: 'Last 30 Days'
   });
+  const [showComparison, setShowComparison] = useState(true);
 
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [inlineEditQuote, setInlineEditQuote] = useState<{ [key: string]: { clientName: string; total: number; notes: string } }>({});
@@ -600,9 +594,6 @@ const App: React.FC = () => {
   const [accentColor, setAccentColor] = useState<AccentColor>('gold');
   const [fontSize, setFontSize] = useState<FontSize>('normal');
   const [highContrast, setHighContrast] = useState<boolean>(false);
-  
-  // Feature Preferences
-  const [enableBeforeAfter, setEnableBeforeAfter] = useState<boolean>(true);
 
   // Notification Preferences State
   const [notifications, setNotifications] = useState<NotificationPreferences>({
@@ -683,7 +674,6 @@ const App: React.FC = () => {
         if (prefs.accentColor) setAccentColor(prefs.accentColor);
         if (prefs.fontSize) setFontSize(prefs.fontSize);
         if (typeof prefs.highContrast === 'boolean') setHighContrast(prefs.highContrast);
-        if (typeof prefs.enableBeforeAfter === 'boolean') setEnableBeforeAfter(prefs.enableBeforeAfter);
       }
       const savedNotifs = localStorage.getItem('omnia_notifications');
       if (savedNotifs) {
@@ -700,8 +690,8 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-accent', accentColor);
     document.documentElement.setAttribute('data-fontsize', fontSize);
     document.documentElement.setAttribute('data-high-contrast', String(highContrast));
-    localStorage.setItem('omnia_theme', JSON.stringify({ theme, accentColor, fontSize, highContrast, enableBeforeAfter }));
-  }, [theme, accentColor, fontSize, highContrast, enableBeforeAfter]);
+    localStorage.setItem('omnia_theme', JSON.stringify({ theme, accentColor, fontSize, highContrast }));
+  }, [theme, accentColor, fontSize, highContrast]);
 
   // Persist notification preferences
   useEffect(() => {
@@ -793,7 +783,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Status messages for loading screen - first 5 at 15s, last one at 30s
+  // Status messages for loading screen - first 5 at 8s, last one at 30s
   const statusMessages = [
     "Processing Image",
     "Analyzing Geometry",
@@ -805,8 +795,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (isLoading && !showLoadingCelebration) {
-      // First 5 messages: 15 seconds each, last message: 30 seconds
-      const duration = statusMessageIndex < 5 ? 15000 : 30000;
+      // First 5 messages: 8 seconds each, last message: 30 seconds
+      const duration = statusMessageIndex < 5 ? 8000 : 30000;
       const timeout = setTimeout(() => {
         setStatusMessageIndex(prev => (prev + 1) % statusMessages.length);
       }, duration);
@@ -1267,14 +1257,7 @@ const App: React.FC = () => {
             setSelectedFixtures(prev => prev.filter(id => id !== fixtureId));
         } else {
             // Toggle ON -> Open Config
-            const existingSubOpts = fixtureSubOptions[fixtureId] || [];
-            setPendingOptions(existingSubOpts);
-            // Initialize pending counts from existing fixtureCounts
-            const initialCounts: Record<string, number | null> = {};
-            existingSubOpts.forEach(optId => {
-                initialCounts[optId] = fixtureCounts[optId] ?? null;
-            });
-            setPendingCounts(initialCounts);
+            setPendingOptions(fixtureSubOptions[fixtureId] || []);
             setActiveConfigFixture(fixtureId);
         }
     } else {
@@ -1292,20 +1275,8 @@ const App: React.FC = () => {
   const togglePendingOption = (optId: string) => {
     setPendingOptions(prev => {
         if (prev.includes(optId)) {
-            // Deselecting - also remove from pendingCounts
-            setPendingCounts(counts => {
-                const newCounts = { ...counts };
-                delete newCounts[optId];
-                return newCounts;
-            });
             return prev.filter(id => id !== optId);
         } else {
-            // Selecting - initialize with default count (manual mode shows plus/minus)
-            const defaultCount = activeConfigFixture ? getDefaultCount(activeConfigFixture, optId) : 6;
-            setPendingCounts(counts => ({
-                ...counts,
-                [optId]: defaultCount
-            }));
             return [...prev, optId];
         }
     });
@@ -1342,61 +1313,26 @@ const App: React.FC = () => {
       return 4; // Generic default
   };
 
-  // Helper function for context-specific placement note placeholders
-  const getPlacementPlaceholder = (fixtureId: string, subOptId: string): string => {
-    const placeholders: Record<string, Record<string, string>> = {
-      up: {
-        siding: 'e.g., Focus on brick sections, skip garage',
-        windows: 'e.g., Below bedroom windows only',
-        columns: 'e.g., Front porch columns',
-        entryway: 'e.g., Either side of front door',
-        trees: 'e.g., Large oak on left, maple on right',
-      },
-      path: {
-        pathway: 'e.g., Along front walkway to door',
-        driveway: 'e.g., Both sides of driveway entrance',
-      },
-      gutter: {
-        dormers: 'e.g., All 3 dormers on front facade',
-        peaks: 'e.g., Center peak over garage',
-        secondStoryFacade: 'e.g., Upper windows above entry',
-      },
-      coredrill: {
-        statues: 'e.g., Fountain in front yard',
-        focalPoints: 'e.g., Flag pole and garden statue',
-      },
-      soffit: {
-        porchEntry: 'e.g., Under front porch overhang',
-        perimeter: 'e.g., Around entire roofline',
-      },
-      hardscape: {
-        retainingWalls: 'e.g., Stone wall along driveway',
-        steps: 'e.g., Front porch steps only',
-      },
-      holiday: {
-        roofline: 'e.g., Along front roofline only',
-        windows: 'e.g., All front-facing windows',
-      },
-    };
-    return placeholders[fixtureId]?.[subOptId] || 'e.g., Describe specific placement';
-  };
-
   const confirmFixtureSelection = () => {
       if (activeConfigFixture) {
           setFixtureSubOptions(prev => ({ ...prev, [activeConfigFixture]: pendingOptions }));
 
-          // Apply pending counts directly (null = auto, number = manual)
-          setFixtureCounts(prev => ({
-              ...prev,
-              ...pendingCounts
-          }));
+          // Set default counts for newly selected sub-options
+          const defaultCounts: Record<string, number> = {};
+          pendingOptions.forEach(optId => {
+              if (fixtureCounts[optId] === undefined || fixtureCounts[optId] === null) {
+                  defaultCounts[optId] = getDefaultCount(activeConfigFixture, optId);
+              }
+          });
+          if (Object.keys(defaultCounts).length > 0) {
+              setFixtureCounts(prev => ({ ...prev, ...defaultCounts }));
+          }
 
           // Ensure fixture is in selectedFixtures
           if (!selectedFixtures.includes(activeConfigFixture)) {
               setSelectedFixtures(prev => [...prev, activeConfigFixture]);
           }
           setActiveConfigFixture(null);
-          setPendingCounts({});  // Clear pending counts
       }
   };
 
@@ -1775,137 +1711,14 @@ const App: React.FC = () => {
 
     try {
       const base64 = await fileToBase64(file);
-
-      // === 4-STAGE AI PIPELINE ===
-      let finalPrompt = activePrompt;
-      let finalIntensity = lightIntensity;
-      let finalBeamAngle = beamAngle;
-
-      // STAGE 1: ANALYZING - Analyze property photo AND user's fixture selections
-      setGenerationStage('analyzing');
-      let analysis: PropertyAnalysis | null = null;
-
-      try {
-        analysis = await analyzePropertyArchitecture(
-          base64,
-          file.type,
-          selectedFixtures,
-          fixtureSubOptions,
-          fixtureCounts
-        );
-        setPropertyAnalysis(analysis);
-        console.log('Stage 1 complete - Property analysis:', analysis);
-
-        // Check if cancelled
-        if (generationCancelledRef.current) {
-          generationCancelledRef.current = false;
-          setGenerationStage('idle');
-          return;
-        }
-
-        // STAGE 2: PLANNING (AI-Powered) - Build lighting plan with AI reasoning
-        setGenerationStage('planning');
-        const plan = await planLightingWithAI(
-          analysis,
-          {
-            fixtures: selectedFixtures,
-            subOptions: fixtureSubOptions,
-            counts: fixtureCounts,
-            placementNotes: fixturePlacementNotes
-          },
-          FIXTURE_TYPES
-        );
-        console.log('Stage 2 complete - AI Lighting plan:', plan);
-
-        // Use optimized settings from plan
-        finalIntensity = plan.settings.intensity;
-        finalBeamAngle = plan.settings.beamAngle;
-
-        // Check if cancelled
-        if (generationCancelledRef.current) {
-          generationCancelledRef.current = false;
-          setGenerationStage('idle');
-          return;
-        }
-
-        // STAGE 3: PROMPTING (AI-Powered) - Craft the optimal prompt with AI
-        setGenerationStage('prompting');
-        const smartPrompt = await craftPromptWithAI(
-          analysis,
-          plan,
-          SYSTEM_PROMPT,
-          FIXTURE_TYPES,
-          colorPrompt,
-          userPreferences,
-          fixturePlacementNotes
-        );
-
-        // VERIFICATION STEP: Double-check fixtures match Fixture Summary before generating
-        const verifiedSummary = verifyFixturesBeforeGeneration(plan, {
-          fixtures: selectedFixtures,
-          subOptions: fixtureSubOptions,
-          counts: fixtureCounts
-        });
-        console.log('VERIFICATION COMPLETE:', verifiedSummary);
-
-        // Check if cancelled
-        if (generationCancelledRef.current) {
-          generationCancelledRef.current = false;
-          setGenerationStage('idle');
-          return;
-        }
-
-        // STAGE 4: VALIDATING (AI-Powered) - Review prompt before image generation
-        setGenerationStage('validating');
-        const validation = await validatePrompt(smartPrompt, analysis, plan);
-        console.log('Stage 4 complete - Validation result:', validation);
-
-        if (validation.issues && validation.issues.length > 0) {
-          console.warn('Prompt validation found issues:', validation.issues);
-        }
-
-        // Use fixed prompt if validation provided one, otherwise use original
-        const validatedPrompt = validation.fixedPrompt || smartPrompt;
-
-        // Merge with verified summary and user's custom notes
-        finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
-        console.log('Stage 4 complete - Final prompt validated and built');
-
-      } catch (pipelineError) {
-        // If any stage fails, continue with standard generation (graceful fallback)
-        console.warn('AI pipeline failed, using standard generation:', pipelineError);
-        setPropertyAnalysis(null);
-        // Keep original prompt and settings
-      }
-
-      // Check if generation was cancelled during pipeline
-      if (generationCancelledRef.current) {
-        generationCancelledRef.current = false;
-        setGenerationStage('idle');
-        return;
-      }
-
-      // STAGE 5: GENERATING - Execute and create the image
-      setGenerationStage('generating');
-      let result = await generateNightScene(
-        base64,
-        finalPrompt,
-        file.type,
-        targetRatio,
-        finalIntensity,
-        finalBeamAngle,
-        colorPrompt,
-        userPreferences
-      );
+      let result = await generateNightScene(base64, activePrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt, userPreferences);
 
       // Check if generation was cancelled while waiting for API
       if (generationCancelledRef.current) {
         generationCancelledRef.current = false;
-        setGenerationStage('idle');
         return;
       }
 
-      setGenerationStage('idle');
       setGeneratedImage(result);
 
       // Trigger loading screen celebration FIRST (before hiding loading)
@@ -2271,15 +2084,6 @@ const App: React.FC = () => {
       // Now save the project with the client ID and current location
       const projectName = clientData.name;
       const quoteData = generateQuoteFromSelections();
-
-      // Populate client details in the quote from the newly created client
-      quoteData.clientDetails = {
-        name: newClient.name || clientData.name || '',
-        email: newClient.email || clientData.email || '',
-        phone: newClient.phone || clientData.phone || '',
-        address: newClient.address || clientData.address || ''
-      };
-
       const result = await saveProject(projectName, generatedImage, quoteData, null, newClient.id, newClient.name, selectedLocationId);
 
       if (result) {
@@ -2547,7 +2351,6 @@ const App: React.FC = () => {
           discount: project.quote.discount || 0,
           total: project.quote.total,
           projectImageUrl: project.image?.startsWith('http') ? project.image : undefined,
-          originalImageUrl: project.originalImage?.startsWith('http') ? project.originalImage : undefined,
           portalLink: shareUrl
         })
       });
@@ -2894,13 +2697,11 @@ Notes: ${invoice.notes || 'N/A'}
       setInvoiceEmailError(null);
       setInvoiceEmailSent(false);
 
-      // Find the project to get the image URLs
+      // Find the project to get the image URL
       // Only include if it's a valid HTTP(S) URL (not a base64 data URL)
       const project = projects.find(p => p.id === currentInvoice.projectId);
       const rawImageUrl = project?.image || null;
       const projectImageUrl = rawImageUrl && rawImageUrl.startsWith('http') ? rawImageUrl : null;
-      const rawOriginalImageUrl = project?.originalImage || null;
-      const originalImageUrl = rawOriginalImageUrl && rawOriginalImageUrl.startsWith('http') ? rawOriginalImageUrl : null;
 
       try {
           // Generate share token to get payment URL
@@ -2961,7 +2762,6 @@ Notes: ${invoice.notes || 'N/A'}
                   total: currentInvoice.total,
                   notes: currentInvoice.notes,
                   projectImageUrl: projectImageUrl || undefined,
-                  originalImageUrl: originalImageUrl || undefined,
                   customMessage: invoiceEmailMessage || undefined,
                   paymentUrl
               })
@@ -3277,7 +3077,7 @@ Notes: ${invoice.notes || 'N/A'}
       <DemoModeBanner
         isVisible={isDemo && !projectsLoading}
         onDismiss={dismissDemoData}
-        onEndDemo={dismissDemoData}
+        onStartFresh={dismissDemoData}
       />
 
       {/* Hidden PDF Generation Container */}
@@ -3352,10 +3152,13 @@ Notes: ${invoice.notes || 'N/A'}
                         <h3 className="text-lg font-semibold text-white tracking-tight">
                             {getActiveFixtureTitle()}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-0.5">Choose fixture types and quantities</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Choose placement areas</p>
+                        <p className="text-[10px] text-amber-500/70 mt-1 flex items-center gap-1">
+                            <span>💡</span> Only select features that exist on this home
+                        </p>
                       </div>
                       <motion.button
-                        onClick={() => { setActiveConfigFixture(null); setPendingCounts({}); }}
+                        onClick={() => setActiveConfigFixture(null)}
                         className="p-2 rounded-full text-gray-500 hover:text-white hover:bg-white/10 transition-all"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
@@ -3387,13 +3190,11 @@ Notes: ${invoice.notes || 'N/A'}
                         <div className="space-y-2 max-w-lg mx-auto md:max-w-none">
                             {getCurrentSubOptions().map((opt, index) => {
                                 const isSelected = pendingOptions.includes(opt.id);
-                                const currentCount = pendingCounts[opt.id];
-                                const isAutoMode = currentCount === null;
-                                const displayCount = currentCount ?? getDefaultCount(activeConfigFixture!, opt.id);
                                 return (
-                                    <motion.div
+                                    <motion.button
                                       key={opt.id}
-                                      className={`w-full rounded-xl border transition-all duration-200 overflow-hidden ${
+                                      onClick={() => togglePendingOption(opt.id)}
+                                      className={`group w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
                                           isSelected
                                               ? 'bg-[#F6B45A] border-[#F6B45A] shadow-[0_0_20px_rgba(246,180,90,0.3)]'
                                               : 'bg-[#0d0d0d] border-white/5 hover:border-[#F6B45A]/40 hover:bg-[#F6B45A]/5'
@@ -3401,142 +3202,38 @@ Notes: ${invoice.notes || 'N/A'}
                                       initial={{ opacity: 0, x: -20 }}
                                       animate={{ opacity: 1, x: 0 }}
                                       transition={{ delay: index * 0.05 }}
+                                      whileTap={{ scale: 0.98 }}
                                     >
-                                        {/* Main clickable area for selection toggle */}
-                                        <motion.button
-                                          onClick={() => togglePendingOption(opt.id)}
-                                          className="group w-full flex items-center justify-between p-4"
-                                          whileTap={{ scale: 0.98 }}
-                                        >
-                                            <div className="flex flex-col items-start text-left">
-                                                <span className={`text-sm font-semibold transition-colors ${
-                                                    isSelected ? 'text-black' : 'text-white group-hover:text-[#F6B45A]'
-                                                }`}>
-                                                    {opt.label}
-                                                </span>
-                                                <span className={`text-xs mt-0.5 transition-colors ${
-                                                    isSelected ? 'text-black/60' : 'text-gray-500'
-                                                }`}>
-                                                    {opt.description}
-                                                </span>
-                                            </div>
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all ${
-                                                isSelected
-                                                    ? 'bg-black/20'
-                                                    : 'border border-white/20 group-hover:border-[#F6B45A]/50'
+                                        <div className="flex flex-col items-start text-left">
+                                            <span className={`text-sm font-semibold transition-colors ${
+                                                isSelected ? 'text-black' : 'text-white group-hover:text-[#F6B45A]'
                                             }`}>
-                                                <AnimatePresence>
-                                                    {isSelected && (
-                                                        <motion.div
-                                                            initial={{ scale: 0 }}
-                                                            animate={{ scale: 1 }}
-                                                            exit={{ scale: 0 }}
-                                                        >
-                                                            <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        </motion.button>
-
-                                        {/* Inline Quantity Selector - Shows when selected */}
-                                        <AnimatePresence>
-                                            {isSelected && (
-                                                <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: 'auto', opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    transition={{ duration: 0.2 }}
-                                                    className="overflow-hidden"
-                                                >
-                                                    <div className="px-4 pb-4 pt-0">
-                                                        <div className="flex items-center justify-between bg-[#C4974A] rounded-lg px-4 py-3">
-                                                            <span className="text-sm font-medium text-black/80">
-                                                                Quantity
-                                                            </span>
-                                                            <div className="flex items-center gap-1.5">
-                                                                {/* Auto Toggle Button */}
-                                                                <motion.button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (isAutoMode) {
-                                                                            // Switch to manual mode with default count
-                                                                            setPendingCounts(prev => ({
-                                                                                ...prev,
-                                                                                [opt.id]: getDefaultCount(activeConfigFixture!, opt.id)
-                                                                            }));
-                                                                        } else {
-                                                                            // Switch to auto mode
-                                                                            setPendingCounts(prev => ({
-                                                                                ...prev,
-                                                                                [opt.id]: null
-                                                                            }));
-                                                                        }
-                                                                    }}
-                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                                                        isAutoMode
-                                                                            ? 'bg-[#E8C78A] text-black/90'
-                                                                            : 'bg-[#D4A85A] text-black/70 hover:bg-[#DDB86A]'
-                                                                    }`}
-                                                                    whileTap={{ scale: 0.95 }}
-                                                                >
-                                                                    Auto
-                                                                </motion.button>
-
-                                                                {/* Manual Controls - Only show when not in auto mode */}
-                                                                <AnimatePresence>
-                                                                    {!isAutoMode && (
-                                                                        <motion.div
-                                                                            initial={{ width: 0, opacity: 0 }}
-                                                                            animate={{ width: 'auto', opacity: 1 }}
-                                                                            exit={{ width: 0, opacity: 0 }}
-                                                                            transition={{ duration: 0.15 }}
-                                                                            className="flex items-center gap-1.5 overflow-hidden"
-                                                                        >
-                                                                            {/* Minus Button */}
-                                                                            <motion.button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setPendingCounts(prev => ({
-                                                                                        ...prev,
-                                                                                        [opt.id]: Math.max(1, (prev[opt.id] ?? displayCount) - 1)
-                                                                                    }));
-                                                                                }}
-                                                                                className="w-9 h-9 flex items-center justify-center bg-[#3A3A3A] rounded-lg text-gray-300 hover:bg-[#4A4A4A] transition-colors"
-                                                                                whileTap={{ scale: 0.9 }}
-                                                                            >
-                                                                                <Minus className="w-4 h-4" />
-                                                                            </motion.button>
-
-                                                                            {/* Count Display */}
-                                                                            <span className="w-8 text-center text-base font-bold text-black">
-                                                                                {displayCount}
-                                                                            </span>
-
-                                                                            {/* Plus Button */}
-                                                                            <motion.button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setPendingCounts(prev => ({
-                                                                                        ...prev,
-                                                                                        [opt.id]: Math.min(50, (prev[opt.id] ?? displayCount) + 1)
-                                                                                    }));
-                                                                                }}
-                                                                                className="w-9 h-9 flex items-center justify-center bg-[#3A3A3A] rounded-lg text-gray-300 hover:bg-[#4A4A4A] transition-colors"
-                                                                                whileTap={{ scale: 0.9 }}
-                                                                            >
-                                                                                <Plus className="w-4 h-4" />
-                                                                            </motion.button>
-                                                                        </motion.div>
-                                                                    )}
-                                                                </AnimatePresence>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </motion.div>
+                                                {opt.label}
+                                            </span>
+                                            <span className={`text-xs mt-0.5 transition-colors ${
+                                                isSelected ? 'text-black/60' : 'text-gray-500'
+                                            }`}>
+                                                {opt.description}
+                                            </span>
+                                        </div>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ml-4 transition-all ${
+                                            isSelected
+                                                ? 'bg-black/20'
+                                                : 'border border-white/20 group-hover:border-[#F6B45A]/50'
+                                        }`}>
+                                            <AnimatePresence>
+                                                {isSelected && (
+                                                    <motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        exit={{ scale: 0 }}
+                                                    >
+                                                        <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    </motion.button>
                                 )
                             })}
                         </div>
@@ -3547,7 +3244,7 @@ Notes: ${invoice.notes || 'N/A'}
                   <div className="shrink-0 p-4 border-t border-white/10 bg-[#0a0a0a]" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
                       <div className="flex items-center gap-3 max-w-lg mx-auto">
                           <motion.button
-                            onClick={() => { setActiveConfigFixture(null); setPendingCounts({}); }}
+                            onClick={() => setActiveConfigFixture(null)}
                             className="flex-1 py-3.5 rounded-xl border border-white/10 text-gray-400 font-medium text-sm hover:bg-white/5 hover:text-white transition-all"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -3860,19 +3557,17 @@ Notes: ${invoice.notes || 'N/A'}
                         </div>
 
                         <div className="flex items-center gap-2">
-                            {enableBeforeAfter && (
-                                <button 
-                                    onClick={() => setShowComparison(!showComparison)}
-                                    className={`flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                                        showComparison 
-                                            ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30' 
-                                            : 'bg-black/40 hover:bg-black/60 text-white/50 hover:text-white'
-                                    }`}
-                                >
-                                    <SplitSquareHorizontal className="w-3 h-3" />
-                                    Before / After
-                                </button>
-                            )}
+                            <button 
+                                onClick={() => setShowComparison(!showComparison)}
+                                className={`flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                    showComparison 
+                                        ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30' 
+                                        : 'bg-black/40 hover:bg-black/60 text-white/50 hover:text-white'
+                                }`}
+                            >
+                                <SplitSquareHorizontal className="w-3 h-3" />
+                                Before / After
+                            </button>
                             <button 
                                 onClick={() => setIsFullScreen(true)}
                                 className="flex items-center gap-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/50 hover:text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
@@ -4624,7 +4319,7 @@ Notes: ${invoice.notes || 'N/A'}
                                         </div>
                                         <div>
                                             <h3 className="text-sm font-semibold text-white tracking-tight">Select Fixtures</h3>
-                                            <p className="text-xs text-gray-500">Choose fixture types and quantities</p>
+                                            <p className="text-xs text-gray-500">Choose lighting types to include</p>
                                         </div>
                                     </div>
                                     <span className="text-[10px] font-medium text-gray-500 bg-white/5 px-2.5 py-1 rounded-full">
@@ -4810,9 +4505,9 @@ Notes: ${invoice.notes || 'N/A'}
                                 })}
                             </div>
 
-                            {/* Fixture Summary - Shows configured quantities */}
+                            {/* Fixture Count Controls - Expandable Section */}
                             <AnimatePresence>
-                                {selectedFixtures.length > 0 && selectedFixtures.some(fId => (fixtureSubOptions[fId] || []).length > 0) && (
+                                {selectedFixtures.length > 0 && (
                                     <motion.div
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: 'auto' }}
@@ -4823,14 +4518,21 @@ Notes: ${invoice.notes || 'N/A'}
                                         <div className="bg-[#0d0d0d] rounded-xl border border-white/10 p-4">
                                             <div className="flex items-center gap-2 mb-3">
                                                 <Hash className="w-4 h-4 text-[#F6B45A]" />
-                                                <span className="text-xs font-semibold text-white uppercase tracking-wider">Fixture Summary</span>
+                                                <div className="flex-1">
+                                                    <span className="text-xs font-semibold text-white uppercase tracking-wider">Fixture Quantities</span>
+                                                    <p className="text-[10px] text-gray-500 mt-0.5">Set exact counts or let AI decide. These flow directly to your quote.</p>
+                                                </div>
+                                                <span className="text-[10px] text-gray-500 px-2 py-1 bg-white/5 rounded-lg">Auto = AI decides</span>
                                             </div>
-                                            <div className="space-y-2">
+                                            <div className="space-y-3">
                                                 {selectedFixtures.flatMap((fixtureId) => {
                                                     const fixture = FIXTURE_TYPES.find(f => f.id === fixtureId);
                                                     if (!fixture) return [];
 
+                                                    // Get selected sub-options for this fixture
                                                     const selectedSubOpts = fixtureSubOptions[fixtureId] || [];
+
+                                                    // If no sub-options selected, show nothing for this fixture
                                                     if (selectedSubOpts.length === 0) return [];
 
                                                     return selectedSubOpts.map((subOptId) => {
@@ -4839,67 +4541,66 @@ Notes: ${invoice.notes || 'N/A'}
 
                                                         const count = fixtureCounts[subOptId];
                                                         const isAuto = count === null || count === undefined;
-                                                        const displayCount = count ?? getDefaultCount(fixtureId, subOptId);
 
                                                         return (
-                                                            <div key={subOptId} className="space-y-2 py-2 border-b border-white/5 last:border-0">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-sm text-gray-300">{fixture.label} - {subOpt.label}</span>
-                                                                    {/* Inline quantity controls */}
-                                                                    <div className="flex items-center gap-2">
-                                                                        <button
-                                                                            onClick={() => setFixtureCounts(prev => ({
-                                                                                ...prev,
-                                                                                [subOptId]: Math.max(1, (prev[subOptId] ?? displayCount) - 1)
-                                                                            }))}
-                                                                            className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-gray-300 text-sm"
-                                                                        >
-                                                                            -
-                                                                        </button>
-                                                                        <span className={`text-sm font-semibold min-w-[20px] text-center ${isAuto ? 'text-gray-500' : 'text-[#F6B45A]'}`}>
-                                                                            {displayCount}
-                                                                        </span>
-                                                                        <button
-                                                                            onClick={() => setFixtureCounts(prev => ({
-                                                                                ...prev,
-                                                                                [subOptId]: (prev[subOptId] ?? displayCount) + 1
-                                                                            }))}
-                                                                            className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-gray-300 text-sm"
-                                                                        >
-                                                                            +
-                                                                        </button>
-                                                                    </div>
+                                                            <div key={subOptId} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 last:border-b-0">
+                                                                <span className="text-sm text-gray-300">{subOpt.label}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    {/* Auto/Manual Toggle */}
+                                                                    <button
+                                                                        onClick={() => setFixtureCounts(prev => ({
+                                                                            ...prev,
+                                                                            [subOptId]: isAuto ? getDefaultCount(fixtureId, subOptId) : null
+                                                                        }))}
+                                                                        className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                                                                            isAuto
+                                                                                ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
+                                                                                : 'bg-white/5 text-gray-500 border border-white/10 hover:border-white/20'
+                                                                        }`}
+                                                                    >
+                                                                        Auto
+                                                                    </button>
+
+                                                                    {/* Stepper Controls */}
+                                                                    {!isAuto && (
+                                                                        <div className="flex items-center gap-1 bg-white/5 rounded-lg border border-white/10">
+                                                                            <button
+                                                                                onClick={() => setFixtureCounts(prev => ({
+                                                                                    ...prev,
+                                                                                    [subOptId]: Math.max(1, (prev[subOptId] || 4) - 1)
+                                                                                }))}
+                                                                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-l-lg transition-colors"
+                                                                            >
+                                                                                <Minus className="w-4 h-4" />
+                                                                            </button>
+                                                                            <span className="w-10 text-center text-sm font-bold text-[#F6B45A]">
+                                                                                {count}
+                                                                            </span>
+                                                                            <button
+                                                                                onClick={() => setFixtureCounts(prev => ({
+                                                                                    ...prev,
+                                                                                    [subOptId]: Math.min(50, (prev[subOptId] || 4) + 1)
+                                                                                }))}
+                                                                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#F6B45A] hover:bg-[#F6B45A]/10 rounded-r-lg transition-colors"
+                                                                            >
+                                                                                <Plus className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder={getPlacementPlaceholder(fixtureId, subOptId)}
-                                                                    value={fixturePlacementNotes[subOptId] || ''}
-                                                                    onChange={(e) => setFixturePlacementNotes(prev => ({
-                                                                        ...prev,
-                                                                        [subOptId]: e.target.value
-                                                                    }))}
-                                                                    className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 placeholder-gray-600 focus:border-[#F6B45A]/50 focus:outline-none"
-                                                                    maxLength={100}
-                                                                />
                                                             </div>
                                                         );
                                                     });
                                                 })}
                                             </div>
-                                            <p className="text-[10px] text-gray-500 mt-3 text-center">
-                                                Tap fixture above to adjust quantities
-                                            </p>
                                         </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
 
-                        {/* Responsive container - Generate button above notes on mobile */}
-                        <div className="flex flex-col">
-
                         {/* Premium Custom Notes Input */}
-                        <div className="relative mt-1 md:mt-2 order-2 md:order-1">
+                        <div className="relative mt-1 md:mt-2">
                             {/* Section Header */}
                             <div className="flex items-center justify-between mb-3 md:mb-4">
                                 <div className="flex items-center gap-3">
@@ -4941,7 +4642,6 @@ Notes: ${invoice.notes || 'N/A'}
                         </div>
 
                         {/* Error Message */}
-                        <div className="order-3 md:order-2">
                         <AnimatePresence>
                             {error && (
                                 <motion.div
@@ -4959,7 +4659,6 @@ Notes: ${invoice.notes || 'N/A'}
                                 </motion.div>
                             )}
                         </AnimatePresence>
-                        </div>
 
                         {/* ✨ HERO Generate Button - The Core Action */}
                         <motion.button
@@ -4977,7 +4676,7 @@ Notes: ${invoice.notes || 'N/A'}
                             disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
                             aria-label={isLoading ? 'Generating lighting design, please wait' : generationComplete ? 'Generation complete' : 'Generate lighting scene design'}
                             aria-busy={isLoading}
-                            className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2 order-1 md:order-3"
+                            className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2"
                             whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.02, y: -4 } : {}}
                             whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.97 } : {}}
                         >
@@ -5219,7 +4918,6 @@ Notes: ${invoice.notes || 'N/A'}
                             {/* Border highlight */}
                             <div className="absolute inset-0 rounded-2xl border border-white/40 pointer-events-none" />
                         </motion.button>
-                        </div>
                     </div>
                 </motion.div>
                 )}
@@ -7544,7 +7242,6 @@ Notes: ${invoice.notes || 'N/A'}
                                      <button onClick={() => setClientPage(p => Math.min(totalClientPages, p + 1))} disabled={clientPage === totalClientPages} className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"><ChevronRight className="w-4 h-4" /></button>
                                  </div>
                              )}
-                            </>
                          )}
                      </>
                  )}
@@ -7686,9 +7383,6 @@ Notes: ${invoice.notes || 'N/A'}
                 onFontSizeChange={setFontSize}
                 highContrast={highContrast}
                 onHighContrastChange={setHighContrast}
-                // Before/After comparison
-                enableBeforeAfter={enableBeforeAfter}
-                onEnableBeforeAfterChange={setEnableBeforeAfter}
                 // Notification props
                 notifications={notifications}
                 onNotificationsChange={setNotifications}
