@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Play, Square, Coffee, Truck, Wrench, Loader2 } from 'lucide-react';
-import { useTimesheets, type TimesheetEntry } from '../../hooks/useTimesheets';
+import { useTimesheets } from '../../hooks/useTimesheets';
 
 interface ClockWidgetProps {
   technicianId: string;
@@ -42,7 +42,7 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
   technicianId,
   technicianName,
   projectId,
-  projectName,
+  projectName: _projectName,
   compact = false,
 }) => {
   const {
@@ -55,7 +55,7 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
     isLoading,
   } = useTimesheets(technicianId);
 
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [_currentTime, setCurrentTime] = useState(new Date());
   const [isActioning, setIsActioning] = useState(false);
 
   // Update time every second

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Clock, Calendar, Check, ChevronLeft, ChevronRight,
-  Loader2, Truck, Wrench, Coffee, FileText
+  Clock, Check, ChevronLeft, ChevronRight,
+  Loader2, Truck, Wrench, Coffee
 } from 'lucide-react';
 import { useTimesheets, type TimesheetEntry } from '../../hooks/useTimesheets';
 import { useTechnicians } from '../../hooks/useTechnicians';
@@ -12,14 +12,6 @@ const formatTime = (dateStr: string) => {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  });
-};
-
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
   });
 };
 
@@ -59,9 +51,9 @@ export const TimesheetsSection: React.FC = () => {
   const { technicians, isLoading: techsLoading } = useTechnicians();
   const {
     entries,
-    dailySummaries,
+    dailySummaries: _dailySummaries,
     isLoading,
-    entriesByDate,
+    entriesByDate: _entriesByDate,
     approveTimesheets,
   } = useTimesheets();
 

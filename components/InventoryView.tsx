@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useSpring, useTransform, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence, useTransform, useMotionValue } from 'framer-motion';
 import { Package, AlertTriangle, RefreshCw, Plus, X, Trash2 } from 'lucide-react';
 import { getInventory, InventoryItem } from '../services/inventoryService';
 
@@ -201,7 +201,7 @@ export const InventoryView: React.FC = () => {
                 }}
             >
                 <AnimatePresence mode="popLayout">
-                    {allInventory.map((item, index) => {
+                    {allInventory.map((item, _index) => {
                         const status = getStockStatus(item);
                         const available = item.on_hand - item.reserved;
                         const isLocal = isLocalItem(item.sku);

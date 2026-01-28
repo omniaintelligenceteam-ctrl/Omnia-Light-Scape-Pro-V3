@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { FileText, DollarSign, Receipt, Calculator, ChevronRight, Download, X, TrendingUp, Clock, Briefcase } from 'lucide-react';
 import { SettingsCard } from '../ui/SettingsCard';
 import { SavedProject } from '../../../types';
-import { useExpenses, type Expense, type ExpenseSummary } from '../../../hooks/useExpenses';
+import { useExpenses } from '../../../hooks/useExpenses';
 
 interface ReportsSectionProps {
   projects?: SavedProject[];
@@ -193,8 +193,6 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ projects = [] })
     const totalIncome = paidProjects.reduce((sum, p) => sum + (p.quote?.total || 0), 0);
 
     // Categorize expenses by chart of accounts categories
-    const expenseSummary = getSummary(filteredExpenses);
-
     // Map expense categories to P&L categories
     const cogs = {
       fixtures: filteredExpenses.filter(e => e.category === 'Fixtures & Materials').reduce((s, e) => s + Number(e.amount), 0),

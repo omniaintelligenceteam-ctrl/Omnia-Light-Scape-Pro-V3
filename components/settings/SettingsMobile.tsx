@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
-  HelpCircle, LogOut, Save, Loader2, Upload, Check, Moon,
-  Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2, Phone,
+  HelpCircle, LogOut, Loader2, Upload, Check, Moon,
+  Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2,
   X, ChevronRight, Download, FileJson, Clock, Target, MapPin, Users, UserPlus, BellRing
 } from 'lucide-react';
 import { useSuccessToast, useErrorToast } from '../Toast';
@@ -120,7 +120,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   fixtureCatalog = [],
   onFixtureCatalogChange,
   subscription,
-  userId,
+  userId: _userId,
   onRequestUpgrade,
   theme = 'dark',
   onThemeChange,
@@ -140,7 +140,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   onBusinessGoalChange,
   onSignOut,
   onSaveSettings,
-  isSaving = false,
+  isSaving: _isSaving = false,
   onManageSubscription,
   isLoadingPortal = false,
   locations = [],

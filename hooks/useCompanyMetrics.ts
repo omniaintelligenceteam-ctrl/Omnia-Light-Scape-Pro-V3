@@ -3,55 +3,6 @@ import { SavedProject, LocationMetrics, TechnicianMetrics, CompanyMetrics } from
 
 type DateRange = 'today' | 'this_week' | 'this_month' | 'this_quarter' | 'this_year';
 
-interface DateRangeBounds {
-  start: Date;
-  end: Date;
-}
-
-function getDateRangeBounds(range: DateRange): DateRangeBounds {
-  const now = new Date();
-  const start = new Date();
-  const end = new Date();
-
-  switch (range) {
-    case 'today':
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-      break;
-
-    case 'this_week':
-      const dayOfWeek = now.getDay();
-      start.setDate(now.getDate() - dayOfWeek);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-      break;
-
-    case 'this_month':
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
-      end.setMonth(now.getMonth() + 1, 0);
-      end.setHours(23, 59, 59, 999);
-      break;
-
-    case 'this_quarter':
-      const currentQuarter = Math.floor(now.getMonth() / 3);
-      start.setMonth(currentQuarter * 3, 1);
-      start.setHours(0, 0, 0, 0);
-      end.setMonth((currentQuarter + 1) * 3, 0);
-      end.setHours(23, 59, 59, 999);
-      break;
-
-    case 'this_year':
-      start.setMonth(0, 1);
-      start.setHours(0, 0, 0, 0);
-      end.setMonth(11, 31);
-      end.setHours(23, 59, 59, 999);
-      break;
-  }
-
-  return { start, end };
-}
-
 function daysBetween(date1: string | undefined, date2: Date): number {
   if (!date1) return 0;
   const d1 = new Date(date1);

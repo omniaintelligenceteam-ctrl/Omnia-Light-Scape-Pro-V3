@@ -24,14 +24,6 @@ interface ProjectTemplatesProps {
   onSelectTemplate: (template: ProjectTemplate) => void;
 }
 
-// Category icons
-const categoryIcons: Record<TemplateCategory, React.ElementType> = {
-  residential: Home,
-  commercial: Building2,
-  holiday: Snowflake,
-  custom: Sparkles,
-};
-
 // Template Card Component
 const TemplateCard: React.FC<{
   template: ProjectTemplate;
@@ -41,7 +33,6 @@ const TemplateCard: React.FC<{
   isSelected?: boolean;
 }> = ({ template, onSelect, onDuplicate, onDelete, isSelected }) => {
   const categoryConfig = CATEGORY_INFO[template.category];
-  const CategoryIcon = categoryIcons[template.category];
   const fixtureCount = template.fixtures.reduce((sum, f) => sum + f.quantity, 0);
 
   return (
