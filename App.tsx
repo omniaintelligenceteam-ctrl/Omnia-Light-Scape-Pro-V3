@@ -4863,7 +4863,7 @@ Notes: ${invoice.notes || 'N/A'}
                                             <Sparkles className="w-4 h-4 text-[#F6B45A]" />
                                         </div>
                                         <div>
-                                            <h3 className="text-sm font-semibold text-white tracking-tight">Select Fixtures</h3>
+                                            <h3 className="text-sm font-semibold text-white tracking-tight">Select Fixtures (v2 TEST)</h3>
                                             <p className="text-xs text-gray-500">Choose fixture types and quantities</p>
                                         </div>
                                     </div>
