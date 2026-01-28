@@ -1318,11 +1318,22 @@ STRICT EXCLUSION ZONES:
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 
-*** CRITICAL DISTINCTION - READ CAREFULLY ***
-GUTTER UP LIGHTS are NOT soffit lights. These are COMPLETELY DIFFERENT:
-- GUTTER UP LIGHT: Fixture sits IN gutter, beam shoots UPWARD to illuminate gable/dormer ABOVE
-- SOFFIT DOWNLIGHT: Fixture recessed in eave, beam shoots DOWNWARD (THIS IS NOT WHAT WE WANT)
-YOU MUST CREATE UPWARD-FACING LIGHTS, NOT DOWNWARD-FACING LIGHTS.
+*** ABSOLUTE BAN ON SOFFIT LIGHTS ***
+DO NOT CREATE SOFFIT LIGHTS. DO NOT CREATE RECESSED DOWNLIGHTS IN THE EAVE.
+DO NOT CREATE ANY LIGHTS THAT SHINE DOWNWARD FROM THE ROOFLINE.
+SOFFIT LIGHTS ARE BANNED. EAVE LIGHTS ARE BANNED. DOWNLIGHTS ARE BANNED.
+
+GUTTER UP LIGHTS ONLY - These shoot UPWARD:
+- GUTTER UP LIGHT: Visible bullet/flood fixture sits IN the metal gutter trough, beam shoots UPWARD
+- The fixture is VISIBLE - you can see the brass/bronze housing sitting in the gutter
+- Light goes UP toward the sky, illuminating walls ABOVE the fixture
+- The illuminated area is ABOVE where the fixture is mounted
+
+BANNED (DO NOT CREATE):
+- Soffit lights (recessed in eave, shine down) - BANNED
+- Can lights in soffit - BANNED  
+- Downlights from roofline - BANNED
+- Any light that shines DOWNWARD - BANNED
 
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
 HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
