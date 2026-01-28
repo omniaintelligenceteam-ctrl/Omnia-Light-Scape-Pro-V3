@@ -2020,7 +2020,11 @@ Generate a dark, unlit nighttime version of this property.`;
         const validatedPrompt = validation.fixedPrompt || smartPrompt;
 
         // Merge with verified summary and user's custom notes
-        finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
+        // BUT: Skip this for grid mode - use dark scene prompt instead
+        if (!hasGridSelections) {
+          finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
+        }
+        // Grid mode keeps the dark scene prompt from activePrompt
 
       } catch {
         // If any stage fails, continue with standard generation (graceful fallback)
