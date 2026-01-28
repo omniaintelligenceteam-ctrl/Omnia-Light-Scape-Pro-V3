@@ -116,7 +116,7 @@ export const GenerationPanelWithStyle: React.FC<GenerationPanelProps> = ({
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface SidebarStyleSelectorProps {
-  onStyleChange?: (context: GenerationStyleContext) => void;
+  onStyleChange?: (context: { prefix: string; suffix: string; colorTempPrompt: string }) => void;
 }
 
 /**
