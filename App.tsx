@@ -378,7 +378,7 @@ const App: React.FC = () => {
   const [fixturePlacementNotes, setFixturePlacementNotes] = useState<Record<string, string>>({});
 
   // Manual Fixture Placement State (click-to-place positions)
-  // FixturePlacer now shown inline - no modal state needed
+  const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [placedFixtures, setPlacedFixtures] = useState<LightFixture[]>([]);
 
   // Favorite Presets State
@@ -1809,8 +1809,8 @@ const App: React.FC = () => {
       const base64 = await fileToBase64(file);
 
       // === INJECT PLACED FIXTURE POSITIONS (from FixturePlacer) ===
-      // If user manually placed fixtures on the image, convert their exact positions to prompt instructions
-      if (placedFixtures.length > 0) {
+      // Only inject when in manual mode AND user has placed fixtures
+      if (placementMode === 'manual' && placedFixtures.length > 0) {
         activePrompt += "\n\n### USER-PLACED FIXTURE POSITIONS (EXACT COORDINATES - MANDATORY):\n";
         activePrompt += "The user has MANUALLY placed fixtures on the image at EXACT positions. These positions are MANDATORY and override any AI suggestions:\n\n";
         
@@ -4623,7 +4623,31 @@ Notes: ${invoice.notes || 'N/A'}
                     
                     {/* Image Upload Area */}
                     <div className="relative">
-                        {/* Show ImageUpload when no image, show FixturePlacer when image uploaded */}
+                        {/* Placement Mode Toggle */}
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                          <button
+                            onClick={() => setPlacementMode('auto')}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                              placementMode === 'auto'
+                                ? 'bg-[#F6B45A] text-black'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            🤖 AI Placement
+                          </button>
+                          <button
+                            onClick={() => setPlacementMode('manual')}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                              placementMode === 'manual'
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            👆 Manual Placement
+                          </button>
+                        </div>
+
+                        {/* Image Upload - always shown when no image */}
                         {!previewUrl ? (
                           <ImageUpload 
                             currentImage={file}
@@ -4631,9 +4655,9 @@ Notes: ${invoice.notes || 'N/A'}
                             onImageSelect={handleImageSelect}
                             onClear={handleClear}
                           />
-                        ) : (
-                          <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] overflow-hidden">
-                            {/* Header with clear button */}
+                        ) : placementMode === 'manual' ? (
+                          /* Manual Mode: FixturePlacer inline */
+                          <div className="rounded-2xl border border-purple-500/30 bg-[#0a0a0a] overflow-hidden">
                             <div className="flex items-center justify-between p-3 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
                               <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-purple-400" />
@@ -4659,7 +4683,6 @@ Notes: ${invoice.notes || 'N/A'}
                                 </button>
                               </div>
                             </div>
-                            {/* Inline Fixture Placer */}
                             <div className="p-2">
                               <FixturePlacer
                                 imageUrl={previewUrl}
@@ -4668,6 +4691,16 @@ Notes: ${invoice.notes || 'N/A'}
                                 showPreview={true}
                               />
                             </div>
+                          </div>
+                        ) : (
+                          /* Auto Mode: Just show the uploaded image */
+                          <div className="relative">
+                            <ImageUpload 
+                              currentImage={file}
+                              previewUrl={previewUrl}
+                              onImageSelect={handleImageSelect}
+                              onClear={handleClear}
+                            />
                           </div>
                         )}
                     </div>
