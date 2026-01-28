@@ -719,13 +719,14 @@ const App: React.FC = () => {
         ctx.drawImage(img, 0, 0);
         
         // Glow colors by fixture type
+        // Larger, brighter glows for dark scene compositing
         const glowColors: Record<string, { inner: string; outer: string; size: number }> = {
-          uplight: { inner: 'rgba(255, 220, 150, 0.9)', outer: 'rgba(255, 180, 80, 0)', size: 60 },
-          path_light: { inner: 'rgba(255, 240, 200, 0.7)', outer: 'rgba(255, 200, 100, 0)', size: 40 },
-          downlight: { inner: 'rgba(255, 250, 230, 0.8)', outer: 'rgba(255, 220, 150, 0)', size: 50 },
-          spot: { inner: 'rgba(255, 255, 220, 0.95)', outer: 'rgba(255, 240, 180, 0)', size: 35 },
-          well_light: { inner: 'rgba(200, 220, 255, 0.8)', outer: 'rgba(150, 180, 255, 0)', size: 55 },
-          wall_wash: { inner: 'rgba(255, 230, 180, 0.6)', outer: 'rgba(255, 200, 120, 0)', size: 80 },
+          uplight: { inner: 'rgba(255, 220, 150, 1)', outer: 'rgba(255, 180, 80, 0)', size: 120 },
+          path_light: { inner: 'rgba(255, 240, 200, 0.95)', outer: 'rgba(255, 200, 100, 0)', size: 80 },
+          downlight: { inner: 'rgba(255, 250, 230, 1)', outer: 'rgba(255, 220, 150, 0)', size: 100 },
+          spot: { inner: 'rgba(255, 255, 220, 1)', outer: 'rgba(255, 240, 180, 0)', size: 70 },
+          well_light: { inner: 'rgba(200, 220, 255, 1)', outer: 'rgba(150, 180, 255, 0)', size: 110 },
+          wall_wash: { inner: 'rgba(255, 230, 180, 0.9)', outer: 'rgba(255, 200, 120, 0)', size: 150 },
         };
         
         // Set blend mode for realistic light overlay
@@ -765,12 +766,13 @@ const App: React.FC = () => {
               ctx.fillStyle = gradient;
               ctx.fill();
               
-              // Add bright center point
+              // Add bright center point (larger for dark scenes)
               const centerGradient = ctx.createRadialGradient(
                 x + offsetX, y, 0,
-                x + offsetX, y, 8
+                x + offsetX, y, 15
               );
               centerGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+              centerGradient.addColorStop(0.5, 'rgba(255, 255, 200, 0.8)');
               centerGradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
               ctx.beginPath();
               ctx.arc(x + offsetX, y, 8, 0, Math.PI * 2);
@@ -1912,58 +1914,26 @@ const App: React.FC = () => {
     try {
       const base64 = await fileToBase64(file);
 
-      // === INJECT GRID-BASED FIXTURE PLACEMENT ===
+      // === GRID PLACEMENT MODE: Generate DARK scene, lights added via compositing ===
       // When in manual mode with grid cell selections (20x20 grid)
       const hasGridSelections = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
       if (hasGridSelections) {
-        activePrompt += "\n\n### CRITICAL: USER-SPECIFIED GRID PLACEMENT (MANDATORY)\n";
-        activePrompt += "The image is divided into a 20x20 grid. The user has marked EXACT grid cells for fixture placement.\n";
-        activePrompt += "Each cell represents approximately 7% of the image width/height.\n\n";
-        
-        const typeLabels: Record<string, string> = {
-          uplight: 'UP-LIGHT (ground fixture pointing up)',
-          path_light: 'PATH LIGHT (short pathway fixture)',
-          downlight: 'DOWN-LIGHT (overhead pointing down)',
-          spot: 'SPOT LIGHT (focused accent beam)',
-          well_light: 'WELL LIGHT (in-ground recessed)',
-          wall_wash: 'WALL WASH (wide-angle illumination)',
-        };
-        
-        let totalFixtures = 0;
-        const fixturePositions: string[] = [];
-        
-        // Parse grid cells and convert to positions
-        Object.entries(zoneFixtures).forEach(([cellId, fixtures]) => {
-          const match = cellId.match(/cell_(\d+)_(\d+)/);
-          if (!match) return;
-          
-          const row = parseInt(match[1]);
-          const col = parseInt(match[2]);
-          
-          // Convert to descriptive position
-          const horizontalPos = col < 4 ? 'LEFT side' : col < 7 ? 'LEFT-CENTER' : col < 10 ? 'RIGHT-CENTER' : 'RIGHT side';
-          const verticalPos = row < 4 ? 'TOP area' : row < 7 ? 'UPPER-MIDDLE' : row < 10 ? 'LOWER-MIDDLE' : 'BOTTOM area';
-          const percentX = Math.round((col + 0.5) / 14 * 100);
-          const percentY = Math.round((row + 0.5) / 14 * 100);
-          
-          fixtures.forEach(f => {
-            for (let i = 0; i < f.count; i++) {
-              totalFixtures++;
-              fixturePositions.push(`  • ${typeLabels[f.type] || f.type} at ${horizontalPos}, ${verticalPos} (grid ${row + 1},${col + 1} ≈ ${percentX}% from left, ${percentY}% from top)`);
-            }
-          });
-        });
-        
-        activePrompt += `**FIXTURE PLACEMENTS (${totalFixtures} total):**\n`;
-        activePrompt += fixturePositions.join('\n');
-        activePrompt += "\n\n";
-        
-        activePrompt += "STRICT RULES:\n";
-        activePrompt += `1. Place EXACTLY ${totalFixtures} visible light sources — no more, no less\n`;
-        activePrompt += "2. Each light MUST appear at its specified grid position\n";
-        activePrompt += "3. Look for the nearest feature (wall, tree, window) at each position and light it\n";
-        activePrompt += "4. Do NOT add lights in areas without markers\n";
-        activePrompt += "5. If multiple lights are near each other, space them realistically\n\n";
+        // Override the prompt completely for grid mode
+        // We want a DARK nighttime scene with NO artificial lights
+        // The compositing code will add all lights at exact positions
+        activePrompt = `Transform this daytime photo into a DARK nighttime scene.
+
+CRITICAL REQUIREMENTS:
+1. Convert to realistic nighttime - dark sky, no sunlight
+2. DO NOT add ANY artificial lighting, fixtures, or glowing lights
+3. Keep the scene DARK - only natural moonlight/ambient light
+4. Preserve all architectural details and landscaping exactly
+5. The scene should look like nighttime BEFORE any lights are turned on
+6. No uplighting, no path lights, no spotlights - completely unlit
+7. Maintain the exact same composition, framing, and perspective
+
+The lighting will be added separately via post-processing.
+Generate a dark, unlit nighttime version of this property.`;
       }
 
       // === 4-STAGE AI PIPELINE ===
