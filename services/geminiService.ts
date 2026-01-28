@@ -2036,7 +2036,7 @@ export function enhancedToLegacyAnalysis(enhanced: EnhancedHouseAnalysis): Prope
            : enhanced.lightingApproach.intensityRecommendation < 60 ? 'moderate'
            : enhanced.lightingApproach.intensityRecommendation < 75 ? 'bright' : 'high_power')
         : 'moderate',
-      optimal_beam_angle: enhanced.lightingApproach?.beamAngleRecommendation || 30,
+      optimal_beam_angle: (enhanced.lightingApproach?.beamAngleRecommendation || 30) as 15 | 30 | 45 | 60,
       fixture_counts: enhanced.fixtureSummary?.byType || {},
       fixture_positions: Object.fromEntries(
         (enhanced.suggestedFixtures || []).map(sf => [

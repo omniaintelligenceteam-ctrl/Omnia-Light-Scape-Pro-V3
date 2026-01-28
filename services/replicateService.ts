@@ -80,7 +80,7 @@ export const IC_LIGHT_DEFAULTS: ICLightSettings = {
  * Get the Replicate API token from environment
  */
 function getReplicateToken(): string {
-  const token = import.meta.env.VITE_REPLICATE_API_TOKEN;
+  const token = (import.meta.env as any).VITE_REPLICATE_API_TOKEN;
   if (!token) {
     throw new Error('VITE_REPLICATE_API_TOKEN is not configured. Please add it to your .env file.');
   }
