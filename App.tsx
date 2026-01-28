@@ -697,6 +697,100 @@ const App: React.FC = () => {
     }
   }, [activeTab, onboarding.isDemoActive, onboarding.completeDemoStep]);
 
+  // === LIGHT GLOW COMPOSITING FUNCTION ===
+  // Overlays realistic light glows at exact grid positions
+  const compositeLightGlows = async (
+    imageUrl: string, 
+    fixtures: Record<string, { type: string; count: number }[]>,
+    imageWidth: number,
+    imageHeight: number
+  ): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(imageUrl); return; }
+        
+        // Draw the base image
+        ctx.drawImage(img, 0, 0);
+        
+        // Glow colors by fixture type
+        const glowColors: Record<string, { inner: string; outer: string; size: number }> = {
+          uplight: { inner: 'rgba(255, 220, 150, 0.9)', outer: 'rgba(255, 180, 80, 0)', size: 60 },
+          path_light: { inner: 'rgba(255, 240, 200, 0.7)', outer: 'rgba(255, 200, 100, 0)', size: 40 },
+          downlight: { inner: 'rgba(255, 250, 230, 0.8)', outer: 'rgba(255, 220, 150, 0)', size: 50 },
+          spot: { inner: 'rgba(255, 255, 220, 0.95)', outer: 'rgba(255, 240, 180, 0)', size: 35 },
+          well_light: { inner: 'rgba(200, 220, 255, 0.8)', outer: 'rgba(150, 180, 255, 0)', size: 55 },
+          wall_wash: { inner: 'rgba(255, 230, 180, 0.6)', outer: 'rgba(255, 200, 120, 0)', size: 80 },
+        };
+        
+        // Set blend mode for realistic light overlay
+        ctx.globalCompositeOperation = 'screen';
+        
+        // Draw glows for each fixture
+        Object.entries(fixtures).forEach(([cellId, fixtureList]) => {
+          const match = cellId.match(/cell_(\d+)_(\d+)/);
+          if (!match) return;
+          
+          const row = parseInt(match[1]);
+          const col = parseInt(match[2]);
+          
+          // Calculate exact pixel position
+          const x = ((col + 0.5) / 14) * img.width;
+          const y = ((row + 0.5) / 14) * img.height;
+          
+          fixtureList.forEach(fixture => {
+            const glow = glowColors[fixture.type] || glowColors.uplight;
+            const count = fixture.count;
+            
+            // Draw multiple glows for count > 1
+            for (let i = 0; i < count; i++) {
+              const offsetX = count > 1 ? (i - (count - 1) / 2) * 20 : 0;
+              
+              // Create radial gradient for glow
+              const gradient = ctx.createRadialGradient(
+                x + offsetX, y, 0,
+                x + offsetX, y, glow.size
+              );
+              gradient.addColorStop(0, glow.inner);
+              gradient.addColorStop(0.3, glow.inner.replace('0.9', '0.5').replace('0.8', '0.4').replace('0.7', '0.35'));
+              gradient.addColorStop(1, glow.outer);
+              
+              ctx.beginPath();
+              ctx.arc(x + offsetX, y, glow.size, 0, Math.PI * 2);
+              ctx.fillStyle = gradient;
+              ctx.fill();
+              
+              // Add bright center point
+              const centerGradient = ctx.createRadialGradient(
+                x + offsetX, y, 0,
+                x + offsetX, y, 8
+              );
+              centerGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+              centerGradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+              ctx.beginPath();
+              ctx.arc(x + offsetX, y, 8, 0, Math.PI * 2);
+              ctx.fillStyle = centerGradient;
+              ctx.fill();
+            }
+          });
+        });
+        
+        // Reset composite operation
+        ctx.globalCompositeOperation = 'source-over';
+        
+        // Return composited image as base64
+        resolve(canvas.toDataURL('image/jpeg', 0.95));
+      };
+      img.onerror = () => resolve(imageUrl);
+      img.src = imageUrl;
+    });
+  };
+
   // Demo guide: Track image upload (step 1)
   useEffect(() => {
     if (!onboarding.isDemoActive) return;
@@ -2019,7 +2113,23 @@ const App: React.FC = () => {
       }
 
       setGenerationStage('idle');
-      setGeneratedImage(result);
+      
+      // Composite light glows if in manual/grid mode with placements
+      let finalImage = result;
+      const hasGridPlacements = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
+      if (hasGridPlacements && result) {
+        try {
+          // Get image dimensions from preview
+          const img = new Image();
+          img.src = previewUrl || '';
+          await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+          finalImage = await compositeLightGlows(result, zoneFixtures, img.width || 1024, img.height || 768);
+        } catch (e) {
+          console.error('Compositing failed, using original:', e);
+        }
+      }
+      
+      setGeneratedImage(finalImage);
 
       // Trigger loading screen celebration FIRST (before hiding loading)
       setShowLoadingCelebration(true);
@@ -2027,7 +2137,7 @@ const App: React.FC = () => {
       // Add to history with settings
       setGenerationHistory(prev => [...prev, {
         id: Date.now().toString(),
-        image: result,
+        image: finalImage,
         timestamp: Date.now(),
         settings: {
           selectedFixtures: selectedFixtures,
@@ -2105,7 +2215,21 @@ const App: React.FC = () => {
           result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt, userPreferences);
         }
 
-        setGeneratedImage(result);
+        // Composite light glows if in manual/grid mode with placements
+        let finalResult = result;
+        const hasGridPlacements = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
+        if (hasGridPlacements && result) {
+          try {
+            const img = new Image();
+            img.src = previewUrl || '';
+            await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+            finalResult = await compositeLightGlows(result, zoneFixtures, img.width || 1024, img.height || 768);
+          } catch (e) {
+            console.error('Compositing failed, using original:', e);
+          }
+        }
+
+        setGeneratedImage(finalResult);
 
         // Trigger loading screen celebration FIRST (before hiding loading)
         setShowLoadingCelebration(true);
@@ -2113,7 +2237,7 @@ const App: React.FC = () => {
         // Add to history with settings
         setGenerationHistory(prev => [...prev, {
           id: Date.now().toString(),
-          image: result,
+          image: finalResult,
           timestamp: Date.now(),
           settings: {
             selectedFixtures: selectedFixtures,
