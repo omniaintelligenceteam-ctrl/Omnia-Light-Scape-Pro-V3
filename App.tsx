@@ -4683,13 +4683,50 @@ Notes: ${invoice.notes || 'N/A'}
                                 </button>
                               </div>
                             </div>
-                            <div className="p-2">
-                              <FixturePlacer
-                                imageUrl={previewUrl}
-                                initialFixtures={placedFixtures}
-                                onFixturesChange={setPlacedFixtures}
-                                showPreview={true}
+                            {/* Container with fixed aspect ratio for the image */}
+                            <div className="relative w-full" style={{ minHeight: '400px' }}>
+                              <img 
+                                src={previewUrl} 
+                                alt="Property" 
+                                className="w-full h-auto"
+                                style={{ maxHeight: '500px', objectFit: 'contain' }}
                               />
+                              {/* Overlay for clicking to place fixtures */}
+                              <div 
+                                className="absolute inset-0 cursor-crosshair"
+                                onClick={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                  const newFixture: LightFixture = {
+                                    id: `fixture_${Date.now()}`,
+                                    x,
+                                    y,
+                                    type: 'uplight',
+                                    intensity: 0.8,
+                                    colorTemp: 2700,
+                                    beamAngle: 30
+                                  };
+                                  setPlacedFixtures(prev => [...prev, newFixture]);
+                                }}
+                              >
+                                {/* Render placed fixture markers */}
+                                {placedFixtures.map((fixture, idx) => (
+                                  <div
+                                    key={fixture.id}
+                                    className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-amber-500 border-2 border-white shadow-lg cursor-move flex items-center justify-center text-xs font-bold text-black"
+                                    style={{ left: `${fixture.x}%`, top: `${fixture.y}%` }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Remove fixture on click
+                                      setPlacedFixtures(prev => prev.filter(f => f.id !== fixture.id));
+                                    }}
+                                    title="Click to remove"
+                                  >
+                                    {idx + 1}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         ) : (
