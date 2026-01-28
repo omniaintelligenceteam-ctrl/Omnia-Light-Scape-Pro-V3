@@ -1776,9 +1776,11 @@ const App: React.FC = () => {
     }
 
     // Validation
-    if (selectedFixtures.length === 0 && !prompt) {
+    // Allow generation if: fixtures selected, OR custom prompt, OR manual placements in manual mode
+    const hasManualPlacements = placementMode === 'manual' && placedFixtures.length > 0;
+    if (selectedFixtures.length === 0 && !prompt && !hasManualPlacements) {
         setIsLoading(false);
-        setError("Please select at least one lighting type or enter custom instructions.");
+        setError("Please select at least one lighting type, enter custom instructions, or place fixtures manually.");
         return;
     }
 
@@ -5181,12 +5183,12 @@ Notes: ${invoice.notes || 'N/A'}
                                 setTimeout(() => setShowRipple(false), 600);
                                 handleGenerate();
                             }}
-                            disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
+                            disabled={!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && placedFixtures.length > 0)) || isLoading}
                             aria-label={isLoading ? 'Generating lighting design, please wait' : generationComplete ? 'Generation complete' : 'Generate lighting scene design'}
                             aria-busy={isLoading}
                             className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2 order-1 md:order-3"
-                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.02, y: -4 } : {}}
-                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.97 } : {}}
+                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && placedFixtures.length > 0)) || isLoading) ? { scale: 1.02, y: -4 } : {}}
+                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && placedFixtures.length > 0)) || isLoading) ? { scale: 0.97 } : {}}
                         >
                             {/* === IDLE STATE: Ambient Glow Pulse === */}
                             <motion.div
