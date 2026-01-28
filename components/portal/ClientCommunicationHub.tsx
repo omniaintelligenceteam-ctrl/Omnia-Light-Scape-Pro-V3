@@ -20,8 +20,8 @@ interface ClientCommunicationHubProps {
 
 export const ClientCommunicationHub: React.FC<ClientCommunicationHubProps> = ({
   messages,
-  clientName,
-  token,
+  clientName: _clientName,
+  token: _token,
   onSendMessage,
   onMarkRead
 }) => {

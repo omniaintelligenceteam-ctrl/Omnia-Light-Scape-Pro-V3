@@ -13,7 +13,6 @@ import {
   Plus,
   Trash2,
   Save,
-  Edit3,
   X
 } from 'lucide-react';
 import { BOMData, BOMFixture, QuoteData } from '../types';
@@ -32,8 +31,8 @@ export const BOMView: React.FC<BOMViewProps> = ({
   bomData,
   onBOMChange,
   onSaveProject,
-  currentQuote,
-  generatedImage
+  currentQuote: _currentQuote,
+  generatedImage: _generatedImage
 }) => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);

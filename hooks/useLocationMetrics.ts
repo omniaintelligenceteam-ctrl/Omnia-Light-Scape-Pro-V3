@@ -52,7 +52,7 @@ function getDateRangeBounds(range: DateRange): DateRangeBounds {
   return { start, end };
 }
 
-function getPreviousPeriodBounds(range: DateRange, current: DateRangeBounds): DateRangeBounds {
+function getPreviousPeriodBounds(_range: DateRange, current: DateRangeBounds): DateRangeBounds {
   const diff = current.end.getTime() - current.start.getTime();
   return {
     start: new Date(current.start.getTime() - diff),

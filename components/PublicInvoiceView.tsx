@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, XCircle, DollarSign, Clock, Share2, Copy, Check } from 'lucide-react';
+import { CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, XCircle, DollarSign, Clock, Share2, Check } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { InvoiceStatusHero, getInvoiceStatus, PaymentSection } from './invoice';
 import { InvoicePageSkeleton } from './shared/PremiumSkeleton';

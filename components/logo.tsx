@@ -5,7 +5,7 @@ interface LogoProps {
   dark?: boolean;
 }
 
-export const Logo: React.FC<LogoProps> = ({ className = "h-12", dark = false }) => {
+export const Logo: React.FC<LogoProps> = ({ className = "h-12", dark: _dark = false }) => {
   return (
     <img 
       src="/logo.png" 
