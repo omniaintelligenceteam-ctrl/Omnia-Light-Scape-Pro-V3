@@ -7709,9 +7709,8 @@ Notes: ${invoice.notes || 'N/A'}
                 analyticsComparisonView={showComparison}
                 onAnalyticsComparisonViewChange={setShowComparison}
                 // Analytics actions
-                onExportAnalytics={(format) => {
-                  // Export logic can be implemented here
-                  console.log(`Exporting analytics as ${format}`);
+                onExportAnalytics={(_format) => {
+                  // TODO: Implement analytics export
                 }}
                 // Advanced Analytics (formerly in Projects section)
                 pipelineAnalytics={pipelineAnalytics}
