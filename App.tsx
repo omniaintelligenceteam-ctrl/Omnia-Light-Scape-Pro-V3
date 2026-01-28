@@ -1814,8 +1814,9 @@ const App: React.FC = () => {
       // === INJECT PLACED FIXTURE POSITIONS (from FixturePlacer) ===
       // Only inject when in manual mode AND user has placed fixtures
       if (placementMode === 'manual' && placedFixtures.length > 0) {
-        activePrompt += "\n\n### USER-PLACED FIXTURE POSITIONS (EXACT COORDINATES - MANDATORY):\n";
-        activePrompt += "The user has MANUALLY placed fixtures on the image at EXACT positions. These positions are MANDATORY and override any AI suggestions:\n\n";
+        activePrompt += "\n\n### CRITICAL: USER-SPECIFIED LIGHT POSITIONS (MANDATORY)\n";
+        activePrompt += "The user has marked EXACT positions for lights on the image. Follow these positions PRECISELY.\n";
+        activePrompt += "Think of the image as a 3x3 grid. Each light is described by its grid position.\n\n";
         
         // Group fixtures by type for cleaner output
         const fixturesByType: Record<string, typeof placedFixtures> = {};
@@ -1824,21 +1825,41 @@ const App: React.FC = () => {
           fixturesByType[f.type].push(f);
         });
         
-        // Output each fixture type with positions
+        // Output each fixture type with positions using visual grid language
         Object.entries(fixturesByType).forEach(([type, fixtures]) => {
-          activePrompt += `**${type.toUpperCase()} FIXTURES (${fixtures.length} total):**\n`;
+          const typeLabels: Record<string, string> = {
+            uplight: 'UP-LIGHTS (ground fixtures pointing up at walls/trees)',
+            path_light: 'PATH LIGHTS (short fixtures along walkways)',
+            downlight: 'DOWN-LIGHTS (overhead fixtures pointing down)',
+            spot: 'SPOT LIGHTS (focused accent beams)',
+            well_light: 'WELL LIGHTS (in-ground recessed fixtures)',
+            wall_wash: 'WALL WASH LIGHTS (wide-angle wall illumination)',
+          };
+          activePrompt += `**${typeLabels[type] || type.toUpperCase()} — PLACE EXACTLY ${fixtures.length}:**\n`;
           fixtures.forEach((f, i) => {
-            // Convert percentage to descriptive position
-            const horizontalPos = f.x < 25 ? 'far left' : f.x < 40 ? 'left' : f.x < 60 ? 'center' : f.x < 75 ? 'right' : 'far right';
-            const verticalPos = f.y < 25 ? 'top' : f.y < 40 ? 'upper' : f.y < 60 ? 'middle' : f.y < 75 ? 'lower' : 'bottom';
-            activePrompt += `  ${i + 1}. Position: ${horizontalPos} of image, ${verticalPos} area (exact: ${Math.round(f.x)}% from left, ${Math.round(f.y)}% from top)\n`;
-            activePrompt += `     Type: ${f.type}, Intensity: ${Math.round(f.intensity * 100)}%, Color Temp: ${f.colorTemp}K\n`;
+            // Convert to 3x3 grid position with more specific language
+            let gridCol = f.x < 33 ? 'LEFT third' : f.x < 66 ? 'CENTER third' : 'RIGHT third';
+            let gridRow = f.y < 33 ? 'TOP third' : f.y < 66 ? 'MIDDLE third' : 'BOTTOM third';
+            
+            // Add more specific positional cues
+            let specificH = f.x < 15 ? 'at the far left edge' : f.x < 33 ? 'in the left section' : 
+                           f.x < 45 ? 'left of center' : f.x < 55 ? 'at dead center' : 
+                           f.x < 66 ? 'right of center' : f.x < 85 ? 'in the right section' : 'at the far right edge';
+            let specificV = f.y < 20 ? 'near the top' : f.y < 40 ? 'in the upper area' :
+                           f.y < 60 ? 'at mid-height' : f.y < 80 ? 'in the lower area' : 'near the ground/bottom';
+            
+            activePrompt += `  Light #${i + 1}: ${specificH}, ${specificV}\n`;
+            activePrompt += `    → Grid: ${gridCol}, ${gridRow}\n`;
+            activePrompt += `    → Look for a feature (tree, wall section, window, column) at this position and place the light there\n`;
           });
           activePrompt += "\n";
         });
         
-        activePrompt += "ENFORCEMENT: Place lights at EXACTLY these positions. Do not deviate. Do not add extra lights beyond these positions.\n";
-        activePrompt += "If the user placed 3 uplights, output EXACTLY 3 uplights at those 3 positions. No more, no less.\n\n";
+        activePrompt += "STRICT RULES:\n";
+        activePrompt += "1. Place EXACTLY " + placedFixtures.length + " light sources total — no more, no less\n";
+        activePrompt += "2. Each light MUST be at its specified grid position\n";
+        activePrompt += "3. Do NOT add lights in areas not specified above\n";
+        activePrompt += "4. Do NOT cluster all lights together — spread them according to positions given\n\n";
       }
 
       // === 4-STAGE AI PIPELINE ===
