@@ -1317,6 +1317,13 @@ STRICT EXCLUSION ZONES:
     label: 'Gutter Up Lights',
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
+
+*** CRITICAL DISTINCTION - READ CAREFULLY ***
+GUTTER UP LIGHTS are NOT soffit lights. These are COMPLETELY DIFFERENT:
+- GUTTER UP LIGHT: Fixture sits IN gutter, beam shoots UPWARD to illuminate gable/dormer ABOVE
+- SOFFIT DOWNLIGHT: Fixture recessed in eave, beam shoots DOWNWARD (THIS IS NOT WHAT WE WANT)
+YOU MUST CREATE UPWARD-FACING LIGHTS, NOT DOWNWARD-FACING LIGHTS.
+
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
 HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
 
@@ -1413,6 +1420,12 @@ STRICT EXCLUSION ZONES:
         label: 'Peaks & Gables',
         description: 'Apex of roof gables',
         prompt: `TARGET: ROOF PEAKS & GABLES -- GUTTER-MOUNTED UPLIGHTS FOR TRIANGULAR PEAK ILLUMINATION
+
+*** THIS IS UPWARD LIGHTING, NOT DOWNWARD ***
+- Light source is IN THE GUTTER at the BOTTOM of the gable
+- Light beam shoots UPWARD toward the peak/apex
+- This is NOT soffit lighting (which shines down)
+- The GABLE FACE is lit from BELOW, creating dramatic uplighting
 
 IDENTIFICATION:
 - Locate ALL prominent gables on the roofline
