@@ -282,6 +282,130 @@ Base your analysis on:
 };
 
 /**
+ * ZONE DETECTION
+ * Analyzes property photo and returns clickable zones for fixture placement
+ * Each zone represents a logical area (wall section, window group, tree, pathway, etc.)
+ */
+export interface LightingZone {
+  id: string;
+  label: string;
+  description: string;
+  // Bounding box as percentages (0-100)
+  bounds: {
+    x: number;      // left edge %
+    y: number;      // top edge %
+    width: number;  // width %
+    height: number; // height %
+  };
+  // What type of feature this zone represents
+  featureType: 'wall' | 'window' | 'door' | 'tree' | 'shrub' | 'pathway' | 'driveway' | 'garage' | 'roof' | 'column' | 'other';
+  // Recommended fixture types for this zone
+  recommendedFixtures: string[];
+  // Lighting technique suggestion
+  technique: string;
+}
+
+export const detectLightingZones = async (
+  imageBase64: string,
+  imageMimeType: string = 'image/jpeg'
+): Promise<LightingZone[]> => {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  const zonePrompt = `Analyze this property photo and identify distinct zones for landscape lighting placement.
+
+For each zone, provide:
+1. A short label (e.g., "Left Wall Section", "Front Windows", "Oak Tree")
+2. A description of what's in that zone
+3. Bounding box as percentages (x, y, width, height) where 0,0 is top-left
+4. The feature type (wall, window, door, tree, shrub, pathway, driveway, garage, roof, column, other)
+5. Recommended fixture types (uplight, downlight, path_light, spot, well_light, wall_wash)
+6. Suggested lighting technique
+
+CRITICAL RULES:
+- Identify 3-12 zones depending on property complexity
+- Zones should not overlap significantly
+- Each architectural feature or landscape element gets its own zone
+- Include wall sections BETWEEN windows as separate zones
+- Group similar adjacent windows together
+- Trees and large shrubs each get their own zone
+- Pathways and driveways are separate zones
+
+Return JSON array:
+[
+  {
+    "id": "zone_1",
+    "label": "Left Wall Section",
+    "description": "Stucco wall area to the left of the main windows",
+    "bounds": { "x": 0, "y": 20, "width": 25, "height": 60 },
+    "featureType": "wall",
+    "recommendedFixtures": ["uplight", "wall_wash"],
+    "technique": "Wall grazing with warm uplights spaced 4-6ft apart"
+  },
+  ...
+]
+
+Only return the JSON array, no other text.`;
+
+  try {
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: ANALYSIS_MODEL_NAME,
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: zonePrompt },
+            {
+              inlineData: {
+                mimeType: imageMimeType,
+                data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+              }
+            }
+          ]
+        }]
+      }),
+      ANALYSIS_TIMEOUT_MS,
+      'Zone detection timed out'
+    );
+
+    const text = response.text?.trim() || '[]';
+    
+    // Parse JSON, handling potential markdown code blocks
+    let jsonStr = text;
+    if (text.includes('```')) {
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      jsonStr = match ? match[1].trim() : text;
+    }
+    
+    const zones: LightingZone[] = JSON.parse(jsonStr);
+    
+    // Validate and clean up zones
+    return zones.map((zone, idx) => ({
+      id: zone.id || `zone_${idx + 1}`,
+      label: zone.label || `Zone ${idx + 1}`,
+      description: zone.description || '',
+      bounds: {
+        x: Math.max(0, Math.min(100, zone.bounds?.x || 0)),
+        y: Math.max(0, Math.min(100, zone.bounds?.y || 0)),
+        width: Math.max(5, Math.min(100, zone.bounds?.width || 20)),
+        height: Math.max(5, Math.min(100, zone.bounds?.height || 20)),
+      },
+      featureType: zone.featureType || 'other',
+      recommendedFixtures: zone.recommendedFixtures || ['uplight'],
+      technique: zone.technique || ''
+    }));
+    
+  } catch (error) {
+    console.error('Zone detection failed:', error);
+    // Return a simple fallback grid if detection fails
+    return [
+      { id: 'zone_left', label: 'Left Section', description: 'Left third of property', bounds: { x: 0, y: 0, width: 33, height: 100 }, featureType: 'wall', recommendedFixtures: ['uplight'], technique: 'Wall lighting' },
+      { id: 'zone_center', label: 'Center Section', description: 'Center of property', bounds: { x: 33, y: 0, width: 34, height: 100 }, featureType: 'wall', recommendedFixtures: ['uplight', 'downlight'], technique: 'Feature lighting' },
+      { id: 'zone_right', label: 'Right Section', description: 'Right third of property', bounds: { x: 67, y: 0, width: 33, height: 100 }, featureType: 'wall', recommendedFixtures: ['uplight'], technique: 'Wall lighting' },
+    ];
+  }
+};
+
+/**
  * Stage 2: PLANNING
  * Builds lighting plan with exact placements, optimal settings, and validated counts
  */

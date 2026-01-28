@@ -59,7 +59,7 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
+import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt, detectLightingZones, type LightingZone } from './services/geminiService';
 import { generateNightSceneWithICLight, checkReplicateStatus, type ICLightProgressCallback } from './services/replicateService';
 import { FixturePlacer } from './components/FixturePlacer';
 import { LightFixture } from './types/fixtures';
@@ -381,6 +381,12 @@ const App: React.FC = () => {
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [placedFixtures, setPlacedFixtures] = useState<LightFixture[]>([]);
   const [manualFixtureType, setManualFixtureType] = useState<string>('uplight');
+  
+  // Smart Zone Placement State
+  const [lightingZones, setLightingZones] = useState<LightingZone[]>([]);
+  const [zoneFixtures, setZoneFixtures] = useState<Record<string, { type: string; count: number }[]>>({});
+  const [isDetectingZones, setIsDetectingZones] = useState(false);
+  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
 
   // Favorite Presets State
   interface FixturePreset {
@@ -1776,11 +1782,12 @@ const App: React.FC = () => {
     }
 
     // Validation
-    // Allow generation if: fixtures selected, OR custom prompt, OR manual placements in manual mode
-    const hasManualPlacements = placementMode === 'manual' && placedFixtures.length > 0;
+    // Allow generation if: fixtures selected, OR custom prompt, OR manual zone placements
+    const hasZonePlacements = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
+    const hasManualPlacements = placementMode === 'manual' && (placedFixtures.length > 0 || hasZonePlacements);
     if (selectedFixtures.length === 0 && !prompt && !hasManualPlacements) {
         setIsLoading(false);
-        setError("Please select at least one lighting type, enter custom instructions, or place fixtures manually.");
+        setError("Please select at least one lighting type, enter custom instructions, or place fixtures in zones.");
         return;
     }
 
@@ -1811,55 +1818,57 @@ const App: React.FC = () => {
     try {
       const base64 = await fileToBase64(file);
 
-      // === INJECT PLACED FIXTURE POSITIONS (from FixturePlacer) ===
-      // Only inject when in manual mode AND user has placed fixtures
-      if (placementMode === 'manual' && placedFixtures.length > 0) {
-        activePrompt += "\n\n### CRITICAL: USER-SPECIFIED LIGHT POSITIONS (MANDATORY)\n";
-        activePrompt += "The user has marked EXACT positions for lights on the image. Follow these positions PRECISELY.\n";
-        activePrompt += "Think of the image as a 3x3 grid. Each light is described by its grid position.\n\n";
+      // === INJECT ZONE-BASED FIXTURE PLACEMENT ===
+      // When in manual mode with zone selections
+      const hasZoneSelections = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
+      if (hasZoneSelections && lightingZones.length > 0) {
+        activePrompt += "\n\n### CRITICAL: USER-SPECIFIED ZONE LIGHTING (MANDATORY)\n";
+        activePrompt += "The user has selected SPECIFIC ZONES on the property for lighting. Follow these EXACTLY.\n\n";
         
-        // Group fixtures by type for cleaner output
-        const fixturesByType: Record<string, typeof placedFixtures> = {};
-        placedFixtures.forEach(f => {
-          if (!fixturesByType[f.type]) fixturesByType[f.type] = [];
-          fixturesByType[f.type].push(f);
-        });
+        const typeLabels: Record<string, string> = {
+          uplight: 'UP-LIGHTS (ground fixtures pointing up)',
+          path_light: 'PATH LIGHTS (short pathway fixtures)',
+          downlight: 'DOWN-LIGHTS (overhead pointing down)',
+          spot: 'SPOT LIGHTS (focused accent beams)',
+          well_light: 'WELL LIGHTS (in-ground recessed)',
+          wall_wash: 'WALL WASH (wide-angle illumination)',
+        };
         
-        // Output each fixture type with positions using visual grid language
-        Object.entries(fixturesByType).forEach(([type, fixtures]) => {
-          const typeLabels: Record<string, string> = {
-            uplight: 'UP-LIGHTS (ground fixtures pointing up at walls/trees)',
-            path_light: 'PATH LIGHTS (short fixtures along walkways)',
-            downlight: 'DOWN-LIGHTS (overhead fixtures pointing down)',
-            spot: 'SPOT LIGHTS (focused accent beams)',
-            well_light: 'WELL LIGHTS (in-ground recessed fixtures)',
-            wall_wash: 'WALL WASH LIGHTS (wide-angle wall illumination)',
-          };
-          activePrompt += `**${typeLabels[type] || type.toUpperCase()} — PLACE EXACTLY ${fixtures.length}:**\n`;
-          fixtures.forEach((f, i) => {
-            // Convert to 3x3 grid position with more specific language
-            let gridCol = f.x < 33 ? 'LEFT third' : f.x < 66 ? 'CENTER third' : 'RIGHT third';
-            let gridRow = f.y < 33 ? 'TOP third' : f.y < 66 ? 'MIDDLE third' : 'BOTTOM third';
-            
-            // Add more specific positional cues
-            let specificH = f.x < 15 ? 'at the far left edge' : f.x < 33 ? 'in the left section' : 
-                           f.x < 45 ? 'left of center' : f.x < 55 ? 'at dead center' : 
-                           f.x < 66 ? 'right of center' : f.x < 85 ? 'in the right section' : 'at the far right edge';
-            let specificV = f.y < 20 ? 'near the top' : f.y < 40 ? 'in the upper area' :
-                           f.y < 60 ? 'at mid-height' : f.y < 80 ? 'in the lower area' : 'near the ground/bottom';
-            
-            activePrompt += `  Light #${i + 1}: ${specificH}, ${specificV}\n`;
-            activePrompt += `    → Grid: ${gridCol}, ${gridRow}\n`;
-            activePrompt += `    → Look for a feature (tree, wall section, window, column) at this position and place the light there\n`;
+        let totalFixtures = 0;
+        
+        // Output each zone with its fixtures
+        Object.entries(zoneFixtures).forEach(([zoneId, fixtures]) => {
+          const zone = lightingZones.find(z => z.id === zoneId);
+          if (!zone) return;
+          
+          activePrompt += `**ZONE: "${zone.label}"**\n`;
+          activePrompt += `  Location: ${zone.description}\n`;
+          activePrompt += `  Feature type: ${zone.featureType}\n`;
+          activePrompt += `  Fixtures to place:\n`;
+          
+          fixtures.forEach(f => {
+            totalFixtures += f.count;
+            activePrompt += `    - ${f.count}x ${typeLabels[f.type] || f.type}\n`;
           });
+          
+          if (zone.technique) {
+            activePrompt += `  Recommended technique: ${zone.technique}\n`;
+          }
           activePrompt += "\n";
         });
         
         activePrompt += "STRICT RULES:\n";
-        activePrompt += "1. Place EXACTLY " + placedFixtures.length + " light sources total — no more, no less\n";
-        activePrompt += "2. Each light MUST be at its specified grid position\n";
-        activePrompt += "3. Do NOT add lights in areas not specified above\n";
-        activePrompt += "4. Do NOT cluster all lights together — spread them according to positions given\n\n";
+        activePrompt += `1. Place EXACTLY ${totalFixtures} light sources total — no more, no less\n`;
+        activePrompt += "2. Each fixture MUST be within its specified zone\n";
+        activePrompt += "3. If multiple fixtures in one zone, space them evenly across that zone\n";
+        activePrompt += "4. Do NOT add lights to zones not listed above\n";
+        activePrompt += "5. Match fixture TYPE to zone — uplights on walls/trees, path lights on walkways, etc.\n\n";
+      }
+      
+      // Legacy: Support old placed fixtures format if zone system not used
+      else if (placementMode === 'manual' && placedFixtures.length > 0) {
+        activePrompt += "\n\n### USER-PLACED FIXTURES (LEGACY MODE)\n";
+        activePrompt += `Place ${placedFixtures.length} fixtures at the user-specified positions.\n\n`;
       }
 
       // === 4-STAGE AI PIPELINE ===
@@ -4660,14 +4669,29 @@ Notes: ${invoice.notes || 'N/A'}
                             🤖 AI Placement
                           </button>
                           <button
-                            onClick={() => setPlacementMode('manual')}
+                            onClick={async () => {
+                              setPlacementMode('manual');
+                              // Detect zones when switching to manual mode with an image
+                              if (previewUrl && file && lightingZones.length === 0) {
+                                setIsDetectingZones(true);
+                                try {
+                                  const base64 = await fileToBase64(file);
+                                  const zones = await detectLightingZones(base64, file.type);
+                                  setLightingZones(zones);
+                                } catch (err) {
+                                  console.error('Zone detection failed:', err);
+                                } finally {
+                                  setIsDetectingZones(false);
+                                }
+                              }
+                            }}
                             className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                               placementMode === 'manual'
                                 ? 'bg-purple-500 text-white'
                                 : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
                             }`}
                           >
-                            👆 Manual Placement
+                            👆 Zone Placement
                           </button>
                         </div>
 
@@ -4680,27 +4704,27 @@ Notes: ${invoice.notes || 'N/A'}
                             onClear={handleClear}
                           />
                         ) : placementMode === 'manual' ? (
-                          /* Manual Mode: FixturePlacer inline */
+                          /* Manual Mode: Smart Zone Placement */
                           <div className="rounded-2xl border border-purple-500/30 bg-[#0a0a0a] overflow-hidden">
                             {/* Header */}
                             <div className="flex items-center justify-between p-3 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
                               <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-purple-400" />
                                 <span className="text-sm font-medium text-white">
-                                  Click to place • {placedFixtures.length} placed
+                                  {isDetectingZones ? 'Detecting zones...' : `Click zones to place lights • ${Object.values(zoneFixtures).flat().reduce((sum, f) => sum + f.count, 0)} total`}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
-                                {placedFixtures.length > 0 && (
+                                {Object.keys(zoneFixtures).length > 0 && (
                                   <button
-                                    onClick={() => setPlacedFixtures([])}
+                                    onClick={() => setZoneFixtures({})}
                                     className="px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
                                   >
                                     Clear All
                                   </button>
                                 )}
                                 <button
-                                  onClick={handleClear}
+                                  onClick={() => { handleClear(); setLightingZones([]); setZoneFixtures({}); }}
                                   className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
                                   title="Remove image"
                                 >
@@ -4709,82 +4733,148 @@ Notes: ${invoice.notes || 'N/A'}
                               </div>
                             </div>
                             {/* Fixture Type Selector */}
-                            <div className="flex flex-wrap gap-2 p-3 border-b border-white/10 bg-black/30">
+                            <div className="flex flex-wrap gap-1.5 p-2 border-b border-white/10 bg-black/30">
                               {[
-                                { id: 'uplight', label: '⬆️ Up Light', color: 'amber' },
-                                { id: 'path_light', label: '🚶 Path', color: 'green' },
-                                { id: 'downlight', label: '⬇️ Down', color: 'blue' },
-                                { id: 'spot', label: '🔦 Spot', color: 'yellow' },
-                                { id: 'well_light', label: '⚫ Well', color: 'purple' },
-                                { id: 'wall_wash', label: '🧱 Wall', color: 'orange' },
+                                { id: 'uplight', label: '⬆️', color: 'bg-amber-500', name: 'Up' },
+                                { id: 'path_light', label: '🚶', color: 'bg-green-500', name: 'Path' },
+                                { id: 'downlight', label: '⬇️', color: 'bg-blue-500', name: 'Down' },
+                                { id: 'spot', label: '🔦', color: 'bg-yellow-500', name: 'Spot' },
+                                { id: 'well_light', label: '⚫', color: 'bg-purple-500', name: 'Well' },
+                                { id: 'wall_wash', label: '🧱', color: 'bg-orange-500', name: 'Wall' },
                               ].map(ft => (
                                 <button
                                   key={ft.id}
                                   onClick={() => setManualFixtureType(ft.id)}
-                                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                                  className={`px-2 py-1 text-xs font-medium rounded transition-all flex items-center gap-1 ${
                                     manualFixtureType === ft.id
-                                      ? 'bg-purple-500 text-white'
-                                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                      ? `${ft.color} text-black`
+                                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
                                   }`}
+                                  title={ft.name}
                                 >
                                   {ft.label}
                                 </button>
                               ))}
                             </div>
-                            {/* Image with click overlay */}
+                            {/* Image with zone overlay */}
                             <div className="relative w-full" style={{ minHeight: '350px' }}>
+                              {isDetectingZones && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+                                  <div className="flex items-center gap-2 text-white">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span>Analyzing property zones...</span>
+                                  </div>
+                                </div>
+                              )}
                               <img 
                                 src={previewUrl} 
                                 alt="Property" 
                                 className="w-full h-auto"
                                 style={{ maxHeight: '450px', objectFit: 'contain' }}
                               />
-                              {/* Overlay for clicking to place fixtures */}
-                              <div 
-                                className="absolute inset-0 cursor-crosshair"
-                                onClick={(e) => {
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  const x = ((e.clientX - rect.left) / rect.width) * 100;
-                                  const y = ((e.clientY - rect.top) / rect.height) * 100;
-                                  const newFixture: LightFixture = {
-                                    id: `fixture_${Date.now()}`,
-                                    x,
-                                    y,
-                                    type: manualFixtureType as any,
-                                    intensity: 0.8,
-                                    colorTemp: 2700,
-                                    beamAngle: 30
-                                  };
-                                  setPlacedFixtures(prev => [...prev, newFixture]);
-                                }}
-                              >
-                                {/* Render placed fixture markers */}
-                                {placedFixtures.map((fixture, idx) => {
-                                  const colors: Record<string, string> = {
-                                    uplight: 'bg-amber-500',
-                                    path_light: 'bg-green-500',
-                                    downlight: 'bg-blue-500',
-                                    spot: 'bg-yellow-500',
-                                    well_light: 'bg-purple-500',
-                                    wall_wash: 'bg-orange-500',
-                                  };
-                                  return (
-                                    <div
-                                      key={fixture.id}
-                                      className={`absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full ${colors[fixture.type] || 'bg-amber-500'} border-2 border-white shadow-lg cursor-pointer flex items-center justify-center text-xs font-bold text-black`}
-                                      style={{ left: `${fixture.x}%`, top: `${fixture.y}%` }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setPlacedFixtures(prev => prev.filter(f => f.id !== fixture.id));
-                                      }}
-                                      title={`${fixture.type} - Click to remove`}
-                                    >
-                                      {idx + 1}
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                              {/* Zone overlays */}
+                              {lightingZones.map(zone => {
+                                const fixturesInZone = zoneFixtures[zone.id] || [];
+                                const totalInZone = fixturesInZone.reduce((sum, f) => sum + f.count, 0);
+                                const isHovered = hoveredZone === zone.id;
+                                const fixtureColors: Record<string, string> = {
+                                  uplight: 'rgba(245, 158, 11, 0.5)',
+                                  path_light: 'rgba(34, 197, 94, 0.5)',
+                                  downlight: 'rgba(59, 130, 246, 0.5)',
+                                  spot: 'rgba(234, 179, 8, 0.5)',
+                                  well_light: 'rgba(168, 85, 247, 0.5)',
+                                  wall_wash: 'rgba(249, 115, 22, 0.5)',
+                                };
+                                const currentColor = fixtureColors[manualFixtureType] || 'rgba(168, 85, 247, 0.4)';
+                                
+                                return (
+                                  <div
+                                    key={zone.id}
+                                    className="absolute cursor-pointer transition-all duration-150"
+                                    style={{
+                                      left: `${zone.bounds.x}%`,
+                                      top: `${zone.bounds.y}%`,
+                                      width: `${zone.bounds.width}%`,
+                                      height: `${zone.bounds.height}%`,
+                                      backgroundColor: totalInZone > 0 ? currentColor : (isHovered ? 'rgba(255,255,255,0.15)' : 'transparent'),
+                                      border: isHovered || totalInZone > 0 ? '2px solid rgba(255,255,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                                      borderRadius: '4px',
+                                    }}
+                                    onMouseEnter={() => setHoveredZone(zone.id)}
+                                    onMouseLeave={() => setHoveredZone(null)}
+                                    onClick={() => {
+                                      // Add fixture to zone
+                                      setZoneFixtures(prev => {
+                                        const existing = prev[zone.id] || [];
+                                        const existingType = existing.find(f => f.type === manualFixtureType);
+                                        if (existingType) {
+                                          return {
+                                            ...prev,
+                                            [zone.id]: existing.map(f => 
+                                              f.type === manualFixtureType ? { ...f, count: f.count + 1 } : f
+                                            )
+                                          };
+                                        }
+                                        return {
+                                          ...prev,
+                                          [zone.id]: [...existing, { type: manualFixtureType, count: 1 }]
+                                        };
+                                      });
+                                    }}
+                                    onContextMenu={(e) => {
+                                      e.preventDefault();
+                                      // Remove fixture from zone
+                                      setZoneFixtures(prev => {
+                                        const existing = prev[zone.id] || [];
+                                        const existingType = existing.find(f => f.type === manualFixtureType);
+                                        if (existingType && existingType.count > 1) {
+                                          return {
+                                            ...prev,
+                                            [zone.id]: existing.map(f =>
+                                              f.type === manualFixtureType ? { ...f, count: f.count - 1 } : f
+                                            )
+                                          };
+                                        } else if (existingType) {
+                                          const filtered = existing.filter(f => f.type !== manualFixtureType);
+                                          if (filtered.length === 0) {
+                                            const { [zone.id]: _, ...rest } = prev;
+                                            return rest;
+                                          }
+                                          return { ...prev, [zone.id]: filtered };
+                                        }
+                                        return prev;
+                                      });
+                                    }}
+                                    title={`${zone.label}\n${zone.description}\nLeft click: add ${manualFixtureType}\nRight click: remove`}
+                                  >
+                                    {/* Zone label on hover */}
+                                    {isHovered && (
+                                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/80 rounded text-[10px] text-white whitespace-nowrap z-10">
+                                        {zone.label}
+                                      </div>
+                                    )}
+                                    {/* Fixture count badge */}
+                                    {totalInZone > 0 && (
+                                      <div className="absolute top-1 right-1 min-w-[20px] h-5 px-1 bg-white rounded-full flex items-center justify-center">
+                                        <span className="text-[10px] font-bold text-black">{totalInZone}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
+                            {/* Zone legend */}
+                            {lightingZones.length > 0 && (
+                              <div className="p-2 border-t border-white/10 bg-black/30">
+                                <div className="flex flex-wrap gap-1 text-[10px] text-gray-400">
+                                  {lightingZones.map(z => (
+                                    <span key={z.id} className="px-1.5 py-0.5 bg-white/5 rounded">
+                                      {z.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           /* Auto Mode: Just show the uploaded image */
@@ -5204,12 +5294,12 @@ Notes: ${invoice.notes || 'N/A'}
                                 setTimeout(() => setShowRipple(false), 600);
                                 handleGenerate();
                             }}
-                            disabled={!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && placedFixtures.length > 0)) || isLoading}
+                            disabled={!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && (placedFixtures.length > 0 || Object.keys(zoneFixtures).length > 0))) || isLoading}
                             aria-label={isLoading ? 'Generating lighting design, please wait' : generationComplete ? 'Generation complete' : 'Generate lighting scene design'}
                             aria-busy={isLoading}
                             className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2 order-1 md:order-3"
-                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && placedFixtures.length > 0)) || isLoading) ? { scale: 1.02, y: -4 } : {}}
-                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && placedFixtures.length > 0)) || isLoading) ? { scale: 0.97 } : {}}
+                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && (placedFixtures.length > 0 || Object.keys(zoneFixtures).length > 0))) || isLoading) ? { scale: 1.02, y: -4 } : {}}
+                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && (placedFixtures.length > 0 || Object.keys(zoneFixtures).length > 0))) || isLoading) ? { scale: 0.97 } : {}}
                         >
                             {/* === IDLE STATE: Ambient Glow Pulse === */}
                             <motion.div
