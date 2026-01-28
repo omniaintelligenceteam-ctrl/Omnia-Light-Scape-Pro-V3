@@ -61,6 +61,8 @@ import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
 import { generateNightSceneWithICLight, checkReplicateStatus, type ICLightProgressCallback } from './services/replicateService';
+import { FixturePlacer } from './components/FixturePlacer';
+import { LightFixture } from './types/fixtures';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
@@ -374,6 +376,10 @@ const App: React.FC = () => {
   const [fixtureCounts, setFixtureCounts] = useState<Record<string, number | null>>({});
   // Placement Notes State (user describes where they want fixtures)
   const [fixturePlacementNotes, setFixturePlacementNotes] = useState<Record<string, string>>({});
+
+  // Manual Fixture Placement State (click-to-place positions)
+  const [showFixturePlacer, setShowFixturePlacer] = useState(false);
+  const [placedFixtures, setPlacedFixtures] = useState<LightFixture[]>([]);
 
   // Favorite Presets State
   interface FixturePreset {
@@ -4593,7 +4599,69 @@ Notes: ${invoice.notes || 'N/A'}
                             onImageSelect={handleImageSelect}
                             onClear={handleClear}
                         />
+                        
+                        {/* Place Fixtures Button - shows after image upload */}
+                        {previewUrl && (
+                          <button
+                            onClick={() => setShowFixturePlacer(true)}
+                            className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 rounded-xl text-purple-300 hover:from-purple-500/30 hover:to-indigo-500/30 hover:border-purple-500/50 transition-all group"
+                          >
+                            <MapPin className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            <span className="text-sm font-medium">
+                              {placedFixtures.length > 0 
+                                ? `Edit Fixture Positions (${placedFixtures.length} placed)` 
+                                : 'Place Fixtures Manually (Optional)'}
+                            </span>
+                          </button>
+                        )}
                     </div>
+
+                    {/* Fixture Placer Modal */}
+                    {showFixturePlacer && previewUrl && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <div className="relative w-full max-w-6xl max-h-[90vh] bg-[#0a0a0a] rounded-2xl border border-white/10 overflow-hidden flex flex-col">
+                          <div className="flex items-center justify-between p-4 border-b border-white/10">
+                            <div>
+                              <h2 className="text-lg font-semibold text-white">Place Fixtures</h2>
+                              <p className="text-sm text-gray-400">Click on the image to place fixtures at exact positions</p>
+                            </div>
+                            <button
+                              onClick={() => setShowFixturePlacer(false)}
+                              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                            >
+                              <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                          </div>
+                          <div className="flex-1 overflow-auto p-4">
+                            <FixturePlacer
+                              imageUrl={previewUrl}
+                              initialFixtures={placedFixtures}
+                              onFixturesChange={setPlacedFixtures}
+                              showPreview={true}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between p-4 border-t border-white/10">
+                            <span className="text-sm text-gray-400">
+                              {placedFixtures.length} fixture{placedFixtures.length !== 1 ? 's' : ''} placed
+                            </span>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => setPlacedFixtures([])}
+                                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                              >
+                                Clear All
+                              </button>
+                              <button
+                                onClick={() => setShowFixturePlacer(false)}
+                                className="px-4 py-2 text-sm bg-[#F6B45A] text-black font-medium rounded-lg hover:bg-[#F6B45A]/90 transition-colors"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Controls */}
                     <div className="flex flex-col gap-4 md:gap-6">
