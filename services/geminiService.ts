@@ -1067,77 +1067,211 @@ export const generateNightScene = async (
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
   // Map sliders (0-100) to descriptive prompt instructions with height-based wattage guidance
+  // Map sliders (0-100) to descriptive prompt instructions with realistic lighting physics
   const getIntensityPrompt = (val: number) => {
-    if (val < 25) return `Lighting Intensity: SUBTLE (2-3W LED equivalent).
-    - Faint accent glow, minimal brightness
-    - Light barely reaches first story soffit
-    - Soft pools of light at fixture base
-    - Beam edges extremely soft and diffused
-    - Minimal atmospheric scatter visible
-    - Very subtle lens glow at fixture
-    - Best for: Ambient mood, pathway marking`;
+    if (val < 25) return `LIGHTING INTENSITY: SUBTLE (2-3W LED equivalent, 150-300 lumens)
 
-    if (val < 50) return `Lighting Intensity: MODERATE (4-5W LED equivalent).
-    - Standard 1st story reach (8-12 ft walls)
-    - Light reaches soffit with gentle falloff
-    - Visible wall grazing without hot spots
-    - Soft beam edges with 6-8 inch feather zone
-    - Subtle atmospheric glow near fixture
-    - Visible lens glow, tiny bloom halo
-    - Some bounce light on adjacent surfaces
-    - Best for: Single-story homes, accent features`;
+LIGHT OUTPUT CHARACTERISTICS:
+- Faint accent glow providing ambient definition
+- Light barely reaches first story soffit (8-10 ft max reach)
+- Soft, gentle pools of light with gradual falloff
+- Beam edges EXTREMELY soft and diffused (12+ inch transition zone)
+- Minimal atmospheric scatter visible near fixture
 
-    if (val < 75) return `Lighting Intensity: BRIGHT (6-8W LED equivalent).
-    - 2nd story reach (18-25 ft walls)
-    - Strong wall grazing to higher soffits
-    - More pronounced beam visibility
-    - Visible light cone in air near fixture (subtle)
-    - Noticeable bloom around fixture lens
-    - Clear bounce light on ground/adjacent areas
-    - Beam feathers over 8-12 inch transition zone
-    - Best for: Two-story facades, tall trees`;
+INVERSE SQUARE LAW APPLICATION:
+- Brightness at 2ft from fixture: 100% (reference)
+- Brightness at 4ft: 25% (1/4 of reference)
+- Brightness at 8ft: 6% (barely visible)
+- Natural, rapid falloff creates intimate pools
 
-    return `Lighting Intensity: HIGH POWER (10-15W LED equivalent).
-    - Full 2-3 story reach (25+ ft walls)
-    - Intense beams reaching tall soffits
-    - Maximum wall coverage
-    - Pronounced atmospheric scatter near fixture
-    - Strong lens bloom and halo effect
-    - Significant bounce/fill light contribution
-    - Beam still feathers at edges (10-15 inch zone)
-    - Best for: Tall facades, commercial, dramatic effect`;
+HOT SPOT AVOIDANCE:
+- NO bright spots at fixture base
+- Light appears to "float" on surface
+- Even distribution within small pool
+
+BEST FOR: Ambient mood, pathway marking, subtle accent, intimate settings`;
+
+    if (val < 50) return `LIGHTING INTENSITY: MODERATE (4-5W LED equivalent, 300-500 lumens)
+
+LIGHT OUTPUT CHARACTERISTICS:
+- Standard 1st story reach (8-12 ft walls)
+- Light comfortably reaches soffit with gentle falloff
+- Visible wall grazing that reveals texture WITHOUT hot spots
+- Soft beam edges with 6-8 inch feather/transition zone
+- Subtle atmospheric glow visible near fixture lens
+- Small bloom halo around fixture (1-2 inch radius)
+
+INVERSE SQUARE LAW APPLICATION:
+- Brightness at 2ft: 100% (reference)
+- Brightness at 4ft: 25%
+- Brightness at 8ft: 6%
+- Brightness at 12ft (soffit): 3% - still visible
+
+TEXTURE REVELATION:
+- Sufficient intensity to show brick mortar joints
+- Siding shadow lines visible but not harsh
+- Stone texture defined but not over-emphasized
+
+BEST FOR: Single-story homes, accent features, balanced residential lighting`;
+
+    if (val < 75) return `LIGHTING INTENSITY: BRIGHT (6-8W LED equivalent, 500-800 lumens)
+
+LIGHT OUTPUT CHARACTERISTICS:
+- 2nd story reach (18-25 ft walls)
+- Strong wall grazing traveling to higher soffits
+- More pronounced beam visibility and definition
+- Visible light cone in air near fixture (subtle atmospheric effect)
+- Noticeable bloom around fixture lens (2-3 inch radius)
+- Clear bounce light contribution on ground and adjacent surfaces
+- Beam feathers over 8-12 inch transition zone
+
+INVERSE SQUARE LAW APPLICATION:
+- Brightness at 2ft: 100% (reference)
+- Brightness at 6ft: 11%
+- Brightness at 12ft: 3%
+- Brightness at 20ft: 1% - still visible for tall walls
+
+TEXTURE REVELATION:
+- Strong shadows in brick/stone mortar joints
+- Dramatic siding shadow lines
+- Surface irregularities clearly defined
+
+BEST FOR: Two-story facades, tall trees, dramatic accent lighting`;
+
+    return `LIGHTING INTENSITY: HIGH POWER (10-15W LED equivalent, 800-1500 lumens)
+
+LIGHT OUTPUT CHARACTERISTICS:
+- Full 2-3 story reach (25+ ft walls)
+- Intense beams traveling to tall soffits and gable peaks
+- Maximum wall coverage with strong definition
+- Pronounced atmospheric scatter near fixture (visible light cone)
+- Strong lens bloom and halo effect (3-4 inch radius)
+- Significant bounce/fill light contribution to surrounding areas
+- Beam still feathers at edges (10-15 inch transition zone)
+
+INVERSE SQUARE LAW APPLICATION:
+- Brightness at 2ft: 100% (reference)
+- Brightness at 8ft: 6%
+- Brightness at 16ft: 1.5%
+- Brightness at 25ft: 0.6% - still visible for tall facades
+
+TEXTURE REVELATION:
+- Maximum shadow definition on textured surfaces
+- Deep mortar joint shadows
+- Dramatic texture grazing effect
+
+HOT SPOT MANAGEMENT:
+- Even with high power, NO harsh bright spots at fixture base
+- Fixture angled to start beam 18-24 inches above ground
+- Light brightest at mid-wall, not at base
+
+BEST FOR: Tall facades, commercial properties, dramatic architectural statements`;
   };
 
   const getBeamAnglePrompt = (angle: number) => {
-    if (angle <= 15) return `Beam Angle: 15 DEGREES (NARROW SPOT).
-    - Tight, focused columns of light
-    - Light cone spreads ~2.5 feet at 10 feet distance
-    - Hot center with rapid but SOFT falloff to edges
-    - Edge transition zone: 3-4 inches (still soft, not sharp)
-    - Creates dramatic accent with defined but feathered boundary
-    - Best for: Architectural columns, narrow trees, specific focal points`;
+    if (angle <= 15) return `BEAM ANGLE: 15 DEGREES (NARROW SPOT) - MAXIMUM DRAMA
 
-    if (angle <= 30) return `Beam Angle: 30 DEGREES (SPOT).
-    - Defined beam with moderate spread
-    - Light cone spreads ~5 feet at 10 feet distance
-    - Hot center transitioning to soft edges over 6-8 inches
-    - Visible beam definition but edges are diffused, not crisp
-    - Best for: Accent lighting on facades, medium trees, entry features`;
+BEAM GEOMETRY:
+- Tight, focused columns of light
+- Spread calculation: diameter = distance × 0.26 (tan 15°)
+- At 10 feet: ~2.6 foot diameter light pool
+- At 20 feet: ~5.2 foot diameter light pool
 
-    if (angle >= 60) return `Beam Angle: 60 DEGREES (WIDE FLOOD).
-    - Broad, even wash of light
-    - Light cone spreads ~11 feet at 10 feet distance
-    - Very soft, gradual edge transitions (12+ inches)
-    - No distinct beam boundary - blends smoothly into darkness
-    - Creates seamless wall wash effect
-    - Best for: Wall washing, large facades, area lighting`;
+LIGHT DISTRIBUTION:
+- HOT CENTER: Brightest point at beam center
+- SOFT FALLOFF: Rapid but smooth transition to edges
+- Edge transition zone: 3-4 inches (soft gradient, NOT hard cutoff)
+- Beam boundary: Feathered, never crisp circles
 
-    return `Beam Angle: 45 DEGREES (FLOOD).
-    - Standard professional landscape spread
-    - Light cone spreads ~8 feet at 10 feet distance
-    - Balanced hot center with 8-10 inch feathered edges
-    - Soft but discernible beam shape
-    - Best for: General facade lighting, medium wall areas`;
+TEXTURE GRAZING EFFECT:
+- Ideal angle for revealing surface texture
+- Brick: Deep mortar joint shadows, dramatic grid pattern
+- Stone: Maximum texture revelation, rugged appearance
+- Siding: Strong horizontal shadow lines
+
+DARK GAP CREATION:
+- Narrow beams create VISIBLE DARK GAPS between fixtures
+- This is the PROFESSIONAL LOOK - isolated pools with separation
+- Adjacent fixtures do NOT blend - each maintains distinct boundary
+
+BEST FOR: Architectural columns, narrow wall sections, focal points, maximum drama`;
+
+    if (angle <= 30) return `BEAM ANGLE: 30 DEGREES (SPOT) - PROFESSIONAL STANDARD
+
+BEAM GEOMETRY:
+- Defined beam with moderate spread
+- Spread calculation: diameter = distance × 0.54 (tan 30°)
+- At 10 feet: ~5.4 foot diameter light pool
+- At 20 feet: ~10.8 foot diameter light pool
+
+LIGHT DISTRIBUTION:
+- DEFINED CENTER: Clear brightness concentration
+- GRADUAL FALLOFF: Smooth transition over 6-8 inches
+- Visible beam definition with diffused, feathered edges
+- NOT crisp boundaries - always soft gradient
+
+TEXTURE GRAZING EFFECT:
+- Excellent balance of texture revelation and coverage
+- Brick: Visible mortar joint shadows, balanced pattern
+- Stone: Good texture definition without harshness
+- Siding: Clear horizontal lines, professional appearance
+
+DARK GAP CREATION:
+- Creates VISIBLE separation between fixture illumination zones
+- Standard spacing allows dark wall sections between beams
+- Professional landscape lighting look with intentional dark areas
+
+BEST FOR: Facade accent lighting, medium trees, entry features, general professional use`;
+
+    if (angle >= 60) return `BEAM ANGLE: 60 DEGREES (WIDE FLOOD) - AREA COVERAGE
+
+BEAM GEOMETRY:
+- Broad, even wash of light
+- Spread calculation: diameter = distance × 1.73 (tan 60°)
+- At 10 feet: ~11.5 foot diameter light pool
+- At 20 feet: ~23 foot diameter light pool
+
+LIGHT DISTRIBUTION:
+- EVEN COVERAGE: Minimal hot center effect
+- VERY SOFT edges: 12+ inch gradual transition
+- No distinct beam boundary - blends smoothly into darkness
+- Creates seamless wall wash effect
+
+WARNING - REDUCED DRAMA:
+- Wide floods REDUCE texture revelation
+- Less shadow definition on brick/stone
+- Can create FLAT, UNIFORM appearance
+- Dark gaps between fixtures may DISAPPEAR
+- Use sparingly - professional lighting rarely uses this wide
+
+BEST FOR: Wall washing (when uniform coverage desired), large blank facades, area lighting where drama is NOT the goal`;
+
+    return `BEAM ANGLE: 45 DEGREES (FLOOD) - BALANCED COVERAGE
+
+BEAM GEOMETRY:
+- Standard professional landscape spread
+- Spread calculation: diameter = distance × 1.0 (tan 45°)
+- At 10 feet: ~8.3 foot diameter light pool
+- At 20 feet: ~16.6 foot diameter light pool
+
+LIGHT DISTRIBUTION:
+- BALANCED CENTER: Moderate brightness concentration
+- SOFT EDGES: 8-10 inch feathered transition zone
+- Soft but discernible beam shape
+- Good coverage with some definition retained
+
+TEXTURE EFFECT:
+- Moderate texture revelation
+- Brick: Visible but softer mortar shadows
+- Stone: Texture present but less dramatic
+- Siding: Subtle horizontal shadow lines
+
+DARK GAP CONSIDERATION:
+- May require closer fixture spacing to maintain dark gaps
+- Watch for beam overlap creating uniform wash
+- Consider narrower angle for more dramatic results
+
+BEST FOR: General facade lighting, medium wall areas, balanced coverage needs`;
   };
 
   // Build user preference context (if available)
