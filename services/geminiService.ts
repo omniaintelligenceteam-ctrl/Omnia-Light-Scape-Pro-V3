@@ -2,6 +2,17 @@
 import { GoogleGenAI } from "@google/genai";
 import type { UserPreferences, PropertyAnalysis, FixtureSelections, LightingPlan, FixturePlacement } from "../types";
 import type { FixtureType, SystemPromptConfig } from "../constants";
+import { 
+  LIGHTING_APPROACH_BY_STYLE, 
+  SPACING_BY_FACADE_WIDTH,
+  BEAM_ANGLE_BY_MATERIAL,
+  INTENSITY_BY_WALL_HEIGHT,
+  FEATURE_LIGHTING_GUIDELINES,
+  ENHANCED_ANALYSIS_SYSTEM_PROMPT,
+  type ArchitecturalStyleType,
+  type FacadeWidthType
+} from "../constants";
+import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -267,6 +278,130 @@ Base your analysis on:
   } catch (error) {
     console.error('Property Analysis Error:', error);
     throw error;
+  }
+};
+
+/**
+ * ZONE DETECTION
+ * Analyzes property photo and returns clickable zones for fixture placement
+ * Each zone represents a logical area (wall section, window group, tree, pathway, etc.)
+ */
+export interface LightingZone {
+  id: string;
+  label: string;
+  description: string;
+  // Bounding box as percentages (0-100)
+  bounds: {
+    x: number;      // left edge %
+    y: number;      // top edge %
+    width: number;  // width %
+    height: number; // height %
+  };
+  // What type of feature this zone represents
+  featureType: 'wall' | 'window' | 'door' | 'tree' | 'shrub' | 'pathway' | 'driveway' | 'garage' | 'roof' | 'column' | 'other';
+  // Recommended fixture types for this zone
+  recommendedFixtures: string[];
+  // Lighting technique suggestion
+  technique: string;
+}
+
+export const detectLightingZones = async (
+  imageBase64: string,
+  imageMimeType: string = 'image/jpeg'
+): Promise<LightingZone[]> => {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  const zonePrompt = `Analyze this property photo and identify distinct zones for landscape lighting placement.
+
+For each zone, provide:
+1. A short label (e.g., "Left Wall Section", "Front Windows", "Oak Tree")
+2. A description of what's in that zone
+3. Bounding box as percentages (x, y, width, height) where 0,0 is top-left
+4. The feature type (wall, window, door, tree, shrub, pathway, driveway, garage, roof, column, other)
+5. Recommended fixture types (uplight, downlight, path_light, spot, well_light, wall_wash)
+6. Suggested lighting technique
+
+CRITICAL RULES:
+- Identify 3-12 zones depending on property complexity
+- Zones should not overlap significantly
+- Each architectural feature or landscape element gets its own zone
+- Include wall sections BETWEEN windows as separate zones
+- Group similar adjacent windows together
+- Trees and large shrubs each get their own zone
+- Pathways and driveways are separate zones
+
+Return JSON array:
+[
+  {
+    "id": "zone_1",
+    "label": "Left Wall Section",
+    "description": "Stucco wall area to the left of the main windows",
+    "bounds": { "x": 0, "y": 20, "width": 25, "height": 60 },
+    "featureType": "wall",
+    "recommendedFixtures": ["uplight", "wall_wash"],
+    "technique": "Wall grazing with warm uplights spaced 4-6ft apart"
+  },
+  ...
+]
+
+Only return the JSON array, no other text.`;
+
+  try {
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: ANALYSIS_MODEL_NAME,
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: zonePrompt },
+            {
+              inlineData: {
+                mimeType: imageMimeType,
+                data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+              }
+            }
+          ]
+        }]
+      }),
+      ANALYSIS_TIMEOUT_MS,
+      'Zone detection timed out'
+    );
+
+    const text = response.text?.trim() || '[]';
+    
+    // Parse JSON, handling potential markdown code blocks
+    let jsonStr = text;
+    if (text.includes('```')) {
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      jsonStr = match ? match[1].trim() : text;
+    }
+    
+    const zones: LightingZone[] = JSON.parse(jsonStr);
+    
+    // Validate and clean up zones
+    return zones.map((zone, idx) => ({
+      id: zone.id || `zone_${idx + 1}`,
+      label: zone.label || `Zone ${idx + 1}`,
+      description: zone.description || '',
+      bounds: {
+        x: Math.max(0, Math.min(100, zone.bounds?.x || 0)),
+        y: Math.max(0, Math.min(100, zone.bounds?.y || 0)),
+        width: Math.max(5, Math.min(100, zone.bounds?.width || 20)),
+        height: Math.max(5, Math.min(100, zone.bounds?.height || 20)),
+      },
+      featureType: zone.featureType || 'other',
+      recommendedFixtures: zone.recommendedFixtures || ['uplight'],
+      technique: zone.technique || ''
+    }));
+    
+  } catch (error) {
+    console.error('Zone detection failed:', error);
+    // Return a simple fallback grid if detection fails
+    return [
+      { id: 'zone_left', label: 'Left Section', description: 'Left third of property', bounds: { x: 0, y: 0, width: 33, height: 100 }, featureType: 'wall', recommendedFixtures: ['uplight'], technique: 'Wall lighting' },
+      { id: 'zone_center', label: 'Center Section', description: 'Center of property', bounds: { x: 33, y: 0, width: 34, height: 100 }, featureType: 'wall', recommendedFixtures: ['uplight', 'downlight'], technique: 'Feature lighting' },
+      { id: 'zone_right', label: 'Right Section', description: 'Right third of property', bounds: { x: 67, y: 0, width: 33, height: 100 }, featureType: 'wall', recommendedFixtures: ['uplight'], technique: 'Wall lighting' },
+    ];
   }
 };
 
@@ -1541,3 +1676,423 @@ ${preferenceContext}
     throw error;
   }
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENHANCED ANALYSIS INTEGRATION
+// Uses the new smart analysis system for better fixture suggestions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ENHANCED_ANALYSIS_TIMEOUT_MS = 90000; // 90 seconds for comprehensive analysis
+
+/**
+ * Enhanced property analysis that provides smarter fixture suggestions
+ * This is the improved version of analyzePropertyArchitecture
+ */
+export const enhancedAnalyzeProperty = async (
+  imageBase64: string,
+  imageMimeType: string = 'image/jpeg',
+  selectedFixtures?: string[],
+  fixtureSubOptions?: Record<string, string[]>
+): Promise<EnhancedHouseAnalysis> => {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  // Build context about user's current selections
+  let selectionContext = '';
+  if (selectedFixtures && selectedFixtures.length > 0) {
+    selectionContext = `
+## USER'S CURRENT FIXTURE SELECTIONS
+Focus your suggestions on these selected types:
+${selectedFixtures.map(f => `- ${f}: ${(fixtureSubOptions?.[f] || []).join(', ') || 'all sub-options'}`).join('\n')}
+`;
+  }
+
+  const analysisPrompt = `${ENHANCED_ANALYSIS_SYSTEM_PROMPT}
+
+${selectionContext}
+
+Analyze this property photo and return a comprehensive JSON analysis with:
+
+1. **style**: Architectural style (modern, traditional, craftsman, mediterranean, colonial, spanish, tudor, farmhouse, ranch, cape-cod, victorian, mid-century, transitional, contemporary, unknown)
+
+2. **facadeWidth**: Facade width classification
+   - "narrow" (<30 feet, 2-4 fixtures typical)
+   - "medium" (30-50 feet, 4-8 fixtures typical)
+   - "wide" (50-80 feet, 6-12 fixtures typical)
+   - "extra-wide" (>80 feet, 10-20 fixtures typical)
+
+3. **storyCount**: 1, 2, or 3
+
+4. **wallHeight**: "8-12ft", "18-25ft", or "25+ft"
+
+5. **architecturalFeatures**: Array of detected features
+   [{
+     "type": "gable|dormer|column|pilaster|archway|portico|bay-window|balcony|turret|chimney|shutters|corbels|dentil-molding",
+     "count": <number>,
+     "positions": ["<description>"],
+     "lightingOpportunity": "high|medium|low",
+     "suggestedApproach": "<how to light>"
+   }]
+
+6. **materials**: Array of detected materials
+   [{
+     "material": "brick|stone|stucco|siding-lap|siding-board-and-batten|vinyl|wood|concrete|glass|metal|mixed",
+     "location": "<where on facade>",
+     "percentage": <0-100>,
+     "textureLevel": "smooth|light|moderate|heavy",
+     "recommendedBeamAngle": <15|20|25|30|45>
+   }]
+
+7. **primaryMaterial**: Main facade material
+
+8. **suggestedFixtures**: Array of smart fixture suggestions
+   [{
+     "fixtureType": "up|path|soffit|gutter|hardscape|coredrill",
+     "subOption": "siding|windows|trees|columns|entryway|walkway|driveway|dormers|peaks",
+     "count": <number>,
+     "positions": [{
+       "description": "<specific location>",
+       "xPercent": <0-100 from left>,
+       "yPercent": <0-100 from top>,
+       "target": "<what this illuminates>"
+     }],
+     "spacing": "<spacing description>",
+     "reasoning": "<why this placement>",
+     "priority": <1-10, 1=highest>
+   }]
+
+9. **avoidZones**: Array of zones to avoid
+   [{
+     "id": "<unique-id>",
+     "reason": "window-glare|door-obstruction|utility-equipment|hardscape-surface|hvac-unit|meter-box|spigot-hose",
+     "description": "<what to avoid>",
+     "xPercent": <0-100>,
+     "yPercent": <0-100>,
+     "radiusPercent": <0-20>,
+     "severity": "critical|important|suggested"
+   }]
+
+10. **optimalUplightPositions**: Best uplight positions
+    [{
+      "id": "<unique-id>",
+      "type": "optimal|acceptable",
+      "description": "<position>",
+      "xPercent": <0-100>,
+      "yPercent": <0-100>,
+      "suggestedFixture": "up",
+      "reasoning": "<why good>"
+    }]
+
+11. **landscaping**: {
+      "trees": { "count": <n>, "positions": ["<loc>"], "sizes": ["small|medium|large"], "uplightCandidates": <n> },
+      "plantingBeds": { "present": <bool>, "locations": ["<loc>"], "fixtureAccessible": <bool> }
+    }
+
+12. **hardscape**: {
+      "driveway": { "present": <bool>, "width": "narrow|standard|wide", "position": "left|right|center", "suggestedPathLightCount": <n> },
+      "walkway": { "present": <bool>, "length": "short|medium|long", "style": "straight|curved", "suggestedPathLightCount": <n> }
+    }
+
+13. **entry**: {
+      "type": "single|double|grand",
+      "hasOverhang": <bool>,
+      "hasColumns": <bool>,
+      "hasSidelights": <bool>,
+      "suggestedFixtureApproach": "<how to light>"
+    }
+
+14. **windows**: {
+      "firstFloorCount": <n>,
+      "secondFloorCount": <n>,
+      "pattern": "symmetrical|asymmetrical|irregular",
+      "positions": "<description>"
+    }
+
+15. **lightingApproach**: {
+      "style": "clean-minimal|warm-welcoming|dramatic-shadow|balanced-traditional|statement-architectural",
+      "description": "<1-2 sentences>",
+      "intensityRecommendation": <0-100>,
+      "beamAngleRecommendation": <15|20|25|30|45>,
+      "colorTempRecommendation": "2700K|3000K|4000K",
+      "reasoning": "<why this approach>"
+    }
+
+16. **fixtureSummary**: {
+      "totalSuggestedCount": <n>,
+      "byType": { "up": <n>, "path": <n>, ... },
+      "estimatedSpacing": "<spacing>",
+      "coverageNotes": "<notes>"
+    }
+
+17. **confidence**: <0-100>
+
+18. **notes**: ["<special notes>"]
+
+Return ONLY valid JSON. No markdown code blocks.`;
+
+  try {
+    const analyzePromise = ai.models.generateContent({
+      model: ANALYSIS_MODEL_NAME,
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: imageBase64,
+              mimeType: imageMimeType,
+            },
+          },
+          {
+            text: analysisPrompt,
+          },
+        ],
+      },
+    });
+
+    const response = await withTimeout(
+      analyzePromise,
+      ENHANCED_ANALYSIS_TIMEOUT_MS,
+      'Enhanced property analysis timed out. Please try again.'
+    );
+
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+      if (candidate.content && candidate.content.parts) {
+        const textPart = candidate.content.parts.find(p => p.text);
+        if (textPart && textPart.text) {
+          let jsonText = textPart.text.trim();
+          if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+          }
+
+          try {
+            const analysis: EnhancedHouseAnalysis = JSON.parse(jsonText);
+            
+            // Enrich with calculated recommendations from constants
+            return enrichAnalysisWithRecommendations(analysis);
+          } catch (parseError) {
+            console.error('Failed to parse enhanced analysis JSON:', parseError);
+            console.error('Raw response:', textPart.text);
+            throw new Error('Failed to parse property analysis. Please try again.');
+          }
+        }
+      }
+    }
+
+    throw new Error('No analysis generated. Please try again.');
+  } catch (error) {
+    console.error('Enhanced Property Analysis Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Enriches the AI analysis with recommendations from our constants
+ */
+function enrichAnalysisWithRecommendations(analysis: EnhancedHouseAnalysis): EnhancedHouseAnalysis {
+  const enriched = { ...analysis };
+  
+  // Get style-based recommendations
+  const styleKey = (analysis.style || 'unknown') as ArchitecturalStyleType;
+  const styleConfig = LIGHTING_APPROACH_BY_STYLE[styleKey] || LIGHTING_APPROACH_BY_STYLE['unknown'];
+  
+  // Get spacing recommendations based on facade width
+  const widthKey = (analysis.facadeWidth || 'medium') as FacadeWidthType;
+  const spacingConfig = SPACING_BY_FACADE_WIDTH[widthKey] || SPACING_BY_FACADE_WIDTH['medium'];
+  
+  // Get intensity recommendations based on wall height
+  const heightKey = analysis.wallHeight || '8-12ft';
+  const intensityConfig = INTENSITY_BY_WALL_HEIGHT[heightKey] || INTENSITY_BY_WALL_HEIGHT['8-12ft'];
+  
+  // Get beam angle based on primary material
+  const materialKey = analysis.primaryMaterial || 'mixed';
+  const beamConfig = BEAM_ANGLE_BY_MATERIAL[materialKey] || BEAM_ANGLE_BY_MATERIAL['mixed'];
+  
+  // Ensure lighting approach uses our constants if AI didn't provide good values
+  if (!enriched.lightingApproach) {
+    enriched.lightingApproach = {
+      style: styleConfig.style,
+      description: styleConfig.description,
+      intensityRecommendation: Math.round((styleConfig.intensityRange[0] + styleConfig.intensityRange[1]) / 2),
+      beamAngleRecommendation: beamConfig.angle,
+      colorTempRecommendation: styleConfig.colorTemp,
+      reasoning: `${styleConfig.description} Beam angle: ${beamConfig.reason}`
+    };
+  } else {
+    // Validate/enhance AI's recommendations
+    if (!enriched.lightingApproach.intensityRecommendation || 
+        enriched.lightingApproach.intensityRecommendation < intensityConfig.min ||
+        enriched.lightingApproach.intensityRecommendation > intensityConfig.max) {
+      enriched.lightingApproach.intensityRecommendation = 
+        Math.round((intensityConfig.min + intensityConfig.max) / 2);
+    }
+  }
+  
+  // Add feature-specific lighting guidelines to notes
+  const featureNotes: string[] = [];
+  for (const feature of enriched.architecturalFeatures || []) {
+    const guideline = FEATURE_LIGHTING_GUIDELINES[feature.type];
+    if (guideline && !feature.suggestedApproach) {
+      feature.suggestedApproach = guideline;
+      featureNotes.push(`${feature.type}: ${guideline}`);
+    }
+  }
+  
+  // Update fixture summary with spacing config
+  if (!enriched.fixtureSummary) {
+    enriched.fixtureSummary = {
+      totalSuggestedCount: enriched.suggestedFixtures?.reduce((sum, f) => sum + f.count, 0) || 0,
+      byType: {},
+      estimatedSpacing: spacingConfig.idealSpacing,
+      coverageNotes: spacingConfig.description
+    };
+  } else {
+    enriched.fixtureSummary.estimatedSpacing = spacingConfig.idealSpacing;
+  }
+  
+  // Calculate byType if not provided
+  if (enriched.suggestedFixtures && enriched.suggestedFixtures.length > 0) {
+    const byType: Record<string, number> = {};
+    for (const fixture of enriched.suggestedFixtures) {
+      byType[fixture.fixtureType] = (byType[fixture.fixtureType] || 0) + fixture.count;
+    }
+    enriched.fixtureSummary.byType = byType;
+    enriched.fixtureSummary.totalSuggestedCount = 
+      Object.values(byType).reduce((sum, n) => sum + n, 0);
+  }
+  
+  // Add spacing guidance to notes
+  enriched.notes = enriched.notes || [];
+  enriched.notes.push(`Recommended spacing for ${widthKey} facade: ${spacingConfig.idealSpacing}`);
+  enriched.notes.push(`Fixture range: ${spacingConfig.minFixtures}-${spacingConfig.maxFixtures} fixtures typical`);
+  
+  // Ensure confidence is set
+  if (!enriched.confidence) {
+    enriched.confidence = 75;
+  }
+  
+  return enriched;
+}
+
+/**
+ * Converts enhanced analysis to the legacy PropertyAnalysis format
+ * for backwards compatibility with existing code
+ */
+export function enhancedToLegacyAnalysis(enhanced: EnhancedHouseAnalysis): PropertyAnalysis {
+  return {
+    architecture: {
+      story_count: enhanced.storyCount,
+      wall_height_estimate: enhanced.wallHeight,
+      facade_materials: enhanced.materials.map(m => m.material as any) || [enhanced.primaryMaterial as any],
+      windows: {
+        first_floor_count: enhanced.windows?.firstFloorCount || 0,
+        second_floor_count: enhanced.windows?.secondFloorCount || 0,
+        positions: enhanced.windows?.positions || ''
+      },
+      columns: {
+        present: enhanced.architecturalFeatures?.some(f => f.type === 'column') || false,
+        count: enhanced.architecturalFeatures?.find(f => f.type === 'column')?.count || 0
+      },
+      dormers: {
+        present: enhanced.architecturalFeatures?.some(f => f.type === 'dormer') || false,
+        count: enhanced.architecturalFeatures?.find(f => f.type === 'dormer')?.count || 0
+      },
+      gables: {
+        present: enhanced.architecturalFeatures?.some(f => f.type === 'gable') || false,
+        count: enhanced.architecturalFeatures?.find(f => f.type === 'gable')?.count || 0
+      },
+      entryway: {
+        type: enhanced.entry?.type || 'single',
+        has_overhang: enhanced.entry?.hasOverhang || false
+      }
+    },
+    landscaping: {
+      trees: {
+        count: enhanced.landscaping?.trees?.count || 0,
+        sizes: enhanced.landscaping?.trees?.sizes || [],
+        positions: enhanced.landscaping?.trees?.positions?.join(', ')
+      },
+      planting_beds: {
+        present: enhanced.landscaping?.plantingBeds?.present || false,
+        locations: enhanced.landscaping?.plantingBeds?.locations || []
+      }
+    },
+    hardscape: {
+      driveway: {
+        present: enhanced.hardscape?.driveway?.present || false,
+        width_estimate: enhanced.hardscape?.driveway?.width || 'standard',
+        position: enhanced.hardscape?.driveway?.position
+      },
+      walkway: {
+        present: enhanced.hardscape?.walkway?.present || false,
+        length_estimate: enhanced.hardscape?.walkway?.length || 'medium',
+        style: enhanced.hardscape?.walkway?.style || 'straight',
+        description: ''
+      },
+      patio: { present: false },
+      sidewalk: { present: false }
+    },
+    recommendations: {
+      optimal_intensity: enhanced.lightingApproach?.intensityRecommendation 
+        ? (enhanced.lightingApproach.intensityRecommendation < 45 ? 'subtle' 
+           : enhanced.lightingApproach.intensityRecommendation < 60 ? 'moderate'
+           : enhanced.lightingApproach.intensityRecommendation < 75 ? 'bright' : 'high_power')
+        : 'moderate',
+      optimal_beam_angle: (enhanced.lightingApproach?.beamAngleRecommendation || 30) as 15 | 30 | 45 | 60,
+      fixture_counts: enhanced.fixtureSummary?.byType || {},
+      fixture_positions: Object.fromEntries(
+        (enhanced.suggestedFixtures || []).map(sf => [
+          `${sf.fixtureType}_${sf.subOption}`,
+          sf.positions.map(p => p.description)
+        ])
+      ),
+      priority_areas: enhanced.suggestedFixtures
+        ?.sort((a, b) => a.priority - b.priority)
+        .map(sf => `${sf.fixtureType} - ${sf.subOption}`) || [],
+      notes: enhanced.notes?.join(' ') || enhanced.lightingApproach?.description || ''
+    }
+  };
+}
+
+/**
+ * Helper to generate explanation for why a fixture was suggested
+ */
+export function explainSuggestedFixture(suggestion: SuggestedFixture): string {
+  const lines: string[] = [];
+  
+  lines.push(`## ${suggestion.fixtureType.toUpperCase()} - ${suggestion.subOption}`);
+  lines.push(`**Count:** ${suggestion.count} fixtures`);
+  lines.push(`**Spacing:** ${suggestion.spacing}`);
+  lines.push(`**Priority:** ${suggestion.priority}/10`);
+  lines.push('');
+  lines.push(`### Why This Placement`);
+  lines.push(suggestion.reasoning);
+  lines.push('');
+  lines.push('### Positions');
+  
+  suggestion.positions.forEach((pos, i) => {
+    lines.push(`${i + 1}. **${pos.description}**`);
+    lines.push(`   - Illuminates: ${pos.target}`);
+    lines.push(`   - Location: ${pos.xPercent}% from left, ${pos.yPercent}% from top`);
+  });
+  
+  return lines.join('\n');
+}
+
+/**
+ * Get fixture suggestions filtered by user's selections
+ */
+export function getFilteredSuggestions(
+  analysis: EnhancedHouseAnalysis,
+  selectedFixtures: string[],
+  selectedSubOptions: Record<string, string[]>
+): SuggestedFixture[] {
+  if (!analysis.suggestedFixtures) return [];
+  
+  return analysis.suggestedFixtures.filter(suggestion => {
+    if (!selectedFixtures.includes(suggestion.fixtureType)) return false;
+    
+    const subs = selectedSubOptions[suggestion.fixtureType];
+    if (subs && subs.length > 0 && !subs.includes(suggestion.subOption)) return false;
+    
+    return true;
+  }).sort((a, b) => a.priority - b.priority);
+}

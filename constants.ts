@@ -28,6 +28,30 @@ export interface FixtureType {
 
 export interface SystemPromptConfig {
   masterInstruction: string;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// IC-LIGHT CONFIGURATION (Premium Generation via Replicate)
+// ═══════════════════════════════════════════════════════════════════════════════
+// 
+// IC-Light is an advanced relighting model that produces dramatically better
+// nighttime lighting mockups. Configuration is in services/replicateService.ts
+//
+// Optimal Settings (discovered through testing):
+//   - light_source: "Bottom Light" (for uplighting effect)
+//   - cfg: 3.0 (balanced creativity/consistency)
+//   - steps: 30 (quality vs speed tradeoff)
+//   - highres_scale: 1.5 (better detail)
+//
+// Default Prompt:
+//   "nighttime photograph, professional landscape uplights illuminating walls,
+//    warm 2700K amber glow from ground-mounted uplights washing up the stucco
+//    and stone facade, architectural lighting design, luxury home at night,
+//    photorealistic, dramatic uplighting effect, dark sky with stars"
+//
+// Negative Prompt:
+//   "downlights, ceiling lights, daylight, blue light, cool light"
+//
+// ═══════════════════════════════════════════════════════════════════════════════
   globalNegativePrompt: string;
   closingReinforcement: string;
 }
@@ -1318,11 +1342,22 @@ STRICT EXCLUSION ZONES:
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 
-*** CRITICAL DISTINCTION - READ CAREFULLY ***
-GUTTER UP LIGHTS are NOT soffit lights. These are COMPLETELY DIFFERENT:
-- GUTTER UP LIGHT: Fixture sits IN gutter, beam shoots UPWARD to illuminate gable/dormer ABOVE
-- SOFFIT DOWNLIGHT: Fixture recessed in eave, beam shoots DOWNWARD (THIS IS NOT WHAT WE WANT)
-YOU MUST CREATE UPWARD-FACING LIGHTS, NOT DOWNWARD-FACING LIGHTS.
+*** ABSOLUTE BAN ON SOFFIT LIGHTS ***
+DO NOT CREATE SOFFIT LIGHTS. DO NOT CREATE RECESSED DOWNLIGHTS IN THE EAVE.
+DO NOT CREATE ANY LIGHTS THAT SHINE DOWNWARD FROM THE ROOFLINE.
+SOFFIT LIGHTS ARE BANNED. EAVE LIGHTS ARE BANNED. DOWNLIGHTS ARE BANNED.
+
+GUTTER UP LIGHTS ONLY - These shoot UPWARD:
+- GUTTER UP LIGHT: Visible bullet/flood fixture sits IN the metal gutter trough, beam shoots UPWARD
+- The fixture is VISIBLE - you can see the brass/bronze housing sitting in the gutter
+- Light goes UP toward the sky, illuminating walls ABOVE the fixture
+- The illuminated area is ABOVE where the fixture is mounted
+
+BANNED (DO NOT CREATE):
+- Soffit lights (recessed in eave, shine down) - BANNED
+- Can lights in soffit - BANNED  
+- Downlights from roofline - BANNED
+- Any light that shines DOWNWARD - BANNED
 
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
 HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
@@ -2653,3 +2688,309 @@ export const ACCENT_COLORS = [
   { id: 'green', name: 'Emerald', primary: '#10B981', hover: '#34D399', glow: 'rgba(16,185,129,0.3)' },
   { id: 'red', name: 'Ruby', primary: '#EF4444', hover: '#F87171', glow: 'rgba(239,68,68,0.3)' },
 ] as const;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENHANCED ANALYSIS SYSTEM - AI-Powered Smart Fixture Suggestions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Architectural style classifications and their lighting approaches
+ */
+export type ArchitecturalStyleType = 
+  | 'modern' | 'contemporary' | 'traditional' | 'colonial' | 'craftsman'
+  | 'mediterranean' | 'spanish' | 'tudor' | 'farmhouse' | 'ranch'
+  | 'cape-cod' | 'victorian' | 'mid-century' | 'transitional' | 'unknown';
+
+export interface LightingApproachConfig {
+  style: 'clean-minimal' | 'warm-welcoming' | 'dramatic-shadow' | 'balanced-traditional' | 'statement-architectural';
+  description: string;
+  intensityRange: [number, number];
+  beamAngle: number;
+  colorTemp: '2700K' | '3000K' | '4000K';
+}
+
+/**
+ * Lighting approach recommendations by architectural style
+ */
+export const LIGHTING_APPROACH_BY_STYLE: Record<ArchitecturalStyleType, LightingApproachConfig> = {
+  'modern': {
+    style: 'clean-minimal',
+    description: 'Clean, focused beams highlighting architectural lines. Minimal fixtures, maximum impact.',
+    intensityRange: [40, 60],
+    beamAngle: 15,
+    colorTemp: '3000K',
+  },
+  'contemporary': {
+    style: 'clean-minimal',
+    description: 'Strategic lighting emphasizing geometric forms and material contrasts.',
+    intensityRange: [45, 65],
+    beamAngle: 20,
+    colorTemp: '3000K',
+  },
+  'traditional': {
+    style: 'warm-welcoming',
+    description: 'Balanced illumination creating an inviting, homey atmosphere.',
+    intensityRange: [50, 70],
+    beamAngle: 30,
+    colorTemp: '2700K',
+  },
+  'colonial': {
+    style: 'balanced-traditional',
+    description: 'Symmetrical lighting respecting the formal architecture.',
+    intensityRange: [50, 70],
+    beamAngle: 30,
+    colorTemp: '2700K',
+  },
+  'craftsman': {
+    style: 'warm-welcoming',
+    description: 'Warm lighting highlighting natural materials and handcrafted details.',
+    intensityRange: [45, 65],
+    beamAngle: 25,
+    colorTemp: '2700K',
+  },
+  'mediterranean': {
+    style: 'dramatic-shadow',
+    description: 'Dramatic uplighting creating bold shadows on textured surfaces.',
+    intensityRange: [55, 75],
+    beamAngle: 15,
+    colorTemp: '3000K',
+  },
+  'spanish': {
+    style: 'dramatic-shadow',
+    description: 'Bold shadows emphasizing stucco texture and architectural arches.',
+    intensityRange: [55, 75],
+    beamAngle: 15,
+    colorTemp: '3000K',
+  },
+  'tudor': {
+    style: 'dramatic-shadow',
+    description: 'Lighting that emphasizes half-timber details and steep rooflines.',
+    intensityRange: [55, 75],
+    beamAngle: 20,
+    colorTemp: '3000K',
+  },
+  'farmhouse': {
+    style: 'warm-welcoming',
+    description: 'Soft, inviting glow emphasizing rustic charm.',
+    intensityRange: [40, 60],
+    beamAngle: 30,
+    colorTemp: '2700K',
+  },
+  'ranch': {
+    style: 'balanced-traditional',
+    description: 'Even coverage for long, horizontal facades.',
+    intensityRange: [45, 65],
+    beamAngle: 30,
+    colorTemp: '3000K',
+  },
+  'cape-cod': {
+    style: 'warm-welcoming',
+    description: 'Cozy lighting highlighting the cottage-style details.',
+    intensityRange: [45, 65],
+    beamAngle: 30,
+    colorTemp: '2700K',
+  },
+  'victorian': {
+    style: 'statement-architectural',
+    description: 'Elaborate lighting showcasing ornate details and trim work.',
+    intensityRange: [55, 75],
+    beamAngle: 20,
+    colorTemp: '3000K',
+  },
+  'mid-century': {
+    style: 'clean-minimal',
+    description: 'Subtle lighting respecting the less-is-more philosophy.',
+    intensityRange: [35, 55],
+    beamAngle: 30,
+    colorTemp: '3000K',
+  },
+  'transitional': {
+    style: 'balanced-traditional',
+    description: 'Versatile lighting that bridges traditional and contemporary.',
+    intensityRange: [45, 65],
+    beamAngle: 25,
+    colorTemp: '3000K',
+  },
+  'unknown': {
+    style: 'balanced-traditional',
+    description: 'Balanced approach suitable for most home styles.',
+    intensityRange: [45, 65],
+    beamAngle: 30,
+    colorTemp: '3000K',
+  },
+};
+
+export type FacadeWidthType = 'narrow' | 'medium' | 'wide' | 'extra-wide';
+
+export interface SpacingConfig {
+  minFixtures: number;
+  maxFixtures: number;
+  idealSpacing: string;
+  description: string;
+}
+
+/**
+ * Fixture count and spacing recommendations by facade width
+ */
+export const SPACING_BY_FACADE_WIDTH: Record<FacadeWidthType, SpacingConfig> = {
+  'narrow': {
+    minFixtures: 2,
+    maxFixtures: 4,
+    idealSpacing: '4-6 feet',
+    description: 'Compact facade under 30 feet. Focus on entry and corners.',
+  },
+  'medium': {
+    minFixtures: 4,
+    maxFixtures: 8,
+    idealSpacing: '6-8 feet',
+    description: 'Standard facade 30-50 feet. Even distribution with entry emphasis.',
+  },
+  'wide': {
+    minFixtures: 6,
+    maxFixtures: 12,
+    idealSpacing: '6-8 feet',
+    description: 'Expansive facade 50-80 feet. Create rhythm with strategic groupings.',
+  },
+  'extra-wide': {
+    minFixtures: 10,
+    maxFixtures: 20,
+    idealSpacing: '8-10 feet',
+    description: 'Grand facade over 80 feet. Zone-based approach recommended.',
+  },
+};
+
+/**
+ * Material-based beam angle recommendations for texture grazing
+ */
+export const BEAM_ANGLE_BY_MATERIAL: Record<string, { angle: number; reason: string }> = {
+  'brick': { angle: 15, reason: 'Narrow beam reveals mortar joint shadows for dramatic texture' },
+  'stone': { angle: 15, reason: 'Narrow beam creates dramatic light/shadow play on irregular surfaces' },
+  'stucco': { angle: 25, reason: 'Medium-narrow beam shows subtle texture without harsh shadows' },
+  'siding-lap': { angle: 25, reason: 'Medium-narrow beam reveals horizontal shadow lines between boards' },
+  'siding-board-and-batten': { angle: 20, reason: 'Narrow beam emphasizes vertical batten shadows' },
+  'siding-shake': { angle: 20, reason: 'Narrow beam creates layered shadow pattern' },
+  'vinyl': { angle: 30, reason: 'Medium beam works well on smooth surfaces' },
+  'wood': { angle: 25, reason: 'Medium-narrow beam reveals grain and natural texture' },
+  'concrete': { angle: 30, reason: 'Medium beam for modern, smooth surfaces' },
+  'glass': { angle: 45, reason: 'Wider beam to minimize direct glare reflection' },
+  'metal': { angle: 30, reason: 'Medium beam to control reflections' },
+  'mixed': { angle: 25, reason: 'Balanced angle for varied materials' },
+};
+
+/**
+ * Wall height to intensity recommendations
+ */
+export const INTENSITY_BY_WALL_HEIGHT: Record<string, { min: number; max: number; wattage: string }> = {
+  '8-12ft': { min: 40, max: 55, wattage: '3-5W LED (200-400 lumens)' },
+  '18-25ft': { min: 55, max: 70, wattage: '6-10W LED (500-800 lumens)' },
+  '25+ft': { min: 70, max: 85, wattage: '10-15W LED (800-1200 lumens)' },
+};
+
+/**
+ * Feature-specific lighting guidelines
+ */
+export const FEATURE_LIGHTING_GUIDELINES: Record<string, string> = {
+  'gable': 'Uplight from gutter line to illuminate triangular peak. One fixture per gable, centered.',
+  'dormer': 'Gutter-mounted uplight below each dormer. One fixture per dormer, centered on dormer width.',
+  'column': 'Ground-mounted uplight at base of each column. Graze the full height to capital.',
+  'pilaster': 'Treat like flat columns. One uplight per pilaster, tight to wall.',
+  'archway': 'Flank with uplights to trace the arch curve. Two fixtures minimum.',
+  'portico': 'Combination of column uplights and soffit downlights for layered effect.',
+  'bay-window': 'Uplight from ground to emphasize projection. Avoid direct light on glass.',
+  'balcony': 'Underlight the balcony floor or uplight supporting columns.',
+  'turret': 'Multiple uplights around base to illuminate cylindrical form evenly.',
+  'chimney': 'Single uplight at base if prominent. Avoid if utility-focused.',
+  'shutters': 'Uplight the wall; shutters catch natural spill creating depth.',
+  'corbels': 'Uplight below to create dramatic shadows from brackets.',
+  'dentil-molding': 'Graze from below to emphasize the rhythmic shadow pattern.',
+};
+
+/**
+ * Avoid zone reasons and their severity
+ */
+export const AVOID_ZONE_GUIDANCE: Record<string, { severity: 'critical' | 'important' | 'suggested'; guidance: string }> = {
+  'window-glare': { 
+    severity: 'important', 
+    guidance: 'Avoid placing fixtures directly below windows. Position between windows to prevent glare.' 
+  },
+  'door-obstruction': { 
+    severity: 'critical', 
+    guidance: 'Never place fixtures that block door swing or foot traffic paths.' 
+  },
+  'utility-equipment': { 
+    severity: 'critical', 
+    guidance: 'Keep fixtures away from electrical panels, gas meters, and HVAC units.' 
+  },
+  'hardscape-surface': { 
+    severity: 'important', 
+    guidance: 'Standard fixtures should not be placed on concrete or pavers (use core drill lights).' 
+  },
+  'hvac-unit': { 
+    severity: 'critical', 
+    guidance: 'Maintain clearance from AC units and heat pumps for service access.' 
+  },
+  'meter-box': { 
+    severity: 'critical', 
+    guidance: 'Keep fixtures clear of utility meter boxes for reader access.' 
+  },
+  'spigot-hose': { 
+    severity: 'suggested', 
+    guidance: 'Avoid placing near hose bibs where fixtures may be hit by hoses.' 
+  },
+  'structural-hazard': { 
+    severity: 'critical', 
+    guidance: 'Avoid areas with drainage issues, unstable ground, or root systems.' 
+  },
+  'aesthetic-concern': { 
+    severity: 'suggested', 
+    guidance: 'Consider visual balance and avoid cluttered fixture placement.' 
+  },
+};
+
+/**
+ * Enhanced Analysis System Prompt for comprehensive property analysis
+ */
+export const ENHANCED_ANALYSIS_SYSTEM_PROMPT = `You are an expert landscape lighting designer with 20+ years of experience. Analyze this property photo with the precision of a seasoned professional.
+
+## YOUR EXPERTISE INCLUDES:
+- Architectural style recognition and appropriate lighting approaches
+- Material identification and texture grazing techniques
+- Optimal fixture placement for maximum impact with minimal fixtures
+- Safety considerations and avoid zones
+- Professional spacing standards (6-8 feet typical)
+
+## ANALYSIS PRIORITIES:
+1. **Identify architectural style** - This drives the entire lighting approach
+2. **Detect facade materials** - Beam angles depend on texture
+3. **Count and locate features** - Windows, columns, gables, dormers
+4. **Find optimal uplight positions** - Wall piers, columns, corners
+5. **Identify avoid zones** - Windows, doors, utilities
+6. **Calculate fixture counts** - Based on facade width
+7. **Suggest specific positions** - With X/Y percentages
+
+## PROFESSIONAL STANDARDS:
+- Uplight spacing: 6-8 feet apart
+- Path light spacing: 6-8 feet apart
+- Always start with far corners and work inward
+- Entry gets priority treatment
+- Symmetry when architecture supports it
+- Dark gaps between fixtures = professional look
+
+## OUTPUT REQUIREMENTS:
+- Every suggested position MUST have xPercent and yPercent coordinates
+- Reasoning MUST explain WHY each placement is recommended
+- Avoid zones MUST include all windows and doors
+- Confidence score reflects analysis quality`;
+
+/**
+ * Quick analysis prompt for when user hasn't selected fixtures yet
+ */
+export const QUICK_ANALYSIS_PROMPT = `Analyze this property photo and provide:
+1. Architectural style (modern, traditional, craftsman, etc.)
+2. Facade width classification (narrow, medium, wide, extra-wide)
+3. Story count and wall height
+4. Key architectural features (gables, columns, dormers)
+5. Primary facade material
+6. Recommended lighting approach
+
+Return a brief JSON summary for initial fixture suggestions.`;

@@ -346,6 +346,35 @@ export interface SettingsSnapshot {
   lightIntensity?: number;
   beamAngle?: number;
   userPrompt?: string;
+  /** Lighting style preset ID */
+  lightingStyleId?: string;
+  /** Lighting style overrides */
+  lightingStyleOverrides?: {
+    colorTemp?: number;
+    intensity?: number;
+    contrast?: 'low' | 'medium' | 'high';
+  };
+}
+
+// === LIGHTING STYLE PRESET TYPES ===
+export interface LightingStylePresetSummary {
+  id: string;
+  name: string;
+  description: string;
+  colorTemp: number;
+  intensity: number;
+  contrast: 'low' | 'medium' | 'high';
+}
+
+export interface UserLightingPreferences {
+  defaultStyleId: string;
+  savedOverrides: Record<string, {
+    colorTemp?: number;
+    intensity?: number;
+    contrast?: 'low' | 'medium' | 'high';
+  }>;
+  favoriteStyles: string[];
+  lastUsedStyleId?: string;
 }
 
 export interface GenerationFeedback {
