@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import type { AccentColor, FontSize, NotificationPreferences } from '../types';
 
 interface AppSettings {
@@ -46,11 +46,11 @@ interface AppSettingsContextType extends AppSettings {
 }
 
 const defaultNotifications: NotificationPreferences = {
-  email: true,
-  push: false,
-  scheduleReminders: true,
-  quoteFollowUps: true,
-  projectUpdates: true,
+  emailProjectUpdates: true,
+  emailQuoteReminders: true,
+  smsNotifications: false,
+  marketingEmails: false,
+  soundEffects: true,
 };
 
 const defaultSettings: AppSettings = {

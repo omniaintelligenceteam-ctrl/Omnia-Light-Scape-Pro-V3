@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { DEFAULT_PRICING } from '../constants';
 import type { CompanyProfile, FixturePricing, CustomPricingItem, FixtureCatalogItem } from '../types';
 
@@ -37,7 +37,7 @@ const defaultCompanyProfile: CompanyProfile = {
   email: '',
   phone: '',
   address: '',
-  logo: undefined,
+  logo: null,
 };
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
