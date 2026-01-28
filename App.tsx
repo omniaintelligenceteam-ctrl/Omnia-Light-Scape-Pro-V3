@@ -794,7 +794,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Status messages for loading screen - first 5 at 15s, last one at 30s
+  // Status messages for loading screen - 100 seconds total, even pace
   const statusMessages = [
     "Processing Image",
     "Analyzing Geometry",
@@ -806,8 +806,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (isLoading && !showLoadingCelebration) {
-      // First 5 messages: 15 seconds each, last message: 30 seconds
-      const duration = statusMessageIndex < 5 ? 15000 : 30000;
+      // 6 messages over 100 seconds = ~16.67 seconds each (same pace throughout)
+      const duration = 16667;
       const timeout = setTimeout(() => {
         setStatusMessageIndex(prev => (prev + 1) % statusMessages.length);
       }, duration);
