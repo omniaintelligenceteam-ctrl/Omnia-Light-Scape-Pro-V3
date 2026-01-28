@@ -48,37 +48,34 @@ export const GenerationPanelWithStyle: React.FC<GenerationPanelProps> = ({
   const {
     selectedStyleId,
     overrides,
+    appliedStyle,
     setStyleId,
     setOverrides,
-    getGenerationContext,
-    hasOverrides
+    getPromptAdditions
   } = useLightingStyle();
   
   // Handle generation with style context
   const handleGenerate = useCallback(async () => {
-    // Get the style context
-    const styleContext = getGenerationContext();
+    // Get the style additions
+    const styleAdditions = getPromptAdditions();
     
     // Example base prompts (these would come from fixture selections in real usage)
     const basePrompt = "professional landscape lighting design";
     const baseNegative = "daytime, sunlight, bright ambient";
     
     // Integrate style into prompts
-    const finalPrompt = integrateStyleIntoPrompt(basePrompt, styleContext);
-    const finalNegative = integrateStyleIntoNegativePrompt(baseNegative, styleContext);
-    
-    // Get IC-Light parameters
-    const icLightConfig = getICLightParams(styleContext);
+    const finalPrompt = `${styleAdditions.prefix} ${basePrompt} ${styleAdditions.suffix}`;
+    const finalNegative = baseNegative;
     
     // Call the generation function
     await onGenerate({
       prompt: finalPrompt,
       negativePrompt: finalNegative,
-      icLightConfig,
-      colorTemp: styleContext.colorTemp,
-      intensity: styleContext.intensity
+      icLightConfig: { cfg: 1.5, light_source: 'ambient' },
+      colorTemp: appliedStyle?.finalColorTemp || 2700,
+      intensity: appliedStyle?.finalIntensity || 0.7
     });
-  }, [getGenerationContext, onGenerate]);
+  }, [getPromptAdditions, appliedStyle, onGenerate]);
   
   return (
     <div className="space-y-6 p-4 bg-[#111] rounded-xl">
