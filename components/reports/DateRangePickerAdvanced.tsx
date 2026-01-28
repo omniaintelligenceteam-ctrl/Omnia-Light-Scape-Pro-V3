@@ -97,10 +97,6 @@ export const DateRangePickerAdvanced: React.FC<DateRangePickerAdvancedProps> = (
     }
   };
 
-  const formatDate = (date: Date): string => {
-    return date.toISOString().split('T')[0];
-  };
-
   return (
     <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4">
       <div className="flex items-center gap-2 mb-4">

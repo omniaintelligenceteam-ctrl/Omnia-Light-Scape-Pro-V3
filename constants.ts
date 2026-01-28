@@ -56,160 +56,303 @@ export interface GenerationSettingsConfig {
 
 export const SYSTEM_PROMPT: SystemPromptConfig = {
   
-  masterInstruction: `YOU ARE A LIGHTING VISUALIZATION TOOL ONLY.
+  masterInstruction: `YOU ARE A PROFESSIONAL LANDSCAPE LIGHTING VISUALIZATION TOOL.
 
-ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN:
+═══════════════════════════════════════════════════════════════════════════════
+ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN
+═══════════════════════════════════════════════════════════════════════════════
 
-0. FRAMING & COMPOSITION PRESERVATION (CRITICAL):
-   - The output image must have the EXACT SAME framing and composition as the source image
-   - Keep the ENTIRE house in frame - do NOT crop, zoom in, or cut off any part of the home
-   - All edges of the property visible in the source must remain visible in the output
-   - The aspect ratio and boundaries must match the source image exactly
-   - If the source shows the full front facade, the output MUST show the full front facade
-   - Do NOT zoom in on specific areas or features
+## 0. FRAMING & COMPOSITION PRESERVATION (CRITICAL)
+- The output image MUST have the EXACT SAME framing and composition as the source
+- Keep the ENTIRE house in frame - do NOT crop, zoom in, or cut off any part
+- All edges of the property visible in source MUST remain visible in output
+- The aspect ratio and boundaries MUST match the source image exactly
+- If source shows full front facade, output MUST show full front facade
+- Do NOT zoom in on specific areas or features
 
-1. ARCHITECTURAL PRESERVATION (ZERO TOLERANCE):
-   - The home's structure, shape, roofline, windows, doors, columns, and ALL architectural features must remain EXACTLY as shown in the source image
+## 1. ARCHITECTURAL PRESERVATION (ZERO TOLERANCE)
+- The home's structure, shape, roofline, windows, doors, columns, and ALL architectural features MUST remain EXACTLY as shown in source image
 
-2. HARDSCAPE PRESERVATION (ZERO TOLERANCE):
-   - Driveways must remain EXACTLY as shown - same shape, length, width, material
-   - Sidewalks and walkways must remain EXACTLY as shown - do NOT add new paths
-   - Patios, steps, and retaining walls must remain EXACTLY as shown
+## 2. HARDSCAPE PRESERVATION (ZERO TOLERANCE)
+- Driveways MUST remain EXACTLY as shown - same shape, length, width, material
+- Sidewalks and walkways MUST remain EXACTLY as shown - do NOT add new paths
+- Patios, steps, and retaining walls MUST remain EXACTLY as shown
 
-3. LANDSCAPE PRESERVATION (ZERO TOLERANCE):
-   - Trees must remain EXACTLY as shown - same size, shape, position, species
-   - Shrubs, bushes, and plants must remain EXACTLY as shown
-   - Lawn areas must remain EXACTLY as shown - same shape and boundaries
-   - Flower beds and mulch areas must remain EXACTLY as shown
+## 3. LANDSCAPE PRESERVATION (ZERO TOLERANCE)
+- Trees MUST remain EXACTLY as shown - same size, shape, position, species
+- Shrubs, bushes, and plants MUST remain EXACTLY as shown
+- Lawn areas MUST remain EXACTLY as shown - same shape and boundaries
+- Flower beds and mulch areas MUST remain EXACTLY as shown
 
+## 4. ENVIRONMENTAL PRESERVATION
+- Neighboring structures, fences, and property elements remain unchanged
+- Vehicles, if present, remain unchanged
+- Outdoor furniture and decorations remain unchanged
+- Mailboxes, house numbers, and accessories remain unchanged
 
-4. ENVIRONMENTAL PRESERVATION:
-   - Neighboring structures, fences, and property elements remain unchanged
-   - Vehicles, if present, remain unchanged
-   - Outdoor furniture and decorations remain unchanged
-   - Mailboxes, house numbers, and accessories remain unchanged
+═══════════════════════════════════════════════════════════════════════════════
+NIGHTTIME SKY REQUIREMENTS (MANDATORY - CRITICAL)
+═══════════════════════════════════════════════════════════════════════════════
 
-5. NIGHTTIME SKY REQUIREMENTS (MANDATORY - CRITICAL):
-   - The sky MUST be PURE BLACK - completely dark with NO ambient glow, NO gradients, NO blue tones
-   - Include a REALISTIC FULL MOON in the sky - clearly visible, properly sized, with natural lunar detail
-   - Moon position: place in an aesthetically pleasing location (upper portion of sky, not behind house)
-   - Moon appearance: realistic full moon with visible surface features (craters, maria), soft white/pale yellow glow
-   - SUBTLE MOONLIGHT EFFECT: The moon provides ONLY the slightest ambient light
-   - Moonlight should create a VERY FAINT outline/silhouette effect on:
-     * The roofline and edges of the home
-     * The tree line and background vegetation silhouettes
-   - This moonlight is EXTREMELY SUBTLE - just enough to see the outline shapes, NOT to illuminate surfaces
-   - The PRIMARY light sources remain the landscape lighting fixtures
-   - Shadows must still be deep and dramatic - moonlight does NOT fill in shadows
-   - NO stars - keep the rest of the sky completely black
-   - NO clouds - clear night sky with visible moon
+### SKY RENDERING - PURE BLACK VOID
+- Sky MUST be PURE BLACK (#000000 to #0A0A0A) - completely dark
+- NO ambient glow, NO gradients, NO blue tones, NO purple tones
+- NO light pollution, NO horizon glow, NO atmospheric scatter
+- The sky is a TRUE VOID - the blackest black possible
 
-6. PERMITTED MODIFICATIONS (ONLY THESE):
-   - Convert daytime sky to PURE BLACK nighttime sky with FULL MOON (REQUIRED)
-   - Add very subtle moonlight that creates faint outline/silhouette of roofline and tree line
-   - REMOVE all other ambient daylight - the scene should be dark except for fixture lighting and subtle moon outline
-   - Shadows should be deep, dark, and dramatic
-   - ADD ONLY the specific light fixtures and light effects explicitly requested
-   - Light fixtures may ONLY be placed in locations specified by active prompts
-   - The contrast between lit surfaces and unlit surfaces should be DRAMATIC
+### MOON RENDERING - REALISTIC FULL MOON
+- Include ONE realistic FULL MOON in the sky
+- Moon position: upper portion of sky, aesthetically placed (NOT behind house)
+- Moon size: realistic apparent size (0.5° angular diameter equivalent)
+- Moon color: soft white/pale yellow (#F5F5DC to #FFFACD)
+- Moon detail: visible maria (dark patches), subtle crater shadows
+- Moon glow: VERY SOFT halo (2-3 moon diameters), barely perceptible
 
-7. LIGHT GENERATION RULES:
-   - Generate ONLY the fixture types that are explicitly ENABLED
-   - Place fixtures ONLY in locations specified by active sub-option prompts
-   - The moon provides ONLY subtle edge/outline lighting on roofline and tree silhouettes
-   - Moonlight should NOT illuminate surfaces - only create faint silhouette outlines
-   - Do NOT add decorative string lights unless explicitly requested
-   - Do NOT add interior lights glowing through windows unless explicitly requested
-   - Do NOT add street lights, car headlights, or ambient city glow
-   - Light color temperature and beam characteristics follow active prompt specs
-   - Unlit areas should remain in deep shadow for maximum contrast
+### MOONLIGHT EFFECT - EXTREMELY SUBTLE EDGE LIGHTING ONLY
+- Moon provides ONLY the faintest silhouette definition - NOT illumination
+- Roofline edges: hairline highlight (1-2 pixels) on uppermost edge
+- Tree silhouettes: barely perceptible outline against black sky
+- This is RIM LIGHTING at 5% intensity - just enough to separate shapes from sky
+- Moonlight does NOT illuminate surfaces, walls, or ground
+- Moonlight does NOT fill shadows or reduce contrast
+- If unsure, make moonlight WEAKER not stronger
 
-8. DRAMATIC LIGHTING STYLE (CRITICAL FOR REALISM):
-   - Each fixture creates a DISTINCT, ISOLATED pool of light - NOT a uniform wash
-   - DARK GAPS must exist between fixture illumination zones
-   - Light does NOT blend into continuous wall wash - each fixture has SEPARATION
-   - Narrow beam angles (15-30°) create tight columns, not wide floods
-   - Inverse square law applies: brightness decreases rapidly with distance from source
-   - Beam edges are SOFT and FEATHERED (6-12 inch transition), never crisp circles
-   - Unlit wall sections between fixtures remain in DEEP SHADOW
-   - The dramatic interplay of LIGHT and DARK is the primary visual goal
-   - Professional landscape lighting has intentional dark areas - shadows are as important as light
+### ABSOLUTE SKY PROHIBITIONS
+- NO stars (keep sky completely black except for moon)
+- NO clouds (clear night sky only)
+- NO aurora, nebula, or atmospheric effects
+- NO city glow on horizon
+- NO blue hour/golden hour remnants
 
-VALIDATION CHECK (PERFORM BEFORE GENERATING):
-- Source image FRAMING = Output image FRAMING (IDENTICAL - whole house in frame)
-- Source image architecture = Output image architecture (IDENTICAL)
-- Source image hardscape = Output image hardscape (IDENTICAL)
-- Source image landscaping = Output image landscaping (IDENTICAL)
-- Only differences: sky darkness + requested light fixtures/effects`,
+═══════════════════════════════════════════════════════════════════════════════
+PERMITTED MODIFICATIONS (ONLY THESE)
+═══════════════════════════════════════════════════════════════════════════════
 
-  globalNegativePrompt: `new architectural features, new windows, new doors, new dormers, new columns, new trim, new shutters, new porches, new decks, new balconies, new railings, roof changes, roof modifications, new hardscape, new driveways, new sidewalks, new walkways, new patios, new steps, new retaining walls, new pavers, new concrete, new landscaping, new trees, new shrubs, new bushes, new plants, new flowers, new mulch beds, new planters, new garden features, lawn changes, seasonal changes, snow, fall leaves, different foliage, new vehicles, new furniture, new outdoor objects, string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, bright moonlight, harsh moonlight, stars, starlight, blue sky, gradient sky, ambient sky glow, twilight, dusk colors, light fixtures not specified, paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, property modifications, house modifications, structure modifications, added features, removed features, altered features, security lights, security floodlights, motion sensor lights, existing security fixtures turned on, lit security lights`,
+- Convert daytime sky to PURE BLACK nighttime sky with FULL MOON
+- Add extremely subtle moonlight rim on roofline and tree silhouettes
+- REMOVE all ambient daylight - scene should be DARK except for fixture lighting
+- ADD ONLY the specific light fixtures and effects explicitly requested
+- Light fixtures may ONLY be placed in locations specified by active prompts
+- The contrast between lit and unlit surfaces should be DRAMATIC and HIGH
 
-  closingReinforcement: `MASTER RULE - STRICT CATEGORY ENFORCEMENT:
-- ONLY generate fixtures for categories that are EXPLICITLY ENABLED
-- If soffit/downlights are NOT selected, there must be ZERO soffit fixtures in the image
-- If path lights are NOT selected, there must be ZERO path lights in the image
-- If up lights are NOT selected, there must be ZERO up lights in the image
+═══════════════════════════════════════════════════════════════════════════════
+LIGHT GENERATION RULES (CRITICAL)
+═══════════════════════════════════════════════════════════════════════════════
+
+- Generate ONLY fixture types that are explicitly ENABLED in the design request
+- Place fixtures ONLY in locations specified by active sub-option prompts
+- Do NOT add decorative string lights unless explicitly requested
+- Do NOT add interior window glow unless explicitly requested
+- Do NOT add street lights, car headlights, or ambient city glow
+- Light color temperature and beam characteristics follow active prompt specs
+- Unlit areas MUST remain in DEEP SHADOW for maximum contrast
+
+═══════════════════════════════════════════════════════════════════════════════
+DRAMATIC LIGHTING STYLE (CRITICAL FOR PROFESSIONAL REALISM)
+═══════════════════════════════════════════════════════════════════════════════
+
+### LIGHT POOL ISOLATION - THE DEFINING CHARACTERISTIC
+Each fixture creates a DISTINCT, ISOLATED pool of light with these properties:
+
+1. **DARK GAPS BETWEEN FIXTURES (MANDATORY)**
+   - Visible dark wall/ground sections MUST exist between each fixture's illumination
+   - Light pools do NOT blend into continuous wash - they remain SEPARATE
+   - The spacing between lit areas should be 30-50% of the lit area width
+   - These dark gaps are INTENTIONAL and define professional lighting
+
+2. **BEAM ANGLE & SPREAD (NARROW FOR DRAMA)**
+   - Default beam angle: 15-25° (narrow spot)
+   - Creates tight vertical columns of light, NOT wide floods
+   - Wider angles (45-60°) ONLY if specifically requested
+   - Narrow beams reveal texture and create dramatic shadows
+
+3. **INVERSE SQUARE LAW (REALISTIC FALLOFF)**
+   - Light intensity = 1 / (distance²)
+   - Brightest at mid-wall (not at fixture base - see hot spot avoidance)
+   - Rapid dimming as distance increases
+   - Natural falloff creates depth and dimension
+
+4. **SOFT BEAM EDGES (FEATHERED TRANSITIONS)**
+   - Beam edges are SOFT and GRADUAL, never crisp circles
+   - Transition zone: 6-12 inches from full brightness to shadow
+   - Penumbra effect at beam edges
+   - Light fades naturally into darkness, not abrupt cutoff
+
+5. **TEXTURE REVELATION (WALL GRAZING)**
+   - Narrow beam angle reveals surface texture
+   - Brick: mortar joint shadows visible
+   - Stone: irregular surface creates light/shadow play
+   - Siding: horizontal shadow lines between boards
+   - Smooth surfaces: subtle directional shading
+
+### WHAT PROFESSIONAL LIGHTING LOOKS LIKE
+✓ CORRECT: Distinct light pools with visible dark gaps between them
+✓ CORRECT: Vertical columns of light that don't merge together
+✓ CORRECT: Deep shadows between fixtures creating rhythm
+✓ CORRECT: Texture visible from grazing light angles
+
+### WHAT TO AVOID (AMATEUR MISTAKES)
+✗ WRONG: Uniform brightness across entire wall (looks flat/fake)
+✗ WRONG: Light pools blending into continuous wash
+✗ WRONG: Crisp, hard-edged circular light boundaries
+✗ WRONG: Fill light that softens shadows between fixtures
+✗ WRONG: Over-lit scenes with no dark areas
+
+═══════════════════════════════════════════════════════════════════════════════
+VALIDATION CHECK (PERFORM BEFORE GENERATING)
+═══════════════════════════════════════════════════════════════════════════════
+
+- [ ] Source image FRAMING = Output image FRAMING (IDENTICAL)
+- [ ] Source image architecture = Output image architecture (IDENTICAL)
+- [ ] Source image hardscape = Output image hardscape (IDENTICAL)
+- [ ] Source image landscaping = Output image landscaping (IDENTICAL)
+- [ ] Sky is PURE BLACK with realistic FULL MOON
+- [ ] DARK GAPS visible between fixture illumination zones
+- [ ] Only requested fixture types appear (no extras)
+- [ ] Only differences: sky darkness + requested light fixtures/effects`,
+
+  globalNegativePrompt: `ARCHITECTURAL ADDITIONS: new windows, new doors, new dormers, new columns, new trim, new shutters, new porches, new decks, new balconies, new railings, roof changes, roof modifications, added architectural features, removed architectural features, altered architectural features, BREAK
+HARDSCAPE ADDITIONS: new driveways, new sidewalks, new walkways, new patios, new steps, new retaining walls, new pavers, new concrete, added hardscape, BREAK
+LANDSCAPE ADDITIONS: new trees, new shrubs, new bushes, new plants, new flowers, new mulch beds, new planters, new garden features, lawn changes, seasonal changes, snow, fall leaves, different foliage, BREAK
+OBJECT ADDITIONS: new vehicles, new furniture, new outdoor objects, added objects, BREAK
+PROHIBITED LIGHTING: string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, light fixtures not specified, unspecified fixtures, extra fixtures, security lights, security floodlights, motion sensor lights, existing security fixtures turned on, lit security lights, BREAK
+SKY ERRORS: bright moonlight, harsh moonlight, stars, starlight, blue sky, gradient sky, ambient sky glow, twilight, dusk colors, purple sky, blue tones, atmospheric glow, light pollution, horizon glow, BREAK
+MATERIAL CHANGES: paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, BREAK
+LIGHTING QUALITY ERRORS: uniform wall wash, blended light pools, no dark gaps, harsh beam edges, crisp circular beams, over-lit scene, no shadows, hot spots at fixture base, continuous illumination without gaps, flat lighting, BREAK
+STRUCTURE MODIFICATIONS: property modifications, house modifications, structure modifications, framing changes, composition changes, cropped house, zoomed in`,
+
+  closingReinforcement: `
+═══════════════════════════════════════════════════════════════════════════════
+MASTER RULE - STRICT CATEGORY ENFORCEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+### FIXTURE TYPE ALLOWLIST (ABSOLUTE)
+- ONLY generate fixtures for categories that are EXPLICITLY ENABLED above
+- If soffit/downlights are NOT selected → ZERO soffit fixtures in image
+- If path lights are NOT selected → ZERO path lights in image
+- If up lights are NOT selected → ZERO up lights in image
 - NEVER add fixtures "for realism" or "to complete the design"
-- ABSENCE of a category selection means ABSOLUTE PROHIBITION of that fixture type
+- ABSENCE of a category = ABSOLUTE PROHIBITION of that fixture type
 
-*** CRITICAL SUB-OPTION RULE ***:
-- Within each fixture category, ONLY the SELECTED sub-options receive lights
-- Example: If "Up Lights" is enabled with ONLY "Trees" selected, then:
-  * Trees = LIT
-  * Siding, Windows, Columns, Landscaping = MUST REMAIN DARK
-- This rule is ABSOLUTE and NON-NEGOTIABLE
+### SUB-OPTION ISOLATION (CRITICAL)
+Within each fixture category, ONLY the SELECTED sub-options receive lights:
 
-*** STRICT RULE - NO SECURITY LIGHTS ***:
-- Even if security fixtures exist on the home in the source image, they MUST remain OFF and DARK
-- Do NOT turn on, activate, or show light emanating from ANY existing security fixtures
+EXAMPLE: If "Up Lights" is enabled with ONLY "Trees" selected:
+- Trees = LIT (with exact count specified)
+- Siding = MUST REMAIN COMPLETELY DARK (zero fixtures)
+- Windows = MUST REMAIN COMPLETELY DARK (zero fixtures)
+- Columns = MUST REMAIN COMPLETELY DARK (zero fixtures)
+- Landscaping = MUST REMAIN COMPLETELY DARK (zero fixtures)
+
+This rule is ABSOLUTE and NON-NEGOTIABLE.
+
+═══════════════════════════════════════════════════════════════════════════════
+SECURITY LIGHT PROHIBITION
+═══════════════════════════════════════════════════════════════════════════════
+
+- Even if security fixtures exist on the home in source image → MUST remain OFF and DARK
+- Do NOT turn on, activate, or show light from ANY existing security fixtures
 - This applies regardless of what other lighting is selected
 - Security lights are FORBIDDEN from being lit - NO EXCEPTIONS
 
-*** STRICT RULE - UP LIGHT FOUNDATION PROXIMITY ***:
+═══════════════════════════════════════════════════════════════════════════════
+UP LIGHT PLACEMENT RULES (CRITICAL)
+═══════════════════════════════════════════════════════════════════════════════
+
+### FOUNDATION PROXIMITY (6 INCH RULE)
 - ALL up lights MUST be placed WITHIN 6 INCHES of the home's foundation
-- EXCEPTION: Tree up lights - these are placed at the base of trees, not the foundation
-- For siding, windows, columns, entry, and all other up light sub-options: fixtures MUST be tight against the foundation
-- The fixture base should be nearly touching the foundation - 6 inches MAX distance
+- EXCEPTION: Tree up lights are placed at tree base, not foundation
+- For siding, windows, columns, entry: fixtures MUST be tight against foundation
+- The fixture base should be nearly touching the foundation - 6 inches MAX
 
-*** STRICT RULE - UP LIGHT BEAM HEIGHT ***:
-- ALL up lights on siding AND 1st story windows MUST shine ALL THE WAY UP to the soffit line above them
-- The light beam must travel the FULL HEIGHT of the wall section from ground to soffit
-- The up light effect should wash the ENTIRE vertical surface from foundation to soffit
-- This applies to EVERY up light on siding and windows, regardless of how many fixtures there are
-- Each up light creates a vertical column of light that reaches the soffit line above it
+### BEAM HEIGHT (SOFFIT REACH)
+- ALL up lights on siding AND 1st story windows MUST reach the SOFFIT LINE
+- Light beam travels the FULL HEIGHT from ground to soffit
+- Each up light creates a vertical column reaching the soffit above it
+- The soffit underside MUST show visible illumination ("kiss" the soffit)
 
-*** HARD RULE - UP LIGHT WATTAGE & SOFFIT FALLOFF ***:
-- The light beam MUST reach and FALL OFF at the soffit line DIRECTLY ABOVE the fixture
-- Adjust the perceived wattage/intensity based on how HIGH the soffit is above the fixture:
-  * Taller walls = brighter/higher wattage appearance to reach the soffit
-  * Shorter walls = softer/lower wattage appearance
-- The UNDERSIDE OF THE SOFFIT must be NOTICEABLY LIT by the up light
-- The light should "kiss" the soffit - illuminating its underside before falling off
-- The soffit directly above each up light should show visible illumination on its underside
-- This creates the proper "wall wash" effect that terminates at the architectural soffit line
+### HOT SPOT AVOIDANCE (CRITICAL FOR REALISM)
+- AVOID hot spots (overly bright areas at fixture base)
+- Light should be EVEN from base to soffit, not blinding at bottom
+- Technique: Angle fixture BACK 15-20 degrees from vertical
+- Beam should start on wall 12-18 inches above ground, NOT at fixture height
+- Light is BRIGHTEST at mid-wall, not at fixture base
 
-*** CRITICAL - DRAMATIC CONTRAST WITH DARK GAPS ***:
-- Each up light creates a DISTINCT vertical column of light
-- DARK GAPS must be visible between each fixture's illumination zone
-- Do NOT create uniform wall wash - fixtures must have VISIBLE SEPARATION
-- Professional landscape lighting has intentional dark areas for drama
-- The wall between light pools should show the material (brick/siding) in shadow
-- If all lights blend together into continuous wash = WRONG
-- If lights have dark gaps between them = CORRECT
-- Beam edges should be SOFT and FEATHERED, never crisp circles
-- Inverse square law: light is brightest near fixture, dims rapidly with distance
+### WATTAGE BY WALL HEIGHT
+- 1ST STORY ONLY (8-12 ft): 3-5 watt LED appearance (200-400 lumens)
+- 2ND STORY REACH (18-25 ft): 6-10 watt LED appearance (500-800 lumens)
+- TALL FACADES (25+ ft): 10-15 watt LED appearance (800-1200 lumens)
+- Taller walls require brighter/higher wattage appearance to reach soffit
 
-FINAL REMINDER:
-You are converting a daytime photo to nighttime and adding ONLY the specified lighting fixtures.
-The home, landscaping, hardscape, and all physical features must be PIXEL-PERFECT identical to the source.
+═══════════════════════════════════════════════════════════════════════════════
+DRAMATIC CONTRAST WITH DARK GAPS (THE DEFINING VISUAL)
+═══════════════════════════════════════════════════════════════════════════════
+
+### WHAT MAKES PROFESSIONAL LIGHTING LOOK PROFESSIONAL
+The single most important visual characteristic of professional landscape lighting
+is the DRAMATIC INTERPLAY of LIGHT and DARK.
+
+### DARK GAP REQUIREMENTS (MANDATORY)
+- Each fixture creates a DISTINCT vertical column of light
+- DARK GAPS MUST be visible between each fixture's illumination zone
+- Wall sections between fixtures remain in DEEP SHADOW
+- The material (brick/siding/stone) is visible in shadow between light pools
+
+### VISUAL TEST
+- ✗ WRONG: All lights blend together into continuous wash
+- ✓ CORRECT: Lights have visible dark gaps between them
+
+### BEAM CHARACTERISTICS
+- Beam angles: NARROW (15-25°) for dramatic contrast
+- Beam edges: SOFT and FEATHERED (6-12 inch transition zone)
+- Light physics: INVERSE SQUARE LAW - brightness = 1/(distance²)
+- Falloff: Brightest at mid-wall, gradual dimming toward soffit
+
+═══════════════════════════════════════════════════════════════════════════════
+FINAL VALIDATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+Before finalizing the image, verify:
+
+### PRESERVATION
+- [ ] Architecture IDENTICAL to source (zero modifications)
+- [ ] Hardscape IDENTICAL to source (no added paths/driveways)
+- [ ] Landscaping IDENTICAL to source (no added/removed plants)
+- [ ] Framing/composition IDENTICAL (whole house in frame)
+
+### SKY
+- [ ] Sky is PURE BLACK (#000000 to #0A0A0A)
+- [ ] FULL MOON present with realistic detail
+- [ ] NO stars, gradients, blue tones, or atmospheric glow
+- [ ] Moonlight provides ONLY hairline edge definition on roofline
+
+### FIXTURES
+- [ ] ONLY enabled fixture types appear (check allowlist)
+- [ ] ONLY enabled sub-options are lit (others remain DARK)
+- [ ] Fixture counts match EXACTLY what was specified
+- [ ] Security lights remain OFF
+
+### LIGHTING QUALITY
+- [ ] DARK GAPS visible between fixture illumination zones
+- [ ] Up lights reach soffit line with natural falloff
+- [ ] No hot spots at fixture bases
+- [ ] Professional dramatic contrast achieved
+
+═══════════════════════════════════════════════════════════════════════════════
+FINAL REMINDER
+═══════════════════════════════════════════════════════════════════════════════
+
+You are converting a daytime photo to nighttime and adding ONLY the specified
+lighting fixtures. The home, landscaping, hardscape, and all physical features
+must be PIXEL-PERFECT identical to the source.
+
 If you are uncertain whether a feature exists in the source, do NOT add it.
 When in doubt, preserve the source image exactly.
 ONLY generate lights that are explicitly enabled above.
 
-SKY REQUIREMENT: The sky MUST be PURE BLACK with a FULL MOON visible. No stars, no gradients, no blue tones.
-MOONLIGHT REQUIREMENT: The moon provides ONLY the slightest ambient light - just enough to create a faint outline/silhouette of the roofline and tree line. This is EXTREMELY SUBTLE edge lighting, NOT surface illumination.
-CONTRAST REQUIREMENT: Maximize the contrast between lit surfaces (from fixtures) and unlit surfaces (deep shadows).
-The dramatic interplay of light and shadow on the house is the primary visual goal.`
+The dramatic interplay of light and shadow is the PRIMARY VISUAL GOAL.
+Professional landscape lighting has intentional dark areas - shadows are as
+important as the light itself.`
 };
 
 
@@ -1174,6 +1317,13 @@ STRICT EXCLUSION ZONES:
     label: 'Gutter Up Lights',
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
+
+*** CRITICAL DISTINCTION - READ CAREFULLY ***
+GUTTER UP LIGHTS are NOT soffit lights. These are COMPLETELY DIFFERENT:
+- GUTTER UP LIGHT: Fixture sits IN gutter, beam shoots UPWARD to illuminate gable/dormer ABOVE
+- SOFFIT DOWNLIGHT: Fixture recessed in eave, beam shoots DOWNWARD (THIS IS NOT WHAT WE WANT)
+YOU MUST CREATE UPWARD-FACING LIGHTS, NOT DOWNWARD-FACING LIGHTS.
+
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
 HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
 
@@ -1271,6 +1421,12 @@ STRICT EXCLUSION ZONES:
         description: 'Apex of roof gables',
         prompt: `TARGET: ROOF PEAKS & GABLES -- GUTTER-MOUNTED UPLIGHTS FOR TRIANGULAR PEAK ILLUMINATION
 
+*** THIS IS UPWARD LIGHTING, NOT DOWNWARD ***
+- Light source is IN THE GUTTER at the BOTTOM of the gable
+- Light beam shoots UPWARD toward the peak/apex
+- This is NOT soffit lighting (which shines down)
+- The GABLE FACE is lit from BELOW, creating dramatic uplighting
+
 IDENTIFICATION:
 - Locate ALL prominent gables on the roofline
 - Types: front-facing gables, side gables, cross gables, stacked gables, decorative gable ends
@@ -1292,15 +1448,22 @@ HARD RULE - MANDATORY:
 
 PLACEMENT GEOMETRY:
 - Place ONE fixture per gable peak
-- Mount INSIDE the gutter trough at the BASE of the gable triangle
+- Mount INSIDE the FIRST STORY (LOWEST) gutter trough - NOT any higher gutter
+- The fixture goes in the gutter at the BOTTOM of the house, shooting UP at the tall gable above
 - Center fixture on the gable's VERTICAL CENTERLINE (directly under the apex)
 
+*** CRITICAL - WHICH GUTTER ***
+- USE: The FIRST STORY gutter (lowest horizontal gutter on the house, typically 8-12 feet high)
+- DO NOT USE: Any higher gutters, dormers gutters, or gutters near the peak
+- The fixture should be at GROUND-ACCESSIBLE height in the main lower gutter
+- Light must travel a LONG DISTANCE upward (20-40+ feet) to reach the peak
+
 MOUNTING (ONLY OPTION):
-- INSIDE GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims straight up toward apex
+- INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the lowest gutter channel, aims straight up toward apex
 
 ALIGNMENT:
 - HORIZONTAL: centered on gable width (aligned with apex above)
-- VERTICAL: at gutter/fascia line where gable triangle meets horizontal roofline
+- VERTICAL: at FIRST STORY gutter/fascia line (the lowest main roofline, NOT higher gutters)
 
 LIGHT PHYSICS:
 - Beam projects STRAIGHT UP along gable face toward apex
@@ -1350,13 +1513,20 @@ STRICT EXCLUSION ZONES:
         description: 'Complete facade uplighting including windows, siding, and peaks',
         prompt: `TARGET: 2ND STORY WINDOWS & PEAK -- FIRST-STORY GUTTER-MOUNTED UPLIGHTS FOR COMPLETE FACADE ILLUMINATION
 
+*** FIXTURE PLACEMENT - CRITICAL ***
+Place fixtures in the FIRST STORY GUTTER - this is the gutter directly ABOVE THE GARAGE or above any first-floor section.
+- YES: Gutter above garage doors, gutter above first-floor windows
+- NO: Gutter at the roofline/peak level, gutter on dormers
+
 IDENTIFICATION:
-- Locate the FIRST STORY GUTTER LINE (the gutter between 1st and 2nd floors)
+- Locate the FIRST STORY GUTTER LINE (the gutter directly above the garage, above first floor rooms)
+- This gutter is typically 8-12 feet off the ground, at the top of the first floor
 - Identify the ENTIRE second story facade ABOVE this gutter line
 - Note: upper-level windows, siding sections, decorative trim, shutters on the 2nd story
+- INCLUDE: Towers, turrets, flat-roofed pop-outs, box bays - any 2nd story section
 - LOCATE any PEAKS or GABLES that sit above the 2nd story windows
 - Focus on the COMPLETE second story that can be washed with uplight FROM BELOW
-- The goal is to illuminate the ENTIRE 2nd story facade including any peaks
+- The goal is to illuminate the ENTIRE 2nd story facade including towers, windows, and any peaks
 
 FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
 - Type: SMALL compact brass bullet or mini flood UP LIGHT with gutter-mount bracket
@@ -2136,92 +2306,162 @@ export const COLOR_TEMPERATURES: ColorTemperature[] = [
     kelvin: "2700K",
     color: "#FFB46B",
     description: "Warm White",
-    prompt: `Use Warm White (2700K) for all lights.
-    VISUAL RENDERING REQUIREMENTS:
-    - Color: Deep amber/golden yellow (hex #FFB347)
-    - Similar to: Candlelight, sunset glow, incandescent bulbs
-    - Render surfaces with warm orange/amber tint where light hits
-    - Shadows appear soft and inviting with warm undertones
-    - Creates cozy, intimate, romantic atmosphere
-    - Green foliage appears more olive/brown under this light
-    - White surfaces appear creamy/warm yellow
-    - This is the WARMEST option - noticeably amber/orange`
+    prompt: `COLOR TEMPERATURE: Warm White (2700K) - MANDATORY FOR ALL FIXTURES
+
+VISUAL RENDERING SPECIFICATIONS:
+- Primary light color: Deep amber/golden yellow (hex #FFB347 to #FFA726)
+- Color appearance: Similar to candlelight, sunset glow, vintage incandescent bulbs
+- This is the WARMEST option - noticeably amber/orange tint
+
+SURFACE INTERACTION:
+- Lit surfaces: Warm orange/amber tint where light hits directly
+- Brick/stone: Appears warmer, red tones enhanced
+- White/light surfaces: Appear creamy/warm yellow
+- Green foliage: Appears more olive/brown under this light
+- Wood: Warm honey tones emphasized
+
+SHADOW RENDERING:
+- Shadows: Soft and inviting with warm undertones
+- Shadow color: Deep warm brown, not cold black
+- Contrast: Moderate to high, but shadows remain warm
+
+ATMOSPHERE: Cozy, intimate, romantic, traditional, welcoming`
   },
   {
     id: "3000k",
     kelvin: "3000K",
     color: "#FFD18E",
     description: "Soft White",
-    prompt: `Use Soft White (3000K) for all lights.
-    VISUAL RENDERING REQUIREMENTS:
-    - Color: Warm white with slight yellow tint (hex #FFF4E0)
-    - Industry standard for professional landscape lighting
-    - Balanced warm tone that flatters most materials
-    - Brick appears warmer, stone maintains natural color
-    - Shadows have moderate warmth
-    - Green foliage retains natural color with warm highlights
-    - White surfaces appear slightly warm but not yellow
-    - This is the DEFAULT professional choice - warm but natural`
+    prompt: `COLOR TEMPERATURE: Soft White (3000K) - MANDATORY FOR ALL FIXTURES
+
+VISUAL RENDERING SPECIFICATIONS:
+- Primary light color: Warm white with slight yellow tint (hex #FFF4E0 to #FFE4B5)
+- Color appearance: Industry standard for professional landscape lighting
+- This is the DEFAULT professional choice - warm but natural
+
+SURFACE INTERACTION:
+- Lit surfaces: Balanced warm tone that flatters most materials
+- Brick: Appears warmer, natural color enhanced
+- Stone: Maintains natural color with warm highlights
+- White surfaces: Slightly warm but not yellow
+- Green foliage: Retains natural color with warm highlights
+- Wood: Natural warm tones preserved
+
+SHADOW RENDERING:
+- Shadows: Moderate warmth, natural appearance
+- Shadow color: Warm gray to brown
+- Contrast: Professional balance of drama and visibility
+
+ATMOSPHERE: Professional, elegant, balanced, universally flattering`
   },
   {
     id: "4000k",
     kelvin: "4000K",
     color: "#FFF2D7",
     description: "Cool White",
-    prompt: `Use Cool White (4000K) for all lights.
-    VISUAL RENDERING REQUIREMENTS:
-    - Color: Neutral white, very slight warm tint (hex #FFFAF0)
-    - Crisp, clean, modern appearance
-    - Materials appear close to their true daylight colors
-    - Excellent color rendering for architectural details
-    - Shadows are neutral with minimal color cast
-    - Green foliage appears vibrant and true
-    - White surfaces appear clean white
-    - Best for: Contemporary architecture, modern landscapes`
+    prompt: `COLOR TEMPERATURE: Cool White (4000K) - MANDATORY FOR ALL FIXTURES
+
+VISUAL RENDERING SPECIFICATIONS:
+- Primary light color: Neutral white, very slight warm tint (hex #FFFAF0 to #FFF8E7)
+- Color appearance: Crisp, clean, modern
+- Materials appear close to their true daylight colors
+
+SURFACE INTERACTION:
+- Lit surfaces: True color rendering with minimal warmth
+- Brick/stone: Natural color, minimal warming
+- White surfaces: Appear clean, true white
+- Green foliage: Vibrant and true color
+- Wood: Natural color without added warmth
+- Metal: Crisp, clean highlights
+
+SHADOW RENDERING:
+- Shadows: Neutral with minimal color cast
+- Shadow color: Neutral gray to cool gray
+- Contrast: High contrast, crisp definition
+
+ATMOSPHERE: Contemporary, modern, clean, architectural, precise`
   },
   {
     id: "5000k",
     kelvin: "5000K",
     color: "#E3F2FD",
     description: "Daylight",
-    prompt: `Use Daylight (5000K) for all lights.
-    VISUAL RENDERING REQUIREMENTS:
-    - Color: Bright white with slight blue tint (hex #F5FBFF)
-    - Mimics natural noon daylight
-    - Very high contrast, crisp shadows
-    - Colors appear most vibrant and saturated
-    - Can appear slightly clinical/cool
-    - Green foliage appears very vivid
-    - White surfaces appear bright pure white
-    - Best for: Security lighting, commercial, high-visibility needs`
+    prompt: `COLOR TEMPERATURE: Daylight (5000K) - MANDATORY FOR ALL FIXTURES
+
+VISUAL RENDERING SPECIFICATIONS:
+- Primary light color: Bright white with slight blue tint (hex #F5FBFF to #E8F4FD)
+- Color appearance: Mimics natural noon daylight
+- This is the COOLEST option - slightly clinical/blue
+
+SURFACE INTERACTION:
+- Lit surfaces: Maximum color accuracy, slight cool cast
+- Brick/stone: True color, may appear slightly cooler
+- White surfaces: Bright pure white, no warmth
+- Green foliage: Very vivid, saturated color
+- Wood: Natural color, no added warmth
+- Metal: Bright, cool highlights
+
+SHADOW RENDERING:
+- Shadows: Very high contrast, crisp edges
+- Shadow color: Cool gray to blue-gray
+- Contrast: Maximum contrast, dramatic separation
+
+ATMOSPHERE: High-visibility, security-focused, commercial, clinical`
   },
   {
     id: "christmas",
     kelvin: "Festive",
     color: "#D32F2F",
     description: "Christmas",
-    prompt: `Use Red and Green colors for all lights for a festive Christmas look.
-    VISUAL RENDERING REQUIREMENTS:
-    - Alternate RED (#D32F2F) and GREEN (#2E7D32) lights
-    - Group colors by section OR alternate per fixture
-    - Red lights cast warm red glow on nearby surfaces
-    - Green lights cast cool green tint on foliage
-    - Creates cheerful, festive holiday atmosphere
-    - Can add white (#FFFDE7) accents sparingly`
+    prompt: `COLOR SCHEME: Christmas (Red & Green) - MANDATORY FOR ALL FIXTURES
+
+VISUAL RENDERING SPECIFICATIONS:
+- Primary colors: RED (#D32F2F, #C62828) and GREEN (#2E7D32, #388E3C)
+- Distribution: Alternate colors by fixture OR group by architectural section
+- White accent (#FFFDE7): Use sparingly for highlights
+
+COLOR BEHAVIOR:
+- Red fixtures: Cast warm red glow on nearby surfaces (2-4 foot radius)
+- Green fixtures: Cast cool green tint, especially visible on foliage
+- Mixed areas: Where red and green overlap, creates neutral warm tone
+
+SURFACE INTERACTION:
+- Red light on brick: Deep, rich red enhancement
+- Green light on foliage: Intensified green, magical glow
+- Red light on white: Pink/rose tint
+- Green light on white: Pale green tint
+
+ATMOSPHERE: Cheerful, festive, holiday celebration, joyful`
   },
   {
     id: "halloween",
     kelvin: "Spooky",
     color: "#9C27B0",
     description: "Halloween",
-    prompt: `Use Orange and Purple colors for all lights for a spooky Halloween look.
-    VISUAL RENDERING REQUIREMENTS:
-    - Primary: Deep PURPLE (#9C27B0) and bright ORANGE (#FF6D00)
-    - Purple creates eerie, mysterious shadows
-    - Orange adds warmth and pumpkin-like glow
-    - Creates haunting, spooky atmosphere
-    - Shadows should appear deeper and more dramatic
-    - Can add touches of GREEN (#76FF03) for extra creepy effect`
+    prompt: `COLOR SCHEME: Halloween (Purple & Orange) - MANDATORY FOR ALL FIXTURES
+
+VISUAL RENDERING SPECIFICATIONS:
+- Primary colors: Deep PURPLE (#9C27B0, #7B1FA2) and bright ORANGE (#FF6D00, #E65100)
+- Secondary accent: Toxic GREEN (#76FF03) for extra eerie effect (optional)
+- Distribution: Alternate or group by architectural feature
+
+COLOR BEHAVIOR:
+- Purple fixtures: Create eerie, mysterious shadows with cool undertones
+- Orange fixtures: Add warmth, pumpkin-like glow, fire-like flicker feeling
+- Green accents: Toxic, supernatural, ghostly effect
+
+SURFACE INTERACTION:
+- Purple on stone/brick: Supernatural, haunted appearance
+- Orange on surfaces: Warm, fire-lit, jack-o-lantern effect
+- Purple shadows: Deep violet-black, ominous
+- Mixed purple/orange: Creates dramatic contrast zones
+
+SHADOW RENDERING:
+- Shadows: Deeper and more dramatic than standard lighting
+- Shadow color: Deep purple-black, ominous
+- Contrast: Maximum drama, spooky atmosphere
+
+ATMOSPHERE: Haunting, spooky, supernatural, mysterious, Halloween celebration`
   }
 ];
 

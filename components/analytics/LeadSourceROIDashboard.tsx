@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Users, Target, Award } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, Target, Award } from 'lucide-react';
 import { LeadSourceMetrics } from '../../types';
 import { KPICard, KPICardGrid } from './KPICard';
 

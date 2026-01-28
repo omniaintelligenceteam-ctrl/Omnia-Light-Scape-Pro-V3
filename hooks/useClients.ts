@@ -268,17 +268,6 @@ export function useClients() {
     }
   }, [user]);
 
-  // Search clients by name/email/phone
-  const searchClients = useCallback((query: string): Client[] => {
-    if (!query.trim()) return clients;
-    const q = query.toLowerCase();
-    return clients.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q) ||
-      c.phone?.includes(query)
-    );
-  }, [clients]);
-
   // Bulk import clients from CSV data
   const importClients = useCallback(async (
     rows: ParsedClientRow[],

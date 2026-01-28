@@ -30,15 +30,6 @@ interface OnboardingWizardProps {
   onStartFirstProject?: () => void;
 }
 
-// Step icons mapping
-const stepIcons: Record<string, React.ElementType> = {
-  welcome: Sparkles,
-  'company-setup': Building2,
-  'pricing-config': DollarSign,
-  'first-project': Camera,
-  complete: CheckCircle2,
-};
-
 // Welcome Step Content
 const WelcomeStep: React.FC<{ onContinue: () => void }> = ({ onContinue }) => (
   <motion.div
@@ -341,7 +332,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   onStartFirstProject,
 }) => {
   const currentIndex = ONBOARDING_STEPS.findIndex(s => s.id === currentStep.id);
-  const Icon = stepIcons[currentStep.id] || Sparkles;
 
   const handleContinue = useCallback(() => {
     onCompleteStep(currentStep.id);

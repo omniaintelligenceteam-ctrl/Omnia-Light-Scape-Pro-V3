@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, ChevronDown, ChevronUp, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, MapPin, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail, Palette, Bell, Moon, Volume2, VolumeX, Download, FileJson } from 'lucide-react';
+import { MessageCircle, ChevronDown, Upload, Check, Building, DollarSign, Lightbulb, Save, LogOut, X, Send, Bot, User as UserIcon, Sparkles, ClipboardList, Plus, Trash2, CreditCard, Loader2, ExternalLink, Mail, Palette, Bell, Moon, Volume2, VolumeX, Download, FileJson } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
-import { COLOR_TEMPERATURES, DEFAULT_PRICING, BEAM_ANGLES, FIXTURE_TYPE_NAMES, ACCENT_COLORS } from '../constants';
+import { COLOR_TEMPERATURES, BEAM_ANGLES, FIXTURE_TYPE_NAMES, ACCENT_COLORS } from '../constants';
 import { FixturePricing, CompanyProfile, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences } from '../types';
 import { createPortalSession } from '../services/stripeservice';
 

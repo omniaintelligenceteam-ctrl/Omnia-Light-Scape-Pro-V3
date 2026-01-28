@@ -13,7 +13,6 @@ import {
   Clock,
   User,
   Trash2,
-  Filter,
 } from 'lucide-react';
 
 // Notification types

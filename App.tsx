@@ -33,13 +33,15 @@ import { useBusinessHealthScore } from './hooks/useBusinessHealthScore';
 import { usePipelineForecast } from './hooks/usePipelineForecast';
 import { useTeamPerformance } from './hooks/useTeamPerformance';
 import { useCapacityPlanning } from './hooks/useCapacityPlanning';
-import { AnalyticsDashboard, ExecutiveDashboard, BusinessHealthScore, PipelineForecast, TeamPerformanceMatrix, CapacityDashboard } from './components/analytics';
+// Analytics components - passed to SettingsView but not used directly in App.tsx
+// import { AnalyticsDashboard, ExecutiveDashboard, BusinessHealthScore, PipelineForecast, TeamPerformanceMatrix, CapacityDashboard } from './components/analytics';
 // LeadSourceROIDashboard, CashFlowDashboard, ExportMenu - currently unused
 // import { LeadSourceROIDashboard } from './components/analytics/LeadSourceROIDashboard';
 // import { CashFlowDashboard } from './components/analytics/CashFlowDashboard';
 // import { ExportMenu } from './components/reports/ExportMenu';
-import { DateRangePickerAdvanced, DateRangeValue } from './components/reports/DateRangePickerAdvanced';
-import { ComparisonView, ComparisonData } from './components/reports/ComparisonView';
+// DateRangePickerAdvanced, ComparisonView - currently unused, reserved for future analytics features
+// import { DateRangePickerAdvanced, DateRangeValue } from './components/reports/DateRangePickerAdvanced';
+// import { ComparisonView, ComparisonData } from './components/reports/ComparisonView';
 import { useLocations } from './hooks/useLocations';
 import { useTechnicians } from './hooks/useTechnicians';
 import { useLocationMetrics } from './hooks/useLocationMetrics';
@@ -178,13 +180,13 @@ const App: React.FC = () => {
   const subscription = useSubscription();
 
   // Load/save projects from Supabase (includes dismissDemoData to exit demo mode)
-  const { projects, isLoading: projectsLoading, isDemo, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject, dismissDemoData } = useProjects();
+  const { projects, isLoading: projectsLoading, isDemo, saveProject, deleteProject, updateProject, updateProjectStatus, scheduleProject, completeProject, addImageToProject, removeImageFromProject: _removeImageFromProject, dismissDemoData } = useProjects();
 
   // Load/save clients from Supabase
-  const { clients, isLoading: clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients, sortClients, filterByLeadSource, filterByLetter, getAvailableLetters } = useClients();
+  const { clients, isLoading: _clientsLoading, createClient, updateClient, deleteClient, searchClients, importClients, sortClients, filterByLeadSource, filterByLetter, getAvailableLetters } = useClients();
 
   // Load/save business goals from Supabase
-  const { goals: businessGoals, createGoal, isLoading: goalsLoading } = useBusinessGoals();
+  const { goals: businessGoals, createGoal, isLoading: _goalsLoading } = useBusinessGoals();
 
   // Analytics calculated from projects, clients, and goals
   const analytics = useAnalytics({ projects, clients, goals: businessGoals });
@@ -229,7 +231,7 @@ const App: React.FC = () => {
   }, [technicians, selectedLocationId]);
 
   // Date range for Executive Dashboard
-  const [dashboardDateRange, setDashboardDateRange] = useState<'today' | 'this_week' | 'this_month' | 'this_quarter' | 'this_year'>('this_month');
+  const [dashboardDateRange, _setDashboardDateRange] = useState<'today' | 'this_week' | 'this_month' | 'this_quarter' | 'this_year'>('this_month');
 
   // Calculate real metrics for Executive Dashboard - use filtered data when location is selected
   const locationMetrics = useLocationMetrics(filteredProjectsByLocation, locations, dashboardDateRange);
@@ -477,7 +479,7 @@ const App: React.FC = () => {
   });
 
   // BOM State
-  const [currentBOM, setCurrentBOM] = useState<BOMData | null>(null);
+  const [_currentBOM, setCurrentBOM] = useState<BOMData | null>(null);
   const [fixtureCatalog, setFixtureCatalog] = useState<FixtureCatalogItem[]>([]);
 
   // Projects Sub-Tab State - Simplified to 2 main views
@@ -625,7 +627,6 @@ const App: React.FC = () => {
     const checkAuth = async () => {
       // 1. First check if we have an Environment Variable mapped to process.env.API_KEY
       if (process.env.API_KEY) {
-        console.log("Omnia: Using Environment Variable Key");
         setIsAuthorized(true);
         setIsCheckingAuth(false);
         return;
@@ -1768,9 +1769,8 @@ const App: React.FC = () => {
         else if (ratio >= 0.65) targetRatio = "3:4";
         else targetRatio = "9:16";
         
-        console.log(`Detected Ratio: ${ratio.toFixed(2)} | Target: ${targetRatio}`);
-    } catch (e) {
-        console.warn("Aspect ratio detection failed, defaulting to 1:1", e);
+    } catch {
+        // Aspect ratio detection failed, use default 1:1
     }
 
     try {
@@ -1794,7 +1794,6 @@ const App: React.FC = () => {
           fixtureCounts
         );
         setPropertyAnalysis(analysis);
-        console.log('Stage 1 complete - Property analysis:', analysis);
 
         // Check if cancelled
         if (generationCancelledRef.current) {
@@ -1815,7 +1814,6 @@ const App: React.FC = () => {
           },
           FIXTURE_TYPES
         );
-        console.log('Stage 2 complete - AI Lighting plan:', plan);
 
         // Use optimized settings from plan
         finalIntensity = plan.settings.intensity;
@@ -1846,7 +1844,6 @@ const App: React.FC = () => {
           subOptions: fixtureSubOptions,
           counts: fixtureCounts
         });
-        console.log('VERIFICATION COMPLETE:', verifiedSummary);
 
         // Check if cancelled
         if (generationCancelledRef.current) {
@@ -1858,22 +1855,15 @@ const App: React.FC = () => {
         // STAGE 4: VALIDATING (AI-Powered) - Review prompt before image generation
         setGenerationStage('validating');
         const validation = await validatePrompt(smartPrompt, analysis, plan);
-        console.log('Stage 4 complete - Validation result:', validation);
-
-        if (validation.issues && validation.issues.length > 0) {
-          console.warn('Prompt validation found issues:', validation.issues);
-        }
 
         // Use fixed prompt if validation provided one, otherwise use original
         const validatedPrompt = validation.fixedPrompt || smartPrompt;
 
         // Merge with verified summary and user's custom notes
         finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
-        console.log('Stage 4 complete - Final prompt validated and built');
 
-      } catch (pipelineError) {
+      } catch {
         // If any stage fails, continue with standard generation (graceful fallback)
-        console.warn('AI pipeline failed, using standard generation:', pipelineError);
         setPropertyAnalysis(null);
         // Keep original prompt and settings
       }
@@ -2185,34 +2175,6 @@ const App: React.FC = () => {
     };
   };
 
-  const handleGenerateQuote = () => {
-    const newQuote = generateQuoteFromSelections();
-    setCurrentQuote(newQuote);
-    handleTabChange('projects');
-  };
-
-  const handleSaveProjectFromEditor = async () => {
-      if (!generatedImage) {
-        return;
-      }
-      const projectName = `Night Scene ${projects.length + 1}`;
-      // Generate quote based on selected fixtures so it saves with the project
-      const quoteData = generateQuoteFromSelections();
-      const result = await saveProject(projectName, generatedImage, quoteData, null, undefined, undefined, selectedLocationId);
-      if (result) {
-        // Track this project ID so subsequent quote saves update it instead of creating duplicates
-        setCurrentProjectId(result.id);
-        setCurrentQuote(quoteData);
-        // Save positive feedback for AI learning (saved project = liked design)
-        saveFeedback('saved', undefined, result.id);
-        handleTabChange('projects');
-        showToast('success', 'Project saved successfully!');
-      } else {
-        setError('Failed to save project. Please try again.');
-        showToast('error', 'Failed to save project');
-      }
-  };
-
   // Save to drafts (no client assignment)
   const handleSaveToDrafts = async () => {
     if (!generatedImage) return;
@@ -2414,34 +2376,12 @@ const App: React.FC = () => {
       setCurrentBOM(bom);
   };
 
-  const handleBOMChange = (bom: BOMData) => {
-      setCurrentBOM(bom);
-  };
-
-  const handleSaveProjectFromBOM = async (bom: BOMData) => {
-      const projectName = currentQuote?.clientDetails?.name || `BOM Project ${projects.length + 1}`;
-      const result = await saveProject(projectName, generatedImage || '', currentQuote, bom);
-      if (result) {
-        handleTabChange('projects');
-        showToast('success', 'BOM saved to project!');
-      } else {
-        setError('Failed to save project. Please try again.');
-        showToast('error', 'Failed to save project');
-      }
-  };
-
   // Approve a project
   const handleApproveProject = async (projectId: string) => {
       await updateProjectStatus(projectId, 'approved');
       showToast('success', 'Project approved! Ready to schedule.');
       // Demo guide: Step 6 - Approve Quote
       if (onboarding.isDemoActive) onboarding.completeDemoStep(6);
-  };
-
-  // Change project status
-  const handleStatusChange = async (projectId: string, newStatus: ProjectStatus) => {
-      await updateProjectStatus(projectId, newStatus);
-      showToast('success', `Project moved to ${STATUS_CONFIG[newStatus].label}`);
   };
 
   // Generate invoice from approved project
@@ -3109,25 +3049,6 @@ Notes: ${invoice.notes || 'N/A'}
   }, [filteredProjectsByLocation, statusCounts]);
 
   // Memoized filtered project lists (includes search and status filtering)
-  const filteredUnapprovedProjects = useMemo(() =>
-      projects.filter(p => {
-          // Status must be draft or quoted for this tab
-          if (p.status !== 'draft' && p.status !== 'quoted') return false;
-          // Apply status filter if not 'all'
-          if (statusFilter !== 'all' && p.status !== statusFilter) return false;
-          // Apply search filter
-          const searchLower = searchTerm.toLowerCase();
-          return (
-              p.name.toLowerCase().includes(searchLower) ||
-              p.date.includes(searchTerm) ||
-              p.quote?.clientDetails?.name?.toLowerCase().includes(searchLower) ||
-              p.quote?.clientDetails?.email?.toLowerCase().includes(searchLower) ||
-              p.quote?.clientDetails?.phone?.includes(searchTerm)
-          );
-      }),
-      [projects, searchTerm, statusFilter]
-  );
-
   const filteredApprovedProjects = useMemo(() =>
       projects.filter(p => {
           // Status must be approved, scheduled, or completed for this tab
@@ -4680,10 +4601,6 @@ Notes: ${invoice.notes || 'N/A'}
                                     const isSelected = selectedFixtures.includes(ft.id);
                                     const subOpts = fixtureSubOptions[ft.id];
                                     const hasSubOpts = subOpts && subOpts.length > 0;
-
-                                    const getSubLabel = (id: string) => {
-                                        return ft.subOptions?.find(o => o.id === id)?.label || '';
-                                    };
 
                                     return (
                                         <motion.button
@@ -7577,7 +7494,7 @@ Notes: ${invoice.notes || 'N/A'}
                     setAutoGenerateInvoice(false);
                     setShowCompletionModal(true);
                   }}
-                  onViewDetails={(projectId) => {
+                  onViewDetails={(_projectId) => {
                     // Navigate to projects tab to view details
                     handleTabChange('projects');
                     setProjectsSubTab('pipeline');
@@ -7742,9 +7659,8 @@ Notes: ${invoice.notes || 'N/A'}
                 analyticsComparisonView={showComparison}
                 onAnalyticsComparisonViewChange={setShowComparison}
                 // Analytics actions
-                onExportAnalytics={(format) => {
-                  // Export logic can be implemented here
-                  console.log(`Exporting analytics as ${format}`);
+                onExportAnalytics={(_format) => {
+                  // TODO: Implement analytics export
                 }}
                 // Advanced Analytics (formerly in Projects section)
                 pipelineAnalytics={pipelineAnalytics}

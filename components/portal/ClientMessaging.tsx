@@ -10,12 +10,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
-  X,
-  Bell,
-  BellOff,
   Phone,
   Mail,
-  Paperclip,
 } from 'lucide-react';
 
 // Message types
@@ -45,13 +41,6 @@ interface MessageTemplate {
   icon: React.ElementType;
   message: string;
   category: 'quote' | 'schedule' | 'followup' | 'general';
-}
-
-// Notification preference
-interface NotificationPrefs {
-  email: boolean;
-  sms: boolean;
-  inApp: boolean;
 }
 
 interface ClientMessagingProps {
