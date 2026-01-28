@@ -1808,6 +1808,36 @@ const App: React.FC = () => {
     try {
       const base64 = await fileToBase64(file);
 
+      // === INJECT PLACED FIXTURE POSITIONS (from FixturePlacer) ===
+      // If user manually placed fixtures on the image, convert their exact positions to prompt instructions
+      if (placedFixtures.length > 0) {
+        activePrompt += "\n\n### USER-PLACED FIXTURE POSITIONS (EXACT COORDINATES - MANDATORY):\n";
+        activePrompt += "The user has MANUALLY placed fixtures on the image at EXACT positions. These positions are MANDATORY and override any AI suggestions:\n\n";
+        
+        // Group fixtures by type for cleaner output
+        const fixturesByType: Record<string, typeof placedFixtures> = {};
+        placedFixtures.forEach(f => {
+          if (!fixturesByType[f.type]) fixturesByType[f.type] = [];
+          fixturesByType[f.type].push(f);
+        });
+        
+        // Output each fixture type with positions
+        Object.entries(fixturesByType).forEach(([type, fixtures]) => {
+          activePrompt += `**${type.toUpperCase()} FIXTURES (${fixtures.length} total):**\n`;
+          fixtures.forEach((f, i) => {
+            // Convert percentage to descriptive position
+            const horizontalPos = f.x < 25 ? 'far left' : f.x < 40 ? 'left' : f.x < 60 ? 'center' : f.x < 75 ? 'right' : 'far right';
+            const verticalPos = f.y < 25 ? 'top' : f.y < 40 ? 'upper' : f.y < 60 ? 'middle' : f.y < 75 ? 'lower' : 'bottom';
+            activePrompt += `  ${i + 1}. Position: ${horizontalPos} of image, ${verticalPos} area (exact: ${Math.round(f.x)}% from left, ${Math.round(f.y)}% from top)\n`;
+            activePrompt += `     Type: ${f.type}, Intensity: ${Math.round(f.intensity * 100)}%, Color Temp: ${f.colorTemp}K\n`;
+          });
+          activePrompt += "\n";
+        });
+        
+        activePrompt += "ENFORCEMENT: Place lights at EXACTLY these positions. Do not deviate. Do not add extra lights beyond these positions.\n";
+        activePrompt += "If the user placed 3 uplights, output EXACTLY 3 uplights at those 3 positions. No more, no less.\n\n";
+      }
+
       // === 4-STAGE AI PIPELINE ===
       let finalPrompt = activePrompt;
       let finalIntensity = lightIntensity;
@@ -4593,75 +4623,54 @@ Notes: ${invoice.notes || 'N/A'}
                     
                     {/* Image Upload Area */}
                     <div className="relative">
-                        <ImageUpload 
+                        {/* Show ImageUpload when no image, show FixturePlacer when image uploaded */}
+                        {!previewUrl ? (
+                          <ImageUpload 
                             currentImage={file}
                             previewUrl={previewUrl}
                             onImageSelect={handleImageSelect}
                             onClear={handleClear}
-                        />
-                        
-                        {/* Place Fixtures Button - shows after image upload */}
-                        {previewUrl && (
-                          <button
-                            onClick={() => setShowFixturePlacer(true)}
-                            className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 rounded-xl text-purple-300 hover:from-purple-500/30 hover:to-indigo-500/30 hover:border-purple-500/50 transition-all group"
-                          >
-                            <MapPin className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            <span className="text-sm font-medium">
-                              {placedFixtures.length > 0 
-                                ? `Edit Fixture Positions (${placedFixtures.length} placed)` 
-                                : 'Place Fixtures Manually (Optional)'}
-                            </span>
-                          </button>
+                          />
+                        ) : (
+                          <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] overflow-hidden">
+                            {/* Header with clear button */}
+                            <div className="flex items-center justify-between p-3 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-purple-400" />
+                                <span className="text-sm font-medium text-white">
+                                  Click to place lights • {placedFixtures.length} placed
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {placedFixtures.length > 0 && (
+                                  <button
+                                    onClick={() => setPlacedFixtures([])}
+                                    className="px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
+                                  >
+                                    Clear
+                                  </button>
+                                )}
+                                <button
+                                  onClick={handleClear}
+                                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                  title="Remove image"
+                                >
+                                  <X className="w-4 h-4 text-gray-400" />
+                                </button>
+                              </div>
+                            </div>
+                            {/* Inline Fixture Placer */}
+                            <div className="p-2">
+                              <FixturePlacer
+                                imageUrl={previewUrl}
+                                initialFixtures={placedFixtures}
+                                onFixturesChange={setPlacedFixtures}
+                                showPreview={true}
+                              />
+                            </div>
+                          </div>
                         )}
                     </div>
-
-                    {/* Fixture Placer Modal */}
-                    {showFixturePlacer && previewUrl && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                        <div className="relative w-full max-w-6xl max-h-[90vh] bg-[#0a0a0a] rounded-2xl border border-white/10 overflow-hidden flex flex-col">
-                          <div className="flex items-center justify-between p-4 border-b border-white/10">
-                            <div>
-                              <h2 className="text-lg font-semibold text-white">Place Fixtures</h2>
-                              <p className="text-sm text-gray-400">Click on the image to place fixtures at exact positions</p>
-                            </div>
-                            <button
-                              onClick={() => setShowFixturePlacer(false)}
-                              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                            >
-                              <X className="w-5 h-5 text-gray-400" />
-                            </button>
-                          </div>
-                          <div className="flex-1 overflow-auto p-4">
-                            <FixturePlacer
-                              imageUrl={previewUrl}
-                              initialFixtures={placedFixtures}
-                              onFixturesChange={setPlacedFixtures}
-                              showPreview={true}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between p-4 border-t border-white/10">
-                            <span className="text-sm text-gray-400">
-                              {placedFixtures.length} fixture{placedFixtures.length !== 1 ? 's' : ''} placed
-                            </span>
-                            <div className="flex gap-3">
-                              <button
-                                onClick={() => setPlacedFixtures([])}
-                                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-                              >
-                                Clear All
-                              </button>
-                              <button
-                                onClick={() => setShowFixturePlacer(false)}
-                                className="px-4 py-2 text-sm bg-[#F6B45A] text-black font-medium rounded-lg hover:bg-[#F6B45A]/90 transition-colors"
-                              >
-                                Done
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Controls */}
                     <div className="flex flex-col gap-4 md:gap-6">
