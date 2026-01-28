@@ -1513,13 +1513,20 @@ STRICT EXCLUSION ZONES:
         description: 'Complete facade uplighting including windows, siding, and peaks',
         prompt: `TARGET: 2ND STORY WINDOWS & PEAK -- FIRST-STORY GUTTER-MOUNTED UPLIGHTS FOR COMPLETE FACADE ILLUMINATION
 
+*** FIXTURE PLACEMENT - CRITICAL ***
+Place fixtures in the FIRST STORY GUTTER - this is the gutter directly ABOVE THE GARAGE or above any first-floor section.
+- YES: Gutter above garage doors, gutter above first-floor windows
+- NO: Gutter at the roofline/peak level, gutter on dormers
+
 IDENTIFICATION:
-- Locate the FIRST STORY GUTTER LINE (the gutter between 1st and 2nd floors)
+- Locate the FIRST STORY GUTTER LINE (the gutter directly above the garage, above first floor rooms)
+- This gutter is typically 8-12 feet off the ground, at the top of the first floor
 - Identify the ENTIRE second story facade ABOVE this gutter line
 - Note: upper-level windows, siding sections, decorative trim, shutters on the 2nd story
+- INCLUDE: Towers, turrets, flat-roofed pop-outs, box bays - any 2nd story section
 - LOCATE any PEAKS or GABLES that sit above the 2nd story windows
 - Focus on the COMPLETE second story that can be washed with uplight FROM BELOW
-- The goal is to illuminate the ENTIRE 2nd story facade including any peaks
+- The goal is to illuminate the ENTIRE 2nd story facade including towers, windows, and any peaks
 
 FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
 - Type: SMALL compact brass bullet or mini flood UP LIGHT with gutter-mount bracket
