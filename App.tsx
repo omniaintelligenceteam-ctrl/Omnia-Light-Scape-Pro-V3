@@ -740,8 +740,8 @@ const App: React.FC = () => {
           const col = parseInt(match[2]);
           
           // Calculate exact pixel position
-          const x = ((col + 0.5) / 14) * img.width;
-          const y = ((row + 0.5) / 14) * img.height;
+          const x = ((col + 0.5) / 20) * img.width;
+          const y = ((row + 0.5) / 20) * img.height;
           
           fixtureList.forEach(fixture => {
             const glow = glowColors[fixture.type] || glowColors.uplight;
@@ -1913,11 +1913,11 @@ const App: React.FC = () => {
       const base64 = await fileToBase64(file);
 
       // === INJECT GRID-BASED FIXTURE PLACEMENT ===
-      // When in manual mode with grid cell selections (14x14 grid)
+      // When in manual mode with grid cell selections (20x20 grid)
       const hasGridSelections = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
       if (hasGridSelections) {
         activePrompt += "\n\n### CRITICAL: USER-SPECIFIED GRID PLACEMENT (MANDATORY)\n";
-        activePrompt += "The image is divided into a 14x14 grid. The user has marked EXACT grid cells for fixture placement.\n";
+        activePrompt += "The image is divided into a 20x20 grid. The user has marked EXACT grid cells for fixture placement.\n";
         activePrompt += "Each cell represents approximately 7% of the image width/height.\n\n";
         
         const typeLabels: Record<string, string> = {
@@ -4815,7 +4815,7 @@ Notes: ${invoice.notes || 'N/A'}
                             onClear={handleClear}
                           />
                         ) : placementMode === 'manual' ? (
-                          /* Manual Mode: 14x14 Grid Placement */
+                          /* Manual Mode: 20x20 Grid Placement */
                           <div className="rounded-2xl border border-purple-500/30 bg-[#0a0a0a] overflow-hidden">
                             {/* Header */}
                             <div className="flex items-center justify-between p-3 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
@@ -4867,7 +4867,7 @@ Notes: ${invoice.notes || 'N/A'}
                                 </button>
                               ))}
                             </div>
-                            {/* Image with 14x14 grid overlay */}
+                            {/* Image with 20x20 grid overlay */}
                             <div className="relative w-full" style={{ minHeight: '350px' }}>
                               <img 
                                 src={previewUrl} 
@@ -4875,11 +4875,11 @@ Notes: ${invoice.notes || 'N/A'}
                                 className="w-full h-auto"
                                 style={{ maxHeight: '450px', objectFit: 'contain' }}
                               />
-                              {/* 14x14 Grid overlay */}
-                              <div className="absolute inset-0" style={{ display: 'grid', gridTemplateColumns: 'repeat(14, 1fr)', gridTemplateRows: 'repeat(14, 1fr)' }}>
-                                {Array.from({ length: 14 * 14 }, (_, idx) => {
-                                  const row = Math.floor(idx / 14);
-                                  const col = idx % 14;
+                              {/* 20x20 Grid overlay */}
+                              <div className="absolute inset-0" style={{ display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gridTemplateRows: 'repeat(20, 1fr)' }}>
+                                {Array.from({ length: 20 * 20 }, (_, idx) => {
+                                  const row = Math.floor(idx / 20);
+                                  const col = idx % 20;
                                   const cellId = `cell_${row}_${col}`;
                                   const fixturesInCell = zoneFixtures[cellId] || [];
                                   const totalInCell = fixturesInCell.reduce((sum, f) => sum + f.count, 0);
