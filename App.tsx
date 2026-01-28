@@ -625,7 +625,6 @@ const App: React.FC = () => {
     const checkAuth = async () => {
       // 1. First check if we have an Environment Variable mapped to process.env.API_KEY
       if (process.env.API_KEY) {
-        console.log("Omnia: Using Environment Variable Key");
         setIsAuthorized(true);
         setIsCheckingAuth(false);
         return;
@@ -1806,9 +1805,8 @@ const App: React.FC = () => {
         else if (ratio >= 0.65) targetRatio = "3:4";
         else targetRatio = "9:16";
         
-        console.log(`Detected Ratio: ${ratio.toFixed(2)} | Target: ${targetRatio}`);
-    } catch (e) {
-        console.warn("Aspect ratio detection failed, defaulting to 1:1", e);
+    } catch {
+        // Aspect ratio detection failed, use default 1:1
     }
 
     try {
@@ -1832,7 +1830,6 @@ const App: React.FC = () => {
           fixtureCounts
         );
         setPropertyAnalysis(analysis);
-        console.log('Stage 1 complete - Property analysis:', analysis);
 
         // Check if cancelled
         if (generationCancelledRef.current) {
@@ -1853,7 +1850,6 @@ const App: React.FC = () => {
           },
           FIXTURE_TYPES
         );
-        console.log('Stage 2 complete - AI Lighting plan:', plan);
 
         // Use optimized settings from plan
         finalIntensity = plan.settings.intensity;
@@ -1884,7 +1880,6 @@ const App: React.FC = () => {
           subOptions: fixtureSubOptions,
           counts: fixtureCounts
         });
-        console.log('VERIFICATION COMPLETE:', verifiedSummary);
 
         // Check if cancelled
         if (generationCancelledRef.current) {
@@ -1896,22 +1891,15 @@ const App: React.FC = () => {
         // STAGE 4: VALIDATING (AI-Powered) - Review prompt before image generation
         setGenerationStage('validating');
         const validation = await validatePrompt(smartPrompt, analysis, plan);
-        console.log('Stage 4 complete - Validation result:', validation);
-
-        if (validation.issues && validation.issues.length > 0) {
-          console.warn('Prompt validation found issues:', validation.issues);
-        }
 
         // Use fixed prompt if validation provided one, otherwise use original
         const validatedPrompt = validation.fixedPrompt || smartPrompt;
 
         // Merge with verified summary and user's custom notes
         finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
-        console.log('Stage 4 complete - Final prompt validated and built');
 
-      } catch (pipelineError) {
+      } catch {
         // If any stage fails, continue with standard generation (graceful fallback)
-        console.warn('AI pipeline failed, using standard generation:', pipelineError);
         setPropertyAnalysis(null);
         // Keep original prompt and settings
       }
