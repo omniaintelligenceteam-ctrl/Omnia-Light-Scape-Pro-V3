@@ -60,6 +60,7 @@ import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
+import { generateNightSceneWithICLight, checkReplicateStatus, type ICLightProgressCallback } from './services/replicateService';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
@@ -421,6 +422,11 @@ const App: React.FC = () => {
   // Auto-prompt feature: Property analysis state
   const [, setPropertyAnalysis] = useState<PropertyAnalysis | null>(null);
   const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'validating' | 'generating'>('idle');
+  
+  // Generation method: 'standard' uses Gemini, 'premium' uses IC-Light via Replicate
+  const [generationMethod, setGenerationMethod] = useState<'standard' | 'premium'>('premium');
+  const [icLightStatus, setIcLightStatus] = useState<{ checked: boolean; available: boolean; error?: string }>({ checked: false, available: false });
+  const [icLightProgress, setIcLightProgress] = useState<string>('');
   const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
 
   // Generation History for Undo with Settings
@@ -648,6 +654,26 @@ const App: React.FC = () => {
       setIsCheckingAuth(false);
     };
     checkAuth();
+  }, []);
+
+  // Check IC-Light (Replicate) availability on mount
+  useEffect(() => {
+    const checkICLight = async () => {
+      try {
+        const status = await checkReplicateStatus();
+        setIcLightStatus({ checked: true, available: status.available, error: status.error });
+        // If IC-Light is not available, fall back to standard
+        if (!status.available) {
+          setGenerationMethod('standard');
+          console.log('IC-Light not available, falling back to standard generation:', status.error);
+        }
+      } catch (e) {
+        console.error('Failed to check IC-Light status:', e);
+        setIcLightStatus({ checked: true, available: false, error: 'Failed to check availability' });
+        setGenerationMethod('standard');
+      }
+    };
+    checkICLight();
   }, []);
 
   // Demo guide: Track settings tab visit (step 9)
@@ -1877,16 +1903,43 @@ const App: React.FC = () => {
 
       // STAGE 5: GENERATING - Execute and create the image
       setGenerationStage('generating');
-      let result = await generateNightScene(
-        base64,
-        finalPrompt,
-        file.type,
-        targetRatio,
-        finalIntensity,
-        finalBeamAngle,
-        colorPrompt,
-        userPreferences
-      );
+      let result: string;
+      
+      if (generationMethod === 'premium' && icLightStatus.available) {
+        // Use IC-Light for premium generation (produces dramatically better results)
+        console.log('Using IC-Light (Premium) generation...');
+        setIcLightProgress('Starting IC-Light generation...');
+        
+        const progressCallback: ICLightProgressCallback = (status, progress) => {
+          setIcLightProgress(status);
+          console.log(`IC-Light: ${status} (${progress}%)`);
+        };
+        
+        result = await generateNightSceneWithICLight(
+          base64,
+          finalPrompt,
+          file.type,
+          targetRatio,
+          finalIntensity,
+          finalBeamAngle,
+          colorPrompt,
+          progressCallback
+        );
+        setIcLightProgress('');
+      } else {
+        // Use standard Gemini generation
+        console.log('Using standard (Gemini) generation...');
+        result = await generateNightScene(
+          base64,
+          finalPrompt,
+          file.type,
+          targetRatio,
+          finalIntensity,
+          finalBeamAngle,
+          colorPrompt,
+          userPreferences
+        );
+      }
 
       // Check if generation was cancelled while waiting for API
       if (generationCancelledRef.current) {
@@ -1969,7 +2022,18 @@ const App: React.FC = () => {
         // Construct a refinement prompt
         const refinementPrompt = `${lastUsedPrompt}\n\nCRITICAL MODIFICATION REQUEST: ${feedbackText}\n\nRe-generate the night scene keeping the original design but applying the modification request.`;
 
-        let result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt, userPreferences);
+        let result: string;
+        
+        if (generationMethod === 'premium' && icLightStatus.available) {
+          // Use IC-Light for premium regeneration
+          const progressCallback: ICLightProgressCallback = (status) => {
+            setIcLightProgress(status);
+          };
+          result = await generateNightSceneWithICLight(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt, progressCallback);
+          setIcLightProgress('');
+        } else {
+          result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt, userPreferences);
+        }
 
         setGeneratedImage(result);
 
@@ -4877,6 +4941,51 @@ Notes: ${invoice.notes || 'N/A'}
                             )}
                         </AnimatePresence>
                         </div>
+
+                        {/* 🔮 Generation Method Toggle - Standard vs Premium (IC-Light) */}
+                        {icLightStatus.checked && (
+                          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-white/[0.02] to-transparent rounded-xl border border-white/5 mb-2 order-0 md:order-2.5">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-purple-400" />
+                              <span className="text-xs font-medium text-gray-300">Generation Mode</span>
+                            </div>
+                            <div className="flex items-center gap-1 p-1 bg-black/30 rounded-lg">
+                              <button
+                                onClick={() => setGenerationMethod('standard')}
+                                className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide rounded-md transition-all duration-200 ${
+                                  generationMethod === 'standard'
+                                    ? 'bg-gray-700 text-white shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-300'
+                                }`}
+                              >
+                                Standard
+                              </button>
+                              <button
+                                onClick={() => icLightStatus.available && setGenerationMethod('premium')}
+                                disabled={!icLightStatus.available}
+                                className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                                  generationMethod === 'premium'
+                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm shadow-purple-500/25'
+                                    : icLightStatus.available
+                                    ? 'text-gray-500 hover:text-purple-400'
+                                    : 'text-gray-600 cursor-not-allowed opacity-50'
+                                }`}
+                                title={!icLightStatus.available ? icLightStatus.error || 'Premium not available' : 'IC-Light - Professional relighting'}
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                Premium
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show IC-Light progress message when generating */}
+                        {isLoading && generationMethod === 'premium' && icLightProgress && (
+                          <div className="flex items-center gap-2 p-3 bg-purple-900/20 border border-purple-500/30 rounded-xl mb-2 order-0 md:order-2.5">
+                            <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                            <span className="text-xs text-purple-300">{icLightProgress}</span>
+                          </div>
+                        )}
 
                         {/* ✨ HERO Generate Button - The Core Action */}
                         <motion.button
