@@ -1448,15 +1448,22 @@ HARD RULE - MANDATORY:
 
 PLACEMENT GEOMETRY:
 - Place ONE fixture per gable peak
-- Mount INSIDE the gutter trough at the BASE of the gable triangle
+- Mount INSIDE the FIRST STORY (LOWEST) gutter trough - NOT any higher gutter
+- The fixture goes in the gutter at the BOTTOM of the house, shooting UP at the tall gable above
 - Center fixture on the gable's VERTICAL CENTERLINE (directly under the apex)
 
+*** CRITICAL - WHICH GUTTER ***
+- USE: The FIRST STORY gutter (lowest horizontal gutter on the house, typically 8-12 feet high)
+- DO NOT USE: Any higher gutters, dormers gutters, or gutters near the peak
+- The fixture should be at GROUND-ACCESSIBLE height in the main lower gutter
+- Light must travel a LONG DISTANCE upward (20-40+ feet) to reach the peak
+
 MOUNTING (ONLY OPTION):
-- INSIDE GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims straight up toward apex
+- INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the lowest gutter channel, aims straight up toward apex
 
 ALIGNMENT:
 - HORIZONTAL: centered on gable width (aligned with apex above)
-- VERTICAL: at gutter/fascia line where gable triangle meets horizontal roofline
+- VERTICAL: at FIRST STORY gutter/fascia line (the lowest main roofline, NOT higher gutters)
 
 LIGHT PHYSICS:
 - Beam projects STRAIGHT UP along gable face toward apex
