@@ -380,6 +380,7 @@ const App: React.FC = () => {
   // Manual Fixture Placement State (click-to-place positions)
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [placedFixtures, setPlacedFixtures] = useState<LightFixture[]>([]);
+  const [manualFixtureType, setManualFixtureType] = useState<string>('uplight');
 
   // Favorite Presets State
   interface FixturePreset {
@@ -4658,11 +4659,12 @@ Notes: ${invoice.notes || 'N/A'}
                         ) : placementMode === 'manual' ? (
                           /* Manual Mode: FixturePlacer inline */
                           <div className="rounded-2xl border border-purple-500/30 bg-[#0a0a0a] overflow-hidden">
+                            {/* Header */}
                             <div className="flex items-center justify-between p-3 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
                               <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-purple-400" />
                                 <span className="text-sm font-medium text-white">
-                                  Click to place lights • {placedFixtures.length} placed
+                                  Click to place • {placedFixtures.length} placed
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
@@ -4671,7 +4673,7 @@ Notes: ${invoice.notes || 'N/A'}
                                     onClick={() => setPlacedFixtures([])}
                                     className="px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
                                   >
-                                    Clear
+                                    Clear All
                                   </button>
                                 )}
                                 <button
@@ -4683,13 +4685,36 @@ Notes: ${invoice.notes || 'N/A'}
                                 </button>
                               </div>
                             </div>
-                            {/* Container with fixed aspect ratio for the image */}
-                            <div className="relative w-full" style={{ minHeight: '400px' }}>
+                            {/* Fixture Type Selector */}
+                            <div className="flex flex-wrap gap-2 p-3 border-b border-white/10 bg-black/30">
+                              {[
+                                { id: 'uplight', label: '⬆️ Up Light', color: 'amber' },
+                                { id: 'path_light', label: '🚶 Path', color: 'green' },
+                                { id: 'downlight', label: '⬇️ Down', color: 'blue' },
+                                { id: 'spot', label: '🔦 Spot', color: 'yellow' },
+                                { id: 'well_light', label: '⚫ Well', color: 'purple' },
+                                { id: 'wall_wash', label: '🧱 Wall', color: 'orange' },
+                              ].map(ft => (
+                                <button
+                                  key={ft.id}
+                                  onClick={() => setManualFixtureType(ft.id)}
+                                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                                    manualFixtureType === ft.id
+                                      ? 'bg-purple-500 text-white'
+                                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                  }`}
+                                >
+                                  {ft.label}
+                                </button>
+                              ))}
+                            </div>
+                            {/* Image with click overlay */}
+                            <div className="relative w-full" style={{ minHeight: '350px' }}>
                               <img 
                                 src={previewUrl} 
                                 alt="Property" 
                                 className="w-full h-auto"
-                                style={{ maxHeight: '500px', objectFit: 'contain' }}
+                                style={{ maxHeight: '450px', objectFit: 'contain' }}
                               />
                               {/* Overlay for clicking to place fixtures */}
                               <div 
@@ -4702,7 +4727,7 @@ Notes: ${invoice.notes || 'N/A'}
                                     id: `fixture_${Date.now()}`,
                                     x,
                                     y,
-                                    type: 'uplight',
+                                    type: manualFixtureType as any,
                                     intensity: 0.8,
                                     colorTemp: 2700,
                                     beamAngle: 30
@@ -4711,21 +4736,30 @@ Notes: ${invoice.notes || 'N/A'}
                                 }}
                               >
                                 {/* Render placed fixture markers */}
-                                {placedFixtures.map((fixture, idx) => (
-                                  <div
-                                    key={fixture.id}
-                                    className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-amber-500 border-2 border-white shadow-lg cursor-move flex items-center justify-center text-xs font-bold text-black"
-                                    style={{ left: `${fixture.x}%`, top: `${fixture.y}%` }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      // Remove fixture on click
-                                      setPlacedFixtures(prev => prev.filter(f => f.id !== fixture.id));
-                                    }}
-                                    title="Click to remove"
-                                  >
-                                    {idx + 1}
-                                  </div>
-                                ))}
+                                {placedFixtures.map((fixture, idx) => {
+                                  const colors: Record<string, string> = {
+                                    uplight: 'bg-amber-500',
+                                    path_light: 'bg-green-500',
+                                    downlight: 'bg-blue-500',
+                                    spot: 'bg-yellow-500',
+                                    well_light: 'bg-purple-500',
+                                    wall_wash: 'bg-orange-500',
+                                  };
+                                  return (
+                                    <div
+                                      key={fixture.id}
+                                      className={`absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full ${colors[fixture.type] || 'bg-amber-500'} border-2 border-white shadow-lg cursor-pointer flex items-center justify-center text-xs font-bold text-black`}
+                                      style={{ left: `${fixture.x}%`, top: `${fixture.y}%` }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPlacedFixtures(prev => prev.filter(f => f.id !== fixture.id));
+                                      }}
+                                      title={`${fixture.type} - Click to remove`}
+                                    >
+                                      {idx + 1}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>
