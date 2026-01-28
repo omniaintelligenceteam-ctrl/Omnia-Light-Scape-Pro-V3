@@ -8,6 +8,7 @@
 
 import React, { useCallback } from 'react';
 import { LightingStyleSelector, useLightingStyle } from './LightingStyleSelector';
+import type { LightingStyleId } from '../constants/lightingPresets';
 import { 
   integrateStyleIntoPrompt, 
   integrateStyleIntoNegativePrompt,
@@ -127,9 +128,10 @@ export const SidebarStyleSelector: React.FC<SidebarStyleSelectorProps> = ({
   const {
     selectedStyleId,
     overrides,
+    appliedStyle,
     setStyleId,
     setOverrides,
-    getGenerationContext
+    getPromptAdditions
   } = useLightingStyle();
   
   // Notify parent when style changes
@@ -137,16 +139,16 @@ export const SidebarStyleSelector: React.FC<SidebarStyleSelectorProps> = ({
     setStyleId(id);
     // Get updated context after state change
     setTimeout(() => {
-      onStyleChange?.(getGenerationContext());
+      onStyleChange?.(getPromptAdditions());
     }, 0);
-  }, [setStyleId, getGenerationContext, onStyleChange]);
+  }, [setStyleId, getPromptAdditions, onStyleChange]);
   
   const handleOverridesChange = useCallback((newOverrides: typeof overrides) => {
     setOverrides(newOverrides);
     setTimeout(() => {
-      onStyleChange?.(getGenerationContext());
+      onStyleChange?.(getPromptAdditions());
     }, 0);
-  }, [setOverrides, getGenerationContext, onStyleChange]);
+  }, [setOverrides, getPromptAdditions, onStyleChange]);
   
   return (
     <div className="p-3 bg-[#151515] rounded-lg border border-[#333]">
@@ -212,10 +214,7 @@ export const CompanyStyleDefaults: React.FC<CompanyStyleDefaultsProps> = ({
     overrides,
     setStyleId,
     setOverrides
-  } = useLightingStyle({
-    initialStyleId: defaultStyleId as any,
-    persist: false // Don't persist in company settings
-  });
+  } = useLightingStyle(defaultStyleId as LightingStyleId);
   
   return (
     <div className="space-y-4">
