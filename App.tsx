@@ -378,7 +378,7 @@ const App: React.FC = () => {
   const [fixturePlacementNotes, setFixturePlacementNotes] = useState<Record<string, string>>({});
 
   // Manual Fixture Placement State (click-to-place positions)
-  const [showFixturePlacer, setShowFixturePlacer] = useState(false);
+  // FixturePlacer now shown inline - no modal state needed
   const [placedFixtures, setPlacedFixtures] = useState<LightFixture[]>([]);
 
   // Favorite Presets State
