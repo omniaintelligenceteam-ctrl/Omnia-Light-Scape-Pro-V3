@@ -4657,14 +4657,15 @@ Notes: ${invoice.notes || 'N/A'}
                     
                     {/* Image Upload Area */}
                     <div className="relative">
-                        {/* Placement Mode Toggle */}
-                        <div className="flex items-center justify-center gap-2 mb-3">
+                        {/* Placement Mode Toggle - ALWAYS VISIBLE */}
+                        <div className="flex items-center justify-center gap-2 mb-4 p-3 bg-[#111] rounded-xl border border-white/10">
+                          <span className="text-xs text-gray-500 mr-2">Mode:</span>
                           <button
                             onClick={() => setPlacementMode('auto')}
                             className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                               placementMode === 'auto'
                                 ? 'bg-[#F6B45A] text-black'
-                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
                             }`}
                           >
                             🤖 AI Placement
@@ -4674,7 +4675,7 @@ Notes: ${invoice.notes || 'N/A'}
                             className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                               placementMode === 'manual'
                                 ? 'bg-purple-500 text-white'
-                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
                             }`}
                           >
                             👆 Grid Placement
