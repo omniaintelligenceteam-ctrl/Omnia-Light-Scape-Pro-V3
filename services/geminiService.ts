@@ -1079,6 +1079,26 @@ export const validatePrompt = async (
     positionsCount: p.positions?.length || 0,
   }));
 
+  // PRE-CHECK: Position count must match fixture count
+  const positionMismatches: string[] = [];
+  expectedCounts.forEach(c => {
+    if (c.positionsCount !== c.count) {
+      positionMismatches.push(
+        `Position/count mismatch for ${c.type}/${c.subOption}: ${c.count} fixtures requested but ${c.positionsCount} positions specified`
+      );
+    }
+  });
+
+  // If there are position mismatches, return invalid immediately (don't waste API call)
+  if (positionMismatches.length > 0) {
+    console.warn('Position count validation failed:', positionMismatches);
+    return {
+      valid: false,
+      confidence: 0,
+      issues: positionMismatches,
+    };
+  }
+
   const validationPrompt = `You are a quality assurance expert for AI image generation prompts. Your job is to catch issues that could cause the AI to generate wrong fixtures or wrong counts.
 
 === PROMPT TO VALIDATE ===
@@ -1211,19 +1231,19 @@ Be STRICT about fixture type control and count accuracy. These are the most impo
             return result;
           } catch (parseError) {
             console.error('Failed to parse validation JSON:', parseError);
-            // Return valid by default if parsing fails
-            return { valid: true, confidence: 70, issues: ['Validation response parse error'] };
+            // Return INVALID - prompt may be malformed
+            return { valid: false, confidence: 0, issues: ['Validation response parse error - prompt may be malformed'] };
           }
         }
       }
     }
 
-    // Default to valid if no response
-    return { valid: true, confidence: 60, issues: ['No validation response'] };
+    // No response = INVALID - validation could not be performed
+    return { valid: false, confidence: 0, issues: ['No validation response from AI'] };
   } catch (error) {
     console.error('Prompt Validation Error:', error);
-    // Don't block generation if validation fails
-    return { valid: true, confidence: 50, issues: ['Validation error - proceeding anyway'] };
+    // Validation error = INVALID - something is wrong
+    return { valid: false, confidence: 0, issues: ['Validation error: ' + (error instanceof Error ? error.message : 'Unknown error')] };
   }
 };
 
