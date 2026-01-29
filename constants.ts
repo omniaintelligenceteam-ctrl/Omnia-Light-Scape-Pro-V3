@@ -15,6 +15,7 @@ export interface SubOption {
   description: string;
   prompt: string;
   negativePrompt: string;
+  darkDescription: string; // Description of what this suboption looks like when NOT selected (dark/off state)
 }
 
 export interface FixtureType {
@@ -647,7 +648,8 @@ HOT SPOT AVOIDANCE & WATTAGE:
 
 STRICT EXCLUSION ZONES:
 - Wall sections immediately adjacent to windows receive SPILL light only, not direct fixtures`,
-  negativePrompt: `ABSOLUTE PROHIBITION (SIDING): skip the corners/ends of the home - both left and right ends MUST have up lights. start placement in the middle of the facade.place up lights directly under windows.  place on concrete, hardscape, or open lawn - ONLY in landscaping beds.  aim beams at window glass.`
+  negativePrompt: `ABSOLUTE PROHIBITION (SIDING): skip the corners/ends of the home - both left and right ends MUST have up lights. start placement in the middle of the facade.place up lights directly under windows.  place on concrete, hardscape, or open lawn - ONLY in landscaping beds.  aim beams at window glass.`,
+  darkDescription: `Wall piers between windows remain PITCH BLACK - zero ground-staked fixtures between windows, no vertical light columns on siding sections, wall surfaces show only ambient spill from adjacent lit features if any, siding texture invisible in darkness.`
 
       },
       {
@@ -749,7 +751,8 @@ RELATIONSHIP TO SIDING PRESET:
 - If SIDING preset is also active: windows get centered fixtures, wall piers get separate fixtures
 - If ONLY windows preset is active: wall piers between windows remain darker (spill light only)
 - These presets are complementary, not overlapping`,
-  negativePrompt: `ABSOLUTE PROHIBITION (1ST STORY WINDOWS): Do NOT place fixtures off-center from windows. Do NOT skip windows due to landscaping. Do NOT place on wall piers between windows. Do NOT aim directly at glass. Do NOT use multiple fixtures per window. ONE fixture centered under each window only.`
+  negativePrompt: `ABSOLUTE PROHIBITION (1ST STORY WINDOWS): Do NOT place fixtures off-center from windows. Do NOT skip windows due to landscaping. Do NOT place on wall piers between windows. Do NOT aim directly at glass. Do NOT use multiple fixtures per window. ONE fixture centered under each window only.`,
+  darkDescription: `First-story windows receive NO dedicated ground fixtures - no centered uplights below windows, window frames and casings remain dark, glass shows only ambient reflection from other light sources if any, window assemblies appear as dark rectangles against facade.`
 },
       {
         id: 'entryway',
@@ -802,7 +805,8 @@ STRICT EXCLUSION ZONES:
 - No lighting directed toward viewer/street
 - Door is FRAMED by light, not blasted with light
 - Maintain perfect symmetry`,
-        negativePrompt: `ABSOLUTE PROHIBITION (ENTRYWAY): Do NOT place lights in the center walking path. Do NOT place only one fixture -- must be a symmetrical pair. Do NOT aim lights directly at the door surface.`
+        negativePrompt: `ABSOLUTE PROHIBITION (ENTRYWAY): Do NOT place lights in the center walking path. Do NOT place only one fixture -- must be a symmetrical pair. Do NOT aim lights directly at the door surface.`,
+        darkDescription: `Entry door has NO flanking uplights - doorway and surrounding trim remain completely dark, no symmetrical fixture pair at entry, door frame and architectural portal unlit, entry appears as dark void in facade.`
       },
       {
         id: 'columns',
@@ -870,7 +874,8 @@ STRICT EXCLUSION ZONES:
 - No downlighting from above
 - Avoid broad flood beams
 - Fixtures should be visually unobtrusive`,
-        negativePrompt: `ABSOLUTE PROHIBITION (COLUMNS): Do NOT place lights in the open space between columns. Do NOT skip columns in a row -- all must be lit for symmetry. Do NOT use broad flood fixtures.`
+        negativePrompt: `ABSOLUTE PROHIBITION (COLUMNS): Do NOT place lights in the open space between columns. Do NOT skip columns in a row -- all must be lit for symmetry. Do NOT use broad flood fixtures.`,
+        darkDescription: `Column bases remain UNLIT - no ground fixtures at pillar bases, column shafts show only ambient spill from adjacent lights, capitals and entablature dark, columns appear as dark silhouettes against facade.`
       },
       {
   id: 'trees',
@@ -935,7 +940,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT over-light small ornamental trees
 - Do NOT place on hardscape or lawn (use bed areas when possible)
 - Do NOT create hot spots on trunk -- light should reach canopy`,
-  negativePrompt: `ABSOLUTE PROHIBITION (TREES): Do NOT aim tree lights toward house windows. Do NOT place in open lawn if avoidable. Do NOT over-light small trees with multiple fixtures.`
+  negativePrompt: `ABSOLUTE PROHIBITION (TREES): Do NOT aim tree lights toward house windows. Do NOT place in open lawn if avoidable. Do NOT over-light small trees with multiple fixtures.`,
+  darkDescription: `Trees remain DARK silhouettes - no ground fixtures near trunks, no upward beams into canopy, tree forms visible only against night sky, trunk texture invisible, canopy unlit, trees appear as natural dark shapes.`
      }
     ]
   },
@@ -1008,7 +1014,8 @@ STRICT EXCLUSION ZONES:
 - No uplighting -- downward projection only
 - No direct glare toward street or windows
 - No exposed bulbs -- hat must shield the light source`,
-  negativePrompt: `ABSOLUTE PROHIBITION (PATHWAY): Do NOT place path lights on concrete or pavement. Do NOT place path lights IN the walkway. Always place in adjacent landscaping beds. Do NOT place along driveways. Do NOT create dark gaps between light pools.`
+  negativePrompt: `ABSOLUTE PROHIBITION (PATHWAY): Do NOT place path lights on concrete or pavement. Do NOT place path lights IN the walkway. Always place in adjacent landscaping beds. Do NOT place along driveways. Do NOT create dark gaps between light pools.`,
+  darkDescription: `Walkways have NO path lights - sidewalks and pedestrian paths remain completely dark, no post-mounted fixtures along paths, no light pools on walking surfaces, path edges undefined in darkness, walking surfaces visible only by ambient moonlight.`
 },
       {
         id: 'driveway',
@@ -1077,7 +1084,8 @@ STRICT EXCLUSION ZONES:
 - No uplighting
 - No fixtures blocking vehicle path at garage/terminus
 - Do NOT mix driveway lights with pedestrian pathway lights in the same run`,
-        negativePrompt: `ABSOLUTE PROHIBITION (DRIVEWAY): Do NOT place path lights on driveway pavement. Do NOT use single-side lighting on long driveways. Do NOT leave dark gaps between pools. Do NOT place along pedestrian walkways.`
+        negativePrompt: `ABSOLUTE PROHIBITION (DRIVEWAY): Do NOT place path lights on driveway pavement. Do NOT use single-side lighting on long driveways. Do NOT leave dark gaps between pools. Do NOT place along pedestrian walkways.`,
+        darkDescription: `Driveway edges have NO path lights - vehicle entry corridor unlit, no brass post fixtures flanking drive, driveway pavement edges undefined in darkness, no glowing corridor effect, driveway appears as dark surface visible only by moonlight.`
       },
       {
         id: 'landscaping',
@@ -1135,7 +1143,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place on extreme outer edge of beds
 - Do NOT place directly against foundation or fences
 - No uplighting -- downward 360-degree spread only`,
-        negativePrompt: `ABSOLUTE PROHIBITION (LANDSCAPING): Do NOT place path lights along walkways or driveways. Do NOT place on bed edges. Do NOT place in open lawn. Interior bed placement only.`
+        negativePrompt: `ABSOLUTE PROHIBITION (LANDSCAPING): Do NOT place path lights along walkways or driveways. Do NOT place on bed edges. Do NOT place in open lawn. Interior bed placement only.`,
+        darkDescription: `Garden beds have NO interior path lights - planting areas remain dark, no post fixtures within landscaping beds, mulch and foliage unlit from within, beds appear as dark masses, no "glow from within" garden effect.`
       }
     ]
   },
@@ -1207,7 +1216,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT aim beams at door panels
 - Fixtures must be FLUSH-MOUNTED only -- no above-ground fixtures
 - Maximum 6 inches from wall to maintain proper grazing angle`,
-        negativePrompt: `ABSOLUTE PROHIBITION (GARAGE SIDES): Do NOT place lights in front of garage doors. Do NOT place in center of driveway. Do NOT use protruding fixtures. Flush-mount in concrete only, aimed at PIERS.`
+        negativePrompt: `ABSOLUTE PROHIBITION (GARAGE SIDES): Do NOT place lights in front of garage doors. Do NOT place in center of driveway. Do NOT use protruding fixtures. Flush-mount in concrete only, aimed at PIERS.`,
+        darkDescription: `Garage piers remain UNLIT - no flush-mounted well lights at pier bases, no vertical light columns grazing pier faces, garage pier texture invisible, piers appear as dark vertical surfaces flanking doors.`
       },
       {
         id: 'garage_door',
@@ -1263,7 +1273,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT let light stop at door top -- MUST continue to soffit
 - Minimum 24 inches from door face to prevent harsh grazing
 - Do NOT use single fixture for double-wide doors`,
-        negativePrompt: `ABSOLUTE PROHIBITION (GARAGE DOOR): Do NOT place lights at pier bases. Do NOT use narrow grazing beams. Light MUST wash above door to soffit. Do NOT place closer than 24 inches to door face.`
+        negativePrompt: `ABSOLUTE PROHIBITION (GARAGE DOOR): Do NOT place lights at pier bases. Do NOT use narrow grazing beams. Light MUST wash above door to soffit. Do NOT place closer than 24 inches to door face.`,
+        darkDescription: `Garage doors receive NO wash lighting - no flush well lights in front of doors, door panels remain dark, siding above doors unlit, garage doors appear as dark rectangles, no illumination from driveway surface.`
       },
       {
         id: 'sidewalks',
@@ -1329,7 +1340,8 @@ STRICT EXCLUSION ZONES:
 - No protruding fixtures
 - No high-power uplights
 - Maximum spacing: 10 feet`,
-        negativePrompt: `ABSOLUTE PROHIBITION (SIDEWALKS): Do NOT embed lights in driveways. Do NOT place in lawn or mulch. Do NOT aim at vertical walls. Edge placement only, not center of walkway.`
+        negativePrompt: `ABSOLUTE PROHIBITION (SIDEWALKS): Do NOT embed lights in driveways. Do NOT place in lawn or mulch. Do NOT aim at vertical walls. Edge placement only, not center of walkway.`,
+        darkDescription: `Sidewalks have NO embedded marker lights - walkway concrete surfaces remain dark, no flush well lights embedded in paths, path edges undefined, no "breadcrumb trail" marker effect, walking surfaces visible only by ambient moonlight.`
       },
       {
         id: 'driveway',
@@ -1395,7 +1407,8 @@ STRICT EXCLUSION ZONES:
 - No protruding fixtures
 - No high-intensity uplights
 - Stay 3-4 inches from pavement edge`,
-        negativePrompt: `ABSOLUTE PROHIBITION (DRIVEWAY): Do NOT embed lights along pedestrian walkways. Do NOT place in grass or beds. Do NOT aim at walls. Edge markers only, ground plane illumination.`
+        negativePrompt: `ABSOLUTE PROHIBITION (DRIVEWAY): Do NOT embed lights along pedestrian walkways. Do NOT place in grass or beds. Do NOT aim at walls. Edge markers only, ground plane illumination.`,
+        darkDescription: `Driveway has NO embedded surface markers - pavement edges undefined, no flush well lights in concrete/asphalt, no "runway" edge definition effect, driveway corridor appears as dark surface, edges visible only by moonlight reflection.`
       }
     ]
   },
@@ -1522,7 +1535,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT use one fixture for multiple dormers -- one fixture per dormer
 - Do NOT skip dormers -- all dormers should be lit for balance
 - Ensure SYMMETRIC placement for balanced facade`,
-        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE VERY SMALL DARK BRONZE light per dormer - no more, no less. Fixture must be TINY and mount INSIDE the gutter inner wall , CENTERED directly below dormer. Do NOT use large fixtures. Do NOT use brass or silver fixtures. Do NOT mount on gutter lip or fascia. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`
+        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE VERY SMALL DARK BRONZE light per dormer - no more, no less. Fixture must be TINY and mount INSIDE the gutter inner wall , CENTERED directly below dormer. Do NOT use large fixtures. Do NOT use brass or silver fixtures. Do NOT mount on gutter lip or fascia. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`,
+        darkDescription: `Dormers remain UNLIT - no gutter-mounted uplights below dormers, dormer faces completely dark, dormer windows show only ambient reflection, dormers appear as dark shapes against roofline, no upward wash on dormer siding or trim.`
       },
       {
         id: 'peaks',
@@ -1620,7 +1634,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place off-center from gable vertical axis
 - ONE fixture per peak -- no doubling up
 - Do NOT leave gaps in gable lighting -- maintain consistent illumination across facade`,
-        negativePrompt: `ABSOLUTE PROHIBITION (PEAKS & GABLES): Fixture must be INSIDE the gutter trough ONLY. Do NOT mount on roof surface or shingles. Do NOT mount on gutter lip or edge. Do NOT mount at the apex. Do NOT use for dormers. Do NOT place off-center. Base-mounted INSIDE GUTTER, centered under apex, upward projection only.`
+        negativePrompt: `ABSOLUTE PROHIBITION (PEAKS & GABLES): Fixture must be INSIDE the gutter trough ONLY. Do NOT mount on roof surface or shingles. Do NOT mount on gutter lip or edge. Do NOT mount at the apex. Do NOT use for dormers. Do NOT place off-center. Base-mounted INSIDE GUTTER, centered under apex, upward projection only.`,
+        darkDescription: `Roof peaks and gables remain DARK - no gutter-mounted uplights below gables, triangular gable faces completely unlit, gable siding texture invisible, peaks appear as dark triangular shapes against sky, no vertical emphasis on gable architecture.`
       },
       {
         id: 'secondStoryFacade',
@@ -1794,7 +1809,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT confuse with PEAKS & GABLES lighting (for peaks WITHOUT a 2nd story facade below)
 - Do NOT leave peaks/gables unlit if they exist above the 2nd story
 - Do NOT let light fall short of the peak -- it MUST reach the apex`,
-        negativePrompt: `ABSOLUTE PROHIBITION (2ND STORY WINDOWS & PEAK): Do NOT illuminate second story facade from first story gutter. Do NOT mount uplights in first story gutter. Do NOT wash upper walls, windows, or peaks with upward light. Second story facade and gable peaks must remain dark. No gutter-mounted uplighting on second story.`
+        negativePrompt: `ABSOLUTE PROHIBITION (2ND STORY WINDOWS & PEAK): Do NOT illuminate second story facade from first story gutter. Do NOT mount uplights in first story gutter. Do NOT wash upper walls, windows, or peaks with upward light. Second story facade and gable peaks must remain dark. No gutter-mounted uplighting on second story.`,
+        darkDescription: `Second story facade and peaks remain DARK - no gutter-mounted uplights from first story level, 2nd story windows unlit, upper siding texture invisible, peaks above 2nd story completely dark, upper facade appears as dark silhouette against sky.`
       }
     ]
   },
@@ -1854,7 +1870,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place fixtures randomly across soffit
 - ONE fixture per window -- no doubling
 - Maintain consistent spacing rhythm with windows`,
-        negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT WINDOWS): Do NOT place soffit lights above solid wall sections. Do NOT place above columns. Windows only, centered on each window.`
+        negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT WINDOWS): Do NOT place soffit lights above solid wall sections. Do NOT place above columns. Windows only, centered on each window.`,
+        darkDescription: `Soffit areas above windows remain PITCH BLACK - no recessed downlights above windows, window frames receive no downward grazing light, window trim unlit from above, eave underside directly above windows completely dark.`
       },
       {
         id: 'columns',
@@ -1905,7 +1922,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place fixtures above solid wall/siding sections (use siding preset)
 - Do NOT skip columns in a row -- all columns must be lit for symmetry
 - ONE fixture per column`,
-        negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT COLUMNS): Do NOT place soffit lights above windows. Do NOT place above wall sections. Columns only, one fixture centered above each column.`
+        negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT COLUMNS): Do NOT place soffit lights above windows. Do NOT place above wall sections. Columns only, one fixture centered above each column.`,
+        darkDescription: `Soffit areas above columns remain PITCH BLACK - no recessed downlights above columns, column capitals receive no downward light, column shafts unlit from above, eave underside directly above columns completely dark.`
       },
       {
         id: 'siding',
@@ -1959,7 +1977,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place fixtures above columns (use columns preset)
 - Wall pier sections ONLY
 - Maintain consistent rhythm with architectural elements`,
-        negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT SIDING): Do NOT place soffit lights above windows. Do NOT place above columns. Wall pier sections only, between windows.`
+        negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT SIDING): Do NOT place soffit lights above windows. Do NOT place above columns. Wall pier sections only, between windows.`,
+        darkDescription: `Soffit areas above wall piers remain PITCH BLACK - no recessed downlights above siding sections, wall pier texture receives no downward grazing, no scalloped illumination pattern, eave underside between windows completely dark.`
       },
       {
         id: 'peaks',
@@ -2010,7 +2029,8 @@ STRICT EXCLUSION ZONES:
 - Peak/apex area ONLY
 - ONE fixture per gable peak
 - Do NOT use for dormers -- dormers have separate preset`,
-        negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT PEAKS): Do NOT place in horizontal eave soffits unless requested. Do NOT place on roof surface. Peak apex location only, one per gable.`
+        negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT PEAKS): Do NOT place in horizontal eave soffits unless requested. Do NOT place on roof surface. Peak apex location only, one per gable.`,
+        darkDescription: `Peak soffits remain PITCH BLACK - no recessed downlights in gable apex soffits, gable faces receive no downward illumination from peak, triangular gable walls unlit from above, peak area completely dark.`
       }
     ]
   },
@@ -2088,7 +2108,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place on TOP of capstone
 - Do NOT use exposed/surface-mounted fixtures
 - UNDER-CAP mounting only`,
-        negativePrompt: `ABSOLUTE PROHIBITION (HARDSCAPE COLUMNS): Do NOT place on retaining walls. Do NOT place on steps. Under-cap mounting on pillars only.`
+        negativePrompt: `ABSOLUTE PROHIBITION (HARDSCAPE COLUMNS): Do NOT place on retaining walls. Do NOT place on steps. Under-cap mounting on pillars only.`,
+        darkDescription: `Hardscape columns/pillars remain UNLIT - no linear lights under capstones, pillar faces completely dark, stone/brick texture invisible, pillar shafts appear as dark vertical masses, no downward wash on pillar surfaces.`
       },
       {
         id: 'walls',
@@ -2154,7 +2175,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place on TOP of capstone
 - UNDER-CAP mounting only
 - Do NOT leave large dark gaps between fixtures on long walls`,
-        negativePrompt: `ABSOLUTE PROHIBITION (RETAINING WALLS): Do NOT place on columns/pillars. Do NOT place on steps. Under-cap mounting on walls only. No large gaps on long walls.`
+        negativePrompt: `ABSOLUTE PROHIBITION (RETAINING WALLS): Do NOT place on columns/pillars. Do NOT place on steps. Under-cap mounting on walls only. No large gaps on long walls.`,
+        darkDescription: `Retaining walls remain UNLIT - no linear lights under capstones, wall face texture invisible, stone/brick pattern hidden in darkness, walls appear as dark horizontal masses, no continuous glow along wall length.`
       },
       {
         id: 'steps',
@@ -2223,7 +2245,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place on TOP of treads (trip hazard)
 - Do NOT place on risers facing outward (glare)
 - UNDER-TREAD mounting only`,
-        negativePrompt: `ABSOLUTE PROHIBITION (STEPS): Do NOT place on columns/pillars. Do NOT place on retaining walls. Under-tread mounting only. Do NOT create trip hazards.`
+        negativePrompt: `ABSOLUTE PROHIBITION (STEPS): Do NOT place on columns/pillars. Do NOT place on retaining walls. Under-tread mounting only. Do NOT create trip hazards.`,
+        darkDescription: `Outdoor steps remain UNLIT - no under-tread lighting, risers completely dark, step edges undefined in darkness, stair treads visible only by ambient moonlight, no safety illumination on steps.`
       }
     ]
   },
@@ -2276,7 +2299,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place in lawn areas (landscape bed only)
 - Do NOT place on hardscape surfaces
 - Do NOT aim at windows or neighboring properties`,
-        negativePrompt: `ABSOLUTE PROHIBITION (WELL TREES): Do NOT place in lawn areas. Do NOT place on hardscape. Do NOT aim at windows. Landscape bed placement only at tree bases.`
+        negativePrompt: `ABSOLUTE PROHIBITION (WELL TREES): Do NOT place in lawn areas. Do NOT place on hardscape. Do NOT aim at windows. Landscape bed placement only at tree bases.`,
+        darkDescription: `Trees have NO in-ground well lights - no flush fixtures near trunk bases, tree trunks unlit, canopy receives no upward illumination, trees appear as dark silhouettes, bark texture invisible, no dramatic tree uplighting effect.`
       },
       {
         id: 'statues',
@@ -2313,7 +2337,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT create glare toward viewing positions
 - Do NOT overlight - maintain drama
 - Do NOT place in water (unless rated)`,
-        negativePrompt: `ABSOLUTE PROHIBITION (WELL STATUES): Do NOT create glare toward viewers. Do NOT overlight focal points. Do NOT place in water unless specifically rated.`
+        negativePrompt: `ABSOLUTE PROHIBITION (WELL STATUES): Do NOT create glare toward viewers. Do NOT overlight focal points. Do NOT place in water unless specifically rated.`,
+        darkDescription: `Statues and focal points remain UNLIT - no in-ground well lights near sculptures, statues appear as dark shapes, fountain features unlit, decorative urns invisible in darkness, no dramatic accent lighting on focal points.`
       },
       {
         id: 'architectural',
@@ -2350,7 +2375,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT place far from wall (grazing requires proximity)
 - Do NOT aim at windows
 - Do NOT use for smooth/flat surfaces (no texture to reveal)`,
-        negativePrompt: `ABSOLUTE PROHIBITION (WELL ARCHITECTURAL): Do NOT place far from wall face. Do NOT aim at windows. Close placement required for grazing effect.`
+        negativePrompt: `ABSOLUTE PROHIBITION (WELL ARCHITECTURAL): Do NOT place far from wall face. Do NOT aim at windows. Close placement required for grazing effect.`,
+        darkDescription: `Architectural features have NO in-ground well lights - no flush fixtures at wall bases, stone walls unlit from ground level, chimney bases dark, textured surfaces invisible, no wall grazing from recessed ground fixtures.`
       }
     ]
   },
@@ -2417,7 +2443,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT install on vertical walls (use peaks/gables preset)
 - Do NOT leave gaps in continuous runs
 - Horizontal eaves and fascia ONLY`,
-        negativePrompt: `ABSOLUTE PROHIBITION (HOLIDAY ROOFLINE): Do NOT install on sloped roof surfaces. Do NOT install on vertical walls. Horizontal eaves and fascia only. No gaps in runs.`
+        negativePrompt: `ABSOLUTE PROHIBITION (HOLIDAY ROOFLINE): Do NOT install on sloped roof surfaces. Do NOT install on vertical walls. Horizontal eaves and fascia only. No gaps in runs.`,
+        darkDescription: `Roofline has NO permanent holiday lighting - no RGB LED track along eaves, fascia boards completely dark, no glowing outline effect on horizontal rooflines, eave edges appear as dark silhouette against sky.`
       },
       {
         id: 'peaks',
@@ -2466,7 +2493,8 @@ STRICT EXCLUSION ZONES:
 - Do NOT skip peaks - outline all prominent gables
 - Do NOT leave apex unconnected
 - Both sloped edges MUST be lit for symmetry`,
-        negativePrompt: `ABSOLUTE PROHIBITION (HOLIDAY PEAKS): Do NOT outline windows. Do NOT skip prominent peaks. Both sloped edges must be lit. Apex must be connected.`
+        negativePrompt: `ABSOLUTE PROHIBITION (HOLIDAY PEAKS): Do NOT outline windows. Do NOT skip prominent peaks. Both sloped edges must be lit. Apex must be connected.`,
+        darkDescription: `Peaks and gables have NO permanent holiday lighting - no RGB LED track along rake edges, gable triangles unoutlined, apex unmarked, sloped rooflines appear as dark shapes against sky, no inverted V lighting effect.`
       }
     ]
   }

@@ -809,6 +809,30 @@ The fixture should be PARTIALLY OBSCURED by the gutter walls because it sits INS
       darkDescription: getDarkDescription(ft.id), // How this looks when "off"
     }));
 
+  // Build SUBOPTION-LEVEL PROHIBITION - non-selected suboptions within SELECTED fixture types
+  const subOptionProhibitions: { fixtureLabel: string; subOptionLabel: string; darkDescription: string }[] = [];
+
+  selectedFixtureIds.forEach(fixtureId => {
+    const fixtureType = fixtureTypes.find(ft => ft.id === fixtureId);
+    if (fixtureType && fixtureType.subOptions) {
+      // Get list of selected suboption IDs for this fixture
+      const selectedSubIds = plan.placements
+        .filter(p => p.fixtureType === fixtureId)
+        .map(p => p.subOption);
+
+      // Find non-selected suboptions for this fixture type
+      fixtureType.subOptions
+        .filter(so => !selectedSubIds.includes(so.id))
+        .forEach(so => {
+          subOptionProhibitions.push({
+            fixtureLabel: fixtureType.label,
+            subOptionLabel: so.label,
+            darkDescription: so.darkDescription || `${so.label} must remain completely dark - no fixtures placed for this target`,
+          });
+        });
+    }
+  });
+
   // ALWAYS add explicit soffit prohibition unless soffit is selected
   const soffitSelected = selectedFixtureIds.includes('soffit');
   const explicitSoffitProhibition = soffitSelected ? '' : `
@@ -923,6 +947,15 @@ ${allowlistItems.map(item => `
 ${prohibitedFixtures.map(pf => `
 - ${pf.label.toUpperCase()}: ${pf.darkDescription}
 `).join('\n')}
+
+=== SUBOPTION-LEVEL PROHIBITION (CRITICAL - Non-selected targets within selected fixture types) ===
+${subOptionProhibitions.length > 0 ? `
+The following SPECIFIC TARGETS are NOT selected and MUST remain DARK even though their parent fixture type is enabled:
+${subOptionProhibitions.map(sp => `
+- ${sp.fixtureLabel.toUpperCase()} / ${sp.subOptionLabel.toUpperCase()}: ${sp.darkDescription}
+`).join('\n')}
+*** CRITICAL: Only the ALLOWLIST suboptions above receive fixtures. All other suboptions within selected fixture types MUST remain completely unlit. ***
+` : '(All suboptions within selected fixtures are enabled)'}
 ${explicitSoffitProhibition}
 ${gutterSoffitClarification}
 === MASTER PRESERVATION RULES ===
@@ -943,6 +976,10 @@ ONLY the following fixture types may appear in this image:
 ## ABSOLUTE PROHIBITION - MUST REMAIN DARK
 The following fixtures are FORBIDDEN:
 - [List each non-selected fixture with description of how it looks when dark/off]
+
+## SUBOPTION-LEVEL PROHIBITION (Non-selected targets within enabled fixture types)
+Within selected fixture types, ONLY the specified suboptions receive lights:
+- [List each non-selected suboption with its dark description]
 
 ## LIGHTING STYLE - DRAMATIC CONTRAST (CRITICAL FOR REALISM)
 BEAM ANGLE: 15-25° (narrow spot for texture grazing, NOT wide flood)
@@ -1080,6 +1117,15 @@ ${expectedCounts.map(c => `- ${c.type}/${c.subOption}: Does prompt specify EXACT
 - Does the prompt use ALL CAPS for critical rules?
 - Does the prompt use markdown dashed lists for rules?
 - Is there a VALIDATION section at the end?
+
+## CRITICAL CHECK 4.5: SUBOPTION-LEVEL PROHIBITION (NEW)
+For each selected fixture type, verify that NON-SELECTED suboptions are explicitly prohibited:
+- Selected fixture types: ${expectedFixtureTypes.join(', ')}
+- Selected suboptions: ${expectedCounts.map(c => `${c.type}/${c.subOption}`).join(', ')}
+- Look for "SUBOPTION-LEVEL PROHIBITION" section in the prompt
+- Each non-selected suboption within a selected fixture type should have a "dark description"
+- FAIL if: A fixture type is selected but non-selected suboptions within it have no prohibition
+- Example: If UP LIGHTS is selected with only "siding" suboption, then "windows", "columns", "trees", "entryway" must be explicitly prohibited
 
 ## CRITICAL CHECK 5: SOFFIT PROHIBITION (MOST COMMON ERROR)
 ${!expectedFixtureTypes.includes('soffit') ? `
