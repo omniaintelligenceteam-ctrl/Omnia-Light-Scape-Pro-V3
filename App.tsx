@@ -60,6 +60,7 @@ import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene, generateNightSceneDirect, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
+import { analyzeWithClaude } from './services/claudeService';
 // IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
@@ -422,7 +423,10 @@ const App: React.FC = () => {
   // Auto-prompt feature: Property analysis state
   const [, setPropertyAnalysis] = useState<PropertyAnalysis | null>(null);
   const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'validating' | 'generating'>('idle');
-  
+
+  // Generation mode: 'hybrid' = Claude Opus 4.5 + Nano Banana Pro (best quality), 'direct' = Nano Banana Pro only (faster)
+  const [generationMode] = useState<'hybrid' | 'direct' | 'full'>('hybrid');
+
   // Generation always uses Nano Banana Pro (best model) - IC-Light dependency removed
   const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
 
@@ -1778,38 +1782,107 @@ const App: React.FC = () => {
 
     try {
       const base64 = await fileToBase64(file);
+      const mimeType = file.type; // Capture mime type for use in nested functions
 
-      // === DIRECT GENERATION MODE (Fast - Single API Call) ===
-      // Uses Nano Banana Pro's built-in "thinking" for composition
-      // Skips analysis/planning/prompting/validation stages for ~60-70% faster generation
-
-      setGenerationStage('generating');
-      console.log('Using DIRECT GENERATION MODE (Nano Banana Pro)...');
+      console.log('Generation mode:', generationMode);
       console.log('Selected fixtures:', selectedFixtures);
       console.log('Sub-options:', fixtureSubOptions);
       console.log('Counts:', fixtureCounts);
 
       let result: string;
 
-      try {
-        // Try direct generation first (faster)
-        result = await generateNightSceneDirect(
-          base64,
-          file.type,
-          selectedFixtures,
-          fixtureSubOptions,
-          fixtureCounts,
-          colorPrompt,
-          lightIntensity,
-          beamAngle,
-          targetRatio,
-          userPreferences
-        );
-      } catch (directError) {
-        // If direct generation fails, fall back to full pipeline
-        console.warn('Direct generation failed, falling back to full pipeline:', directError);
+      // === HYBRID MODE: Claude Opus 4.5 + Nano Banana Pro (Best Quality) ===
+      if (generationMode === 'hybrid') {
+        try {
+          console.log('Using HYBRID MODE (Claude Opus 4.5 + Nano Banana Pro)...');
 
-        // === FALLBACK: Full 5-Stage Pipeline ===
+          // Stage 1: Claude analyzes property and crafts optimized prompt
+          setGenerationStage('analyzing');
+          const claudeResult = await analyzeWithClaude(
+            base64,
+            mimeType,
+            selectedFixtures,
+            fixtureSubOptions,
+            fixtureCounts,
+            colorPrompt,
+            lightIntensity,
+            beamAngle,
+            userPreferences
+          );
+
+          console.log('[Claude] Analysis complete:', claudeResult.reasoning);
+          setPropertyAnalysis(claudeResult.analysis);
+
+          if (generationCancelledRef.current) {
+            generationCancelledRef.current = false;
+            setGenerationStage('idle');
+            return;
+          }
+
+          // Stage 2: Nano Banana Pro generates image with Claude's optimized prompt
+          setGenerationStage('generating');
+          result = await generateNightScene(
+            base64,
+            claudeResult.optimizedPrompt + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : ''),
+            mimeType,
+            targetRatio,
+            claudeResult.analysis.recommendations.optimal_intensity === 'subtle' ? 40 :
+            claudeResult.analysis.recommendations.optimal_intensity === 'moderate' ? 60 :
+            claudeResult.analysis.recommendations.optimal_intensity === 'bright' ? 80 : 100,
+            claudeResult.analysis.recommendations.optimal_beam_angle,
+            colorPrompt,
+            userPreferences
+          );
+        } catch (hybridError) {
+          console.warn('Hybrid mode failed, falling back to direct generation:', hybridError);
+          // Fall through to direct generation
+          setGenerationStage('generating');
+          result = await generateNightSceneDirect(
+            base64,
+            mimeType,
+            selectedFixtures,
+            fixtureSubOptions,
+            fixtureCounts,
+            colorPrompt,
+            lightIntensity,
+            beamAngle,
+            targetRatio,
+            userPreferences
+          );
+        }
+      }
+      // === DIRECT GENERATION MODE (Fast - Single API Call) ===
+      else if (generationMode === 'direct') {
+        console.log('Using DIRECT GENERATION MODE (Nano Banana Pro only)...');
+        setGenerationStage('generating');
+
+        try {
+          result = await generateNightSceneDirect(
+            base64,
+            mimeType,
+            selectedFixtures,
+            fixtureSubOptions,
+            fixtureCounts,
+            colorPrompt,
+            lightIntensity,
+            beamAngle,
+            targetRatio,
+            userPreferences
+          );
+        } catch (directError) {
+          // If direct generation fails, fall back to full pipeline
+          console.warn('Direct generation failed, falling back to full pipeline:', directError);
+          result = await runFullPipeline();
+        }
+      }
+      // === FULL PIPELINE MODE (5-Stage) ===
+      else {
+        console.log('Using FULL PIPELINE MODE (5 stages)...');
+        result = await runFullPipeline();
+      }
+
+      // Helper function for full pipeline (used as fallback)
+      async function runFullPipeline(): Promise<string> {
         let finalPrompt = activePrompt;
         let finalIntensity = lightIntensity;
         let finalBeamAngle = beamAngle;
@@ -1820,7 +1893,7 @@ const App: React.FC = () => {
         try {
           analysis = await analyzePropertyArchitecture(
             base64,
-            file.type,
+            mimeType,
             selectedFixtures,
             fixtureSubOptions,
             fixtureCounts
@@ -1830,7 +1903,7 @@ const App: React.FC = () => {
           if (generationCancelledRef.current) {
             generationCancelledRef.current = false;
             setGenerationStage('idle');
-            return;
+            throw new Error('Generation cancelled');
           }
 
           setGenerationStage('planning');
@@ -1851,7 +1924,7 @@ const App: React.FC = () => {
           if (generationCancelledRef.current) {
             generationCancelledRef.current = false;
             setGenerationStage('idle');
-            return;
+            throw new Error('Generation cancelled');
           }
 
           setGenerationStage('prompting');
@@ -1874,7 +1947,7 @@ const App: React.FC = () => {
           if (generationCancelledRef.current) {
             generationCancelledRef.current = false;
             setGenerationStage('idle');
-            return;
+            throw new Error('Generation cancelled');
           }
 
           setGenerationStage('validating');
@@ -1882,21 +1955,22 @@ const App: React.FC = () => {
           const validatedPrompt = validation.fixedPrompt || smartPrompt;
           finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
 
-        } catch {
+        } catch (err) {
+          if ((err as Error).message === 'Generation cancelled') throw err;
           setPropertyAnalysis(null);
         }
 
         if (generationCancelledRef.current) {
           generationCancelledRef.current = false;
           setGenerationStage('idle');
-          return;
+          throw new Error('Generation cancelled');
         }
 
         setGenerationStage('generating');
-        result = await generateNightScene(
+        return await generateNightScene(
           base64,
           finalPrompt,
-          file.type,
+          mimeType,
           targetRatio,
           finalIntensity,
           finalBeamAngle,
