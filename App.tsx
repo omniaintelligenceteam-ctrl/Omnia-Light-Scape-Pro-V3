@@ -4878,6 +4878,32 @@ Notes: ${invoice.notes || 'N/A'}
                                                                         >
                                                                             +
                                                                         </button>
+                                                                        {/* Remove button */}
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                // Remove from sub-options
+                                                                                setFixtureSubOptions(prev => ({
+                                                                                    ...prev,
+                                                                                    [fixtureId]: (prev[fixtureId] || []).filter(id => id !== subOptId)
+                                                                                }));
+                                                                                // Clean up count
+                                                                                setFixtureCounts(prev => {
+                                                                                    const newCounts = { ...prev };
+                                                                                    delete newCounts[subOptId];
+                                                                                    return newCounts;
+                                                                                });
+                                                                                // Clean up placement notes
+                                                                                setFixturePlacementNotes(prev => {
+                                                                                    const newNotes = { ...prev };
+                                                                                    delete newNotes[subOptId];
+                                                                                    return newNotes;
+                                                                                });
+                                                                            }}
+                                                                            className="w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/40 flex items-center justify-center text-red-400 text-sm ml-2"
+                                                                            title="Remove fixture"
+                                                                        >
+                                                                            ×
+                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                                 <input

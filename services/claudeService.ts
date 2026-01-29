@@ -129,6 +129,55 @@ function buildClaudeAnalysisPrompt(
 `;
   }
 
+  // Build explicit fixture inventory for inclusion in optimizedPrompt
+  let inventoryAllowlist = '';
+  let totalFixtureCount = 0;
+  selectedFixtures.forEach(fixtureId => {
+    const fixtureType = FIXTURE_TYPES.find(f => f.id === fixtureId);
+    if (fixtureType) {
+      const subOpts = fixtureSubOptions[fixtureId] || [];
+      subOpts.forEach(subOptId => {
+        const subOpt = fixtureType.subOptions?.find(s => s.id === subOptId);
+        if (subOpt) {
+          const count = fixtureCounts[subOptId];
+          const countStr = count !== null ? `EXACTLY ${count}` : 'Auto (AI decides based on property)';
+          inventoryAllowlist += `- ${fixtureType.label} (${subOpt.label}): ${countStr}\n`;
+          if (count !== null) {
+            totalFixtureCount += count;
+          }
+        }
+      });
+    }
+  });
+
+  // Build explicit prohibition list (fixture types not selected)
+  let inventoryProhibitions = '';
+  FIXTURE_TYPES.forEach(fixtureType => {
+    if (!selectedFixtures.includes(fixtureType.id)) {
+      // Entire fixture category not selected
+      inventoryProhibitions += `- ${fixtureType.label}: FORBIDDEN - ZERO instances allowed\n`;
+    } else {
+      // Check for non-selected sub-options within selected category
+      const selectedSubs = fixtureSubOptions[fixtureType.id] || [];
+      fixtureType.subOptions?.forEach(subOpt => {
+        if (!selectedSubs.includes(subOpt.id)) {
+          inventoryProhibitions += `- ${fixtureType.label} (${subOpt.label}): FORBIDDEN - ZERO instances allowed\n`;
+        }
+      });
+    }
+  });
+
+  // Build the inventory reminder section
+  const inventoryReminder = `
+## FIXTURE INVENTORY REMINDER (COPY THIS INTO optimizedPrompt)
+ALLOWED FIXTURES (include ONLY these):
+${inventoryAllowlist || '- None selected'}
+${totalFixtureCount > 0 ? `EXPECTED TOTAL: approximately ${totalFixtureCount} fixtures` : ''}
+
+FORBIDDEN FIXTURES (ZERO of these):
+${inventoryProhibitions || '- None'}
+`;
+
   return `You are a professional landscape lighting designer analyzing a property photo.
 
 ## YOUR TASK
@@ -153,6 +202,7 @@ ${fixtureDetails}
 ## PROHIBITION LIST
 ${prohibitions}
 ${preferencesContext}
+${inventoryReminder}
 
 ## MASTER INSTRUCTION (INCLUDE IN YOUR PROMPT)
 ${SYSTEM_PROMPT.masterInstruction}
@@ -268,6 +318,35 @@ CRITICAL PROMPT CRAFTING RULES:
 7. Include the master instruction constraints
 8. Include color temperature and beam angle specifications
 9. The prompt should be comprehensive and self-contained
+10. ALWAYS include FIXTURE INVENTORY section (see below) - this is CRITICAL for preventing extra fixtures
+
+## FIXTURE INVENTORY (STRICT ENFORCEMENT - MUST INCLUDE IN optimizedPrompt)
+
+Your optimizedPrompt MUST include a "COMPLETE FIXTURE INVENTORY" section that explicitly lists:
+1. EXACTLY which fixture types and sub-types will appear in the image
+2. The EXACT count for each fixture type (from spatialMap placements)
+3. The TOTAL count of ALL fixtures combined
+
+Your optimizedPrompt MUST ALSO include a "PROHIBITION VERIFICATION" section that lists:
+- Every fixture type that is NOT selected with "ZERO instances allowed"
+- Every sub-option that is NOT selected with "ZERO instances allowed"
+
+INVENTORY FORMAT TO INCLUDE IN optimizedPrompt:
+\`\`\`
+## COMPLETE FIXTURE INVENTORY
+This image will contain EXACTLY these fixtures and NO OTHERS:
+- [fixture type] ([sub-option]): EXACTLY [count] fixtures
+- [next fixture]...
+TOTAL FIXTURES IN IMAGE: [sum of all counts]
+
+## PROHIBITION VERIFICATION
+These fixture types MUST NOT appear AT ALL (ZERO instances):
+- [non-selected fixture type]: FORBIDDEN - zero allowed
+- [non-selected sub-option]: FORBIDDEN - zero allowed
+...
+
+VERIFICATION RULE: Before finalizing the image, mentally count all fixtures. If the count exceeds the inventory above, REMOVE the extras. If any prohibited fixture types appear, REMOVE them entirely.
+\`\`\`
 
 EXAMPLE SPATIAL PLACEMENT MAP FORMAT (include this in optimizedPrompt):
 ## EXACT FIXTURE PLACEMENT MAP
