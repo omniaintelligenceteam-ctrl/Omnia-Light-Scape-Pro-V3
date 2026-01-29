@@ -1439,10 +1439,10 @@ DO NOT CREATE SOFFIT LIGHTS. DO NOT CREATE RECESSED DOWNLIGHTS IN THE EAVE.
 DO NOT CREATE ANY LIGHTS THAT SHINE DOWNWARD FROM THE ROOFLINE.
 SOFFIT LIGHTS ARE BANNED. EAVE LIGHTS ARE BANNED. DOWNLIGHTS ARE BANNED.
 
-GUTTER UP LIGHTS ONLY - These shoot UPWARD:
-- GUTTER UP LIGHT: Visible bullet/flood fixture sits IN the metal gutter trough, beam shoots UPWARD
-- The fixture is VISIBLE - you can see the brass/bronze housing sitting in the gutter
-- Light goes UP toward the sky, illuminating walls ABOVE the fixture
+GUTTER MOUNTED UP LIGHTS ONLY - These shoot UPWARD:
+- GUTTER MOUNTED UP LIGHT: Visible bullet/flood fixture sits IN the metal gutter trough mounted inside the gutter inner wall, beam shoots UPWARD
+- The fixture is VISIBLE - you can see the bronze housing peaking out of the gutter
+- Light goes UP toward the sky, illuminating ABOVE the fixture
 - The illuminated area is ABOVE where the fixture is mounted
 
 BANNED (DO NOT CREATE):
@@ -1554,11 +1554,11 @@ STRICT EXCLUSION ZONES:
         id: 'peaks',
         label: 'Peaks & Gables',
         description: 'Apex of roof gables',
-        prompt: `TARGET: ROOF PEAKS & GABLES -- GUTTER-MOUNTED UPLIGHTS FOR TRIANGULAR PEAK ILLUMINATION
+        prompt: `TARGET: ROOF PEAKS & GABLES -- GUTTER-MOUNTED UPLIGHTS FOR TRIANGULAR PEAK ILLUMINATION SECTIONS
 
 *** THIS IS UPWARD LIGHTING, NOT DOWNWARD ***
-- Light source is IN THE GUTTER at the BOTTOM of the gable
-- Light beam shoots UPWARD toward the peak/apex
+- Light source is IN THE GUTTER Below the gable
+- Light beam shoots UPWARD toward the peak/apex Section
 - This is NOT soffit lighting (which shines down)
 - The GABLE FACE is lit from BELOW, creating dramatic uplighting
 
@@ -1588,9 +1588,9 @@ HARD RULE - MANDATORY:
 - FORBIDDEN: Placing fixture on roof surface, on shingles, on gutter edge/lip, or anywhere outside the gutter
 
 PLACEMENT GEOMETRY:
-- Place ONE fixture per gable peak
+- Place ONE fixture per gable 
 - Mount INSIDE the FIRST STORY (LOWEST) gutter trough - NOT any higher gutter
-- The fixture goes in the gutter at the BOTTOM of the house, shooting UP at the tall gable above
+- The fixture goes in the first story gutter, shooting UP at the tall gable above
 - Center fixture on the gable's VERTICAL CENTERLINE (directly under the apex)
 
 *** CRITICAL - WHICH GUTTER ***
@@ -1600,7 +1600,7 @@ PLACEMENT GEOMETRY:
 - Light must travel a LONG DISTANCE upward (20-40+ feet) to reach the peak
 
 MOUNTING (ONLY OPTION):
-- INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the lowest gutter channel, aims straight up toward apex
+- MOUNTED INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the lowest gutter channel, aims straight up toward apex
 
 ALIGNMENT:
 - HORIZONTAL: centered on gable width (aligned with apex above)
@@ -1631,7 +1631,7 @@ GABLE HIERARCHY (if budget limited):
 
 FIXTURE VISIBILITY:
 - Daytime: subtle fixture on gutter line
-- Nighttime: gable face glows dramatically; fixture hidden
+- Nighttime: gable face glows dramatically; fixture poking just above gutter lip
 
 HEIGHT & DRAMA:
 - Gutter mounting creates proper grazing angle for tall gables
@@ -1662,15 +1662,13 @@ STRICT EXCLUSION ZONES:
 - DO NOT generate soffit lights, can lights, or downlights
 - Soffits/eaves must remain PITCH BLACK (no fixtures in them)
 
-*** FIXTURE PLACEMENT - ANY FIRST STORY GUTTER WITH 2ND STORY ABOVE ***
+*** FIXTURE PLACEMENT - ANY FIRST STORY GUTTER 
 Place fixtures in ANY FIRST STORY GUTTER that has a 2nd story facade above it.
 
 FIRST STORY GUTTER LOCATIONS (place fixtures here):
-- Gutter above garage doors with 2nd story above
-- Gutter above first-floor windows with 2nd story above
 - Gutter above first-floor porch with 2nd story above
 - Gutter above ANY first-floor section that has a 2nd story facade rising above it
-- ANY horizontal gutter line that sits at the transition between 1st and 2nd story
+- ANY horizontal gutter line that sits at 1st story
 
 DO NOT PLACE FIXTURES IN:
 - Roofline gutter (the gutter at the very TOP of the house)
@@ -1680,30 +1678,29 @@ DO NOT PLACE FIXTURES IN:
 IDENTIFICATION:
 - SCAN THE ENTIRE HOME for first story gutters with 2nd story sections above
 - First story gutters are typically 8-12 feet off the ground
-- Look for the horizontal gutter line where the first floor roof meets the 2nd story wall
-- The 2nd story facade rises ABOVE this gutter line - this is your target
+- Look for the horizontal gutter line where the first floor ends 
 - Identify the ENTIRE second story facade ABOVE each first story gutter line
 - Note: upper-level windows, siding sections, decorative trim, shutters on the 2nd story
-- INCLUDE: Towers, turrets, flat-roofed pop-outs, box bays - any 2nd story section
-- LOCATE any PEAKS or GABLES that sit above the 2nd story windows
+- INCLUDE: Towers, turrets, flat-roofed pop-outs, box bays, walls - any 2nd story section
+- LOCATE any PEAKS or GABLES and potential lighting opertunties around them
 - Focus on the COMPLETE second story that can be washed with uplight FROM BELOW
 - The goal is to illuminate the ENTIRE 2nd story facade including towers, windows, and any peaks
 
 FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
-- Type: SMALL compact brass bullet or mini flood UP LIGHT with gutter-mount bracket
-- Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
+- Type: SMALL compact bronze bullet or mini flood UP LIGHT with gutter-mount bracket
+- Housing: BRONZE - this is REQUIRED, no other material
 - Size: SMALL/COMPACT fixture - NOT large floodlights
 - Profile: LOW-PROFILE design that sits discreetly INSIDE the first story gutter trough
 - Mounting: INSIDE the first story gutter trough ONLY - fixture sits IN the gutter channel
 - Beam spread: medium to wide -- soft wall wash coverage projecting UPWARD
 
 HARD RULE - MANDATORY:
-- Fixture MUST be placed INSIDE the gutter trough - NOT on roof, NOT on shingles, NOT on gutter lip
+- Fixture MUST be mounted INSIDE the gutter trough - NOT on roof, NOT on shingles, NOT on gutter lip
 - The fixture sits IN the gutter channel itself, aiming upward
 - FORBIDDEN: Placing fixture on roof surface, on shingles, on gutter edge/lip, or anywhere outside the gutter
 
 *** CRITICAL: GUTTER ANATOMY - UNDERSTANDING "INSIDE THE GUTTER" ***
-GUTTER STRUCTURE: A gutter is a U-shaped metal channel running along the roofline.
+GUTTER STRUCTURE: A gutter is a U-shaped metal channel running along the 1st story roofline.
 - The INSIDE of the gutter is the U-shaped trough where rainwater flows
 - Fixtures sit DOWN INSIDE this U-channel, against the INNER WALL (closest to house)
 - The fixture is PARTIALLY HIDDEN by the gutter walls - only the top is visible from below
@@ -1757,7 +1754,7 @@ PEAK/GABLE ILLUMINATION (CRITICAL - when present):
 - Creates dramatic vertical emphasis: windows glowing + peak illuminated above
 
 MOUNTING LOCATION (FIRST STORY GUTTER TROUGH ONLY):
-- INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims UPWARD at 2nd story above
+- MOUNTED INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims UPWARD
 - Fixture braced against INNER GUTTER WALL (wall closest to house/fascia)
 - The fixture is small enough to fit inside the gutter without blocking water flow
 - FORBIDDEN: On gutter lip, on fascia board, on roof surface, in ROOFLINE gutter
