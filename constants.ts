@@ -29,30 +29,6 @@ export interface FixtureType {
 
 export interface SystemPromptConfig {
   masterInstruction: string;
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// IC-LIGHT CONFIGURATION (Premium Generation via Replicate)
-// ═══════════════════════════════════════════════════════════════════════════════
-// 
-// IC-Light is an advanced relighting model that produces dramatically better
-// nighttime lighting mockups. Configuration is in services/replicateService.ts
-//
-// Optimal Settings (discovered through testing):
-//   - light_source: "Bottom Light" (for uplighting effect)
-//   - cfg: 3.0 (balanced creativity/consistency)
-//   - steps: 30 (quality vs speed tradeoff)
-//   - highres_scale: 1.5 (better detail)
-//
-// Default Prompt:
-//   "nighttime photograph, professional landscape uplights illuminating walls,
-//    warm 2700K amber glow from ground-mounted uplights washing up the stucco
-//    and stone facade, architectural lighting design, luxury home at night,
-//    photorealistic, dramatic uplighting effect, dark sky with stars"
-//
-// Negative Prompt:
-//   "downlights, ceiling lights, daylight, blue light, cool light"
-//
-// ═══════════════════════════════════════════════════════════════════════════════
   globalNegativePrompt: string;
   closingReinforcement: string;
 }
@@ -188,40 +164,14 @@ LIGHT GENERATION RULES (CRITICAL)
 SOFFIT/DOWNLIGHT PROHIBITION (CRITICAL - READ THIS)
 ═══════════════════════════════════════════════════════════════════════════════
 
-*** ABSOLUTE BAN ON SOFFIT LIGHTS UNLESS EXPLICITLY REQUESTED ***
-
-- DO NOT generate soffit lights, downlights, or recessed eave fixtures
-- DO NOT illuminate soffits from fixtures IN the soffit
-- Eave undersides MUST remain PITCH BLACK shadows
-- The ONLY way soffit surfaces receive light is from UP LIGHTS reflecting upward
-- This glow is REFLECTED AMBIENT light, NOT direct illumination from above
-- If "Soffit Lights" is NOT in the DESIGN REQUEST → ZERO soffit fixtures
-
-CLARIFICATION ON "SOFFIT REACH":
-- When we say "up lights reach the soffit" we mean the BEAM travels upward TO the soffit
-- The soffit receives REFLECTED GLOW from the up light beam hitting the wall below
-- This is NOT the same as having fixtures IN the soffit
-- UP LIGHTS shine UP. SOFFIT LIGHTS shine DOWN. They are OPPOSITES.
-
-WHAT "SOFFIT GLOW" FROM UP LIGHTS LOOKS LIKE:
-- Soft, ambient reflection on eave underside
-- Light source is CLEARLY from below (up lights at ground level)
-- Much dimmer than the wall below (inverse square law)
-- Natural fade - NOT direct illumination
-
-WHAT SOFFIT LIGHTS (PROHIBITED) LOOK LIKE:
-- Distinct downward beams from fixtures IN the eave
-- Light source visible in soffit
-- Illumination pattern shines DOWNWARD onto porch/ground
-- Creates pools of light below the eave
-
-IF IN DOUBT: Keep soffits DARK. Err on the side of NO soffit illumination.
+SOFFIT/RESCESSED DOWNLIGHTS MUST REMAIN COMPLETELT DARK - ZERO EXCEPTIONS. UNLESS A SOFFIT LIGHT SUB OPTION IS SELECTED. OTHERWISE ABSOLUTE NO DOWNLIGHTING. 
+EVEN IF THEY EXIST IN THE SCORE IMAGE
 
 ═══════════════════════════════════════════════════════════════════════════════
 GUTTER LIGHT MOUNTING LOCATION (CRITICAL - WHEN GUTTER LIGHTS SELECTED)
 ═══════════════════════════════════════════════════════════════════════════════
 
-*** GUTTER LIGHTS MUST BE INSIDE THE GUTTER TROUGH - NEVER ON THE ROOF ***
+*** GUTTER LIGHTS MUST BE INSIDE THE GUTTER TROUGH POKING OUT THE ROOF - NEVER ON THE ROOF ***
 
 GUTTER ANATOMY:
 - A gutter is a U-shaped metal channel running along the roofline
@@ -354,7 +304,7 @@ GUTTER LIGHT SPECIFICATIONS (APPLIES TO ALL GUTTER SUB-OPTIONS)
 
 - Type: SMALL compact mini bullet up light - TINY fixture
 - Housing: DARK BRONZE finish (required)
-- Mounting: INSIDE the gutter trough ONLY, against inner gutter wall
+- Mounting: INSIDE the gutter trough ONLY, against inner gutter wall poking out over the roof
 - FORBIDDEN: On roof shingles, on gutter lip, on fascia board
 - Beam MUST reach target (dormer/gable) regardless of distance
 
@@ -707,7 +657,7 @@ COMPATIBILITY (when other sub-options also selected):
 
 WHAT TO LIGHT:
 - ALL first-story windows: single, double, triple, picture, bay
-- Illuminates window frame, trim, casing, and sill
+- Illuminates window frame, trim, casing, sill and the home above to the soffit line
 
 PLACEMENT BY WINDOW TYPE:
 - SINGLE window: center on glass horizontal middle
@@ -1091,22 +1041,16 @@ EXCLUSIONS:
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 
-*** ABSOLUTE BAN ON SOFFIT LIGHTS ***
-DO NOT CREATE SOFFIT LIGHTS. DO NOT CREATE RECESSED DOWNLIGHTS IN THE EAVE.
-DO NOT CREATE ANY LIGHTS THAT SHINE DOWNWARD FROM THE ROOFLINE.
-SOFFIT LIGHTS ARE BANNED. EAVE LIGHTS ARE BANNED. DOWNLIGHTS ARE BANNED.
+WHEN SELECTED THERE MUST ONLY BE UP LIGHTING ABOVE THE FIRST STORY ROOFLINE
 
 GUTTER MOUNTED UP LIGHTS ONLY - These shoot UPWARD:
 - GUTTER MOUNTED UP LIGHT: Visible bullet/flood fixture sits IN the metal gutter trough mounted inside the gutter inner wall, beam shoots UPWARD
 - The fixture is VISIBLE - you can see the bronze housing peaking out of the gutter
-- Light goes UP toward the sky, illuminating ABOVE the fixture
+- Light goes UP toward the 2nd story features, illuminating up from the gutter
 - The illuminated area is ABOVE where the fixture is mounted
 
 BANNED (DO NOT CREATE):
-- Soffit lights (recessed in eave, shine down) - BANNED
-- Can lights in soffit - BANNED  
-- Downlights from roofline - BANNED
-- Any light that shines DOWNWARD - BANNED
+DO NOT CREATE ANY OTHER LIGHTING BESIDE GUTTER MOUNTED UP LIGHTS IN THE FIRST STORY GUTTER SHINING UPWARDS
 
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
 HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
@@ -1154,57 +1098,17 @@ COMPATIBILITY (when other sub-options selected):
         negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE VERY SMALL DARK BRONZE light per dormer - no more, no less. Fixture must be TINY and mount INSIDE the gutter inner wall , CENTERED directly below dormer. Do NOT use large fixtures. Do NOT use brass or silver fixtures. Do NOT mount on gutter lip or fascia. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`,
         darkDescription: `Dormers remain UNLIT - no gutter-mounted uplights below dormers, dormer faces completely dark, dormer windows show only ambient reflection, dormers appear as dark shapes against roofline, no upward wash on dormer siding or trim.`
       },
-      {
-        id: 'peaks',
-        label: 'Peaks & Gables',
-        description: 'Apex of roof gables',
-        prompt: `TARGET: Roof peaks & gables - gutter-mounted uplights
-
-WHAT TO LIGHT:
-- ALL prominent gables on the roofline (front-facing, side, cross gables)
-- Distinguish from DORMERS (dormers are separate structures)
-- Light the triangular gable FACE from base to apex
-
-COUNT RULE:
-- ONE fixture per gable
-- Centered on gable's vertical centerline (directly under apex)
-
-WHICH GUTTER (CRITICAL):
-- Mount in FIRST STORY (lowest) gutter ONLY
-- Do NOT use higher gutters, dormer gutters, or gutters near peak
-- Light travels 20-40+ feet upward to reach peak
-
-PLACEMENT:
-- Mount INSIDE gutter trough at first story level
-- Beam MUST reach the gable APEX with natural falloff
-- Wall grazing creates dramatic triangular illumination
-
-PRIORITY (if budget limited):
-1. Main front-facing gable
-2. Flanking front gables
-3. Side-facing gables visible from approach
-
-EXCLUSIONS:
-- Do NOT use for dormers (use dormers preset)
-- Do NOT mount at the apex - fixture at BASE looking UP
-- Do NOT place off-center from gable axis
-
-COMPATIBILITY (when other sub-options selected):
-- If SECONDSTORYFACADE selected: peaks handles ONLY standalone gables
-- Gables above 2nd story facades are handled by secondStoryFacade`,
-        negativePrompt: `ABSOLUTE PROHIBITION (PEAKS & GABLES): Fixture must be INSIDE the gutter trough ONLY. Do NOT mount on roof surface or shingles. Do NOT mount on gutter lip or edge. Do NOT mount at the apex. Do NOT use for dormers. Do NOT place off-center. Base-mounted INSIDE GUTTER, centered under apex, upward projection only.`,
-        darkDescription: `Roof peaks and gables remain DARK - no gutter-mounted uplights below gables, triangular gable faces completely unlit, gable siding texture invisible, peaks appear as dark triangular shapes against sky, no vertical emphasis on gable architecture.`
-      },
+    
       {
         id: 'secondStoryFacade',
-        label: '2nd Story Windows & Peak',
+        label: '2nd Story Windows, Sidings, & Peaks',
         description: 'Complete facade uplighting including windows, siding, and peaks',
         prompt: `TARGET: 2nd story windows & peaks - first-story gutter-mounted uplights
 
 WHAT TO LIGHT:
 - ENTIRE 2nd story facade: windows, siding, trim, AND peaks above
 - Light falling on 2nd story windows IS ACCEPTABLE and DESIRED
-- Include towers, turrets, pop-outs, box bays - any 2nd story section
+- Include towers, turrets, pop-outs, siding, box bays - any 2nd story section
 
 WHICH GUTTER (CRITICAL):
 - Mount in FIRST STORY gutter ONLY (typically 8-12 feet high)
@@ -1233,8 +1137,7 @@ EXCLUSIONS:
 - Do NOT confuse with PEAKS (use peaks for standalone gables without 2nd story below)
 
 COMPATIBILITY (when other sub-options selected):
-- If DORMERS selected: skip fixtures directly below dormers
-- If PEAKS selected: secondStoryFacade handles peaks above 2nd story facades`,
+- If DORMERS selected: skip fixtures directly below dormers`,
         negativePrompt: `ABSOLUTE PROHIBITION (2ND STORY WINDOWS & PEAK): Do NOT illuminate second story facade from first story gutter. Do NOT mount uplights in first story gutter. Do NOT wash upper walls, windows, or peaks with upward light. Second story facade and gable peaks must remain dark. No gutter-mounted uplighting on second story.`,
         darkDescription: `Second story facade and peaks remain DARK - no gutter-mounted uplights from first story level, 2nd story windows unlit, upper siding texture invisible, peaks above 2nd story completely dark, upper facade appears as dark silhouette against sky.`
       }
@@ -1250,7 +1153,7 @@ COMPATIBILITY (when other sub-options selected):
     description: 'Recessed roof overhang lights',
     positivePrompt: `CATEGORY ENABLED: Soffit Downlights.
 FIXTURE STYLE: Recessed canless LED downlights or slim LED soffit lights, flush-mounted in soffit, exterior IP65+ rated.
-INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement. Only illuminate the specific targets below (windows, columns, siding, peaks) as specified.`,
+INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement. Only illuminate the specific targets below (windows, columns, siding, peaks) as specified. Do not generate when not selected as a sub-option`,
     negativePrompt: `ABSOLUTE PROHIBITION (SOFFIT): The roof eaves and soffits must be PITCH BLACK. You must TURN OFF and REMOVE any existing soffit lights found in the original image. Zero light is permitted from roof overhangs under any circumstance.`,
     subOptions: [
       {
