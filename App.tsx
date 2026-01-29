@@ -1527,19 +1527,13 @@ const App: React.FC = () => {
     activePrompt += "2. IF A SURFACE IS NOT LISTED AS ALLOWED, IT MUST REMAIN DARK.\n";
     activePrompt += "3. DO NOT assume standard lighting packages. If I only ask for 'Trees', the House must remain DARK. If I only ask for 'Path', the House and Trees must remain DARK.\n\n";
 
-    // --- CRITICAL HARD RULE: SOFFIT LIGHTS DISABLED ---
-    // If soffit lights are not selected, strictly forbid them and command retouching of existing ones.
-    if (!selectedFixtures.includes('soffit')) {
-        activePrompt += "### ABSOLUTE PROHIBITION - SOFFIT LIGHTS:\n";
-        activePrompt += "Soffit lights (recessed can lights in the roof overhangs) are NOT selected. You must strictly enforce the following:\n";
-        activePrompt += "1. NO NEW LIGHTS: Do not place any lights in the roof overhangs, eaves, or soffits.\n";
-        activePrompt += "2. EXISTING LIGHTS MUST BE OFF: If the original input photo has soffit lights turned on, you must RETOUCH THEM OUT. They must be turned OFF in the final image.\n";
-        activePrompt += "3. PITCH BLACK EAVES: The area under the roof line must remain completely dark. Zero downlighting from the roof.\n\n";
-    }
+    // NOTE: Soffit prohibition removed - using "complete invisibility" approach
+    // If we don't mention soffits at all, AI can't generate them
 
     // --- PART 1: NEGATIVE CONSTRAINTS (HARD RULES) ---
     // List unselected fixtures first to strictly forbid them
-    const unselectedFixtures = FIXTURE_TYPES.filter(ft => !selectedFixtures.includes(ft.id));
+    // IMPORTANT: Skip soffit - complete invisibility approach
+    const unselectedFixtures = FIXTURE_TYPES.filter(ft => !selectedFixtures.includes(ft.id) && ft.id !== 'soffit');
     if (unselectedFixtures.length > 0) {
         activePrompt += "### STRICT NEGATIVE CONSTRAINTS (DO NOT GENERATE):\n";
         activePrompt += "You must NOT generate any of the following lighting types. These surfaces must remain DARK:\n";
@@ -1709,18 +1703,9 @@ const App: React.FC = () => {
         }
     });
 
-    // --- LOGIC GATE FOR GUTTER vs SOFFIT ---
-    // Rule: If Gutter is ON and Soffit is OFF -> Strictly forbid soffit lighting.
-    if (selectedFixtures.includes('gutter') && !selectedFixtures.includes('soffit')) {
-        activePrompt += `\n\n[HARD CONSTRAINT]: GUTTER LIGHTS ARE ACTIVE, BUT SOFFIT LIGHTS ARE DISABLED. You must ONLY generate lights shining UP from the gutter lip. The underside of the roof eaves (soffits) MUST remain completely dark. Do not allow any light bleed under the roof overhangs. Do NOT turn on existing soffit lights.`;
-    }
+    // NOTE: Soffit logic gates removed - using "complete invisibility" approach
+    // If we don't mention soffits at all, AI can't generate them
 
-    // --- LOGIC GATE FOR UP LIGHT vs SOFFIT ---
-    // Rule: If Up Lights are ON and Soffit is OFF -> Strictly forbid soffit lighting.
-    if (selectedFixtures.includes('up') && !selectedFixtures.includes('soffit')) {
-        activePrompt += `\n\n[HARD CONSTRAINT]: UP LIGHTS ARE ACTIVE, BUT SOFFIT DOWNLIGHTS ARE DISABLED. Do NOT generate any recessed can lights or downlights in the roof overhangs/soffits. The ONLY light on the house must come from the GROUND UP. The eaves themselves should not be emitting light, though they may catch the wash from the up lights.`;
-    }
-    
     // Final QA Instruction - Comprehensive Verification Checklist
     activePrompt += "\n\n### FINAL VERIFICATION CHECKLIST (MANDATORY):\n";
     activePrompt += "Before outputting, verify each item. If ANY check fails, FIX IT:\n";

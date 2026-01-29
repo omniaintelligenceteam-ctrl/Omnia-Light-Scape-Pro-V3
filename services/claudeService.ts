@@ -104,8 +104,13 @@ function buildClaudeAnalysisPrompt(
   });
 
   // Build prohibitions for non-selected fixtures
+  // IMPORTANT: Skip soffit entirely - if we don't mention it, AI can't generate it
+  // This is the "complete invisibility" approach for soffit control
   let prohibitions = '\n### FIXTURES THAT MUST REMAIN OFF (DARK):\n';
   FIXTURE_TYPES.forEach(fixtureType => {
+    // Skip soffit - complete invisibility approach
+    if (fixtureType.id === 'soffit') return;
+
     if (!selectedFixtures.includes(fixtureType.id)) {
       prohibitions += `- ${fixtureType.label}: MUST be completely dark/off\n`;
     } else {
@@ -151,8 +156,12 @@ function buildClaudeAnalysisPrompt(
   });
 
   // Build explicit prohibition list (fixture types not selected)
+  // IMPORTANT: Skip soffit - complete invisibility approach
   let inventoryProhibitions = '';
   FIXTURE_TYPES.forEach(fixtureType => {
+    // Skip soffit - if we don't mention it, AI can't generate it
+    if (fixtureType.id === 'soffit') return;
+
     if (!selectedFixtures.includes(fixtureType.id)) {
       // Entire fixture category not selected
       inventoryProhibitions += `- ${fixtureType.label}: FORBIDDEN - ZERO instances allowed\n`;

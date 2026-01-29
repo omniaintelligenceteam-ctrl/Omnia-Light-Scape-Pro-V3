@@ -1979,8 +1979,12 @@ const buildDirectPrompt = (
   }
 
   // Add PROHIBITION section for non-selected fixture types
+  // IMPORTANT: Skip soffit entirely - if we don't mention it, AI can't generate it
+  // This is the "complete invisibility" approach for soffit control
   prompt += '=== PROHIBITED FIXTURES (MUST REMAIN DARK) ===\n\n';
-  const nonSelectedFixtures = FIXTURE_TYPES.filter(f => !selectedFixtures.includes(f.id));
+  const nonSelectedFixtures = FIXTURE_TYPES.filter(f =>
+    !selectedFixtures.includes(f.id) && f.id !== 'soffit'
+  );
   if (nonSelectedFixtures.length > 0) {
     nonSelectedFixtures.forEach(fixture => {
       prompt += `### ${fixture.label.toUpperCase()} - FORBIDDEN\n`;

@@ -161,13 +161,6 @@ LIGHT GENERATION RULES (CRITICAL)
 - Unlit areas MUST remain in DEEP SHADOW for maximum contrast
 
 ═══════════════════════════════════════════════════════════════════════════════
-SOFFIT/DOWNLIGHT PROHIBITION (CRITICAL - READ THIS)
-═══════════════════════════════════════════════════════════════════════════════
-
-SOFFIT/RESCESSED DOWNLIGHTS MUST REMAIN COMPLETELT DARK - ZERO EXCEPTIONS. UNLESS A SOFFIT LIGHT SUB OPTION IS SELECTED. OTHERWISE ABSOLUTE NO DOWNLIGHTING. 
-EVEN IF THEY EXIST IN THE SCORE IMAGE
-
-═══════════════════════════════════════════════════════════════════════════════
 GUTTER LIGHT MOUNTING LOCATION (CRITICAL - WHEN GUTTER LIGHTS SELECTED)
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -375,7 +368,6 @@ MASTER RULE - STRICT CATEGORY ENFORCEMENT
 
 ### FIXTURE TYPE ALLOWLIST (ABSOLUTE)
 - ONLY generate fixtures for categories that are EXPLICITLY ENABLED above
-- If soffit/downlights are NOT selected → ZERO soffit fixtures in image
 - If path lights are NOT selected → ZERO path lights in image
 - If up lights are NOT selected → ZERO up lights in image
 - NEVER add fixtures "for realism" or "to complete the design"
