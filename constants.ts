@@ -1635,15 +1635,27 @@ STRICT EXCLUSION ZONES:
 - DO NOT generate soffit lights, can lights, or downlights
 - Soffits/eaves must remain PITCH BLACK (no fixtures in them)
 
-*** FIXTURE PLACEMENT - CRITICAL ***
-Place fixtures in the FIRST STORY GUTTER - this is the gutter directly ABOVE THE GARAGE or above any first-floor section.
-- YES: Gutter above garage doors, gutter above first-floor windows
-- NO: Gutter at the roofline/peak level, gutter on dormers
+*** FIXTURE PLACEMENT - ANY FIRST STORY GUTTER WITH 2ND STORY ABOVE ***
+Place fixtures in ANY FIRST STORY GUTTER that has a 2nd story facade above it.
+
+FIRST STORY GUTTER LOCATIONS (place fixtures here):
+- Gutter above garage doors with 2nd story above
+- Gutter above first-floor windows with 2nd story above
+- Gutter above first-floor porch with 2nd story above
+- Gutter above ANY first-floor section that has a 2nd story facade rising above it
+- ANY horizontal gutter line that sits at the transition between 1st and 2nd story
+
+DO NOT PLACE FIXTURES IN:
+- Roofline gutter (the gutter at the very TOP of the house)
+- Dormer gutters
+- Gutters with no 2nd story facade above them
 
 IDENTIFICATION:
-- Locate the FIRST STORY GUTTER LINE (the gutter directly above the garage, above first floor rooms)
-- This gutter is typically 8-12 feet off the ground, at the top of the first floor
-- Identify the ENTIRE second story facade ABOVE this gutter line
+- SCAN THE ENTIRE HOME for first story gutters with 2nd story sections above
+- First story gutters are typically 8-12 feet off the ground
+- Look for the horizontal gutter line where the first floor roof meets the 2nd story wall
+- The 2nd story facade rises ABOVE this gutter line - this is your target
+- Identify the ENTIRE second story facade ABOVE each first story gutter line
 - Note: upper-level windows, siding sections, decorative trim, shutters on the 2nd story
 - INCLUDE: Towers, turrets, flat-roofed pop-outs, box bays - any 2nd story section
 - LOCATE any PEAKS or GABLES that sit above the 2nd story windows
