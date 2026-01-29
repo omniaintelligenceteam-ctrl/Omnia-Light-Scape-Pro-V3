@@ -2,13 +2,15 @@
 import { GoogleGenAI } from "@google/genai";
 import type { UserPreferences, PropertyAnalysis, FixtureSelections, LightingPlan, FixturePlacement } from "../types";
 import type { FixtureType, SystemPromptConfig } from "../constants";
-import { 
-  LIGHTING_APPROACH_BY_STYLE, 
+import {
+  LIGHTING_APPROACH_BY_STYLE,
   SPACING_BY_FACADE_WIDTH,
   BEAM_ANGLE_BY_MATERIAL,
   INTENSITY_BY_WALL_HEIGHT,
   FEATURE_LIGHTING_GUIDELINES,
   ENHANCED_ANALYSIS_SYSTEM_PROMPT,
+  FIXTURE_TYPES,
+  SYSTEM_PROMPT,
   type ArchitecturalStyleType,
   type FacadeWidthType
 } from "../constants";
