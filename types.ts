@@ -304,6 +304,29 @@ export interface PropertyAnalysis {
   recommendations: PropertyRecommendations;
 }
 
+// === SPATIAL MAPPING TYPES (Smart Fixture Placement) ===
+export interface FeatureLocation {
+  id: string;                    // "window_1", "tree_left", "entry_door"
+  type: 'window' | 'door' | 'column' | 'tree' | 'corner' | 'dormer' | 'gable' | 'garage';
+  horizontalPosition: number;    // 0-100 (% from left edge of facade)
+  width?: number;                // Feature width as % of facade
+  label: string;                 // "First window from left"
+}
+
+export interface SpatialFixturePlacement {
+  id: string;                    // "uplight_siding_1"
+  fixtureType: string;           // "up", "path", "gutter"
+  subOption: string;             // "siding", "windows", "dormers"
+  horizontalPosition: number;    // 0-100 (% from left edge)
+  anchor: string;                // "right_of corner_left" or "below window_1"
+  description: string;           // Human-readable: "At far LEFT corner, in landscaping bed"
+}
+
+export interface SpatialMap {
+  features: FeatureLocation[];
+  placements: SpatialFixturePlacement[];
+}
+
 export interface OptimizedPromptData {
   intensity: number;
   beamAngle: number;

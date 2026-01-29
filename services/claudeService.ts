@@ -12,7 +12,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import type { PropertyAnalysis, UserPreferences } from '../types';
+import type { PropertyAnalysis, UserPreferences, SpatialMap, SpatialFixturePlacement } from '../types';
 import { FIXTURE_TYPES, SYSTEM_PROMPT } from '../constants';
 
 // Initialize Anthropic client
@@ -52,6 +52,7 @@ export interface ClaudeAnalysisResult {
   analysis: PropertyAnalysis;
   optimizedPrompt: string;
   reasoning: string;
+  spatialMap?: SpatialMap;  // Grid-based feature and fixture placement map
 }
 
 /**
@@ -159,6 +160,13 @@ ${SYSTEM_PROMPT.masterInstruction}
 ## CLOSING REINFORCEMENT (INCLUDE AT END OF YOUR PROMPT)
 ${SYSTEM_PROMPT.closingReinforcement}
 
+## SPATIAL MAPPING (CRITICAL FOR ACCURATE PLACEMENT)
+
+First, map all architectural features with their horizontal position on the facade.
+Use percentages: 0% = far left edge, 100% = far right edge.
+
+Then, for each fixture to place, specify its EXACT horizontal position and anchor it to a feature.
+
 ## OUTPUT FORMAT
 Return a JSON object with this exact structure:
 {
@@ -219,20 +227,147 @@ Return a JSON object with this exact structure:
       "notes": "<2-3 sentences about placement>"
     }
   },
-  "optimizedPrompt": "<THE FULL PROMPT FOR IMAGE GENERATION - Include master instruction, fixture-specific details with EXACT positions, all prohibitions, and closing reinforcement>",
+  "spatialMap": {
+    "features": [
+      { "id": "corner_left", "type": "corner", "horizontalPosition": 0, "label": "Far left corner" },
+      { "id": "window_1", "type": "window", "horizontalPosition": 15, "width": 8, "label": "First window from left" },
+      { "id": "entry_door", "type": "door", "horizontalPosition": 50, "label": "Center entry door" },
+      { "id": "window_2", "type": "window", "horizontalPosition": 75, "label": "Window right of door" },
+      { "id": "corner_right", "type": "corner", "horizontalPosition": 100, "label": "Far right corner" }
+    ],
+    "placements": [
+      {
+        "id": "uplight_1",
+        "fixtureType": "up",
+        "subOption": "siding",
+        "horizontalPosition": 5,
+        "anchor": "right_of corner_left",
+        "description": "At far LEFT corner, in landscaping bed"
+      },
+      {
+        "id": "uplight_2",
+        "fixtureType": "up",
+        "subOption": "siding",
+        "horizontalPosition": 35,
+        "anchor": "between window_1 and entry_door",
+        "description": "Wall section between first window and entry door"
+      }
+    ]
+  },
+  "optimizedPrompt": "<THE FULL PROMPT FOR IMAGE GENERATION - Include the SPATIAL PLACEMENT MAP section with horizontal positions and narrative descriptions>",
   "reasoning": "<Brief explanation of your analysis and prompt decisions>"
 }
 
 CRITICAL PROMPT CRAFTING RULES:
 1. Use ALL CAPS for critical rules (MUST, NEVER, EXACTLY, FORBIDDEN)
-2. Use visual anchors for positions (e.g., "FIXTURE 1: Far LEFT corner of facade")
-3. Specify EXACT counts with numbered positions (FIXTURE 1, FIXTURE 2, etc.)
-4. Describe what "dark" looks like for prohibited fixtures
-5. Include the master instruction constraints
-6. Include color temperature and beam angle specifications
-7. The prompt should be comprehensive and self-contained
+2. Include a SPATIAL PLACEMENT MAP section in your optimizedPrompt using the spatialMap data
+3. Format placements as narrative: "Scanning LEFT to RIGHT, you will see exactly N fixtures:"
+4. For each fixture, include: position (% from left), anchor feature, description
+5. End each fixture group with: "COUNT CHECK: There are EXACTLY N fixtures. No more, no less."
+6. Describe what "dark" looks like for prohibited fixtures
+7. Include the master instruction constraints
+8. Include color temperature and beam angle specifications
+9. The prompt should be comprehensive and self-contained
+
+EXAMPLE SPATIAL PLACEMENT MAP FORMAT (include this in optimizedPrompt):
+## EXACT FIXTURE PLACEMENT MAP
+The facade spans 0% (far left) to 100% (far right).
+
+### REFERENCE POINTS:
+- Far left corner: 0%
+- First window: 15%
+- Entry door: 50%
+- Second window: 75%
+- Far right corner: 100%
+
+### UP LIGHTS (siding)
+Scanning LEFT to RIGHT, you will see exactly 4 fixtures:
+1. Fixture at 5% - At far LEFT corner, in landscaping bed
+2. Fixture at 35% - Wall section between first window and entry door
+3. Fixture at 62% - Wall section between entry door and second window
+4. Fixture at 95% - At far RIGHT corner, in landscaping bed
+
+COUNT CHECK: There are EXACTLY 4 fixtures. No more, no less.
 
 Return ONLY the JSON object, no markdown code blocks or additional text.`;
+}
+
+/**
+ * Generates a narrative description of fixture placements for a specific fixture type.
+ * Research shows narrative descriptions are more effective than technical specs for AI image generation.
+ */
+export function generateNarrativePlacement(
+  spatialMap: SpatialMap,
+  fixtureType: string,
+  subOption?: string
+): string {
+  let placements = spatialMap.placements.filter(p => p.fixtureType === fixtureType);
+  if (subOption) {
+    placements = placements.filter(p => p.subOption === subOption);
+  }
+
+  if (placements.length === 0) return '';
+
+  // Sort left to right
+  const sorted = [...placements].sort((a, b) => a.horizontalPosition - b.horizontalPosition);
+
+  const label = subOption ? `${fixtureType} (${subOption})` : fixtureType;
+  let narrative = `### ${label.toUpperCase()}\n`;
+  narrative += `Scanning LEFT to RIGHT, you will see exactly ${sorted.length} fixtures:\n\n`;
+
+  sorted.forEach((p, i) => {
+    const positionDesc =
+      p.horizontalPosition < 15 ? 'near the left edge' :
+      p.horizontalPosition > 85 ? 'near the right edge' :
+      `at ${Math.round(p.horizontalPosition)}% from the left`;
+
+    narrative += `${i + 1}. Fixture ${positionDesc} - ${p.description}\n`;
+  });
+
+  narrative += `\nCOUNT CHECK: There are EXACTLY ${sorted.length} fixtures. No more, no less.\n`;
+
+  return narrative;
+}
+
+/**
+ * Formats the full spatial map into a prompt-ready string
+ */
+export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
+  if (!spatialMap.features.length && !spatialMap.placements.length) {
+    return '';
+  }
+
+  let output = `\n## EXACT FIXTURE PLACEMENT MAP\n`;
+  output += `The facade spans 0% (far left) to 100% (far right).\n\n`;
+
+  // Reference points
+  if (spatialMap.features.length > 0) {
+    output += `### REFERENCE POINTS:\n`;
+    const sortedFeatures = [...spatialMap.features].sort((a, b) => a.horizontalPosition - b.horizontalPosition);
+    sortedFeatures.forEach(f => {
+      output += `- ${f.label}: ${f.horizontalPosition}%\n`;
+    });
+    output += '\n';
+  }
+
+  // Group placements by fixtureType and subOption
+  const groups = new Map<string, SpatialFixturePlacement[]>();
+  spatialMap.placements.forEach(p => {
+    const key = `${p.fixtureType}_${p.subOption}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(p);
+  });
+
+  // Generate narrative for each group
+  groups.forEach((placements, key) => {
+    const [fixtureType, subOption] = key.split('_');
+    output += generateNarrativePlacement({ ...spatialMap, placements }, fixtureType, subOption);
+    output += '\n';
+  });
+
+  return output;
 }
 
 /**
