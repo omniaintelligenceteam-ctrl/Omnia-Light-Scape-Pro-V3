@@ -1675,12 +1675,51 @@ HARD RULE - MANDATORY:
 - The fixture sits IN the gutter channel itself, aiming upward
 - FORBIDDEN: Placing fixture on roof surface, on shingles, on gutter edge/lip, or anywhere outside the gutter
 
+*** CRITICAL: GUTTER ANATOMY - UNDERSTANDING "INSIDE THE GUTTER" ***
+GUTTER STRUCTURE: A gutter is a U-shaped metal channel running along the roofline.
+- The INSIDE of the gutter is the U-shaped trough where rainwater flows
+- Fixtures sit DOWN INSIDE this U-channel, against the INNER WALL (closest to house)
+- The fixture is PARTIALLY HIDDEN by the gutter walls - only the top is visible from below
+- Water flows around the fixture (weather-sealed design)
+
+CORRECT PLACEMENT (REQUIRED):
+- Fixture sits INSIDE the U-channel of the first story gutter
+- Braced against the INNER GUTTER WALL (wall closest to fascia/house)
+- Fixture is LOW in the channel, not sitting on the edge
+
+INCORRECT PLACEMENT (FORBIDDEN):
+- ON THE ROOF SURFACE (shingles) - NEVER place fixtures on the roof
+- ON THE GUTTER LIP/EDGE (outer rim) - NEVER sit fixtures on the visible edge
+- ON TOP OF THE GUTTER - NEVER have fixtures prominently visible on roofline
+- ON THE FASCIA BOARD - Fixtures go IN the gutter, not on the board behind it
+
+VISUAL TEST: From ground level, the fixture should be PARTIALLY OBSCURED by the gutter walls.
+If you can see the ENTIRE fixture prominently on the roofline, it's placed WRONG.
+
 PLACEMENT GEOMETRY:
 - Mount fixtures INSIDE the FIRST STORY GUTTER TROUGH (NOT the roofline gutter)
 - Position fixtures to achieve COMPLETE coverage of the 2nd story facade
 - Fixtures may be centered on windows, between windows, or positioned to illuminate peaks
 - Use VISUAL ANCHORS to describe each fixture position (e.g., "below window 1", "between windows 2 and 3", "centered under the peak")
 - Aim to wash the ENTIRE 2nd story including windows, siding, AND any peaks/gables above
+
+FIXTURE COUNT GUIDANCE:
+- For narrow 2nd story sections (8-12 feet wide): 2-3 fixtures
+- For medium 2nd story sections (12-20 feet wide): 3-4 fixtures
+- For wide 2nd story sections (20+ feet wide): 4-6 fixtures
+- Space fixtures approximately 4-6 feet apart for even coverage
+- Ensure at least ONE fixture is positioned to illuminate any peak/gable above
+
+MULTI-SECTION HOMES:
+- If the home has MULTIPLE first story sections with 2nd stories above:
+- Place fixtures in EACH first story gutter that has a 2nd story above
+- Each section should have complete coverage of its 2nd story facade
+- The goal is to illuminate ALL 2nd story facades visible from curb
+
+COUNT VALIDATION:
+- Too few fixtures = dark gaps in coverage
+- Too many fixtures = overlapping hot spots
+- Aim for smooth, even wash across the ENTIRE 2nd story facade
 
 PEAK/GABLE ILLUMINATION (CRITICAL - when present):
 - If a PEAK or GABLE exists above the 2nd story:
