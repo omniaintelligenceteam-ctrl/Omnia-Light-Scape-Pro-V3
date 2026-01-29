@@ -27,8 +27,8 @@ const getAnthropicClient = () => {
   });
 };
 
-// Claude Opus 4.5 model ID
-const CLAUDE_MODEL = 'claude-opus-4-5-20250514';
+// Claude Opus 4.5 model ID (released November 2025)
+const CLAUDE_MODEL = 'claude-opus-4-5-20251101';
 
 // Timeout for API calls (2 minutes)
 const API_TIMEOUT_MS = 120000;
