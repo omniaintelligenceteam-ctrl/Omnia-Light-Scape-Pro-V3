@@ -59,7 +59,7 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
+import { generateNightScene, generateNightSceneDirect, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
 // IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
@@ -1779,118 +1779,131 @@ const App: React.FC = () => {
     try {
       const base64 = await fileToBase64(file);
 
-      // === 4-STAGE AI PIPELINE ===
-      let finalPrompt = activePrompt;
-      let finalIntensity = lightIntensity;
-      let finalBeamAngle = beamAngle;
+      // === DIRECT GENERATION MODE (Fast - Single API Call) ===
+      // Uses Nano Banana Pro's built-in "thinking" for composition
+      // Skips analysis/planning/prompting/validation stages for ~60-70% faster generation
 
-      // STAGE 1: ANALYZING - Analyze property photo AND user's fixture selections
-      setGenerationStage('analyzing');
-      let analysis: PropertyAnalysis | null = null;
+      setGenerationStage('generating');
+      console.log('Using DIRECT GENERATION MODE (Nano Banana Pro)...');
+      console.log('Selected fixtures:', selectedFixtures);
+      console.log('Sub-options:', fixtureSubOptions);
+      console.log('Counts:', fixtureCounts);
+
+      let result: string;
 
       try {
-        analysis = await analyzePropertyArchitecture(
+        // Try direct generation first (faster)
+        result = await generateNightSceneDirect(
           base64,
           file.type,
           selectedFixtures,
           fixtureSubOptions,
-          fixtureCounts
+          fixtureCounts,
+          colorPrompt,
+          lightIntensity,
+          beamAngle,
+          targetRatio,
+          userPreferences
         );
-        setPropertyAnalysis(analysis);
+      } catch (directError) {
+        // If direct generation fails, fall back to full pipeline
+        console.warn('Direct generation failed, falling back to full pipeline:', directError);
 
-        // Check if cancelled
-        if (generationCancelledRef.current) {
-          generationCancelledRef.current = false;
-          setGenerationStage('idle');
-          return;
-        }
+        // === FALLBACK: Full 5-Stage Pipeline ===
+        let finalPrompt = activePrompt;
+        let finalIntensity = lightIntensity;
+        let finalBeamAngle = beamAngle;
 
-        // STAGE 2: PLANNING (AI-Powered) - Build lighting plan with AI reasoning
-        setGenerationStage('planning');
-        const plan = await planLightingWithAI(
-          analysis,
-          {
+        setGenerationStage('analyzing');
+        let analysis: PropertyAnalysis | null = null;
+
+        try {
+          analysis = await analyzePropertyArchitecture(
+            base64,
+            file.type,
+            selectedFixtures,
+            fixtureSubOptions,
+            fixtureCounts
+          );
+          setPropertyAnalysis(analysis);
+
+          if (generationCancelledRef.current) {
+            generationCancelledRef.current = false;
+            setGenerationStage('idle');
+            return;
+          }
+
+          setGenerationStage('planning');
+          const plan = await planLightingWithAI(
+            analysis,
+            {
+              fixtures: selectedFixtures,
+              subOptions: fixtureSubOptions,
+              counts: fixtureCounts,
+              placementNotes: fixturePlacementNotes
+            },
+            FIXTURE_TYPES
+          );
+
+          finalIntensity = plan.settings.intensity;
+          finalBeamAngle = plan.settings.beamAngle;
+
+          if (generationCancelledRef.current) {
+            generationCancelledRef.current = false;
+            setGenerationStage('idle');
+            return;
+          }
+
+          setGenerationStage('prompting');
+          const smartPrompt = await craftPromptWithAI(
+            analysis,
+            plan,
+            SYSTEM_PROMPT,
+            FIXTURE_TYPES,
+            colorPrompt,
+            userPreferences,
+            fixturePlacementNotes
+          );
+
+          const verifiedSummary = verifyFixturesBeforeGeneration(plan, {
             fixtures: selectedFixtures,
             subOptions: fixtureSubOptions,
-            counts: fixtureCounts,
-            placementNotes: fixturePlacementNotes
-          },
-          FIXTURE_TYPES
-        );
+            counts: fixtureCounts
+          });
 
-        // Use optimized settings from plan
-        finalIntensity = plan.settings.intensity;
-        finalBeamAngle = plan.settings.beamAngle;
+          if (generationCancelledRef.current) {
+            generationCancelledRef.current = false;
+            setGenerationStage('idle');
+            return;
+          }
 
-        // Check if cancelled
+          setGenerationStage('validating');
+          const validation = await validatePrompt(smartPrompt, analysis, plan);
+          const validatedPrompt = validation.fixedPrompt || smartPrompt;
+          finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
+
+        } catch {
+          setPropertyAnalysis(null);
+        }
+
         if (generationCancelledRef.current) {
           generationCancelledRef.current = false;
           setGenerationStage('idle');
           return;
         }
 
-        // STAGE 3: PROMPTING (AI-Powered) - Craft the optimal prompt with AI
-        setGenerationStage('prompting');
-        const smartPrompt = await craftPromptWithAI(
-          analysis,
-          plan,
-          SYSTEM_PROMPT,
-          FIXTURE_TYPES,
+        setGenerationStage('generating');
+        result = await generateNightScene(
+          base64,
+          finalPrompt,
+          file.type,
+          targetRatio,
+          finalIntensity,
+          finalBeamAngle,
           colorPrompt,
-          userPreferences,
-          fixturePlacementNotes
+          userPreferences
         );
-
-        // VERIFICATION STEP: Double-check fixtures match Fixture Summary before generating
-        const verifiedSummary = verifyFixturesBeforeGeneration(plan, {
-          fixtures: selectedFixtures,
-          subOptions: fixtureSubOptions,
-          counts: fixtureCounts
-        });
-
-        // Check if cancelled
-        if (generationCancelledRef.current) {
-          generationCancelledRef.current = false;
-          setGenerationStage('idle');
-          return;
-        }
-
-        // STAGE 4: VALIDATING (AI-Powered) - Review prompt before image generation
-        setGenerationStage('validating');
-        const validation = await validatePrompt(smartPrompt, analysis, plan);
-
-        // Use fixed prompt if validation provided one, otherwise use original
-        const validatedPrompt = validation.fixedPrompt || smartPrompt;
-
-        // Merge with verified summary and user's custom notes
-        finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
-
-      } catch {
-        // If any stage fails, continue with standard generation (graceful fallback)
-        setPropertyAnalysis(null);
-        // Keep original prompt and settings
       }
-
-      // Check if generation was cancelled during pipeline
-      if (generationCancelledRef.current) {
-        generationCancelledRef.current = false;
-        setGenerationStage('idle');
-        return;
-      }
-
-      // STAGE 5: GENERATING - Execute and create the image (using Nano Banana Pro - best model)
-      setGenerationStage('generating');
-      console.log('Using Nano Banana Pro (Gemini 3 Pro Image) generation...');
-      const result = await generateNightScene(
-        base64,
-        finalPrompt,
-        file.type,
-        targetRatio,
-        finalIntensity,
-        finalBeamAngle,
-        colorPrompt,
-        userPreferences
-      );
 
       // Check if generation was cancelled while waiting for API
       if (generationCancelledRef.current) {

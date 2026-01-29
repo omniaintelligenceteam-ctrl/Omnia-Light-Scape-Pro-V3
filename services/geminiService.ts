@@ -1907,6 +1907,193 @@ ${preferenceContext}
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// DIRECT GENERATION MODE (FAST - Single API Call)
+// Skips analysis/planning/prompting/validation stages for ~60-70% faster generation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Builds a complete prompt directly from user selections + pre-built templates
+ * No AI analysis needed - uses the rich prompt templates from constants.ts
+ */
+const buildDirectPrompt = (
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number
+): string => {
+  // Start with master instruction (includes narrative description and constraints)
+  let prompt = SYSTEM_PROMPT.masterInstruction + '\n\n';
+
+  // Add intensity and beam angle context
+  const intensityDesc = lightIntensity < 25 ? 'SUBTLE' : lightIntensity < 50 ? 'MODERATE' : lightIntensity < 75 ? 'BRIGHT' : 'HIGH POWER';
+  const beamDesc = beamAngle < 20 ? 'NARROW SPOT (15-20°)' : beamAngle < 40 ? 'MEDIUM FLOOD (25-40°)' : 'WIDE FLOOD (45-60°)';
+
+  prompt += `=== LIGHTING PARAMETERS ===
+- Color Temperature: ${colorTemperaturePrompt}
+- Intensity Level: ${intensityDesc} (${lightIntensity}%)
+- Beam Angle: ${beamDesc}
+
+`;
+
+  // Add ENABLED fixtures section
+  prompt += '=== ENABLED LIGHTING (ALLOWLIST) ===\n\n';
+
+  if (selectedFixtures.length === 0) {
+    prompt += 'NO LIGHTING ENABLED. Convert to nighttime scene only. Do NOT add any light fixtures.\n\n';
+  } else {
+    // Build fixture-specific prompts from FIXTURE_TYPES
+    selectedFixtures.forEach(fixtureId => {
+      const fixtureType = FIXTURE_TYPES.find(f => f.id === fixtureId);
+      if (fixtureType) {
+        prompt += `### ${fixtureType.label.toUpperCase()}\n`;
+        prompt += fixtureType.positivePrompt + '\n\n';
+
+        // Add sub-option specific prompts
+        const subOpts = fixtureSubOptions[fixtureId] || [];
+        if (subOpts.length > 0 && fixtureType.subOptions) {
+          subOpts.forEach(subOptId => {
+            const subOpt = fixtureType.subOptions?.find(s => s.id === subOptId);
+            if (subOpt) {
+              const count = fixtureCounts[subOptId];
+              const countStr = count !== null && count !== undefined ? `EXACTLY ${count}` : 'AUTO (AI determines optimal count)';
+              prompt += `#### ${subOpt.label}\n`;
+              prompt += `- Count: ${countStr} fixtures\n`;
+              prompt += `- ${subOpt.prompt}\n\n`;
+            }
+          });
+
+          // Add dark descriptions for NON-selected sub-options within this fixture type
+          const nonSelectedSubOpts = fixtureType.subOptions.filter(s => !subOpts.includes(s.id));
+          if (nonSelectedSubOpts.length > 0) {
+            prompt += `#### PROHIBITED SUB-OPTIONS (within ${fixtureType.label}):\n`;
+            nonSelectedSubOpts.forEach(subOpt => {
+              prompt += `- ${subOpt.label}: ${subOpt.darkDescription || 'MUST remain completely dark - no fixtures'}\n`;
+            });
+            prompt += '\n';
+          }
+        }
+      }
+    });
+  }
+
+  // Add PROHIBITION section for non-selected fixture types
+  prompt += '=== PROHIBITED FIXTURES (MUST REMAIN DARK) ===\n\n';
+  const nonSelectedFixtures = FIXTURE_TYPES.filter(f => !selectedFixtures.includes(f.id));
+  if (nonSelectedFixtures.length > 0) {
+    nonSelectedFixtures.forEach(fixture => {
+      prompt += `### ${fixture.label.toUpperCase()} - FORBIDDEN\n`;
+      prompt += `${fixture.negativePrompt}\n`;
+      prompt += `ALL ${fixture.label.toLowerCase()} areas MUST remain PITCH BLACK with zero illumination.\n\n`;
+    });
+  }
+
+  // Add closing reinforcement
+  prompt += SYSTEM_PROMPT.closingReinforcement;
+
+  return prompt;
+};
+
+/**
+ * DIRECT GENERATION - Single API call, ~20-60 seconds
+ * Uses Nano Banana Pro's built-in "thinking" for composition
+ * Skips analysis/planning/prompting/validation stages
+ */
+export const generateNightSceneDirect = async (
+  imageBase64: string,
+  imageMimeType: string,
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number,
+  aspectRatio: string = '1:1',
+  userPreferences?: UserPreferences | null
+): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  // Build prompt directly from templates (no AI analysis needed)
+  let prompt = buildDirectPrompt(
+    selectedFixtures,
+    fixtureSubOptions,
+    fixtureCounts,
+    colorTemperaturePrompt,
+    lightIntensity,
+    beamAngle
+  );
+
+  // Add user preference context if available
+  const preferenceContext = buildPreferenceContext(userPreferences);
+  if (preferenceContext) {
+    prompt = preferenceContext + '\n\n' + prompt;
+  }
+
+  console.log('=== DIRECT GENERATION MODE ===');
+  console.log('Selected fixtures:', selectedFixtures);
+  console.log('Sub-options:', fixtureSubOptions);
+  console.log('Counts:', fixtureCounts);
+  console.log('Prompt length:', prompt.length, 'characters');
+
+  try {
+    const generatePromise = ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: imageBase64,
+              mimeType: imageMimeType,
+            },
+          },
+          {
+            text: prompt,
+          },
+        ],
+      },
+      config: {
+        imageConfig: {
+          imageSize: "2K",
+          aspectRatio: aspectRatio,
+        }
+      },
+    });
+
+    // Wrap with timeout
+    const response = await withTimeout(
+      generatePromise,
+      API_TIMEOUT_MS,
+      'Direct generation timed out. Please try again.'
+    );
+
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+
+      if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+        console.warn(`Direct generation stopped with reason: ${candidate.finishReason}`);
+      }
+
+      if (candidate.content && candidate.content.parts) {
+        for (const part of candidate.content.parts) {
+          if (part.inlineData && part.inlineData.data) {
+            const base64Data = part.inlineData.data;
+            const mimeType = part.inlineData.mimeType || 'image/png';
+            console.log('✓ Direct generation successful');
+            return `data:${mimeType};base64,${base64Data}`;
+          }
+        }
+      }
+    }
+
+    throw new Error("Direct generation returned no image. Try the full pipeline mode.");
+  } catch (error) {
+    console.error("Direct Generation Error:", error);
+    throw error;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ENHANCED ANALYSIS INTEGRATION
 // Uses the new smart analysis system for better fixture suggestions
 // ═══════════════════════════════════════════════════════════════════════════════
