@@ -303,6 +303,99 @@ Each fixture creates a DISTINCT, ISOLATED pool of light with these properties:
 ✗ WRONG: Over-lit scenes with no dark areas
 
 ═══════════════════════════════════════════════════════════════════════════════
+UP LIGHT FIXTURE SPECIFICATIONS (APPLIES TO ALL UP LIGHT SUB-OPTIONS)
+═══════════════════════════════════════════════════════════════════════════════
+
+- Type: ground-staked brass up light (bullet or cylinder style)
+- Housing: solid brass/bronze, low-profile
+- Height: 6-8 inches above grade
+- Beam: narrow (15-25°) for wall grazing, medium (20-40°) for wash
+- Distance from wall/foundation: 4-6 inches
+- Placement: ONLY in landscaping beds/mulch, NEVER on hardscape
+
+═══════════════════════════════════════════════════════════════════════════════
+HOT SPOT AVOIDANCE (APPLIES TO ALL UP LIGHTS)
+═══════════════════════════════════════════════════════════════════════════════
+
+- Angle fixture BACK 15-20° from vertical
+- Beam starts on wall 12-18 inches above ground, NOT at fixture height
+- Light is BRIGHTEST at mid-wall, not at fixture base
+- Avoid overly bright "hot spot" at base - light should be EVEN
+
+WATTAGE BY WALL HEIGHT:
+- 1st story only (8-12 ft): 3-5 watt LED (200-400 lumens)
+- 2nd story reach (18-25 ft): 6-10 watt LED (500-800 lumens)
+- Tall facades (25+ ft): 10-15 watt LED (800-1200 lumens)
+
+═══════════════════════════════════════════════════════════════════════════════
+PATH LIGHT SPECIFICATIONS (APPLIES TO ALL PATH LIGHT SUB-OPTIONS)
+═══════════════════════════════════════════════════════════════════════════════
+
+- Style: cast brass "china hat" or dome-top path light
+- Height: 22 inches tall
+- Material: solid brass with aged bronze patina finish
+- Distribution: 360-degree omnidirectional downward projection
+- Light pool diameter: 6-8 feet
+- Placement: ALWAYS in landscaping beds adjacent to path, NEVER on hardscape
+- Pattern: STAGGERED ZIGZAG along path edges, 8-10 feet apart
+
+═══════════════════════════════════════════════════════════════════════════════
+CORE DRILL SPECIFICATIONS (APPLIES TO ALL IN-GRADE SUB-OPTIONS)
+═══════════════════════════════════════════════════════════════════════════════
+
+- Type: flush-mounted well light recessed into concrete/pavers
+- Housing: brass or stainless steel with tempered glass lens
+- Installation: level with grade, ZERO protrusion
+- Rating: vehicle-traffic rated where applicable
+
+═══════════════════════════════════════════════════════════════════════════════
+GUTTER LIGHT SPECIFICATIONS (APPLIES TO ALL GUTTER SUB-OPTIONS)
+═══════════════════════════════════════════════════════════════════════════════
+
+- Type: SMALL compact mini bullet up light - TINY fixture
+- Housing: DARK BRONZE finish (required)
+- Mounting: INSIDE the gutter trough ONLY, against inner gutter wall
+- FORBIDDEN: On roof shingles, on gutter lip, on fascia board
+- Beam MUST reach target (dormer/gable) regardless of distance
+
+═══════════════════════════════════════════════════════════════════════════════
+MULTI-SELECTION PRIORITY RULES (CRITICAL - PREVENTS DUPLICATE FIXTURES)
+═══════════════════════════════════════════════════════════════════════════════
+
+When multiple sub-options are active, some SHARE TARGET ZONES. Follow these rules:
+
+UP LIGHTS - SHARED ZONE RESOLUTION:
+1. ENTRYWAY takes PRIORITY within 6 feet of entry door
+   - If siding/windows/columns would place a fixture near the entry, SKIP IT
+   - Entryway's two flanking fixtures cover the entry zone
+
+2. COLUMNS takes PRIORITY at column bases
+   - If siding would place a fixture where a column stands, use COLUMNS instead
+   - Do NOT add a siding fixture at a column base
+
+3. WINDOWS takes PRIORITY at window centers
+   - Siding does NOT place fixtures under windows - only BETWEEN them
+   - This is already the default behavior
+
+4. SIDING fills REMAINING wall sections
+   - After entryway, columns, and windows have their fixtures, siding fills gaps
+
+GUTTER UP LIGHTS - SHARED ZONE RESOLUTION:
+1. DORMERS takes PRIORITY for dormer features
+   - If secondStoryFacade would place a fixture below a dormer, SKIP IT
+   - Dormers sub-option handles all dormer illumination
+
+2. SECONDSTORYFACADE handles facades WITH peaks above
+   - If peaks AND secondStoryFacade both selected, secondStoryFacade handles peaks that are part of a 2nd story facade
+
+3. PEAKS handles STANDALONE gables only
+   - Gables that rise directly from ground level OR don't have a 2nd story facade below
+
+FIXTURE OVERLAP RULE:
+- NEVER place two fixtures within 2 feet of each other
+- If two sub-options would both place a fixture in the same spot, use the HIGHER PRIORITY option only
+
+═══════════════════════════════════════════════════════════════════════════════
 VALIDATION CHECK (PERFORM BEFORE GENERATING)
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -580,86 +673,28 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
   id: 'siding',
   label: 'Siding',
   description: 'Ground staked up lights on wall piers between windows',
-  prompt: `TARGET: WALL PIERS / SIDING SECTIONS -- VERTICAL SURFACE GRAZING
+  prompt: `TARGET: Wall piers / siding sections between windows
 
-IDENTIFICATION SCAN:
-- Locate every vertical solid wall section BETWEEN windows across the entire home facade
-- Wall pier materials: siding (lap, board & batten, shake), stucco, brick, stone, block
-- Include: corner siding at far left and far right of structure
-- Include: wall sections between window groupings
-- Include: blank wall expanses with no windows
+WHAT TO LIGHT:
+- Every vertical wall section BETWEEN windows across facade
+- Include corner siding at far LEFT and far RIGHT of structure
+- Include blank wall expanses with no windows
 
-FIXTURE SPECIFICATIONS:
-- Type: ground-staked brass up light (bullet or cylinder style)
-- Housing: solid brass/bronze, low-profile
-- Height: 6-8 inches above grade
-- Beam: narrow to medium (15-30 degrees) for wall grazing
-
-PLACEMENT GEOMETRY:
-- Place ONE ground-staked fixture at the BASE of EACH wall pier
-- Distance from wall: 6 inches (tighter against foundation if landscaping obstructs)
-- Place fixtures in planting bed or mulch ONLY -- never on concrete, pavers, or hardscape
-
-PLACEMENT SEQUENCE:
-1. Start with FAR LEFT corner of facade if under landscaping bed
-2. Then FAR RIGHT corner of facade if under landscaping bed
-3. Fill INWARD identifying each wall pier between windows, add 2 for large blank sections
-4. Every vertical wall section receives atleast one fixture
-
-WALL PIER IDENTIFICATION:
-- Measure from window edge to window edge
-- The solid wall between = one pier = one fixture
-- Wide piers (>6 ft): consider two fixtures at 1/3 points
+PLACEMENT:
+- ONE fixture at BASE of each wall pier
+- Start at FAR LEFT corner, then FAR RIGHT corner, fill inward
+- Wide piers (>6 ft): two fixtures at 1/3 points
 - Narrow piers (<2 ft): single centered fixture
+- Beam MUST reach soffit/roofline
 
-LIGHT PHYSICS:
-- WALL GRAZING technique: fixture close to wall (6 inches) creates dramatic texture reveal
-- Beam originates as bright hotspot at ground level
-- Light travels VERTICALLY UP the wall surface
-- Natural intensity falloff: brightest at base, gradually dimmer toward top
-- Beam MUST reach soffit/roofline directly above
-- If 2nd story present, light must travel full height to upper roofline
-- Cast subtle shadows from architectural trim, shutters, and surface texture
+EXCLUSIONS:
+- Do NOT place directly under windows (windows get separate fixtures if selected)
+- Do NOT place on concrete/hardscape
 
-TEXTURE REVELATION BY MATERIAL:
-- LAP SIDING: horizontal shadow lines between each board
-- BOARD & BATTEN: vertical shadow lines at battens
-- BRICK: mortar joint grid pattern emphasized
-- STONE: irregular surface creates dramatic light/shadow play
-- STUCCO: subtle texture with soft shadows
-- SHAKE/SHINGLE: layered shadow pattern
-
-REALISM REQUIREMENTS:
-- Characteristic of low-voltage LED landscape lighting
-- Slight light spill onto adjacent surfaces (not perfectly contained beams)
-- Fixtures appear as small dark brass cylinders, nearly invisible at night
-- Light appears natural, not theatrical or over-saturated
-
-SPACING RHYTHM:
-- Consistent fixture placement creates visual rhythm across facade
-- Alternating pattern: window (ambient glow) / pier (direct uplight) / window / pier
-- Symmetry preferred when architecture allows
-
-HOT SPOT AVOIDANCE & WATTAGE:
-- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
-- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
-- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
-- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
-- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
-- Light BRIGHTEST at mid-wall, not at base
-- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
-
-HOT SPOT AVOIDANCE & WATTAGE:
-- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
-- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
-- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
-- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
-- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
-- Light BRIGHTEST at mid-wall, not at base
-- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
-
-STRICT EXCLUSION ZONES:
-- Wall sections immediately adjacent to windows receive SPILL light only, not direct fixtures`,
+COMPATIBILITY (when other sub-options also selected):
+- If WINDOWS selected: place siding fixtures ONLY between windows, not under them
+- If COLUMNS selected: skip wall sections occupied by columns
+- If ENTRYWAY selected: skip wall sections within 6 feet of entry door`,
   negativePrompt: `ABSOLUTE PROHIBITION (SIDING): skip the corners/ends of the home - both left and right ends MUST have up lights. start placement in the middle of the facade.place up lights directly under windows.  place on concrete, hardscape, or open lawn - ONLY in landscaping beds.  aim beams at window glass.`,
   darkDescription: `Wall piers between windows remain PITCH BLACK - zero ground-staked fixtures between windows, no vertical light columns on siding sections, wall surfaces show only ambient spill from adjacent lit features if any, siding texture invisible in darkness.`
 
@@ -668,101 +703,31 @@ STRICT EXCLUSION ZONES:
   id: 'windows',
   label: '1st Story Windows',
   description: 'Centered on glass (single) or mullion between (double)',
-  prompt: `TARGET: 1ST STORY WINDOW ASSEMBLIES -- CENTERED UPLIGHTING
+  prompt: `TARGET: First-story window assemblies - centered uplighting
 
-IDENTIFICATION SCAN:
-- Locate ALL first-story windows across the home facade
-- Include: single windows, double/mulled windows, triple windows, picture windows, bay windows
-- Identify the window TYPE to determine fixture placement point
-- Note window trim, casing, and any shutters present
+WHAT TO LIGHT:
+- ALL first-story windows: single, double, triple, picture, bay
+- Illuminates window frame, trim, casing, and sill
 
-WINDOW CLASSIFICATION & PLACEMENT POINT:
-- SINGLE WINDOW (one pane): fixture centered on the horizontal middle of the glass
-- DOUBLE/MULLED WINDOW (two panes): fixture centered on the vertical MULLION (divider) between panes
-- TRIPLE WINDOW (three panes): fixture centered on the middle pane OR on center mullion
-- PICTURE WINDOW (large single): fixture centered on window width
-- BAY WINDOW: one fixture centered on each flat window section
+PLACEMENT BY WINDOW TYPE:
+- SINGLE window: center on glass horizontal middle
+- DOUBLE/MULLED window: center on mullion between panes
+- TRIPLE window: center on middle pane
+- BAY window: one fixture per flat section
+- ONE fixture per window - no exceptions
 
-FIXTURE SPECIFICATIONS:
-- Type: ground-staked brass up light (bullet or cylinder style)
-- Housing: solid brass/bronze, low-profile
-- Height: 6-8 inches above grade
-- Beam: medium spread (20-40 degrees) for soft wall washing
+OBSTRUCTION RULE:
+- IGNORE landscaping - place fixture BEHIND foliage if needed
+- Do NOT skip windows due to plants
+- Do NOT relocate off-center to avoid plants
 
-PLACEMENT GEOMETRY:
-- Find the CENTER AXIS of the window unit (vertical centerline)
-- Drop a plumb line from that center point to ground level
-- Stake the fixture at that exact ground point
-- Setback from foundation wall: 4-6 inches
-- Place in planting bed or mulch ONLY
+EXCLUSIONS:
+- Do NOT place on wall piers between windows (siding handles those)
+- Do NOT aim directly at glass surface
 
-CENTERING PRECISION:
-- Fixture must align with window centerline -- NOT offset left or right
-- For windows with shutters: center on WINDOW, ignore shutter width
-- For windows with trim/casing: center on GLASS, not outer trim edge
-- Visual test: fixture should appear directly below window center when viewed straight-on
-
-LIGHT PHYSICS:
-- WALL WASHING technique with slight graze for soft illumination
-- Beam originates at ground level below window
-- Light travels VERTICALLY UP, grazing the window frame and trim
-- Illuminates: sill, frame, casing, trim details, header
-- Light CONTINUES ABOVE window to soffit/roofline
-- Brightest at base with natural intensity falloff upward
-- Glass receives AMBIENT GLOW only -- no direct beam on glass surface
-
-WINDOW FRAME ILLUMINATION:
-- Bottom sill: receives direct light first
-- Side casings: light grazes vertically along trim
-- Header/top trim: receives light traveling upward
-- Muntins/grilles (if present): cast subtle shadow patterns
-- Shutters (if present): catch side spill, add depth
-
-OBSTRUCTION OVERRIDE PROTOCOL:
-- IGNORE landscaping obstructions entirely
-- If bushes, shrubs, or plants block the ideal fixture location:
-  - Place fixture BEHIND the foliage
-  - Press fixture close to foundation (tighter than 4 inches if needed)
-  - Light will filter through/around foliage naturally
-- Do NOT skip any window due to landscaping obstacles
-- Do NOT relocate fixture off-center to avoid plants
-
-REALISM REQUIREMENTS:
-- Characteristic of low-voltage LED landscape lighting
-- Window frame and trim softly illuminated, not harshly lit
-- Glass appears to glow from reflected/ambient light, not direct beam
-- Slight spill onto wall areas immediately adjacent to window
-- Fixture nearly invisible at night -- light effect is the focus
-
-FIXTURE COUNT RULE:
-- ONE fixture per window unit -- no exceptions
-- Double window = ONE fixture (on mullion)
-- Triple window = ONE fixture (centered middle window)
-- Do NOT use multiple fixtures for a single window assembly
-
-HOT SPOT AVOIDANCE & WATTAGE:
-- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
-- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
-- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
-- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
-- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
-- Light BRIGHTEST at mid-wall, not at base
-- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
-
-STRICT EXCLUSION ZONES:
-- Do NOT place fixtures directly under SHUTTERS
-- Do NOT place fixtures on BLANK SIDING or wall piers between windows
-- Do NOT place fixtures on concrete, pavers, driveways, or walkways
-- Do NOT aim beam directly AT the glass surface
-- Do NOT skip windows because of landscaping
-- Do NOT use multiple fixtures per window
-- Do NOT place off-center from window axis
-- Adjacent wall piers receive SPILL LIGHT only, not dedicated fixtures
-
-RELATIONSHIP TO SIDING PRESET:
-- If SIDING preset is also active: windows get centered fixtures, wall piers get separate fixtures
-- If ONLY windows preset is active: wall piers between windows remain darker (spill light only)
-- These presets are complementary, not overlapping`,
+COMPATIBILITY:
+- If SIDING also selected: windows get centered fixtures, wall piers get separate siding fixtures
+- These are complementary, not overlapping`,
   negativePrompt: `ABSOLUTE PROHIBITION (1ST STORY WINDOWS): Do NOT place fixtures off-center from windows. Do NOT skip windows due to landscaping. Do NOT place on wall piers between windows. Do NOT aim directly at glass. Do NOT use multiple fixtures per window. ONE fixture centered under each window only.`,
   darkDescription: `First-story windows receive NO dedicated ground fixtures - no centered uplights below windows, window frames and casings remain dark, glass shows only ambient reflection from other light sources if any, window assemblies appear as dark rectangles against facade.`
 },
@@ -770,53 +735,31 @@ RELATIONSHIP TO SIDING PRESET:
         id: 'entryway',
         label: 'Entryway',
         description: 'Flanking main entry door',
-        prompt: `TARGET: MAIN ENTRYWAY -- ARCHITECTURAL PORTAL FRAMING WITH FLANKING UPLIGHTS
+        prompt: `TARGET: Main entryway - flanking uplights
 
-IDENTIFICATION:
-- Locate the PRIMARY entrance door
-- Identify architectural features: decorative trim/casing, sidelights, transom, columns/pilasters, archway, portico, pediment
+WHAT TO LIGHT:
+- PRIMARY entrance door and surrounding architecture
+- Trim, casing, sidelights, transom, columns, portico
 
-FIXTURE PLACEMENT (CRITICAL):
-- Place EXACTLY TWO ground-staked brass up lights: one LEFT and one RIGHT of the entry door
-- Distance from wall/column surface: 4-6 inches
-- Beams angled to graze the architecture and visually converge overhead
+PLACEMENT:
+- EXACTLY TWO fixtures: one LEFT, one RIGHT of entry door
+- Beams angled slightly inward, converging above door
+- Must be SYMMETRICAL pair
 
 PLACEMENT BY SCENARIO:
-- COLUMNS/PILASTERS flank door: place at base of each column, 4-6 inches from face, angled upward along shaft
-- SIDELIGHTS flank door: place at outer edge of sidelight assembly, grazing vertical trim/casing
-- PLAIN WALL/TRIM only: place at outer edges of door casing, grazing vertical molding up to soffit line
-- PORTICO/ROOF OVERHANG above door: angle beams to illuminate underside of overhang
-- ARCHWAY surrounds door: illuminate arch legs to trace the curve overhead
+- COLUMNS flank door: at base of each column
+- SIDELIGHTS flank door: at outer edges of sidelight assembly
+- PLAIN WALL: at outer edges of door casing
+- PORTICO above: angle to illuminate underside of overhang
 
-SETBACK & ANGLE:
-- Keep fixtures 4-6 inches from vertical surface
-- Stake in planting bed/mulch (NOT on porch floor or steps)
-- Beam angled slightly inward toward door frame
-
-LIGHT PHYSICS:
-- Use WALL GRAZING for textured surfaces (stone/brick) or WALL WASHING for smooth surfaces
-- Hotspot at ground level beside each door edge
-- Beams travel upward grazing the framing elements
-- Illuminate header, transom, or underside of portico/roof overhang
-- Beams converge to create a subtle halo above the door
-- Small spill onto door surface is acceptable
-
-SHADOWS & TEXTURE:
-- Grazing reveals trim profiles, column fluting, and surface texture
-- Door hardware may catch subtle reflections
-
-FIXTURE APPEARANCE:
-- Small cylindrical brass/bronze ground-stake fixtures
-- Low-profile, nearly invisible at night
-- Fixtures MUST be a symmetrical pair
-
-STRICT EXCLUSION ZONES:
-- No fixtures in the CENTER of walkway or porch (trip hazard)
+EXCLUSIONS:
+- No fixtures in CENTER of walkway (trip hazard)
 - No fixtures on concrete, pavers, or steps
-- No downlighting
-- No lighting directed toward viewer/street
 - Door is FRAMED by light, not blasted with light
-- Maintain perfect symmetry`,
+
+COMPATIBILITY (when other sub-options also selected):
+- Entryway takes PRIORITY over siding/windows/columns within entry zone
+- If columns flank the entry: entryway fixtures at column bases replace column fixtures`,
         negativePrompt: `ABSOLUTE PROHIBITION (ENTRYWAY): Do NOT place lights in the center walking path. Do NOT place only one fixture -- must be a symmetrical pair. Do NOT aim lights directly at the door surface.`,
         darkDescription: `Entry door has NO flanking uplights - doorway and surrounding trim remain completely dark, no symmetrical fixture pair at entry, door frame and architectural portal unlit, entry appears as dark void in facade.`
       },
@@ -824,68 +767,28 @@ STRICT EXCLUSION ZONES:
         id: 'columns',
         label: 'Columns',
         description: 'Base of architectural pillars',
-        prompt: `TARGET: ARCHITECTURAL COLUMNS, PILLARS & POSTS -- VERTICAL SHAFT GRAZING
+        prompt: `TARGET: Architectural columns, pillars & posts
 
-IDENTIFICATION:
-- Locate ALL vertical columnar elements across the facade
-- Types: round classical columns, square pillars, tapered columns, porch posts, pilasters, stone/brick piers
+WHAT TO LIGHT:
+- ALL vertical columnar elements: round columns, square pillars, porch posts, pilasters, stone/brick piers
+- Beam MUST reach capital, entablature, and soffit above
 
-FIXTURE PLACEMENT:
-- Place ONE ground-staked brass up light at the BASE of EACH column
-- Center fixture on the column footprint (front face)
+PLACEMENT:
+- ONE fixture at BASE of EACH column, centered on front face
+- EACH column in a row gets its own fixture
 
-PLACEMENT BY COLUMN TYPE:
-- ROUND COLUMNS: center on front face, 3-4 inches from surface; beam grazes shaft for vertical highlight with soft side shadows
-- SQUARE PILLARS: center on front face, 4-6 inches from surface; light grazes flat plane to reveal panel details
-- TAPERED COLUMNS: base-centered; light follows taper upward
-- PILASTERS: at base, tight to wall; grazes raised surface; subtle edge shadows
-- STONE/BRICK PIERS: 4-6 inches from face; dramatic texture grazing to reveal mortar joints
+SETBACK BY SURFACE:
+- Textured (stone/brick/fluted): 3-6 inches for dramatic graze
+- Smooth (painted wood/vinyl): 6-8 inches for soft wash
 
-SETBACK DISTANCE:
-- Smooth surfaces (painted wood/vinyl): 6-8 inches for soft wash
-- Textured surfaces (stone/brick/fluted): 3-6 inches for dramatic graze
-- If in planting bed or at porch edge, place in bed/mulch -- NOT on porch floor
-
-LIGHT PHYSICS:
-- Use WALL GRAZING technique
-- Hotspot at base of column
-- Beam travels VERTICALLY UP the full column shaft in a narrow illumination corridor
-- MUST reach CAPITAL, ENTABLATURE, and SOFFIT above
-- Falloff: brightest at base but sufficient intensity to illuminate full height
-- Fluted columns produce rhythmic light/shadow pattern per groove
-
-SHADOW & TEXTURE:
-- Grazing reveals surface texture and architectural details
-- Round columns show vertical highlight with wrapping shadows
-- Square columns show crisp edge definition
-- Trim and shaft elements cast thin shadows
-
-FIXTURE APPEARANCE:
-- Small brass/bronze ground stake
-- Low-profile and discreet
-
-MULTIPLE COLUMN PROTOCOL:
-- For rows of columns, EACH column receives its own fixture
-- Same setback and centering for visual rhythm
-- Spaces BETWEEN columns stay darker for contrast
-
-HOT SPOT AVOIDANCE & WATTAGE:
-- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
-- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
-- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
-- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
-- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
-- Light BRIGHTEST at mid-wall, not at base
-- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
-
-STRICT EXCLUSION ZONES:
+EXCLUSIONS:
 - No fixtures in gaps BETWEEN columns
 - No fixtures on porch floor or deck surface
-- No side lighting from distance
-- No horizontal beam spread
-- No downlighting from above
-- Avoid broad flood beams
-- Fixtures should be visually unobtrusive`,
+- Spaces between columns stay darker for contrast
+
+COMPATIBILITY (when other sub-options also selected):
+- Columns take PRIORITY at column locations over siding
+- If ENTRYWAY selected AND columns flank door: entryway takes priority at entry columns`,
         negativePrompt: `ABSOLUTE PROHIBITION (COLUMNS): Do NOT place lights in the open space between columns. Do NOT skip columns in a row -- all must be lit for symmetry. Do NOT use broad flood fixtures.`,
         darkDescription: `Column bases remain UNLIT - no ground fixtures at pillar bases, column shafts show only ambient spill from adjacent lights, capitals and entablature dark, columns appear as dark silhouettes against facade.`
       },
@@ -893,65 +796,24 @@ STRICT EXCLUSION ZONES:
   id: 'trees',
   label: 'Trees',
   description: 'Uplighting trees and large shrubs',
-  prompt: `TARGET: TREES & LARGE SHRUBS -- CANOPY UPLIGHTING
+  prompt: `TARGET: Trees & large shrubs - canopy uplighting
 
-IDENTIFICATION SCAN:
-- Locate ALL significant trees within 15 feet of the home
-- Include: deciduous trees, evergreens, ornamental trees, large specimen shrubs
-- Note trunk location, canopy spread, and branch structure
+WHAT TO LIGHT:
+- ALL significant trees within 15 feet of the home
+- Deciduous, evergreens, ornamental trees, large specimen shrubs
+- Illuminates trunk, branches, and canopy
 
-FIXTURE SPECIFICATIONS:
-- Type: ground-staked brass up light (bullet or well light style)
-- Housing: solid brass/bronze, low-profile
-- Beam: narrow to medium (15-35 degrees) depending on tree size
-- For large canopy trees: use 2-3 fixtures around trunk
-
-PLACEMENT GEOMETRY:
-- Single trunk trees: place fixture 1-2 feet from trunk base
-- Multi-trunk trees: place fixtures to illuminate each major trunk
-- Angle beam UP into the canopy center
-- For trees near house: position fixture so light grazes toward home
-
-TREE SIZE PROTOCOL:
-- SMALL trees (under 15 ft): ONE fixture, narrow beam
-- MEDIUM trees (15-25 ft): ONE or TWO fixtures, medium beam
+PLACEMENT BY TREE SIZE:
+- SMALL trees (under 15 ft): ONE fixture, 1-2 feet from trunk
+- MEDIUM trees (15-25 ft): ONE or TWO fixtures
 - LARGE trees (over 25 ft): TWO or THREE fixtures around trunk base
+- Multi-trunk trees: illuminate each major trunk
+- Angle beam UP into canopy center
 
-LIGHT PHYSICS:
-- Beam originates at ground level near trunk
-- Light travels UP through branch structure into canopy
-- Illuminates: trunk texture, primary branches, leaf/needle mass
-- Creates dramatic silhouette and shadow play
-- Moonlighting effect on ground below (light filtering through leaves)
-
-CANOPY ILLUMINATION:
-- Deciduous trees: branch architecture visible, leaves glow
-- Evergreens: needle texture emphasized, dense glow
-- Palm trees: illuminate trunk texture and frond undersides
-- Ornamental trees: highlight unique form and features
-
-REALISM REQUIREMENTS:
-- Warm, soft glow characteristic of low-voltage LED
-- Natural light falloff through canopy
-- Some light escapes through gaps in foliage
-- Ground receives dappled shadow patterns
-- Fixture nearly invisible at night
-
-HOT SPOT AVOIDANCE & WATTAGE:
-- CRITICAL: Avoid hot spots (overly bright area at fixture base). Light should be EVEN from base to soffit.
-- Angle fixture so beam starts on wall 12-18 inches above ground, NOT at fixture height
-- 1ST STORY ONLY (8-12 ft): 3-5 watt LED (200-400 lumens)
-- 2ND STORY REACH (18-25 ft): 6-10 watt LED (500-800 lumens)
-- TALL FACADES (25+ ft): 10-15 watt LED (800-1200 lumens)
-- Light BRIGHTEST at mid-wall, not at base
-- Tilt fixture BACK 15-20 degrees from vertical to throw light UP and reduce hot spot
-
-STRICT EXCLUSION ZONES:
-- Do NOT place fixtures where they will be hit by mowers
-- Do NOT aim light toward windows or neighbor properties
-- Do NOT over-light small ornamental trees
-- Do NOT place on hardscape or lawn (use bed areas when possible)
-- Do NOT create hot spots on trunk -- light should reach canopy`,
+EXCLUSIONS:
+- Do NOT aim toward windows or neighbor properties
+- Do NOT over-light small trees with multiple fixtures
+- Use landscaping beds when possible, not open lawn`,
   negativePrompt: `ABSOLUTE PROHIBITION (TREES): Do NOT aim tree lights toward house windows. Do NOT place in open lawn if avoidable. Do NOT over-light small trees with multiple fixtures.`,
   darkDescription: `Trees remain DARK silhouettes - no ground fixtures near trunks, no upward beams into canopy, tree forms visible only against night sky, trunk texture invisible, canopy unlit, trees appear as natural dark shapes.`
      }
@@ -974,58 +836,24 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
   id: 'pathway',
   label: 'Pathway',
   description: 'Walkways & sidewalks',
-  prompt: `TARGET: PEDESTRIAN WALKWAYS & SIDEWALKS -- POOL-OF-LIGHT WAYFINDING
+  prompt: `TARGET: Pedestrian walkways & sidewalks
 
-IDENTIFICATION:
-- Locate all pedestrian walkways: front walk from street/driveway to front door, side paths, garden paths, patio transitions
-- Distinguish from driveways (vehicle paths)
+WHAT TO LIGHT:
+- Front walk from street/driveway to front door
+- Side paths, garden paths, patio transitions
+- NOT driveways (use driveway preset for those)
 
-FIXTURE SPECIFICATIONS:
-- Style: cast brass "china hat" or dome-top path light
-- Height: 22 inches tall
-- Material: solid brass with aged bronze patina finish
-- Light distribution: 360-degree omnidirectional downward projection
-- Ground light pool diameter: approximately 6-8 feet
+PLACEMENT:
+- IN landscaping beds/mulch ALONGSIDE the path, NOT in the path itself
+- STAGGERED ZIGZAG pattern: alternate left and right sides
+- Spacing: 8-10 feet apart
+- First fixture: near path start; Last fixture: near destination
+- Pools should TOUCH or SLIGHTLY OVERLAP - no dark gaps
 
-PLACEMENT PRIORITY (CRITICAL):
-- PREFERRED: Place fixtures IN landscaping beds/mulch alongside the pathway, NOT in the path itself
-- Position fixtures at the edge of planting beds where they meet the pathway
-- If no landscaping exists, place at pathway edge in grass/groundcover
-- AVOID: Placing fixtures directly in the middle of walkways or on hardscape
-- Fixtures illuminate the path from the SIDE, not obstruct foot traffic
-- Setback from path edge: 6-8 inches INTO the landscaping bed
-
-PLACEMENT GEOMETRY:
-- Place fixtures in a STAGGERED ZIGZAG pattern along the path
-- Alternate left and right sides for depth and coverage
-- Spacing: 8-10 feet apart along the zigzag line
-
-PLACEMENT SPECIFICS:
-- First fixture: near the PATH START (street or driveway junction)
-- Last fixture: near the DESTINATION (porch, steps, door threshold)
-- For NARROW WALKWAYS (<4 ft wide): single-side placement, fixtures every 6-8 feet
-- For CURVED PATHS: place on OUTSIDE of curves for visibility; add fixture on INSIDE of tight turns
-
-LIGHT BEHAVIOR:
-- Light projects DOWNWARD through 360-degree spread beneath the hat
-- Creates soft, circular pools of light on the ground
-- Pools should TOUCH or SLIGHTLY OVERLAP to avoid dark gaps
-- Glare shield from hat prevents direct bulb visibility
-- Fixture silhouette visible by day; warm glow at night
-
-FUNCTIONAL PURPOSE:
-- Define the walking path with a "breadcrumb trail" of light pools
-- Improve safety and wayfinding
-- Create welcoming approach to the home
-
-STRICT EXCLUSION ZONES:
-- Do NOT place fixtures ON concrete, pavers, or any hardscape surface
-- Do NOT place fixtures IN the walking path -- always in adjacent beds
-- Do NOT place in open lawn areas away from path edge
-- Do NOT place along driveways (use driveway preset)
-- No uplighting -- downward projection only
-- No direct glare toward street or windows
-- No exposed bulbs -- hat must shield the light source`,
+EXCLUSIONS:
+- Do NOT place ON concrete, pavers, or hardscape
+- Do NOT place IN the walking path - always in adjacent beds
+- Do NOT place along driveways`,
   negativePrompt: `ABSOLUTE PROHIBITION (PATHWAY): Do NOT place path lights on concrete or pavement. Do NOT place path lights IN the walkway. Always place in adjacent landscaping beds. Do NOT place along driveways. Do NOT create dark gaps between light pools.`,
   darkDescription: `Walkways have NO path lights - sidewalks and pedestrian paths remain completely dark, no post-mounted fixtures along paths, no light pools on walking surfaces, path edges undefined in darkness, walking surfaces visible only by ambient moonlight.`
 },
@@ -1033,69 +861,27 @@ STRICT EXCLUSION ZONES:
         id: 'driveway',
         label: 'Driveway',
         description: 'Along vehicle entry',
-        prompt: `TARGET: DRIVEWAY EDGES -- VEHICLE ENTRY DELINEATION LIGHTING
+        prompt: `TARGET: Driveway edges - vehicle entry delineation
 
-IDENTIFICATION:
-- Locate the DRIVEWAY: apron (where it meets street), full LENGTH of both edges, terminus (garage/carport/parking area)
-- Identify curves, bends, and widening areas (turnarounds, parking pads)
+WHAT TO LIGHT:
+- BOTH SIDES of driveway from apron (street) to terminus (garage)
+- Define the vehicle corridor with light pools
 
-FIXTURE SPECIFICATIONS:
-- Style: cast brass "china hat" or dome-top path light
-- Height: 22 inches tall
-- Material: solid brass with aged bronze patina finish
-- Light distribution: 360-degree omnidirectional downward projection
-- Ground light pool diameter: approximately 6-8 feet
+PLACEMENT BY LENGTH:
+- SHORT driveways (<40 ft): PARALLEL - fixtures across from each other, 10-12 ft apart
+- LONG driveways (40+ ft): STAGGERED ZIGZAG - alternating left/right, 10-15 ft apart
+- First fixtures: at driveway apron (one on each side)
+- Last fixtures: near garage/terminus
+- Pools should TOUCH or OVERLAP - no dark gaps
 
-PLACEMENT GEOMETRY:
-- Place fixtures on BOTH SIDES of the driveway along left and right edges
+CURVES:
+- Place fixtures CLOSER on curves (8-10 ft apart)
+- Add extra fixture on inside of tight turns
 
-PATTERN BY DRIVEWAY LENGTH:
-- SHORT DRIVEWAYS (<40 ft): PARALLEL placement -- fixtures directly across from each other; spacing 10-12 feet apart on each edge
-- LONG DRIVEWAYS (40+ ft): STAGGERED ZIGZAG -- alternating left/right; spacing 10-15 feet along the zigzag line
-
-PLACEMENT SPECIFICS:
-- Setback: 6-8 inches into lawn/landscape from pavement edge
-- First fixtures: at the DRIVEWAY APRON (one on each side at street entry)
-- Last fixtures: near the TERMINUS (garage or parking area)
-- Edge should be clearly defined by light pools
-
-CURVE & BEND PROTOCOL:
-- On OUTSIDE curves: place fixtures closer (8-10 feet apart)
-- On INSIDE curves: add an extra fixture
-- Curves require MORE fixtures to maintain edge definition
-
-WIDENING AREAS:
-- Continue fixtures around the perimeter of turnarounds and parking pads
-- Maintain consistent spacing
-
-LIGHT BEHAVIOR:
-- Light projects DOWNWARD through 360-degree spread
-- Creates soft circular pools on the ground
-- Pools should TOUCH or SLIGHTLY OVERLAP to define edges continuously
-- Pavement receives spill light from adjacent pools
-
-FUNCTIONAL PURPOSE:
-- Guide vehicles safely along the driveway
-- Prevent veering onto lawn
-- Define entry visible from street
-- Create welcoming approach
-- Deter intruders by eliminating dark zones
-
-FIXTURE VISIBILITY:
-- 22-inch height places light at bumper/wheel-well level
-- Fixtures appear as brass sentinels along the drive
-- Create a glowing corridor at night
-
-STRICT EXCLUSION ZONES:
+EXCLUSIONS:
 - No fixtures ON driveway pavement
 - No fixtures along pedestrian walkways (use pathway preset)
-- No fixtures in garden beds NOT bordering driveway
-- No fixtures in open lawn areas NOT bordering driveway
-- No single-side lighting on driveways over 20 feet long
-- No dark gaps between light pools
-- No uplighting
-- No fixtures blocking vehicle path at garage/terminus
-- Do NOT mix driveway lights with pedestrian pathway lights in the same run`,
+- No single-side lighting on driveways over 20 ft`,
         negativePrompt: `ABSOLUTE PROHIBITION (DRIVEWAY): Do NOT place path lights on driveway pavement. Do NOT use single-side lighting on long driveways. Do NOT leave dark gaps between pools. Do NOT place along pedestrian walkways.`,
         darkDescription: `Driveway edges have NO path lights - vehicle entry corridor unlit, no brass post fixtures flanking drive, driveway pavement edges undefined in darkness, no glowing corridor effect, driveway appears as dark surface visible only by moonlight.`
       },
@@ -1177,57 +963,28 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
         id: 'garage_sides',
         label: 'Garage Sides',
         description: 'Piers flanking & between doors',
-        prompt: `TARGET: GARAGE PIERS -- WALL GRAZING FROM FLUSH IN-GROUND FIXTURES
+        prompt: `TARGET: Garage piers - wall grazing from in-ground fixtures
 
-IDENTIFICATION:
-- Locate ALL vertical wall surfaces (piers) associated with garage doors
-- Identify: FAR LEFT pier, FAR RIGHT pier, and CENTER pier(s) between doors (if applicable)
+WHAT TO LIGHT:
+- ALL vertical wall surfaces (piers) flanking garage doors
+- FAR LEFT pier, FAR RIGHT pier, and CENTER pier(s) between doors
 
-PIER COUNT BY GARAGE CONFIGURATION:
-- SINGLE-CAR GARAGE (one door): 2 fixtures (left pier + right pier)
-- DOUBLE-WIDE DOOR (one large door): 2 fixtures (left pier + right pier)
-- TWO SINGLE DOORS with center pier: 3 fixtures (left + center + right)
-- THREE-CAR GARAGE: 4 fixtures (left + center + center + right)
+FIXTURE COUNT BY CONFIGURATION:
+- SINGLE-CAR GARAGE: 2 fixtures (left + right piers)
+- DOUBLE-WIDE DOOR: 2 fixtures (left + right piers)
+- TWO SINGLE DOORS with center pier: 3 fixtures
+- THREE-CAR GARAGE: 4 fixtures
 
-FIXTURE SPECIFICATIONS:
-- Type: flush-mounted core drill well light
-- Housing: brass/bronze with tempered glass lens
-- Installation: recessed into concrete driveway, level with grade
-- Protrusion: ZERO -- completely flush with pavement
-- Light output: upward projection for wall grazing
+PLACEMENT:
+- Drill into driveway concrete at BASE of each pier
+- Distance from wall: 4-6 inches for proper grazing angle
+- Centered on pier width, ONE fixture per pier
+- Beam MUST reach soffit above garage
 
-PLACEMENT GEOMETRY:
-- Drill fixtures into driveway concrete at the BASE of each pier
-- Distance from wall face: 4-6 inches
-- Center fixture on pier WIDTH (horizontally centered on the pier face)
-- ONE fixture per pier
-
-LIGHT PHYSICS:
-- Use WALL GRAZING technique
-- Beam originates at ground level and projects STRAIGHT UP along pier face
-- Reveals texture: stone, brick, mortar joints, wood grain, stucco patterns
-- Light travels vertically to illuminate soffit/roofline above garage
-- Brightest at base with natural vertical falloff
-
-VISIBILITY & SAFETY:
-- Daytime: small circular lens flush with concrete -- barely visible
-- Nighttime: dramatic vertical light columns on piers
-- Zero protrusion = vehicle-safe and trip-free
-- Fixtures rated for drive-over traffic loads
-
-RELATIONSHIP TO DOORS:
-- Garage DOORS remain relatively dark (no direct light on door panels)
-- PIERS glow dramatically
-- Creates a "picture frame" effect framing the door openings
-
-STRICT EXCLUSION ZONES:
-- Do NOT place fixtures IN FRONT OF garage doors (center of door opening)
-- Do NOT place fixtures in the CENTER of the driveway driving path
-- Do NOT place in lawn, mulch, or planting beds
-- Do NOT place fixtures directly ON the door surface
-- Do NOT aim beams at door panels
-- Fixtures must be FLUSH-MOUNTED only -- no above-ground fixtures
-- Maximum 6 inches from wall to maintain proper grazing angle`,
+EXCLUSIONS:
+- Do NOT place IN FRONT OF garage doors
+- Do NOT place in center of driveway driving path
+- Do NOT aim beams at door panels - piers only`,
         negativePrompt: `ABSOLUTE PROHIBITION (GARAGE SIDES): Do NOT place lights in front of garage doors. Do NOT place in center of driveway. Do NOT use protruding fixtures. Flush-mount in concrete only, aimed at PIERS.`,
         darkDescription: `Garage piers remain UNLIT - no flush-mounted well lights at pier bases, no vertical light columns grazing pier faces, garage pier texture invisible, piers appear as dark vertical surfaces flanking doors.`
       },
@@ -1235,55 +992,25 @@ STRICT EXCLUSION ZONES:
         id: 'garage_door',
         label: 'Garage Door',
         description: 'Wash light on door face and siding above',
-        prompt: `TARGET: GARAGE DOOR PANELS -- WALL WASHING FROM FLUSH IN-GROUND FIXTURES
+        prompt: `TARGET: Garage door panels - wall washing from in-ground fixtures
 
-IDENTIFICATION:
-- Locate EACH garage door panel
-- Types: single-car doors, double-wide doors (16-18 ft), multiple single doors
-- Identify wall area ABOVE each door up to soffit line
-
-FIXTURE SPECIFICATIONS:
-- Type: flush-mounted core drill well light
-- Housing: brass/bronze with tempered glass lens
-- Installation: recessed into concrete driveway, level with grade
-- Protrusion: ZERO -- completely flush with pavement
-- Beam spread: WIDE (for wall washing, not narrow grazing)
-
-PLACEMENT GEOMETRY:
-- Drill fixtures into driveway concrete, CENTERED in front of each door
-- Distance from door face: 24-36 inches (further back than pier grazing)
-- For DOUBLE-WIDE DOORS: use TWO fixtures at the 1/3 and 2/3 points across door width
+WHAT TO LIGHT:
+- Each garage door panel AND wall above to soffit
+- Use WIDE beam (wall wash, not narrow graze)
 
 FIXTURE COUNT BY DOOR TYPE:
-- 1 SINGLE DOOR: 1 fixture (centered)
-- 1 DOUBLE-WIDE DOOR: 2 fixtures (at 1/3 points)
-- 2 SEPARATE SINGLE DOORS: 2 fixtures (one per door)
-- 3 SINGLE DOORS: 3 fixtures (one per door)
+- SINGLE DOOR: 1 fixture (centered)
+- DOUBLE-WIDE DOOR: 2 fixtures (at 1/3 and 2/3 points)
+- MULTIPLE SINGLE DOORS: 1 fixture per door
 
-LIGHT PHYSICS:
-- Use WALL WASHING technique (not narrow grazing)
-- Beam originates at ground and projects upward at slight angle
-- Light WASHES the entire door surface evenly
-- Light CONTINUES ABOVE the door to illuminate header, trim, and wall/siding up to soffit
-- Wider beam spread creates smooth, even illumination
+PLACEMENT:
+- Drill into driveway concrete, CENTERED in front of each door
+- Distance from door: 24-36 inches (further back than pier grazing)
+- Light MUST wash door face AND continue above to soffit
 
-COVERAGE OBJECTIVE:
-- Full door face illumination from bottom to top
-- Continuation above door -- light does NOT stop at door top
-- Soffit receives ambient glow from wash
-
-VISIBILITY & SAFETY:
-- Daytime: flush lens barely visible
-- Nighttime: doors glow warmly as focal points
-- Zero protrusion = vehicle-safe
-- Fixtures in approach zone must be drive-over rated
-
-STRICT EXCLUSION ZONES:
-- Do NOT place fixtures at PIER bases (use garage_sides preset)
-- Do NOT place in lawn, mulch, or planting beds
-- Do NOT use narrow grazing beams -- wide wash only
-- Do NOT let light stop at door top -- MUST continue to soffit
-- Minimum 24 inches from door face to prevent harsh grazing
+EXCLUSIONS:
+- Do NOT place at pier bases (garage_sides handles those)
+- Do NOT use narrow grazing beams
 - Do NOT use single fixture for double-wide doors`,
         negativePrompt: `ABSOLUTE PROHIBITION (GARAGE DOOR): Do NOT place lights at pier bases. Do NOT use narrow grazing beams. Light MUST wash above door to soffit. Do NOT place closer than 24 inches to door face.`,
         darkDescription: `Garage doors receive NO wash lighting - no flush well lights in front of doors, door panels remain dark, siding above doors unlit, garage doors appear as dark rectangles, no illumination from driveway surface.`
@@ -1292,66 +1019,32 @@ STRICT EXCLUSION ZONES:
         id: 'sidewalks',
         label: 'Sidewalks',
         description: 'Embedded marker lights in walkways',
-        prompt: `TARGET: SIDEWALKS & WALKWAYS -- EMBEDDED MARKER LIGHTS FOR PATH DEFINITION
+        prompt: `TARGET: Sidewalks & walkways - embedded marker lights
 
-IDENTIFICATION:
-- Locate all CONCRETE pedestrian walkways: front walk, side paths, driveway-to-entry paths, patio transitions
-- Include paver/flagstone paths with concrete joints
-- EXCLUDE: driveways, grass/lawn paths, mulch beds, loose gravel paths
+WHAT TO LIGHT:
+- ALL concrete pedestrian walkways: front walk, side paths, entry paths
+- Include paver/flagstone paths
+- EXCLUDE: driveways (use driveway preset)
 
-FIXTURE SPECIFICATIONS:
-- Type: flush-mounted core drill well light or paver dot light
-- Housing: brass or stainless steel
-- Lens: tempered glass or polycarbonate
-- Installation: recessed into concrete/paver surface, level with grade
-- Protrusion: ZERO
-- Light intensity: LOW -- marker glow, not area illumination
-- Distribution: wide diffused or omnidirectional
-
-PLACEMENT GEOMETRY:
-- Embed fixtures along the EDGES of the path (not center)
-
-PATTERN OPTIONS:
-- STAGGERED EDGE (recommended): alternate left/right edges; 6-8 feet spacing along path; 2-3 inch inset from edge
-- PARALLEL EDGE (for walkways >4 ft wide): fixtures on both edges opposite each other; 8-10 feet spacing per edge
-- SINGLE EDGE (for narrow walkways <3 ft): one side only; 5-6 feet spacing
+PLACEMENT PATTERN:
+- STAGGERED EDGE (recommended): alternate left/right edges, 6-8 feet apart
+- PARALLEL EDGE (wide paths >4 ft): both edges opposite each other
+- SINGLE EDGE (narrow paths <3 ft): one side only
 
 PLACEMENT SPECIFICS:
-- Setback from edge: 2-3 inches
-- First fixture: near path START (street/driveway junction)
-- Last fixture: near path END (porch, steps)
-- Add fixtures at CURVES to maintain edge definition
+- Along path EDGES (not center), 2-3 inches from edge
+- First fixture at path START, last at path END
+- Extra fixtures at CURVES and STEPS (top and bottom)
+- Maximum spacing: 10 feet
 
 LIGHT BEHAVIOR:
-- MARKER LIGHTING only -- soft, low glow
-- Each fixture creates small illumination pool (2-3 ft diameter)
-- No uplighting -- light stays on ground plane
-- "Breadcrumb trail" effect guiding the way
-- Fixtures appear as embedded jewels
+- MARKER glow only (2-3 ft diameter pools)
+- "Breadcrumb trail" effect on ground plane
 
-STEP/ELEVATION PROTOCOL:
-- Place fixture at TOP and BOTTOM of any steps
-- Indicate elevation changes with light markers
-
-WALKING SURFACE ILLUMINATION:
-- Reveals surface texture and color
-- Subtle shadows add visual interest
-- Safety-focused: shows path edges and changes
-
-VISIBILITY & SAFETY:
-- Daytime: small circular flush lens
-- Nighttime: gentle glow defines path
-- Zero protrusion = trip-free
-- Durable for foot traffic
-
-STRICT EXCLUSION ZONES:
-- Do NOT place in driveways (use driveway preset)
+EXCLUSIONS:
+- Do NOT place in driveways
 - Do NOT place in grass, lawn, or mulch
-- Do NOT place in CENTER of wide walkways
-- Do NOT aim at vertical walls -- ground plane only
-- No protruding fixtures
-- No high-power uplights
-- Maximum spacing: 10 feet`,
+- Do NOT place in CENTER of wide walkways`,
         negativePrompt: `ABSOLUTE PROHIBITION (SIDEWALKS): Do NOT embed lights in driveways. Do NOT place in lawn or mulch. Do NOT aim at vertical walls. Edge placement only, not center of walkway.`,
         darkDescription: `Sidewalks have NO embedded marker lights - walkway concrete surfaces remain dark, no flush well lights embedded in paths, path edges undefined, no "breadcrumb trail" marker effect, walking surfaces visible only by ambient moonlight.`
       },
@@ -1359,66 +1052,30 @@ STRICT EXCLUSION ZONES:
         id: 'driveway',
         label: 'Driveway',
         description: 'Surface marker lights',
-        prompt: `TARGET: DRIVEWAY SURFACE -- EMBEDDED MARKER LIGHTS FOR EDGE DEFINITION
+        prompt: `TARGET: Driveway surface - embedded edge markers
 
-IDENTIFICATION:
-- Locate the DRIVEWAY: apron (street entry), full length of BOTH edges, terminus (garage/parking)
-- Identify curves, bends, and widening areas (turnarounds, parking pads)
+WHAT TO LIGHT:
+- BOTH EDGES of driveway from apron (street) to terminus (garage)
+- Include curves, turnarounds, and parking pads
 
-FIXTURE SPECIFICATIONS:
-- Type: flush-mounted core drill well light or driveway marker
-- Housing: brass or stainless steel
-- Lens: tempered glass or polycarbonate
-- Installation: recessed into concrete/asphalt/pavers, level with surface
-- Protrusion: ZERO
-- Light intensity: LOW -- marker glow
-- Rating: VEHICLE TRAFFIC rated
-
-PLACEMENT GEOMETRY:
-- Embed fixtures along BOTH EDGES of the driveway to define the corridor
-
-PATTERN OPTIONS:
-- STAGGERED EDGE: alternate left/right edges; 10-15 feet spacing along length; 3-4 inches from pavement edge
-- PARALLEL EDGE: fixtures on both edges across from each other; 12-15 feet spacing per edge; pairs mark driveway width
+PLACEMENT PATTERN:
+- STAGGERED EDGE: alternate left/right, 10-15 feet apart
+- PARALLEL EDGE: both edges opposite each other, 12-15 feet apart
 
 PLACEMENT SPECIFICS:
-- First fixtures: at DRIVEWAY APRON (street entry) -- one on each side
-- Last fixtures: near TERMINUS (garage or parking area)
-- Both edges must be lit to define corridor
-- Setback from edge: 3-4 inches (avoid edge damage)
-
-CURVE & TURN PROTOCOL:
-- On curves: place fixtures CLOSER (8-10 feet apart)
-- More fixtures on OUTSIDE of curves
-- Add fixtures on INSIDE of tight turns
-
-WIDENING AREAS:
-- Continue around full PERIMETER of turnarounds and parking pads
-- Maintain consistent spacing
+- First fixtures: at APRON (street entry), one on each side
+- Last fixtures: near TERMINUS (garage/parking)
+- Setback from edge: 3-4 inches
+- On curves: place CLOSER (8-10 feet apart)
 
 LIGHT BEHAVIOR:
-- MARKER LIGHTING with soft glow
-- Each fixture creates small illuminated patch (2-4 ft diameter) on pavement
-- No uplighting -- light stays on ground plane
-- "Runway" edge definition effect
+- MARKER glow only (2-4 ft diameter pools)
+- "Runway" edge definition effect on ground plane
 
-GROUND PLANE ONLY:
-- No vertical wall grazing
-- Lighting remains on pavement surface
-
-VISIBILITY & SAFETY:
-- Daytime: flush lens appearance
-- Nighttime: glowing edge markers define corridor
-- Zero protrusion
-- Vehicle-load rated fixtures
-
-STRICT EXCLUSION ZONES:
+EXCLUSIONS:
 - Do NOT place along pedestrian walkways (use sidewalks preset)
-- Do NOT place in grass, lawn, or planting beds
-- Do NOT aim at vertical walls
-- No protruding fixtures
-- No high-intensity uplights
-- Stay 3-4 inches from pavement edge`,
+- Do NOT place in grass, lawn, or beds
+- Do NOT aim at vertical walls`,
         negativePrompt: `ABSOLUTE PROHIBITION (DRIVEWAY): Do NOT embed lights along pedestrian walkways. Do NOT place in grass or beds. Do NOT aim at walls. Edge markers only, ground plane illumination.`,
         darkDescription: `Driveway has NO embedded surface markers - pavement edges undefined, no flush well lights in concrete/asphalt, no "runway" edge definition effect, driveway corridor appears as dark surface, edges visible only by moonlight reflection.`
       }
@@ -1470,83 +1127,30 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
         id: 'dormers',
         label: 'Dormers',
         description: 'Illuminating dormer faces',
-        prompt: `TARGET: DORMERS -- GUTTER-MOUNTED UPLIGHTS FOR UPPER-STORY DORMER ILLUMINATION
+        prompt: `TARGET: Dormers - gutter-mounted uplights
 
-*** ABSOLUTE BAN ON SOFFIT LIGHTS - THIS IS GUTTER LIGHTING, NOT SOFFIT LIGHTING ***
-- This is an UP LIGHT mounted IN THE GUTTER, NOT a downlight in the soffit
-- Fixture sits INSIDE the gutter trough, visible as a small dark bronze bullet
-- Light beam shoots UPWARD toward dormers, NOT downward
-- DO NOT generate soffit lights, can lights, or downlights
-- Soffits/eaves must remain PITCH BLACK (no fixtures in them)
+WHAT TO LIGHT:
+- ALL dormers on the roofline: gable, shed, hipped, eyebrow types
+- Wash the dormer FACE (front wall, trim, window frame)
 
-IDENTIFICATION:
-- Locate ALL dormers on the roofline
-- Types: gable dormers, shed dormers, hipped dormers, eyebrow dormers
-- Identify dormer face (front wall), dormer window, and dormer roof
+COUNT RULE (CRITICAL):
+- EXACTLY ONE (1) fixture per dormer
+- 2 dormers = 2 lights, 3 dormers = 3 lights
+- Do NOT use multiple lights per dormer
 
-FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
-- Type: VERY SMALL compact mini bullet up light - TINY fixture
-- Housing: DARK BRONZE finish - this is REQUIRED, no brass or silver
-- Color: Dark bronze / dark brown / oil-rubbed bronze finish only
-- Size: VERY SMALL/MINI/COMPACT fixture - smaller than a fist - NOT large floodlights
-- Profile: ULTRA LOW-PROFILE design that sits discreetly INSIDE the gutter trough
-- Mounting: INSIDE the gutter trough ONLY - fixture sits IN the gutter channel
-- Beam spread: narrow to medium -- focused wash on dormer face
+PLACEMENT:
+- Mount INSIDE gutter trough directly BELOW each dormer
+- CENTERED horizontally under the dormer
+- Beam MUST reach and fully illuminate dormer face (10-25 ft distance)
 
-PLACEMENT GEOMETRY (STRICT RULE - CRITICAL):
-*** EXACTLY ONE (1) FIXTURE PER DORMER - THIS IS MANDATORY ***
-- Each dormer receives ONE and ONLY ONE gutter-mounted up light
-- The fixture MUST be placed INSIDE the gutter inner wall directly BELOW the dormer
-- The fixture MUST be CENTERED horizontally under the dormer (aligned with the dormer's vertical centerline)
-- The fixture sits INSIDE the horizontal gutter channel/trough - NOT on the lip, NOT on fascia
-- COUNT RULE: If the house has 2 dormers, place exactly 2 lights. If 3 dormers, exactly 3 lights.
-- FORBIDDEN: Multiple lights per dormer, lights placed between dormers, lights on roof shingles, lights on gutter lip
+EXCLUSIONS:
+- Do NOT mount on dormer face, dormer roof, or main roof shingles
+- Do NOT aim directly into window glass
+- Do NOT skip dormers - all should be lit for balance
 
-MOUNTING LOCATION (STRICT):
-- INSIDE GUTTER TROUGH ONLY: fixture sits IN the inner gutter channel, aims up at dormer
-- The fixture is small enough to fit inside the gutter without blocking water flow
-- FORBIDDEN: On gutter lip, on fascia board, on roof surface
-
-ALIGNMENT:
-- HORIZONTAL: centered on dormer width
-- VERTICAL: on gutter/fascia line at base of main roof slope below dormer
-
-LIGHT PHYSICS:
-- Beam projects UPWARD from gutter line
-- Washes the dormer FACE (front wall and trim)
-- Illuminates dormer window frame (not direct glare into glass)
-- Light grazes dormer siding texture
-- Reveals architectural trim and details
-- Subtle spillover onto dormer roof edges
-
-TARGET REACH - MANDATORY:
-- Light beam MUST reach and illuminate the dormer face completely
-- Fixture mounts against INNER GUTTER WALL, beam travels up to dormer
-- Distance from gutter to dormer is typically 10-25 feet - beam MUST span this distance
-- The dormer face should be visibly illuminated, not just the space between
-- Light must fully wash the dormer - never fall short of the target
-
-WIRING:
-- Wires concealed in gutter trough or routed through downspout
-- Low-voltage connections at gutter level
-
-RATIONALE -- WHY GUTTER MOUNTING:
-- Dormers are 15-25+ feet above ground -- too high for effective ground uplighting
-- Gutter mounting places light source inside the gutter inner wall below from dormer face
-- Prevents "black hole" effect of unlit dormers
-- Creates glowing dormer against dark roofline
-
-FIXTURE VISIBILITY:
-- Daytime: small fixture on gutter line -- subtle
-- Nighttime: dormer glows; fixture hidden by roof angle from ground view
-
-STRICT EXCLUSION ZONES:
-- Do NOT mount fixtures ON the dormer face or dormer roof
-- Do NOT mount on sloped main roof surface
-- Do NOT aim directly INTO dormer window glass
-- Do NOT use one fixture for multiple dormers -- one fixture per dormer
-- Do NOT skip dormers -- all dormers should be lit for balance
-- Ensure SYMMETRIC placement for balanced facade`,
+COMPATIBILITY (when other sub-options selected):
+- Dormers takes PRIORITY over secondStoryFacade for dormer features
+- If secondStoryFacade selected: dormers handles all dormer illumination`,
         negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE VERY SMALL DARK BRONZE light per dormer - no more, no less. Fixture must be TINY and mount INSIDE the gutter inner wall , CENTERED directly below dormer. Do NOT use large fixtures. Do NOT use brass or silver fixtures. Do NOT mount on gutter lip or fascia. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`,
         darkDescription: `Dormers remain UNLIT - no gutter-mounted uplights below dormers, dormer faces completely dark, dormer windows show only ambient reflection, dormers appear as dark shapes against roofline, no upward wash on dormer siding or trim.`
       },
@@ -1554,98 +1158,40 @@ STRICT EXCLUSION ZONES:
         id: 'peaks',
         label: 'Peaks & Gables',
         description: 'Apex of roof gables',
-        prompt: `TARGET: ROOF PEAKS & GABLES -- GUTTER-MOUNTED UPLIGHTS FOR TRIANGULAR PEAK ILLUMINATION SECTIONS
+        prompt: `TARGET: Roof peaks & gables - gutter-mounted uplights
 
-*** THIS IS UPWARD LIGHTING, NOT DOWNWARD ***
-- Light source is IN THE GUTTER Below the gable
-- Light beam shoots UPWARD toward the peak/apex Section
-- This is NOT soffit lighting (which shines down)
-- The GABLE FACE is lit from BELOW, creating dramatic uplighting
+WHAT TO LIGHT:
+- ALL prominent gables on the roofline (front-facing, side, cross gables)
+- Distinguish from DORMERS (dormers are separate structures)
+- Light the triangular gable FACE from base to apex
 
-*** ABSOLUTE BAN ON SOFFIT LIGHTS - THIS IS GUTTER LIGHTING, NOT SOFFIT LIGHTING ***
-- Fixture sits INSIDE the gutter trough, visible as a small brass bullet
-- DO NOT generate soffit lights, can lights, or downlights
-- Soffits/eaves must remain PITCH BLACK (no fixtures in them)
-- Any glow on soffit is ONLY reflected ambient light from gutter lights hitting the gable face below
+COUNT RULE:
+- ONE fixture per gable
+- Centered on gable's vertical centerline (directly under apex)
 
-IDENTIFICATION:
-- Locate ALL prominent gables on the roofline
-- Types: front-facing gables, side gables, cross gables, stacked gables, decorative gable ends
-- Distinguish from DORMERS (dormers are separate structures; gables are part of main roof)
-- Identify: gable TRIANGLE (the triangular wall section), gutter line at gable BASE, gable APEX (peak point)
+WHICH GUTTER (CRITICAL):
+- Mount in FIRST STORY (lowest) gutter ONLY
+- Do NOT use higher gutters, dormer gutters, or gutters near peak
+- Light travels 20-40+ feet upward to reach peak
 
-FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
-- Type: SMALL compact brass bullet or mini flood up light with gutter-mount bracket
-- Housing: CAST BRASS or BRONZE - this is REQUIRED, no other material
-- Size: SMALL/COMPACT fixture - NOT large floodlights
-- Profile: LOW-PROFILE design that sits discreetly INSIDE the gutter trough
-- Mounting: INSIDE the gutter trough ONLY - fixture sits IN the gutter channel
-- Beam spread: narrow to medium -- focused vertical emphasis
+PLACEMENT:
+- Mount INSIDE gutter trough at first story level
+- Beam MUST reach the gable APEX with natural falloff
+- Wall grazing creates dramatic triangular illumination
 
-HARD RULE - MANDATORY:
-- Fixture MUST be placed INSIDE the gutter trough - NOT on roof, NOT on shingles, NOT on gutter lip
-- The fixture sits IN the gutter channel itself, aiming upward
-- FORBIDDEN: Placing fixture on roof surface, on shingles, on gutter edge/lip, or anywhere outside the gutter
+PRIORITY (if budget limited):
+1. Main front-facing gable
+2. Flanking front gables
+3. Side-facing gables visible from approach
 
-PLACEMENT GEOMETRY:
-- Place ONE fixture per gable 
-- Mount INSIDE the FIRST STORY (LOWEST) gutter trough - NOT any higher gutter
-- The fixture goes in the first story gutter, shooting UP at the tall gable above
-- Center fixture on the gable's VERTICAL CENTERLINE (directly under the apex)
+EXCLUSIONS:
+- Do NOT use for dormers (use dormers preset)
+- Do NOT mount at the apex - fixture at BASE looking UP
+- Do NOT place off-center from gable axis
 
-*** CRITICAL - WHICH GUTTER ***
-- USE: The FIRST STORY gutter (lowest horizontal gutter on the house, typically 8-12 feet high)
-- DO NOT USE: Any higher gutters, dormers gutters, or gutters near the peak
-- The fixture should be at GROUND-ACCESSIBLE height in the main lower gutter
-- Light must travel a LONG DISTANCE upward (20-40+ feet) to reach the peak
-
-MOUNTING (ONLY OPTION):
-- MOUNTED INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the lowest gutter channel, aims straight up toward apex
-
-ALIGNMENT:
-- HORIZONTAL: centered on gable width (aligned with apex above)
-- VERTICAL: at FIRST STORY gutter/fascia line (the lowest main roofline, NOT higher gutters)
-
-LIGHT PHYSICS:
-- Beam projects STRAIGHT UP along gable face toward apex
-- WALL GRAZING technique for vertical emphasis
-- Reveals siding texture on gable face (lap siding, board and batten, shingles, stone)
-- Illuminates gable vent, decorative trim, or accent features
-- Light travels from gutter line to apex with natural falloff
-- Creates dramatic triangular illumination
-
-TARGET REACH - MANDATORY:
-- Light beam MUST travel from INNER GUTTER WALL all the way to the gable APEX
-- Fixture mounts against inner gutter wall, beam projects upward along gable face
-- Gable heights vary from 8-30+ feet - beam MUST span the full height
-- The entire triangular gable face should show wall grazing effect
-- Light intensity at apex should still be visible (with natural falloff)
-- Light must reach the peak - never fall short of the apex
-
-GABLE HIERARCHY (if budget limited):
-- Priority 1: MAIN FRONT-FACING GABLE (most prominent)
-- Priority 2: Flanking front gables
-- Priority 3: Side-facing gables visible from approach
-- Priority 4: Rear or less visible gables
-- Avoid leaving prominent gables unlit
-
-FIXTURE VISIBILITY:
-- Daytime: subtle fixture on gutter line
-- Nighttime: gable face glows dramatically; fixture poking just above gutter lip
-
-HEIGHT & DRAMA:
-- Gutter mounting creates proper grazing angle for tall gables
-- Elevates perceived height of home
-- Eye follows light path from gutter to apex
-
-STRICT EXCLUSION ZONES:
-- Do NOT place fixtures meant for DORMERS (separate preset)
-- Do NOT mount on sloped roof surface
-- Do NOT mount at the apex (fixture at BASE looking UP)
-- Do NOT aim outward or downward -- UPWARD only
-- Do NOT place off-center from gable vertical axis
-- ONE fixture per peak -- no doubling up
-- Do NOT leave gaps in gable lighting -- maintain consistent illumination across facade`,
+COMPATIBILITY (when other sub-options selected):
+- If SECONDSTORYFACADE selected: peaks handles ONLY standalone gables
+- Gables above 2nd story facades are handled by secondStoryFacade`,
         negativePrompt: `ABSOLUTE PROHIBITION (PEAKS & GABLES): Fixture must be INSIDE the gutter trough ONLY. Do NOT mount on roof surface or shingles. Do NOT mount on gutter lip or edge. Do NOT mount at the apex. Do NOT use for dormers. Do NOT place off-center. Base-mounted INSIDE GUTTER, centered under apex, upward projection only.`,
         darkDescription: `Roof peaks and gables remain DARK - no gutter-mounted uplights below gables, triangular gable faces completely unlit, gable siding texture invisible, peaks appear as dark triangular shapes against sky, no vertical emphasis on gable architecture.`
       },
@@ -1653,171 +1199,42 @@ STRICT EXCLUSION ZONES:
         id: 'secondStoryFacade',
         label: '2nd Story Windows & Peak',
         description: 'Complete facade uplighting including windows, siding, and peaks',
-        prompt: `TARGET: 2ND STORY WINDOWS & PEAK -- FIRST-STORY GUTTER-MOUNTED UPLIGHTS FOR COMPLETE FACADE ILLUMINATION
+        prompt: `TARGET: 2nd story windows & peaks - first-story gutter-mounted uplights
 
-*** ABSOLUTE BAN ON SOFFIT LIGHTS - THIS IS GUTTER LIGHTING, NOT SOFFIT LIGHTING ***
-- This is an UP LIGHT mounted IN THE FIRST STORY GUTTER, NOT a downlight in the soffit
-- Fixture sits INSIDE the gutter trough, visible as a small brass bullet
-- Light beam shoots UPWARD toward 2nd story and peaks, NOT downward
-- DO NOT generate soffit lights, can lights, or downlights
-- Soffits/eaves must remain PITCH BLACK (no fixtures in them)
+WHAT TO LIGHT:
+- ENTIRE 2nd story facade: windows, siding, trim, AND peaks above
+- Light falling on 2nd story windows IS ACCEPTABLE and DESIRED
+- Include towers, turrets, pop-outs, box bays - any 2nd story section
 
-*** FIXTURE PLACEMENT - ANY FIRST STORY GUTTER 
-Place fixtures in ANY FIRST STORY GUTTER that has a 2nd story facade above it.
+WHICH GUTTER (CRITICAL):
+- Mount in FIRST STORY gutter ONLY (typically 8-12 feet high)
+- ANY first-story gutter with 2nd story above it
+- Do NOT use roofline gutter, dormer gutters, or gutters with no 2nd story above
 
-FIRST STORY GUTTER LOCATIONS (place fixtures here):
-- Gutter above first-floor porch with 2nd story above
-- Gutter above ANY first-floor section that has a 2nd story facade rising above it
-- ANY horizontal gutter line that sits at 1st story
+FIXTURE COUNT BY FACADE WIDTH:
+- Narrow (8-12 ft): 2-3 fixtures
+- Medium (12-20 ft): 3-4 fixtures
+- Wide (20+ ft): 4-6 fixtures
+- Space 4-6 feet apart for even coverage
+- At least ONE fixture positioned to illuminate any peak above
 
-DO NOT PLACE FIXTURES IN:
-- Roofline gutter (the gutter at the very TOP of the house)
-- Dormer gutters
-- Gutters with no 2nd story facade above them
+PLACEMENT:
+- Distribute across facade to cover windows, siding, AND peaks
+- Use visual anchors: "below window 1", "between windows 2-3", "centered under peak"
+- For multi-section homes: fixtures in EACH first story gutter with 2nd story above
 
-IDENTIFICATION:
-- SCAN THE ENTIRE HOME for first story gutters with 2nd story sections above
-- First story gutters are typically 8-12 feet off the ground
-- Look for the horizontal gutter line where the first floor ends 
-- Identify the ENTIRE second story facade ABOVE each first story gutter line
-- Note: upper-level windows, siding sections, decorative trim, shutters on the 2nd story
-- INCLUDE: Towers, turrets, flat-roofed pop-outs, box bays, walls - any 2nd story section
-- LOCATE any PEAKS or GABLES and potential lighting opertunties around them
-- Focus on the COMPLETE second story that can be washed with uplight FROM BELOW
-- The goal is to illuminate the ENTIRE 2nd story facade including towers, windows, and any peaks
+PEAK ILLUMINATION (when present):
+- Beam MUST continue PAST windows to graze gable face to APEX
+- Creates dramatic vertical emphasis: windows glowing + peak lit above
 
-FIXTURE SPECIFICATIONS (STRICT - MANDATORY):
-- Type: SMALL compact bronze bullet or mini flood UP LIGHT with gutter-mount bracket
-- Housing: BRONZE - this is REQUIRED, no other material
-- Size: SMALL/COMPACT fixture - NOT large floodlights
-- Profile: LOW-PROFILE design that sits discreetly INSIDE the first story gutter trough
-- Mounting: INSIDE the first story gutter trough ONLY - fixture sits IN the gutter channel
-- Beam spread: medium to wide -- soft wall wash coverage projecting UPWARD
+EXCLUSIONS:
+- Do NOT mount in roofline gutter (top of house)
+- Do NOT confuse with DORMERS (use dormers preset for dormers)
+- Do NOT confuse with PEAKS (use peaks for standalone gables without 2nd story below)
 
-HARD RULE - MANDATORY:
-- Fixture MUST be mounted INSIDE the gutter trough - NOT on roof, NOT on shingles, NOT on gutter lip
-- The fixture sits IN the gutter channel itself, aiming upward
-- FORBIDDEN: Placing fixture on roof surface, on shingles, on gutter edge/lip, or anywhere outside the gutter
-
-*** CRITICAL: GUTTER ANATOMY - UNDERSTANDING "INSIDE THE GUTTER" ***
-GUTTER STRUCTURE: A gutter is a U-shaped metal channel running along the 1st story roofline.
-- The INSIDE of the gutter is the U-shaped trough where rainwater flows
-- Fixtures sit DOWN INSIDE this U-channel, against the INNER WALL (closest to house)
-- The fixture is PARTIALLY HIDDEN by the gutter walls - only the top is visible from below
-- Water flows around the fixture (weather-sealed design)
-
-CORRECT PLACEMENT (REQUIRED):
-- Fixture sits INSIDE the U-channel of the first story gutter
-- Braced against the INNER GUTTER WALL (wall closest to fascia/house)
-- Fixture is LOW in the channel, not sitting on the edge
-
-INCORRECT PLACEMENT (FORBIDDEN):
-- ON THE ROOF SURFACE (shingles) - NEVER place fixtures on the roof
-- ON THE GUTTER LIP/EDGE (outer rim) - NEVER sit fixtures on the visible edge
-- ON TOP OF THE GUTTER - NEVER have fixtures prominently visible on roofline
-- ON THE FASCIA BOARD - Fixtures go IN the gutter, not on the board behind it
-
-VISUAL TEST: From ground level, the fixture should be PARTIALLY OBSCURED by the gutter walls.
-If you can see the ENTIRE fixture prominently on the roofline, it's placed WRONG.
-
-PLACEMENT GEOMETRY:
-- Mount fixtures INSIDE the FIRST STORY GUTTER TROUGH (NOT the roofline gutter)
-- Position fixtures to achieve COMPLETE coverage of the 2nd story facade
-- Fixtures may be centered on windows, between windows, or positioned to illuminate peaks
-- Use VISUAL ANCHORS to describe each fixture position (e.g., "below window 1", "between windows 2 and 3", "centered under the peak")
-- Aim to wash the ENTIRE 2nd story including windows, siding, AND any peaks/gables above
-
-FIXTURE COUNT GUIDANCE:
-- For narrow 2nd story sections (8-12 feet wide): 2-3 fixtures
-- For medium 2nd story sections (12-20 feet wide): 3-4 fixtures
-- For wide 2nd story sections (20+ feet wide): 4-6 fixtures
-- Space fixtures approximately 4-6 feet apart for even coverage
-- Ensure at least ONE fixture is positioned to illuminate any peak/gable above
-
-MULTI-SECTION HOMES:
-- If the home has MULTIPLE first story sections with 2nd stories above:
-- Place fixtures in EACH first story gutter that has a 2nd story above
-- Each section should have complete coverage of its 2nd story facade
-- The goal is to illuminate ALL 2nd story facades visible from curb
-
-COUNT VALIDATION:
-- Too few fixtures = dark gaps in coverage
-- Too many fixtures = overlapping hot spots
-- Aim for smooth, even wash across the ENTIRE 2nd story facade
-
-PEAK/GABLE ILLUMINATION (CRITICAL - when present):
-- If a PEAK or GABLE exists above the 2nd story:
-- Position at least ONE fixture to illuminate the peak
-- The upward beam MUST continue PAST the windows to graze the gable triangle face
-- Beam MUST reach the peak APEX with natural falloff
-- Light must travel the FULL distance from gutter to peak apex -- never fall short
-- Creates dramatic vertical emphasis: windows glowing + peak illuminated above
-
-MOUNTING LOCATION (FIRST STORY GUTTER TROUGH ONLY):
-- MOUNTED INSIDE FIRST STORY GUTTER TROUGH ONLY: fixture sits IN the gutter channel, aims UPWARD
-- Fixture braced against INNER GUTTER WALL (wall closest to house/fascia)
-- The fixture is small enough to fit inside the gutter without blocking water flow
-- FORBIDDEN: On gutter lip, on fascia board, on roof surface, in ROOFLINE gutter
-
-ALIGNMENT:
-- HORIZONTAL: distributed across facade width to illuminate windows, siding, AND peaks
-- VERTICAL: mounted at the first story gutter/fascia line, projecting light UPWARD onto second story wall and peak
-
-LIGHT PHYSICS:
-- Beam projects UPWARD from first story gutter line onto second story facade
-- WALL GRAZING/WASHING technique for broad, even upward illumination
-- Light travels UP from first story gutter to illuminate 2nd story above
-- Light WILL fall on second story windows -- this is INTENTIONAL and DESIRED
-- Illuminates window frames, muntins, trim details, siding texture
-- For peak illumination: light continues PAST windows to graze the gable triangle face to the APEX
-- Reveals siding texture on 2nd story (lap siding, board and batten, shingles, brick, stone)
-- Creates warm glow on upper facade and peak visible from street level
-- Soft light on window glass adds warmth and architectural interest
-
-WINDOW ILLUMINATION GUIDANCE:
-- Light falling on second story windows IS ACCEPTABLE for this application
-- The goal is overall second story facade illumination, not window avoidance
-- Light on window glass creates reflective warmth at night
-- Window frames and trim will be highlighted by the upward wash
-- In most cases, light will naturally fall on windows -- this is intentional
-
-SIDING & WALL COVERAGE:
-- Prioritize complete coverage across the ENTIRE second story wall surface
-- Light washes UPWARD from first story gutter to second story roofline AND peak
-- Reveal architectural texture and material variations
-- Create smooth gradient traveling upward
-- Avoid harsh hot spots -- aim for gentle wash effect
-
-TARGET REACH - MANDATORY:
-- Light beam MUST travel from first story INNER GUTTER WALL to illuminate the FULL target height
-- For windows: beam reaches from gutter to 2nd story window and surrounding siding
-- For peak: beam reaches from gutter PAST windows to the gable APEX
-- Typical distances: 8-12 feet for windows, 15-25 feet for peak apex
-- Light intensity at peak should still be visible (with natural falloff from inverse square law)
-- Light MUST reach its target NO MATTER THE DISTANCE
-- The beam ALWAYS reaches and illuminates the intended target fully - never falls short
-- Higher wattage for distant targets (peaks), lower wattage for closer targets (windows)
-
-FIXTURE VISIBILITY:
-- Daytime: subtle fixtures along first story gutter line -- discreet
-- Nighttime: 2nd story facade and peak glow warmly; fixtures hidden at lower level
-
-ARCHITECTURAL EMPHASIS:
-- First story gutter mounting creates ideal upward angle for second story illumination
-- Brings life to often-neglected upper portions of home
-- Peaks and gables receive dramatic vertical emphasis
-- Balances with ground-level lighting for complete facade treatment
-- Creates welcoming, finished appearance from curb
-
-STRICT EXCLUSION ZONES:
-- Do NOT mount in the ROOFLINE gutter (top of house) -- FIRST STORY GUTTER ONLY
-- Do NOT mount on roof surface or shingles -- INSIDE GUTTER TROUGH ONLY
-- Do NOT mount on gutter lip or edge -- INSIDE the gutter channel ONLY
-- Do NOT aim fixtures DOWNWARD -- UPWARD PROJECTION ONLY
-- Do NOT confuse with DORMER lighting (separate preset for dormers only)
-- Do NOT confuse with PEAKS & GABLES lighting (for peaks WITHOUT a 2nd story facade below)
-- Do NOT leave peaks/gables unlit if they exist above the 2nd story
-- Do NOT let light fall short of the peak -- it MUST reach the apex`,
+COMPATIBILITY (when other sub-options selected):
+- If DORMERS selected: skip fixtures directly below dormers
+- If PEAKS selected: secondStoryFacade handles peaks above 2nd story facades`,
         negativePrompt: `ABSOLUTE PROHIBITION (2ND STORY WINDOWS & PEAK): Do NOT illuminate second story facade from first story gutter. Do NOT mount uplights in first story gutter. Do NOT wash upper walls, windows, or peaks with upward light. Second story facade and gable peaks must remain dark. No gutter-mounted uplighting on second story.`,
         darkDescription: `Second story facade and peaks remain DARK - no gutter-mounted uplights from first story level, 2nd story windows unlit, upper siding texture invisible, peaks above 2nd story completely dark, upper facade appears as dark silhouette against sky.`
       }
