@@ -172,6 +172,73 @@ LIGHT GENERATION RULES (CRITICAL)
 - Unlit areas MUST remain in DEEP SHADOW for maximum contrast
 
 ═══════════════════════════════════════════════════════════════════════════════
+SOFFIT/DOWNLIGHT PROHIBITION (CRITICAL - READ THIS)
+═══════════════════════════════════════════════════════════════════════════════
+
+*** ABSOLUTE BAN ON SOFFIT LIGHTS UNLESS EXPLICITLY REQUESTED ***
+
+- DO NOT generate soffit lights, downlights, or recessed eave fixtures
+- DO NOT illuminate soffits from fixtures IN the soffit
+- Eave undersides MUST remain PITCH BLACK shadows
+- The ONLY way soffit surfaces receive light is from UP LIGHTS reflecting upward
+- This glow is REFLECTED AMBIENT light, NOT direct illumination from above
+- If "Soffit Lights" is NOT in the DESIGN REQUEST → ZERO soffit fixtures
+
+CLARIFICATION ON "SOFFIT REACH":
+- When we say "up lights reach the soffit" we mean the BEAM travels upward TO the soffit
+- The soffit receives REFLECTED GLOW from the up light beam hitting the wall below
+- This is NOT the same as having fixtures IN the soffit
+- UP LIGHTS shine UP. SOFFIT LIGHTS shine DOWN. They are OPPOSITES.
+
+WHAT "SOFFIT GLOW" FROM UP LIGHTS LOOKS LIKE:
+- Soft, ambient reflection on eave underside
+- Light source is CLEARLY from below (up lights at ground level)
+- Much dimmer than the wall below (inverse square law)
+- Natural fade - NOT direct illumination
+
+WHAT SOFFIT LIGHTS (PROHIBITED) LOOK LIKE:
+- Distinct downward beams from fixtures IN the eave
+- Light source visible in soffit
+- Illumination pattern shines DOWNWARD onto porch/ground
+- Creates pools of light below the eave
+
+IF IN DOUBT: Keep soffits DARK. Err on the side of NO soffit illumination.
+
+═══════════════════════════════════════════════════════════════════════════════
+GUTTER LIGHT MOUNTING LOCATION (CRITICAL - WHEN GUTTER LIGHTS SELECTED)
+═══════════════════════════════════════════════════════════════════════════════
+
+*** GUTTER LIGHTS MUST BE INSIDE THE GUTTER TROUGH - NEVER ON THE ROOF ***
+
+GUTTER ANATOMY:
+- A gutter is a U-shaped metal channel running along the roofline
+- It collects rainwater and directs it to downspouts
+- The INSIDE of the gutter is where water flows
+- Gutter lights sit INSIDE this U-channel, against the inner wall
+
+CORRECT GUTTER LIGHT PLACEMENT:
+- INSIDE the metal gutter trough (the U-shaped channel)
+- Against the INNER GUTTER WALL (wall closest to house/fascia)
+- Fixture sits DOWN in the channel, partially hidden by gutter walls
+- Only the top of the fixture is visible from ground level
+
+FORBIDDEN GUTTER LIGHT PLACEMENTS:
+- ON THE ROOF SURFACE - Fixtures must NEVER be on shingles
+- ON THE GUTTER LIP/EDGE - Fixtures must NEVER be on the outer rim
+- ON THE FASCIA BOARD - Fixtures must be IN the gutter, not on fascia
+- PROMINENTLY VISIBLE ON ROOFLINE - Fixtures should be partially hidden
+
+WHY INSIDE THE GUTTER:
+- Professional installation - fixtures are protected from weather
+- Aesthetic - fixtures are discreet, not prominently visible
+- Function - allows upward beam angle toward target
+
+VISUAL VALIDATION:
+- If the entire fixture is prominently visible on the roofline = WRONG
+- If the fixture appears to be sitting on shingles = WRONG
+- If the fixture is described as low-profile, inside gutter channel = CORRECT
+
+═══════════════════════════════════════════════════════════════════════════════
 DRAMATIC LIGHTING STYLE (CRITICAL FOR PROFESSIONAL REALISM)
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1380,6 +1447,13 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
         description: 'Illuminating dormer faces',
         prompt: `TARGET: DORMERS -- GUTTER-MOUNTED UPLIGHTS FOR UPPER-STORY DORMER ILLUMINATION
 
+*** ABSOLUTE BAN ON SOFFIT LIGHTS - THIS IS GUTTER LIGHTING, NOT SOFFIT LIGHTING ***
+- This is an UP LIGHT mounted IN THE GUTTER, NOT a downlight in the soffit
+- Fixture sits INSIDE the gutter trough, visible as a small dark bronze bullet
+- Light beam shoots UPWARD toward dormers, NOT downward
+- DO NOT generate soffit lights, can lights, or downlights
+- Soffits/eaves must remain PITCH BLACK (no fixtures in them)
+
 IDENTIFICATION:
 - Locate ALL dormers on the roofline
 - Types: gable dormers, shed dormers, hipped dormers, eyebrow dormers
@@ -1461,6 +1535,12 @@ STRICT EXCLUSION ZONES:
 - Light beam shoots UPWARD toward the peak/apex
 - This is NOT soffit lighting (which shines down)
 - The GABLE FACE is lit from BELOW, creating dramatic uplighting
+
+*** ABSOLUTE BAN ON SOFFIT LIGHTS - THIS IS GUTTER LIGHTING, NOT SOFFIT LIGHTING ***
+- Fixture sits INSIDE the gutter trough, visible as a small brass bullet
+- DO NOT generate soffit lights, can lights, or downlights
+- Soffits/eaves must remain PITCH BLACK (no fixtures in them)
+- Any glow on soffit is ONLY reflected ambient light from gutter lights hitting the gable face below
 
 IDENTIFICATION:
 - Locate ALL prominent gables on the roofline
@@ -1547,6 +1627,13 @@ STRICT EXCLUSION ZONES:
         label: '2nd Story Windows & Peak',
         description: 'Complete facade uplighting including windows, siding, and peaks',
         prompt: `TARGET: 2ND STORY WINDOWS & PEAK -- FIRST-STORY GUTTER-MOUNTED UPLIGHTS FOR COMPLETE FACADE ILLUMINATION
+
+*** ABSOLUTE BAN ON SOFFIT LIGHTS - THIS IS GUTTER LIGHTING, NOT SOFFIT LIGHTING ***
+- This is an UP LIGHT mounted IN THE FIRST STORY GUTTER, NOT a downlight in the soffit
+- Fixture sits INSIDE the gutter trough, visible as a small brass bullet
+- Light beam shoots UPWARD toward 2nd story and peaks, NOT downward
+- DO NOT generate soffit lights, can lights, or downlights
+- Soffits/eaves must remain PITCH BLACK (no fixtures in them)
 
 *** FIXTURE PLACEMENT - CRITICAL ***
 Place fixtures in the FIRST STORY GUTTER - this is the gutter directly ABOVE THE GARAGE or above any first-floor section.

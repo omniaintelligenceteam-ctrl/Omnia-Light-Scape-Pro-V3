@@ -562,7 +562,7 @@ function getDarkDescription(fixtureId: string): string {
     'up': 'Ground areas near foundation remain unlit - NO vertical light beams on walls',
     'path': 'Walkways and paths remain in darkness - NO ground-level path lighting',
     'gutter': 'Roofline and gutters appear as dark silhouette - NO edge illumination',
-    'soffit': 'Eave undersides appear as dark shadow - NO downward recessed lighting',
+    'soffit': 'SOFFIT/EAVES MUST BE PITCH BLACK - NO downlights, NO recessed lights, NO illumination from above. Eave undersides are COMPLETELY DARK shadows. The only light on soffits comes from UP LIGHTS reflecting upward - NEVER from fixtures IN the soffit. DO NOT ADD SOFFIT LIGHTS.',
     'hardscape': 'Walls, steps, and retaining walls remain unlit - NO accent lighting',
     'coredrill': 'Ground surfaces remain dark - NO in-ground well lights or markers',
     'holiday': 'Roofline remains dark - NO colored lights, NO string lights, NO RGB illumination',
@@ -756,6 +756,38 @@ export const craftPromptWithAI = async (
     const fixtureType = fixtureTypes.find(ft => ft.id === placement.fixtureType);
     const subOption = fixtureType?.subOptions.find(so => so.id === placement.subOption);
     const userNote = placementNotes?.[placement.subOption] || '';
+
+    // Add visual description for gutter fixtures to help AI distinguish from soffit lights AND prevent roof placement
+    const gutterVisualDescription = placement.fixtureType === 'gutter' ? `
+
+GUTTER FIXTURE VISUAL APPEARANCE (CRITICAL):
+- Small brass/bronze bullet fixture (size of a fist) sitting INSIDE the metal gutter channel
+- The fixture is VISIBLE - you can see it sitting in the gutter trough
+- Light beam projects UPWARD from this fixture toward the target above
+- This is NOT a soffit light - soffit lights are recessed IN the eave and shine DOWN
+- The gutter fixture is OUTSIDE the eave, sitting IN the metal gutter, shining UP
+
+*** CRITICAL MOUNTING LOCATION - INSIDE THE GUTTER TROUGH ***
+GUTTER ANATOMY: A gutter is a U-shaped metal channel that runs along the roofline to collect rainwater.
+- The INSIDE of the gutter is the U-shaped channel where water flows
+- Fixtures MUST sit INSIDE this U-shaped channel, against the INNER WALL (closest to house)
+- The fixture is PARTIALLY HIDDEN by the gutter walls - only the top is visible from below
+
+MANDATORY PLACEMENT:
+- INSIDE the gutter trough (in the U-channel where water flows)
+- Against the INNER GUTTER WALL (the wall closest to the fascia/house)
+- The fixture sits DOWN inside the gutter channel
+
+ABSOLUTELY FORBIDDEN PLACEMENTS:
+- ON THE ROOF SURFACE (shingles) - NEVER
+- ON THE GUTTER LIP/EDGE (the outer rim of the gutter) - NEVER
+- ON TOP OF THE GUTTER (sitting on the visible edge) - NEVER
+- ON THE FASCIA BOARD (the vertical board behind the gutter) - NEVER
+- ANYWHERE prominently visible on the roofline - NEVER
+
+VISUAL TEST: If you can see the entire fixture from ground level, it's placed WRONG.
+The fixture should be PARTIALLY OBSCURED by the gutter walls because it sits INSIDE the channel.` : '';
+
     return {
       fixture: placement.fixtureType,
       fixtureLabel: fixtureType?.label || placement.fixtureType,
@@ -763,7 +795,7 @@ export const craftPromptWithAI = async (
       subOptionLabel: subOption?.label || placement.subOption,
       count: placement.count,
       positions: placement.positions,
-      positivePrompt: subOption?.prompt || fixtureType?.positivePrompt || '',
+      positivePrompt: (subOption?.prompt || fixtureType?.positivePrompt || '') + gutterVisualDescription,
       userPlacementNote: userNote,
     };
   });
@@ -776,6 +808,72 @@ export const craftPromptWithAI = async (
       label: ft.label,
       darkDescription: getDarkDescription(ft.id), // How this looks when "off"
     }));
+
+  // ALWAYS add explicit soffit prohibition unless soffit is selected
+  const soffitSelected = selectedFixtureIds.includes('soffit');
+  const explicitSoffitProhibition = soffitSelected ? '' : `
+## SOFFIT LIGHTS - ABSOLUTE PROHIBITION (CRITICAL)
+SOFFIT LIGHTS ARE NOT SELECTED. The following is MANDATORY:
+- ZERO fixtures in soffits or eaves
+- Eave undersides remain PITCH BLACK
+- NO downlights, NO recessed lights, NO can lights in eaves
+- Any soffit "glow" is ONLY from up lights reflecting upward - NOT from fixtures IN the soffit
+- Do NOT add soffit lights "for realism" or "to complete the design"
+- UP LIGHTS shine UP. SOFFIT LIGHTS shine DOWN. They are OPPOSITES.
+- If you see "soffit reach" or "soffit glow" that means REFLECTED light from UP LIGHTS, NOT soffit fixtures
+`;
+
+  // When GUTTER is selected, add extra-strong soffit prohibition to prevent confusion
+  const gutterSelected = selectedFixtureIds.includes('gutter');
+  const gutterSoffitClarification = gutterSelected ? `
+
+## GUTTER LIGHTS vs SOFFIT LIGHTS - CRITICAL DISTINCTION
+YOU HAVE SELECTED: GUTTER-MOUNTED UP LIGHTS (fixtures IN the gutter, shining UP)
+YOU HAVE NOT SELECTED: SOFFIT LIGHTS (fixtures IN the eave, shining DOWN)
+
+*** DO NOT CONFUSE THESE - THEY ARE OPPOSITES ***
+
+GUTTER UP LIGHTS (SELECTED - GENERATE THESE):
+- Fixture Location: INSIDE the metal gutter trough/channel
+- Fixture Appearance: Small brass/bronze bullet visible sitting IN the gutter
+- Beam Direction: UPWARD toward dormers, gables, or 2nd story facade
+- Light travels: FROM gutter UP TO higher features
+- You can SEE the fixture sitting in the gutter
+
+SOFFIT LIGHTS (NOT SELECTED - DO NOT GENERATE):
+- Fixture Location: Recessed IN the soffit/eave underside
+- Fixture Appearance: Flush-mounted can light in eave
+- Beam Direction: DOWNWARD onto porch, ground, or windows
+- Light travels: FROM eave DOWN TO ground
+- Fixture is recessed/hidden in the eave
+
+VISUAL TEST:
+- If fixture is INSIDE the gutter trough and light goes UP = CORRECT (gutter light)
+- If fixture is IN the eave and light goes DOWN = WRONG (soffit light - forbidden)
+
+SOFFIT MUST REMAIN DARK:
+- Eave undersides remain pitch black
+- NO downlights, NO can lights, NO recessed fixtures in eaves
+- Any glow on soffit is ONLY reflected ambient light from gutter lights hitting walls below
+
+GUTTER MOUNTING LOCATION - ABSOLUTE REQUIREMENTS:
+*** FIXTURES MUST BE INSIDE THE GUTTER TROUGH - NOT ON THE ROOF ***
+
+WHAT "INSIDE THE GUTTER" MEANS:
+- Gutters are U-shaped metal channels attached below the roofline
+- The fixture sits DOWN INSIDE this U-channel, against the inner wall
+- Water flows around the fixture (it's weather-sealed)
+- Only the top portion of the fixture is visible from below
+
+WHAT "ON THE ROOF" MEANS (FORBIDDEN):
+- Fixture sitting ON shingles or roofing material - FORBIDDEN
+- Fixture mounted to visible roof surface - FORBIDDEN
+- Fixture prominently visible on the roofline - FORBIDDEN
+- Fixture on the outer edge/lip of the gutter - FORBIDDEN
+
+ROOF PLACEMENT = WRONG. INSIDE GUTTER TROUGH = CORRECT.
+If you place fixtures ON the roof surface, the image is INVALID.
+` : '';
 
   // Build preference context
   const preferenceContext = userPreferences ? `
@@ -825,7 +923,8 @@ ${allowlistItems.map(item => `
 ${prohibitedFixtures.map(pf => `
 - ${pf.label.toUpperCase()}: ${pf.darkDescription}
 `).join('\n')}
-
+${explicitSoffitProhibition}
+${gutterSoffitClarification}
 === MASTER PRESERVATION RULES ===
 ${systemPrompt.masterInstruction}
 
@@ -981,6 +1080,40 @@ ${expectedCounts.map(c => `- ${c.type}/${c.subOption}: Does prompt specify EXACT
 - Does the prompt use ALL CAPS for critical rules?
 - Does the prompt use markdown dashed lists for rules?
 - Is there a VALIDATION section at the end?
+
+## CRITICAL CHECK 5: SOFFIT PROHIBITION (MOST COMMON ERROR)
+${!expectedFixtureTypes.includes('soffit') ? `
+- SOFFIT IS NOT IN THE SELECTED FIXTURES - this is a CRITICAL check
+- Verify the prompt explicitly PROHIBITS soffit lights/downlights
+- Look for phrases like: "soffit must remain dark", "no downlights", "eaves pitch black"
+- FAIL if: The prompt mentions soffit lighting without explicit prohibition
+- FAIL if: The prompt says "soffit glow" without clarifying it's REFLECTED light from up lights
+- This is the MOST COMMON hallucination error - be extra strict here
+` : '- Soffit IS selected, so soffit lights are allowed'}
+
+## CRITICAL CHECK 6: GUTTER PLACEMENT (MOST CRITICAL FOR GUTTER LIGHTS)
+${expectedFixtureTypes.includes('gutter') ? `
+- GUTTER LIGHTS ARE SELECTED - verify fixtures are INSIDE THE GUTTER TROUGH
+
+CORRECT PLACEMENT (REQUIRED):
+- Fixtures described as "inside gutter trough" or "in the gutter channel"
+- Fixtures against "inner gutter wall" or "inside the U-channel"
+- Fixtures partially hidden by gutter walls
+- Beam direction is UPWARD toward targets
+
+INCORRECT PLACEMENT (FAIL THE VALIDATION):
+- Fixtures "on the roof" or "on roof surface" - FAIL
+- Fixtures "on shingles" or "on roofing material" - FAIL
+- Fixtures "on gutter lip" or "on gutter edge" - FAIL
+- Fixtures prominently visible on roofline - FAIL
+- Fixtures on fascia board - FAIL
+
+ALSO CHECK SOFFIT DISTINCTION:
+- Gutter lights are UP LIGHTS (shine upward) - NOT soffit lights (shine down)
+- FAIL if: prompt describes downward beams when gutter lights are selected
+- FAIL if: fixtures described as in soffit/eave instead of in gutter
+- FAIL if: "soffit" appears without explicit prohibition/dark description
+` : '- Gutter is NOT selected, skip this check'}
 
 Return ONLY a valid JSON object:
 
@@ -1224,6 +1357,13 @@ HOT SPOT AVOIDANCE:
 - Light appears to "float" on surface
 - Even distribution within small pool
 
+SOFFIT INTERACTION (CRITICAL - NO SOFFIT FIXTURES):
+- Up light beams travel UP and may reach soffit level
+- Soffit receives REFLECTED ambient glow from light hitting wall below
+- This is NOT the same as soffit fixtures - there are NO fixtures IN the soffit
+- The soffit glow is dim, ambient, and clearly comes from BELOW
+- Do NOT add any downlights or fixtures in the eave to "enhance" this effect
+
 BEST FOR: Ambient mood, pathway marking, subtle accent, intimate settings`;
 
     if (val < 50) return `LIGHTING INTENSITY: MODERATE (4-5W LED equivalent, 300-500 lumens)
@@ -1246,6 +1386,13 @@ TEXTURE REVELATION:
 - Sufficient intensity to show brick mortar joints
 - Siding shadow lines visible but not harsh
 - Stone texture defined but not over-emphasized
+
+SOFFIT INTERACTION (CRITICAL - NO SOFFIT FIXTURES):
+- Up light beams travel UP and reach soffit level
+- Soffit receives REFLECTED ambient glow from light hitting wall below
+- This is NOT the same as soffit fixtures - there are NO fixtures IN the soffit
+- The soffit glow is dim, ambient, and clearly comes from BELOW
+- Do NOT add any downlights or fixtures in the eave to "enhance" this effect
 
 BEST FOR: Single-story homes, accent features, balanced residential lighting`;
 
@@ -1270,6 +1417,13 @@ TEXTURE REVELATION:
 - Strong shadows in brick/stone mortar joints
 - Dramatic siding shadow lines
 - Surface irregularities clearly defined
+
+SOFFIT INTERACTION (CRITICAL - NO SOFFIT FIXTURES):
+- Up light beams travel UP and reach soffit level on taller walls
+- Soffit receives REFLECTED ambient glow from light hitting wall below
+- This is NOT the same as soffit fixtures - there are NO fixtures IN the soffit
+- The soffit glow is moderate, ambient, and clearly comes from BELOW
+- Do NOT add any downlights or fixtures in the eave to "enhance" this effect
 
 BEST FOR: Two-story facades, tall trees, dramatic accent lighting`;
 
@@ -1299,6 +1453,13 @@ HOT SPOT MANAGEMENT:
 - Even with high power, NO harsh bright spots at fixture base
 - Fixture angled to start beam 18-24 inches above ground
 - Light brightest at mid-wall, not at base
+
+SOFFIT INTERACTION (CRITICAL - NO SOFFIT FIXTURES):
+- Up light beams travel UP and reach soffit/gable level on tall walls
+- Soffit receives REFLECTED ambient glow from light hitting wall below
+- This is NOT the same as soffit fixtures - there are NO fixtures IN the soffit
+- The soffit glow is visible, ambient, and clearly comes from BELOW
+- Do NOT add any downlights or fixtures in the eave to "enhance" this effect
 
 BEST FOR: Tall facades, commercial properties, dramatic architectural statements`;
   };

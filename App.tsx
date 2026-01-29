@@ -59,10 +59,8 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt, detectLightingZones, type LightingZone } from './services/geminiService';
+import { generateNightScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
 import { generateNightSceneWithICLight, checkReplicateStatus, type ICLightProgressCallback } from './services/replicateService';
-import { FixturePlacer } from './components/FixturePlacer';
-import { LightFixture } from './types/fixtures';
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
 import { FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
@@ -377,17 +375,6 @@ const App: React.FC = () => {
   // Placement Notes State (user describes where they want fixtures)
   const [fixturePlacementNotes, setFixturePlacementNotes] = useState<Record<string, string>>({});
 
-  // Manual Fixture Placement State (click-to-place positions)
-  const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
-  const [placedFixtures, setPlacedFixtures] = useState<LightFixture[]>([]);
-  const [manualFixtureType, setManualFixtureType] = useState<string>('uplight');
-  
-  // Smart Zone Placement State
-  const [lightingZones, setLightingZones] = useState<LightingZone[]>([]);
-  const [zoneFixtures, setZoneFixtures] = useState<Record<string, { type: string; count: number }[]>>({});
-  const [isDetectingZones, setIsDetectingZones] = useState(false);
-  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
-
   // Favorite Presets State
   interface FixturePreset {
     id: string;
@@ -696,102 +683,6 @@ const App: React.FC = () => {
       onboarding.completeDemoStep(9);
     }
   }, [activeTab, onboarding.isDemoActive, onboarding.completeDemoStep]);
-
-  // === LIGHT GLOW COMPOSITING FUNCTION ===
-  // Overlays realistic light glows at exact grid positions
-  const compositeLightGlows = async (
-    imageUrl: string, 
-    fixtures: Record<string, { type: string; count: number }[]>,
-    imageWidth: number,
-    imageHeight: number
-  ): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve(imageUrl); return; }
-        
-        // Draw the base image
-        ctx.drawImage(img, 0, 0);
-        
-        // Glow colors by fixture type
-        // Larger, brighter glows for dark scene compositing
-        const glowColors: Record<string, { inner: string; outer: string; size: number }> = {
-          uplight: { inner: 'rgba(255, 220, 150, 1)', outer: 'rgba(255, 180, 80, 0)', size: 120 },
-          path_light: { inner: 'rgba(255, 240, 200, 0.95)', outer: 'rgba(255, 200, 100, 0)', size: 80 },
-          downlight: { inner: 'rgba(255, 250, 230, 1)', outer: 'rgba(255, 220, 150, 0)', size: 100 },
-          spot: { inner: 'rgba(255, 255, 220, 1)', outer: 'rgba(255, 240, 180, 0)', size: 70 },
-          well_light: { inner: 'rgba(200, 220, 255, 1)', outer: 'rgba(150, 180, 255, 0)', size: 110 },
-          wall_wash: { inner: 'rgba(255, 230, 180, 0.9)', outer: 'rgba(255, 200, 120, 0)', size: 150 },
-        };
-        
-        // Set blend mode for realistic light overlay
-        ctx.globalCompositeOperation = 'screen';
-        
-        // Draw glows for each fixture
-        Object.entries(fixtures).forEach(([cellId, fixtureList]) => {
-          const match = cellId.match(/cell_(\d+)_(\d+)/);
-          if (!match) return;
-          
-          const row = parseInt(match[1]);
-          const col = parseInt(match[2]);
-          
-          // Calculate exact pixel position
-          const x = ((col + 0.5) / 20) * img.width;
-          const y = ((row + 0.5) / 20) * img.height;
-          
-          fixtureList.forEach(fixture => {
-            const glow = glowColors[fixture.type] || glowColors.uplight;
-            const count = fixture.count;
-            
-            // Draw multiple glows for count > 1
-            for (let i = 0; i < count; i++) {
-              const offsetX = count > 1 ? (i - (count - 1) / 2) * 20 : 0;
-              
-              // Create radial gradient for glow
-              const gradient = ctx.createRadialGradient(
-                x + offsetX, y, 0,
-                x + offsetX, y, glow.size
-              );
-              gradient.addColorStop(0, glow.inner);
-              gradient.addColorStop(0.3, glow.inner.replace('0.9', '0.5').replace('0.8', '0.4').replace('0.7', '0.35'));
-              gradient.addColorStop(1, glow.outer);
-              
-              ctx.beginPath();
-              ctx.arc(x + offsetX, y, glow.size, 0, Math.PI * 2);
-              ctx.fillStyle = gradient;
-              ctx.fill();
-              
-              // Add bright center point (larger for dark scenes)
-              const centerGradient = ctx.createRadialGradient(
-                x + offsetX, y, 0,
-                x + offsetX, y, 15
-              );
-              centerGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-              centerGradient.addColorStop(0.5, 'rgba(255, 255, 200, 0.8)');
-              centerGradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
-              ctx.beginPath();
-              ctx.arc(x + offsetX, y, 8, 0, Math.PI * 2);
-              ctx.fillStyle = centerGradient;
-              ctx.fill();
-            }
-          });
-        });
-        
-        // Reset composite operation
-        ctx.globalCompositeOperation = 'source-over';
-        
-        // Return composited image as base64
-        resolve(canvas.toDataURL('image/jpeg', 0.95));
-      };
-      img.onerror = () => resolve(imageUrl);
-      img.src = imageUrl;
-    });
-  };
 
   // Demo guide: Track image upload (step 1)
   useEffect(() => {
@@ -1878,12 +1769,9 @@ const App: React.FC = () => {
     }
 
     // Validation
-    // Allow generation if: fixtures selected, OR custom prompt, OR manual zone placements
-    const hasZonePlacements = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
-    const hasManualPlacements = placementMode === 'manual' && (placedFixtures.length > 0 || hasZonePlacements);
-    if (selectedFixtures.length === 0 && !prompt && !hasManualPlacements) {
+    if (selectedFixtures.length === 0 && !prompt) {
         setIsLoading(false);
-        setError("Please select at least one lighting type, enter custom instructions, or place fixtures in zones.");
+        setError("Please select at least one lighting type or enter custom instructions.");
         return;
     }
 
@@ -1913,28 +1801,6 @@ const App: React.FC = () => {
 
     try {
       const base64 = await fileToBase64(file);
-
-      // === GRID PLACEMENT MODE: Generate DARK scene, lights added via compositing ===
-      // When in manual mode with grid cell selections (20x20 grid)
-      const hasGridSelections = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
-      if (hasGridSelections) {
-        // Override the prompt completely for grid mode
-        // We want a DARK nighttime scene with NO artificial lights
-        // The compositing code will add all lights at exact positions
-        activePrompt = `Transform this daytime photo into a DARK nighttime scene.
-
-CRITICAL REQUIREMENTS:
-1. Convert to realistic nighttime - dark sky, no sunlight
-2. DO NOT add ANY artificial lighting, fixtures, or glowing lights
-3. Keep the scene DARK - only natural moonlight/ambient light
-4. Preserve all architectural details and landscaping exactly
-5. The scene should look like nighttime BEFORE any lights are turned on
-6. No uplighting, no path lights, no spotlights - completely unlit
-7. Maintain the exact same composition, framing, and perspective
-
-The lighting will be added separately via post-processing.
-Generate a dark, unlit nighttime version of this property.`;
-      }
 
       // === 4-STAGE AI PIPELINE ===
       let finalPrompt = activePrompt;
@@ -2020,11 +1886,7 @@ Generate a dark, unlit nighttime version of this property.`;
         const validatedPrompt = validation.fixedPrompt || smartPrompt;
 
         // Merge with verified summary and user's custom notes
-        // BUT: Skip this for grid mode - use dark scene prompt instead
-        if (!hasGridSelections) {
-          finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
-        }
-        // Grid mode keeps the dark scene prompt from activePrompt
+        finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
 
       } catch {
         // If any stage fails, continue with standard generation (graceful fallback)
@@ -2087,23 +1949,8 @@ Generate a dark, unlit nighttime version of this property.`;
       }
 
       setGenerationStage('idle');
-      
-      // Composite light glows if in manual/grid mode with placements
-      let finalImage = result;
-      const hasGridPlacements = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
-      if (hasGridPlacements && result) {
-        try {
-          // Get image dimensions from preview
-          const img = new Image();
-          img.src = previewUrl || '';
-          await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
-          finalImage = await compositeLightGlows(result, zoneFixtures, img.width || 1024, img.height || 768);
-        } catch (e) {
-          console.error('Compositing failed, using original:', e);
-        }
-      }
-      
-      setGeneratedImage(finalImage);
+
+      setGeneratedImage(result);
 
       // Trigger loading screen celebration FIRST (before hiding loading)
       setShowLoadingCelebration(true);
@@ -2111,7 +1958,7 @@ Generate a dark, unlit nighttime version of this property.`;
       // Add to history with settings
       setGenerationHistory(prev => [...prev, {
         id: Date.now().toString(),
-        image: finalImage,
+        image: result,
         timestamp: Date.now(),
         settings: {
           selectedFixtures: selectedFixtures,
@@ -2189,21 +2036,7 @@ Generate a dark, unlit nighttime version of this property.`;
           result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt, userPreferences);
         }
 
-        // Composite light glows if in manual/grid mode with placements
-        let finalResult = result;
-        const hasGridPlacements = placementMode === 'manual' && Object.keys(zoneFixtures).length > 0;
-        if (hasGridPlacements && result) {
-          try {
-            const img = new Image();
-            img.src = previewUrl || '';
-            await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
-            finalResult = await compositeLightGlows(result, zoneFixtures, img.width || 1024, img.height || 768);
-          } catch (e) {
-            console.error('Compositing failed, using original:', e);
-          }
-        }
-
-        setGeneratedImage(finalResult);
+        setGeneratedImage(result);
 
         // Trigger loading screen celebration FIRST (before hiding loading)
         setShowLoadingCelebration(true);
@@ -2211,7 +2044,7 @@ Generate a dark, unlit nighttime version of this property.`;
         // Add to history with settings
         setGenerationHistory(prev => [...prev, {
           id: Date.now().toString(),
-          image: finalResult,
+          image: result,
           timestamp: Date.now(),
           settings: {
             selectedFixtures: selectedFixtures,
@@ -4755,197 +4588,12 @@ Notes: ${invoice.notes || 'N/A'}
                     
                     {/* Image Upload Area */}
                     <div className="relative">
-                        {/* Placement Mode Toggle - ALWAYS VISIBLE */}
-                        <div className="flex items-center justify-center gap-2 mb-4 p-3 bg-[#111] rounded-xl border border-white/10">
-                          <span className="text-xs text-gray-500 mr-2">Mode:</span>
-                          <button
-                            onClick={() => setPlacementMode('auto')}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                              placementMode === 'auto'
-                                ? 'bg-[#F6B45A] text-black'
-                                : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
-                            }`}
-                          >
-                            🤖 AI Placement
-                          </button>
-                          <button
-                            onClick={() => setPlacementMode('manual')}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                              placementMode === 'manual'
-                                ? 'bg-purple-500 text-white'
-                                : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
-                            }`}
-                          >
-                            👆 Grid Placement
-                          </button>
-                        </div>
-
-                        {/* Image Upload - always shown when no image */}
-                        {!previewUrl ? (
-                          <ImageUpload 
-                            currentImage={file}
-                            previewUrl={previewUrl}
-                            onImageSelect={handleImageSelect}
-                            onClear={handleClear}
-                          />
-                        ) : placementMode === 'manual' ? (
-                          /* Manual Mode: 20x20 Grid Placement */
-                          <div className="rounded-2xl border border-purple-500/30 bg-[#0a0a0a] overflow-hidden">
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-3 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-purple-400" />
-                                <span className="text-sm font-medium text-white">
-                                  Click grid to place • {Object.values(zoneFixtures).flat().reduce((sum, f) => sum + f.count, 0)} total
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {Object.keys(zoneFixtures).length > 0 && (
-                                  <button
-                                    onClick={() => setZoneFixtures({})}
-                                    className="px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
-                                  >
-                                    Clear All
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => { handleClear(); setZoneFixtures({}); }}
-                                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                                  title="Remove image"
-                                >
-                                  <X className="w-4 h-4 text-gray-400" />
-                                </button>
-                              </div>
-                            </div>
-                            {/* Fixture Type Selector */}
-                            <div className="flex flex-wrap gap-1.5 p-2 border-b border-white/10 bg-black/30">
-                              {[
-                                { id: 'uplight', label: '⬆️', color: 'bg-amber-500', name: 'Up' },
-                                { id: 'path_light', label: '🚶', color: 'bg-green-500', name: 'Path' },
-                                { id: 'downlight', label: '⬇️', color: 'bg-blue-500', name: 'Down' },
-                                { id: 'spot', label: '🔦', color: 'bg-yellow-500', name: 'Spot' },
-                                { id: 'well_light', label: '⚫', color: 'bg-purple-500', name: 'Well' },
-                                { id: 'wall_wash', label: '🧱', color: 'bg-orange-500', name: 'Wall' },
-                              ].map(ft => (
-                                <button
-                                  key={ft.id}
-                                  onClick={() => setManualFixtureType(ft.id)}
-                                  className={`px-2 py-1 text-xs font-medium rounded transition-all flex items-center gap-1 ${
-                                    manualFixtureType === ft.id
-                                      ? `${ft.color} text-black`
-                                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                                  }`}
-                                  title={ft.name}
-                                >
-                                  {ft.label}
-                                </button>
-                              ))}
-                            </div>
-                            {/* Image with 20x20 grid overlay */}
-                            <div className="relative w-full" style={{ minHeight: '350px' }}>
-                              <img 
-                                src={previewUrl} 
-                                alt="Property" 
-                                className="w-full h-auto"
-                                style={{ maxHeight: '450px', objectFit: 'contain' }}
-                              />
-                              {/* 20x20 Grid overlay */}
-                              <div className="absolute inset-0" style={{ display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gridTemplateRows: 'repeat(20, 1fr)' }}>
-                                {Array.from({ length: 20 * 20 }, (_, idx) => {
-                                  const row = Math.floor(idx / 20);
-                                  const col = idx % 20;
-                                  const cellId = `cell_${row}_${col}`;
-                                  const fixturesInCell = zoneFixtures[cellId] || [];
-                                  const totalInCell = fixturesInCell.reduce((sum, f) => sum + f.count, 0);
-                                  const isHovered = hoveredZone === cellId;
-                                  
-                                  const fixtureColors: Record<string, string> = {
-                                    uplight: 'rgba(245, 158, 11, 0.6)',
-                                    path_light: 'rgba(34, 197, 94, 0.6)',
-                                    downlight: 'rgba(59, 130, 246, 0.6)',
-                                    spot: 'rgba(234, 179, 8, 0.6)',
-                                    well_light: 'rgba(168, 85, 247, 0.6)',
-                                    wall_wash: 'rgba(249, 115, 22, 0.6)',
-                                  };
-                                  
-                                  // Get the dominant fixture color for this cell
-                                  const dominantFixture = fixturesInCell.length > 0 ? fixturesInCell[0].type : null;
-                                  const cellColor = dominantFixture ? fixtureColors[dominantFixture] : null;
-                                  
-                                  return (
-                                    <div
-                                      key={cellId}
-                                      className="cursor-pointer transition-all duration-100 flex items-center justify-center"
-                                      style={{
-                                        backgroundColor: cellColor || (isHovered ? 'rgba(255,255,255,0.1)' : 'transparent'),
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                        boxShadow: totalInCell > 0 ? `0 0 8px ${cellColor}, inset 0 0 4px ${cellColor}` : 'none',
-                                      }}
-                                      onMouseEnter={() => setHoveredZone(cellId)}
-                                      onMouseLeave={() => setHoveredZone(null)}
-                                      onClick={() => {
-                                        setZoneFixtures(prev => {
-                                          const existing = prev[cellId] || [];
-                                          const existingType = existing.find(f => f.type === manualFixtureType);
-                                          if (existingType) {
-                                            return {
-                                              ...prev,
-                                              [cellId]: existing.map(f => 
-                                                f.type === manualFixtureType ? { ...f, count: f.count + 1 } : f
-                                              )
-                                            };
-                                          }
-                                          return {
-                                            ...prev,
-                                            [cellId]: [...existing, { type: manualFixtureType, count: 1 }]
-                                          };
-                                        });
-                                      }}
-                                      onContextMenu={(e) => {
-                                        e.preventDefault();
-                                        setZoneFixtures(prev => {
-                                          const existing = prev[cellId] || [];
-                                          const existingType = existing.find(f => f.type === manualFixtureType);
-                                          if (existingType && existingType.count > 1) {
-                                            return {
-                                              ...prev,
-                                              [cellId]: existing.map(f =>
-                                                f.type === manualFixtureType ? { ...f, count: f.count - 1 } : f
-                                              )
-                                            };
-                                          } else if (existingType) {
-                                            const filtered = existing.filter(f => f.type !== manualFixtureType);
-                                            if (filtered.length === 0) {
-                                              const { [cellId]: _, ...rest } = prev;
-                                              return rest;
-                                            }
-                                            return { ...prev, [cellId]: filtered };
-                                          }
-                                          return prev;
-                                        });
-                                      }}
-                                      title={`Row ${row + 1}, Col ${col + 1}\nLeft: add | Right: remove`}
-                                    >
-                                      {totalInCell > 0 && (
-                                        <span className="text-[8px] font-bold text-white drop-shadow-lg">{totalInCell}</span>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          /* Auto Mode: Just show the uploaded image */
-                          <div className="relative">
-                            <ImageUpload 
-                              currentImage={file}
-                              previewUrl={previewUrl}
-                              onImageSelect={handleImageSelect}
-                              onClear={handleClear}
-                            />
-                          </div>
-                        )}
+                        <ImageUpload
+                          currentImage={file}
+                          previewUrl={previewUrl}
+                          onImageSelect={handleImageSelect}
+                          onClear={handleClear}
+                        />
                     </div>
 
                     {/* Controls */}
@@ -5353,12 +5001,12 @@ Notes: ${invoice.notes || 'N/A'}
                                 setTimeout(() => setShowRipple(false), 600);
                                 handleGenerate();
                             }}
-                            disabled={!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && (placedFixtures.length > 0 || Object.keys(zoneFixtures).length > 0))) || isLoading}
+                            disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
                             aria-label={isLoading ? 'Generating lighting design, please wait' : generationComplete ? 'Generation complete' : 'Generate lighting scene design'}
                             aria-busy={isLoading}
                             className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2 order-1 md:order-3"
-                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && (placedFixtures.length > 0 || Object.keys(zoneFixtures).length > 0))) || isLoading) ? { scale: 1.02, y: -4 } : {}}
-                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && (placedFixtures.length > 0 || Object.keys(zoneFixtures).length > 0))) || isLoading) ? { scale: 0.97 } : {}}
+                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.02, y: -4 } : {}}
+                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.97 } : {}}
                         >
                             {/* === IDLE STATE: Ambient Glow Pulse === */}
                             <motion.div
