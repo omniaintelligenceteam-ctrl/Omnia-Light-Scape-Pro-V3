@@ -1985,6 +1985,9 @@ ATMOSPHERE: Haunting, spooky, supernatural, mysterious, Halloween celebration`
   }
 ];
 
+// Temporary: Hide soffit from UI for testing (remove filter to restore)
+export const VISIBLE_FIXTURE_TYPES = FIXTURE_TYPES.filter(f => f.id !== 'soffit');
+
 export const BEAM_ANGLES = [
   { id: 15, label: '15°', description: 'Narrow Spot' },
   { id: 30, label: '30°', description: 'Spot' },

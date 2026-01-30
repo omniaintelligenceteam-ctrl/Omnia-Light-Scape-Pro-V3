@@ -30,6 +30,9 @@ const MODEL_NAME = 'gemini-3-pro-image-preview';
 // Timeout for API calls (2 minutes)
 const API_TIMEOUT_MS = 120000;
 
+// Temporary: Hide all soffit references from AI prompts (set to false to restore)
+const SOFFIT_HIDDEN = true;
+
 /**
  * Wraps a promise with a timeout
  */
@@ -867,9 +870,9 @@ The fixture should be PARTIALLY OBSCURED by the gutter walls because it sits INS
     }
   });
 
-  // ALWAYS add explicit soffit prohibition unless soffit is selected
+  // ALWAYS add explicit soffit prohibition unless soffit is selected (skip if SOFFIT_HIDDEN)
   const soffitSelected = selectedFixtureIds.includes('soffit');
-  const explicitSoffitProhibition = soffitSelected ? '' : `
+  const explicitSoffitProhibition = SOFFIT_HIDDEN ? '' : (soffitSelected ? '' : `
 ## SOFFIT LIGHTS - ABSOLUTE PROHIBITION (CRITICAL)
 SOFFIT LIGHTS ARE NOT SELECTED. The following is MANDATORY:
 - ZERO fixtures in soffits or eaves
@@ -879,11 +882,11 @@ SOFFIT LIGHTS ARE NOT SELECTED. The following is MANDATORY:
 - Do NOT add soffit lights "for realism" or "to complete the design"
 - UP LIGHTS shine UP. SOFFIT LIGHTS shine DOWN. They are OPPOSITES.
 - If you see "soffit reach" or "soffit glow" that means REFLECTED light from UP LIGHTS, NOT soffit fixtures
-`;
+`);
 
-  // When GUTTER is selected, add extra-strong soffit prohibition to prevent confusion
+  // When GUTTER is selected, add extra-strong soffit prohibition to prevent confusion (skip if SOFFIT_HIDDEN)
   const gutterSelected = selectedFixtureIds.includes('gutter');
-  const gutterSoffitClarification = gutterSelected ? `
+  const gutterSoffitClarification = SOFFIT_HIDDEN ? '' : (gutterSelected ? `
 
 ## GUTTER LIGHTS vs SOFFIT LIGHTS - CRITICAL DISTINCTION
 YOU HAVE SELECTED: GUTTER-MOUNTED UP LIGHTS (fixtures IN the gutter, shining UP)
@@ -931,7 +934,7 @@ WHAT "ON THE ROOF" MEANS (FORBIDDEN):
 
 ROOF PLACEMENT = WRONG. INSIDE GUTTER TROUGH = CORRECT.
 If you place fixtures ON the roof surface, the image is INVALID.
-` : '';
+` : '');
 
   // Build preference context
   const preferenceContext = userPreferences ? `
@@ -1181,7 +1184,7 @@ For each selected fixture type, verify that NON-SELECTED suboptions are explicit
 - FAIL if: A fixture type is selected but non-selected suboptions within it have no prohibition
 - Example: If UP LIGHTS is selected with only "siding" suboption, then "windows", "columns", "trees", "entryway" must be explicitly prohibited
 
-## CRITICAL CHECK 5: SOFFIT PROHIBITION (MOST COMMON ERROR)
+${SOFFIT_HIDDEN ? '' : `## CRITICAL CHECK 5: SOFFIT PROHIBITION (MOST COMMON ERROR)
 ${!expectedFixtureTypes.includes('soffit') ? `
 - SOFFIT IS NOT IN THE SELECTED FIXTURES - this is a CRITICAL check
 - Verify the prompt explicitly PROHIBITS soffit lights/downlights
@@ -1189,7 +1192,7 @@ ${!expectedFixtureTypes.includes('soffit') ? `
 - FAIL if: The prompt mentions soffit lighting without explicit prohibition
 - FAIL if: The prompt says "soffit glow" without clarifying it's REFLECTED light from up lights
 - This is the MOST COMMON hallucination error - be extra strict here
-` : '- Soffit IS selected, so soffit lights are allowed'}
+` : '- Soffit IS selected, so soffit lights are allowed'}`}
 
 ## CRITICAL CHECK 6: GUTTER PLACEMENT (MOST CRITICAL FOR GUTTER LIGHTS)
 ${expectedFixtureTypes.includes('gutter') ? `
@@ -1208,11 +1211,11 @@ INCORRECT PLACEMENT (FAIL THE VALIDATION):
 - Fixtures prominently visible on roofline - FAIL
 - Fixtures on fascia board - FAIL
 
-ALSO CHECK SOFFIT DISTINCTION:
+${SOFFIT_HIDDEN ? '' : `ALSO CHECK SOFFIT DISTINCTION:
 - Gutter lights are UP LIGHTS (shine upward) - NOT soffit lights (shine down)
 - FAIL if: prompt describes downward beams when gutter lights are selected
 - FAIL if: fixtures described as in soffit/eave instead of in gutter
-- FAIL if: "soffit" appears without explicit prohibition/dark description
+- FAIL if: "soffit" appears without explicit prohibition/dark description`}
 ` : '- Gutter is NOT selected, skip this check'}
 
 Return ONLY a valid JSON object:
