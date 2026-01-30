@@ -249,7 +249,7 @@ Return this exact structure:
 }
 
 SPATIAL MAPPING INSTRUCTIONS:
-1. Map all architectural features (windows, doors, columns, corners, dormers, gables) with horizontal positions (0% = far left, 100% = far right)
+1. Map all architectural features (windows, doors, columns, corners, dormers, gables, gutters) with horizontal positions (0% = far left, 100% = far right)
 2. For each selected fixture to place, specify EXACT horizontal position and anchor it to a feature
 3. Use percentage-based coordinates for precise placement
 4. Create narrative descriptions for each fixture placement
@@ -567,7 +567,7 @@ function getSpacingForFixture(fixtureType: string, subOption: string): string {
   } else if (fixtureType === 'soffit') {
     return '4-6 feet apart';
   } else if (fixtureType === 'gutter') {
-    return 'one per gable peak';
+    return 'whatever is needed to illuminate target areas';
   }
   return 'as needed for coverage';
 }
@@ -596,7 +596,7 @@ function getDarkDescription(fixtureId: string): string {
   const descriptions: Record<string, string> = {
     'up': 'Ground areas near foundation remain unlit - NO vertical light beams on walls',
     'path': 'Walkways and paths remain in darkness - NO ground-level path lighting',
-    'gutter': 'Roofline and gutters appear as dark silhouette - NO edge illumination',
+    'gutter': '2nd story archutecture and dormers appear as dark silhouette - NO edge illumination',
     'soffit': 'SOFFIT/EAVES MUST BE PITCH BLACK - NO downlights, NO recessed lights, NO illumination from above. Eave undersides are COMPLETELY DARK shadows. The only light on soffits comes from UP LIGHTS reflecting upward - NEVER from fixtures IN the soffit. DO NOT ADD SOFFIT LIGHTS.',
     'hardscape': 'Walls, steps, and retaining walls remain unlit - NO accent lighting',
     'coredrill': 'Ground surfaces remain dark - NO in-ground well lights or markers',
@@ -796,20 +796,19 @@ export const craftPromptWithAI = async (
     const gutterVisualDescription = placement.fixtureType === 'gutter' ? `
 
 GUTTER FIXTURE VISUAL APPEARANCE (CRITICAL):
-- Small brass/bronze bullet fixture (size of a fist) sitting INSIDE the metal gutter channel
+- Small bronze bullet fixture (size of a fist) peaking out over the roof INSIDE the metal gutter channel
 - The fixture is VISIBLE - you can see it sitting in the gutter trough
 - Light beam projects UPWARD from this fixture toward the target above
-- This is NOT a soffit light - soffit lights are recessed IN the eave and shine DOWN
 - The gutter fixture is OUTSIDE the eave, sitting IN the metal gutter, shining UP
 
 *** CRITICAL MOUNTING LOCATION - INSIDE THE GUTTER TROUGH ***
-GUTTER ANATOMY: A gutter is a U-shaped metal channel that runs along the roofline to collect rainwater.
+GUTTER ANATOMY: A gutter is a U-shaped metal channel that runs along the 1st story roofline to collect rainwater.
 - The INSIDE of the gutter is the U-shaped channel where water flows
 - Fixtures MUST sit INSIDE this U-shaped channel, against the INNER WALL (closest to house)
 - The fixture is PARTIALLY HIDDEN by the gutter walls - only the top is visible from below
 
 MANDATORY PLACEMENT:
-- INSIDE the gutter trough (in the U-channel where water flows)
+- INSIDE the 1st story gutter trough (in the U-channel where water flows)
 - Against the INNER GUTTER WALL (the wall closest to the fascia/house)
 - The fixture sits DOWN inside the gutter channel
 
