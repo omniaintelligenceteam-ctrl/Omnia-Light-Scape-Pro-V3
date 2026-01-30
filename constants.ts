@@ -404,11 +404,13 @@ UP LIGHT PLACEMENT RULES (CRITICAL)
 - For siding, windows, columns, entry: fixtures MUST be tight against foundation
 - The fixture base should be nearly touching the foundation - 6 inches MAX
 
-### BEAM HEIGHT (SOFFIT REACH)
-- ALL up lights on siding AND 1st story windows MUST reach the SOFFIT LINE
-- Light beam travels the FULL HEIGHT from ground to soffit
-- Each up light creates a vertical column reaching the soffit above it
-- The soffit underside MUST show visible illumination ("kiss" the soffit)
+### BEAM HEIGHT (GUTTER LINE REACH - CRITICAL)
+- ALL up lights MUST reach the GUTTER LINE / SOFFIT directly above them
+- For 1ST STORY walls: beam reaches 1st story gutter/soffit (8-12 ft)
+- For 2ND STORY sections: beam MUST reach 2ND STORY soffit (18-25 ft)
+- Each up light creates a vertical column from ground to the gutter line above it
+- The gutter/soffit underside MUST show visible illumination ("kiss" the roofline)
+- NEVER stop the beam at 1st floor level on a 2-story facade
 
 ### HOT SPOT AVOIDANCE (CRITICAL FOR REALISM)
 - AVOID hot spots (overly bright areas at fixture base)
@@ -1033,7 +1035,10 @@ EXCLUSIONS:
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 
-WHEN SELECTED THERE MUST ONLY BE UP LIGHTS MOUNTED IN THE FIRST STORY GUTTER SHINING UPWARDS TO ILLUMINATE 2nd STORY FEATURES (DORMERS, GABLES, 2nd STORY FACADE).
+ASSUMPTION: A 1st story gutter ALWAYS exists on 2-story homes.
+PLACEMENT: Gutter up lights MUST be placed IN the 1st story gutter (8-10 ft high off ground).
+TARGET: Beams shine UPWARD to illuminate 2nd story sections (dormers, gables, 2nd story facade, peaks).
+NEVER place gutter lights in the roofline gutter at the top of the house - ONLY in the 1st story gutter.
 
 GUTTER MOUNTED UP LIGHTS ONLY - These shoot UPWARD:
 - GUTTER MOUNTED UP LIGHT: Visible bullet/flood fixture sits IN the metal gutter trough mounted inside the gutter inner wall, beam shoots UPWARD

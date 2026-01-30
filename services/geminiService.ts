@@ -1736,13 +1736,14 @@ ${preferenceContext}
     - **Intensity**: ${getIntensityPrompt(lightIntensity)}
     - **Beam**: ${getBeamAnglePrompt(beamAngle)}
     - **FIXTURE QUANTITIES (ABSOLUTE - NON-NEGOTIABLE)**: When the DESIGN REQUEST specifies "EXACTLY X fixtures", you MUST place EXACTLY X fixtures. Not X-1, not X+1, EXACTLY X. Count them. Recount them. This is non-negotiable. Never add "extra" fixtures to balance or complete the design.
-    - **SOFFIT REACH RULE**: Up lights MUST reach the soffit/eave line. The light beam should:
-      * Start bright at the fixture (avoid hot spot by angling back 15-20 degrees from wall)
-      * Travel UP the wall surface (wall grazing effect)
-      * Fade gradually as it approaches the soffit
-      * The soffit itself receives subtle reflected glow, NOT direct illumination
-      * Taller walls require more intensity to reach the soffit
-      * The beam should be visible traveling up the wall, not just illuminating a spot
+    - **GUTTER LINE REACH RULE**: Up lights MUST reach the gutter/soffit line directly above them:
+      * For 1-story sections: beam reaches 1st floor gutter (8-12 ft)
+      * For 2-story sections: beam MUST reach 2nd story soffit (18-25 ft)
+      * NEVER stop the beam at mid-wall - it must travel to the roofline above
+      * Start bright at fixture, travel UP the wall surface (wall grazing effect)
+      * Fade gradually as it approaches the gutter/soffit
+      * The gutter underside receives subtle illumination ("kiss" the roofline)
+      * Taller facades require higher intensity to reach the roofline
 
     # ABSOLUTE FIXTURE ENFORCEMENT (MOST CRITICAL RULE)
 
