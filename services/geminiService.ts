@@ -1985,11 +1985,20 @@ const buildDirectPrompt = (
     selectedFixtures.forEach(fixtureId => {
       const fixtureType = FIXTURE_TYPES.find(f => f.id === fixtureId);
       if (fixtureType) {
+        // Get sub-options for this fixture
+        const subOpts = fixtureSubOptions[fixtureId] || [];
+
+        // Skip this fixture entirely if it has sub-options but none are selected
+        // This prevents soffit (and any fixture with sub-options) from being enabled
+        // when no specific sub-option is chosen
+        if (fixtureType.subOptions && fixtureType.subOptions.length > 0 && subOpts.length === 0) {
+          return; // Skip - don't add positivePrompt
+        }
+
         prompt += `### ${fixtureType.label.toUpperCase()}\n`;
         prompt += fixtureType.positivePrompt + '\n\n';
 
         // Add sub-option specific prompts
-        const subOpts = fixtureSubOptions[fixtureId] || [];
         if (subOpts.length > 0 && fixtureType.subOptions) {
           subOpts.forEach(subOptId => {
             const subOpt = fixtureType.subOptions?.find(s => s.id === subOptId);

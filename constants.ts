@@ -649,7 +649,7 @@ COMPATIBILITY (when other sub-options also selected):
 
 WHAT TO LIGHT:
 - ALL first-story windows: single, double, triple, picture, bay
-- Illuminates window frame, trim, casing, sill and the home above to the soffit line
+- Illuminates window glass, frame, trim, casing, sill and above to the soffit line
 
 PLACEMENT BY WINDOW TYPE:
 - SINGLE window: center on glass horizontal middle
@@ -1033,16 +1033,13 @@ EXCLUSIONS:
     description: 'Roofline accent lights',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 
-WHEN SELECTED THERE MUST ONLY BE UP LIGHTING ABOVE THE FIRST STORY ROOFLINE
+WHEN SELECTED THERE MUST ONLY BE UP LIGHTS MOUNTED IN THE FIRST STORY GUTTER SHINING UPWARDS TO ILLUMINATE 2nd STORY FEATURES (DORMERS, GABLES, 2nd STORY FACADE).
 
 GUTTER MOUNTED UP LIGHTS ONLY - These shoot UPWARD:
 - GUTTER MOUNTED UP LIGHT: Visible bullet/flood fixture sits IN the metal gutter trough mounted inside the gutter inner wall, beam shoots UPWARD
 - The fixture is VISIBLE - you can see the bronze housing peaking out of the gutter
 - Light goes UP toward the 2nd story features, illuminating up from the gutter
 - The illuminated area is ABOVE where the fixture is mounted
-
-BANNED (DO NOT CREATE):
-DO NOT CREATE ANY OTHER LIGHTING BESIDE GUTTER MOUNTED UP LIGHTS IN THE FIRST STORY GUTTER SHINING UPWARDS
 
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
 HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
@@ -1099,34 +1096,35 @@ COMPATIBILITY (when other sub-options selected):
 
 WHAT TO LIGHT:
 - ENTIRE 2nd story facade: windows, siding, trim, AND peaks above
-- Light falling on 2nd story windows IS ACCEPTABLE and DESIRED
-- Include towers, turrets, pop-outs, siding, box bays - any 2nd story section
+- Light shining up on 2nd story windows IS ACCEPTABLE and DESIRED
+- Include towers, turrets, pop-outs, windows, siding, box bays - any 2nd story section
 
 WHICH GUTTER (CRITICAL):
-- Mount in FIRST STORY gutter ONLY (typically 8-12 feet high)
-- ANY first-story gutter with 2nd story above it
-- Do NOT use roofline gutter, dormer gutters, or gutters with no 2nd story above
+- Mount in FIRST STORY gutter ONLY (typically 8-10 feet high off the ground)
+- ANY first-story gutter with a 2nd story above it is ELIGIBLE
+- Beam shoots UPWARD to illuminate 2nd story facade and peaks
+- Do NOT soffit from the 2nd story
 
 FIXTURE COUNT BY FACADE WIDTH:
 - Narrow (8-12 ft): 2-3 fixtures
 - Medium (12-20 ft): 3-4 fixtures
 - Wide (20+ ft): 4-6 fixtures
 - Space 4-6 feet apart for even coverage
-- At least ONE fixture positioned to illuminate any peak above
+- At least ONE fixture positioned to illuminate any area or peak above
 
 PLACEMENT:
 - Distribute across facade to cover windows, siding, AND peaks
-- Use visual anchors: "below window 1", "between windows 2-3", "centered under peak"
-- For multi-section homes: fixtures in EACH first story gutter with 2nd story above
+- Use visual anchors: "below window 1", "between windows 2-3", "centered under peak" "bigger peaks add 2 lights"
+- Ensure FULL coverage of 2nd story facade with up lighting
+- For multi-section homes: fixtures in EACH first story gutter 
 
 PEAK ILLUMINATION (when present):
-- Beam MUST continue PAST windows to graze gable face to APEX
-- Creates dramatic vertical emphasis: windows glowing + peak lit above
+- Beam MUST continue PAST windows upwards to graze gable face to APEX
+- Creates dramatic vertical emphasis: windows and siding glowing + peak lit above
 
 EXCLUSIONS:
 - Do NOT mount in roofline gutter (top of house)
 - Do NOT confuse with DORMERS (use dormers preset for dormers)
-- Do NOT confuse with PEAKS (use peaks for standalone gables without 2nd story below)
 
 COMPATIBILITY (when other sub-options selected):
 - If DORMERS selected: skip fixtures directly below dormers`,
