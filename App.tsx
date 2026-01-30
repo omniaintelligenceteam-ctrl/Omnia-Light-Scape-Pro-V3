@@ -59,7 +59,7 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, generateNightSceneDirect, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
+import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
 import { analyzeWithClaude } from './services/claudeService';
 // IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
@@ -424,8 +424,8 @@ const App: React.FC = () => {
   const [, setPropertyAnalysis] = useState<PropertyAnalysis | null>(null);
   const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'validating' | 'generating'>('idle');
 
-  // Generation mode: 'hybrid' = Claude Opus 4.5 + Nano Banana Pro (best quality), 'direct' = Nano Banana Pro only (faster)
-  const [generationMode] = useState<'hybrid' | 'direct' | 'full'>('hybrid');
+  // Generation mode: 'enhanced' = Gemini Pro 3 only (Claude quality, lower cost), 'hybrid' = Claude Opus 4.5 + Gemini (premium), 'direct' = Gemini only (fast)
+  const [generationMode] = useState<'enhanced' | 'hybrid' | 'direct' | 'full'>('enhanced');
 
   // Generation always uses Nano Banana Pro (best model) - IC-Light dependency removed
   const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
@@ -1776,8 +1776,26 @@ const App: React.FC = () => {
 
       let result: string;
 
+      // === ENHANCED MODE: Gemini Pro 3 Only (Claude Quality, Lower Cost) ===
+      if (generationMode === 'enhanced') {
+        console.log('Using ENHANCED MODE (Gemini Pro 3 only - replaces Claude)...');
+        setGenerationStage('analyzing');
+
+        result = await generateNightSceneEnhanced(
+          base64,
+          mimeType,
+          selectedFixtures,
+          fixtureSubOptions,
+          fixtureCounts,
+          colorPrompt,
+          lightIntensity,
+          beamAngle,
+          targetRatio,
+          userPreferences
+        );
+      }
       // === HYBRID MODE: Claude Opus 4.5 + Nano Banana Pro (Best Quality) ===
-      if (generationMode === 'hybrid') {
+      else if (generationMode === 'hybrid') {
         try {
           console.log('Using HYBRID MODE (Claude Opus 4.5 + Nano Banana Pro)...');
 

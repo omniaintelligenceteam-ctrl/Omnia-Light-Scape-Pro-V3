@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import type { UserPreferences, PropertyAnalysis, FixtureSelections, LightingPlan, FixturePlacement } from "../types";
+import type { UserPreferences, PropertyAnalysis, FixtureSelections, LightingPlan, FixturePlacement, SpatialMap, SpatialFixturePlacement } from "../types";
 import type { FixtureType, SystemPromptConfig } from "../constants";
 import {
   LIGHTING_APPROACH_BY_STYLE,
@@ -105,7 +105,7 @@ export const analyzePropertyArchitecture = async (
   selectedFixtures: string[],
   fixtureSubOptions: Record<string, string[]>,
   fixtureCounts: Record<string, number | null>
-): Promise<PropertyAnalysis> => {
+): Promise<PropertyAnalysis & { spatialMap?: SpatialMap }> => {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
   // Build user's fixture selection summary (from Fixture Summary box)
@@ -218,8 +218,41 @@ Return this exact structure:
     },
     "priority_areas": ["<ordered list based on selected fixtures>"],
     "notes": "<2-3 sentences about placement for the selected fixtures>"
+  },
+  "spatialMap": {
+    "features": [
+      {
+        "id": "corner_left",
+        "type": "corner",
+        "horizontalPosition": 0,
+        "label": "Far left corner"
+      },
+      {
+        "id": "window_1",
+        "type": "window",
+        "horizontalPosition": <0-100 percentage from left>,
+        "width": <percentage width of feature>,
+        "label": "<descriptive label like 'First window from left'>"
+      }
+    ],
+    "placements": [
+      {
+        "id": "<unique_id like 'uplight_1'>",
+        "fixtureType": "<fixture category id like 'up', 'path', etc>",
+        "subOption": "<sub-option id like 'siding', 'windows', etc>",
+        "horizontalPosition": <0-100 percentage from left>,
+        "anchor": "<description like 'right_of corner_left' or 'below window_1'>",
+        "description": "<human-readable like 'At far LEFT corner, in landscaping bed'>"
+      }
+    ]
   }
 }
+
+SPATIAL MAPPING INSTRUCTIONS:
+1. Map all architectural features (windows, doors, columns, corners, dormers, gables) with horizontal positions (0% = far left, 100% = far right)
+2. For each selected fixture to place, specify EXACT horizontal position and anchor it to a feature
+3. Use percentage-based coordinates for precise placement
+4. Create narrative descriptions for each fixture placement
 
 Base your analysis on:
 - Wall height determines intensity (taller = brighter)
@@ -2095,6 +2128,240 @@ export const generateNightSceneDirect = async (
     console.error("Direct Generation Error:", error);
     throw error;
   }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPATIAL MAPPING UTILITIES (Ported from claudeService.ts)
+// Used for Enhanced Gemini Pro 3 Mode
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Generates a narrative description of fixture placements for a specific fixture type.
+ * Research shows narrative descriptions are more effective than technical specs for AI image generation.
+ */
+export function generateNarrativePlacement(
+  spatialMap: SpatialMap,
+  fixtureType: string,
+  subOption?: string
+): string {
+  let placements = spatialMap.placements.filter(p => p.fixtureType === fixtureType);
+  if (subOption) {
+    placements = placements.filter(p => p.subOption === subOption);
+  }
+
+  if (placements.length === 0) return '';
+
+  // Sort left to right
+  const sorted = [...placements].sort((a, b) => a.horizontalPosition - b.horizontalPosition);
+
+  const label = subOption ? `${fixtureType} (${subOption})` : fixtureType;
+  let narrative = `### ${label.toUpperCase()}\n`;
+  narrative += `Scanning LEFT to RIGHT, you will see exactly ${sorted.length} fixtures:\n\n`;
+
+  sorted.forEach((p, i) => {
+    const positionDesc =
+      p.horizontalPosition < 15 ? 'near the left edge' :
+      p.horizontalPosition > 85 ? 'near the right edge' :
+      `at ${Math.round(p.horizontalPosition)}% from the left`;
+
+    narrative += `${i + 1}. Fixture ${positionDesc} - ${p.description}\n`;
+  });
+
+  narrative += `\nCOUNT CHECK: There are EXACTLY ${sorted.length} fixtures. No more, no less.\n`;
+
+  return narrative;
+}
+
+/**
+ * Formats the full spatial map into a prompt-ready string
+ */
+export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
+  if (!spatialMap.features.length && !spatialMap.placements.length) {
+    return '';
+  }
+
+  let output = `\n## EXACT FIXTURE PLACEMENT MAP\n`;
+  output += `The facade spans 0% (far left) to 100% (far right).\n\n`;
+
+  // Reference points
+  if (spatialMap.features.length > 0) {
+    output += `### REFERENCE POINTS:\n`;
+    const sortedFeatures = [...spatialMap.features].sort((a, b) => a.horizontalPosition - b.horizontalPosition);
+    sortedFeatures.forEach(f => {
+      output += `- ${f.label}: ${f.horizontalPosition}%\n`;
+    });
+    output += '\n';
+  }
+
+  // Group placements by fixtureType and subOption
+  const groups = new Map<string, SpatialFixturePlacement[]>();
+  spatialMap.placements.forEach(p => {
+    const key = `${p.fixtureType}_${p.subOption}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(p);
+  });
+
+  // Generate narrative for each group
+  groups.forEach((placements, key) => {
+    const [fixtureType, subOption] = key.split('_');
+    output += generateNarrativePlacement({ ...spatialMap, placements }, fixtureType, subOption);
+    output += '\n';
+  });
+
+  return output;
+}
+
+/**
+ * Builds an enhanced prompt for image generation using Gemini's analysis results
+ * This replicates Claude's prompt quality using Gemini Pro 3 analysis
+ */
+function buildEnhancedPrompt(
+  analysis: PropertyAnalysis & { spatialMap?: SpatialMap },
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number
+): string {
+  // Build fixture inventory
+  let inventoryAllowlist = '';
+  let totalFixtureCount = 0;
+  selectedFixtures.forEach(fixtureId => {
+    const fixtureType = FIXTURE_TYPES.find(f => f.id === fixtureId);
+    if (fixtureType) {
+      const subOpts = fixtureSubOptions[fixtureId] || [];
+      subOpts.forEach(subOptId => {
+        const subOpt = fixtureType.subOptions?.find(s => s.id === subOptId);
+        if (subOpt) {
+          const count = fixtureCounts[subOptId];
+          const countStr = count !== null ? `EXACTLY ${count}` : 'Auto (AI determines optimal count based on property)';
+          inventoryAllowlist += `- ${fixtureType.label} (${subOpt.label}): ${countStr}\n`;
+          if (count !== null) {
+            totalFixtureCount += count;
+          }
+        }
+      });
+    }
+  });
+
+  // Build prohibition list (skip soffit for "complete invisibility")
+  let inventoryProhibitions = '';
+  FIXTURE_TYPES.forEach(fixtureType => {
+    // Skip soffit - complete invisibility approach
+    if (fixtureType.id === 'soffit') return;
+
+    if (!selectedFixtures.includes(fixtureType.id)) {
+      inventoryProhibitions += `- ${fixtureType.label}: FORBIDDEN - ZERO instances allowed\n`;
+    } else {
+      const selectedSubs = fixtureSubOptions[fixtureType.id] || [];
+      fixtureType.subOptions?.forEach(subOpt => {
+        if (!selectedSubs.includes(subOpt.id)) {
+          inventoryProhibitions += `- ${fixtureType.label} (${subOpt.label}): FORBIDDEN - ZERO instances allowed\n`;
+        }
+      });
+    }
+  });
+
+  // Start building the comprehensive prompt
+  let prompt = SYSTEM_PROMPT.masterInstruction + '\n\n';
+
+  // Add fixture inventory
+  prompt += `## COMPLETE FIXTURE INVENTORY\n`;
+  prompt += `This image will contain EXACTLY these fixtures and NO OTHERS:\n`;
+  prompt += inventoryAllowlist || '- None selected\n';
+  if (totalFixtureCount > 0) {
+    prompt += `\nTOTAL FIXTURES IN IMAGE: ${totalFixtureCount}\n`;
+  }
+  prompt += '\n';
+
+  // Add prohibition verification
+  prompt += `## PROHIBITION VERIFICATION\n`;
+  prompt += `These fixture types MUST NOT appear AT ALL (ZERO instances):\n`;
+  prompt += inventoryProhibitions || '- None\n';
+  prompt += '\n';
+  prompt += `VERIFICATION RULE: Before finalizing the image, mentally count all fixtures. If the count exceeds the inventory above, REMOVE the extras. If any prohibited fixture types appear, REMOVE them entirely.\n\n`;
+
+  // Add spatial placement map if available
+  if (analysis.spatialMap && analysis.spatialMap.placements.length > 0) {
+    prompt += formatSpatialMapForPrompt(analysis.spatialMap);
+    prompt += '\n';
+  }
+
+  // Add lighting parameters
+  prompt += `## LIGHTING PARAMETERS\n`;
+  prompt += `- Color Temperature: ${colorTemperaturePrompt}\n`;
+  prompt += `- Light Intensity: ${lightIntensity}%\n`;
+  prompt += `- Beam Angle: ${beamAngle}°\n\n`;
+
+  // Add closing reinforcement
+  prompt += SYSTEM_PROMPT.closingReinforcement;
+
+  return prompt;
+}
+
+/**
+ * Enhanced Night Scene Generation using Gemini Pro 3 Only
+ * This replaces the Claude + Gemini hybrid mode with a Gemini-only pipeline
+ * while maintaining the same quality through ported features
+ */
+export const generateNightSceneEnhanced = async (
+  imageBase64: string,
+  imageMimeType: string,
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number,
+  targetRatio: string,
+  userPreferences?: UserPreferences | null
+): Promise<string> => {
+  console.log('[Enhanced Mode] Starting Gemini-only generation...');
+
+  // Step 1: Analyze property with Gemini (includes spatial mapping)
+  console.log('[Enhanced Mode] Step 1: Analyzing property with Gemini Pro 3...');
+  const analysis = await analyzePropertyArchitecture(
+    imageBase64,
+    imageMimeType,
+    selectedFixtures,
+    fixtureSubOptions,
+    fixtureCounts
+  );
+
+  console.log('[Enhanced Mode] Analysis complete. Spatial map:', analysis.spatialMap ? 'included' : 'not included');
+
+  // Step 2: Build enhanced prompt using Claude's quality approach
+  console.log('[Enhanced Mode] Step 2: Building enhanced prompt...');
+  const enhancedPrompt = buildEnhancedPrompt(
+    analysis,
+    selectedFixtures,
+    fixtureSubOptions,
+    fixtureCounts,
+    colorTemperaturePrompt,
+    lightIntensity,
+    beamAngle
+  );
+
+  console.log('[Enhanced Mode] Enhanced prompt built. Length:', enhancedPrompt.length, 'characters');
+
+  // Step 3: Generate image with Gemini 3 Pro Image using enhanced prompt
+  console.log('[Enhanced Mode] Step 3: Generating image with Gemini 3 Pro Image...');
+  const result = await generateNightScene(
+    imageBase64,
+    enhancedPrompt, // User instructions (our comprehensive enhanced prompt)
+    imageMimeType,
+    targetRatio,
+    lightIntensity,
+    beamAngle,
+    colorTemperaturePrompt,
+    userPreferences
+  );
+
+  console.log('[Enhanced Mode] Generation complete!');
+  return result;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
