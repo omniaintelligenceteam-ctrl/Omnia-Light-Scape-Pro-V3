@@ -1035,7 +1035,7 @@ EXCLUSIONS:
     description: 'Up lights mounted in gutter illuminating up',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 
-ASSUMPTION: A 1st story gutter ALWAYS exists on 2-story homes.
+ASSUMPTION: A 1st story gutter ALWAYS exists.
 PLACEMENT: Gutter up lights MUST be placed IN the 1st story gutter (8-10 ft high off ground).
 TARGET: Beams shine UPWARD to illuminate 2nd story sections - AI decides what to light based on the home's architecture.
 
@@ -1070,7 +1070,32 @@ BEAM REACH:
 - For distant targets: higher wattage, narrower beam angles
 - The light ALWAYS reaches and illuminates the intended target fully`,
     negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting from gutter level.`,
-    subOptions: []
+    subOptions: [
+      {
+        id: 'gutterUpLights',
+        label: 'Gutter Up Lights',
+        description: '1st story gutter up lights illuminating 2nd story',
+        prompt: `TARGET: 2nd story features from 1ST STORY GUTTER ONLY.
+
+CRITICAL RULE: ONLY 1ST STORY GUTTERS receive up lights.
+- 1st story gutter = 8-10 ft off ground
+- NEVER place lights in 2nd story gutters or roofline gutters
+- 2nd story gutters MUST remain empty - NO fixtures
+
+WHAT TO LIGHT (AI decides based on what's present):
+- Dormers: one fixture centered below each
+- 2nd story windows and siding
+- Gable peaks and architectural features
+- Any 2nd story section above the 1st story roofline
+
+FIXTURE COUNT (AI decides):
+- Typically 2-6 fixtures based on home size
+- One per dormer if dormers present
+- Space 4-6 feet apart for coverage`,
+        negativePrompt: `Do NOT place any up lights in 1st story gutters. 2nd story features must remain dark from gutter-level lighting.`,
+        darkDescription: `1st story gutters remain EMPTY - no gutter-mounted up lights, 2nd story features unlit from gutter level.`
+      }
+    ]
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
