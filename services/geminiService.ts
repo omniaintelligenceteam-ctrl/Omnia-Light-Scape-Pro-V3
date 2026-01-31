@@ -98,7 +98,7 @@ function buildPreferenceContext(preferences: UserPreferences | null | undefined)
 const ANALYSIS_MODEL_NAME = 'gemini-3-pro-preview';
 // Kimi K2 for property analysis (3-4x cheaper than Gemini)
 const KIMI_API_ENDPOINT = 'https://api.moonshot.cn/v1/chat/completions';
-const KIMI_MODEL_NAME = 'kimi-k2-0711-preview';
+const KIMI_MODEL_NAME = 'kimi-k2.5';
 const ANALYSIS_TIMEOUT_MS = 60000; // 1 minute for analysis
 
 /**
