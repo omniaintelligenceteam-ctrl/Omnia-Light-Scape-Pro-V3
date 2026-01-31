@@ -1031,112 +1031,46 @@ EXCLUSIONS:
   // ═══════════════════════════════════════════════════════════════════════════
   {
     id: 'gutter',
-    label: 'Gutter Up Lights',
-    description: 'Roofline accent lights',
+    label: 'Gutter Mounted Up Lights',
+    description: 'Up lights mounted in gutter illuminating up',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 
 ASSUMPTION: A 1st story gutter ALWAYS exists on 2-story homes.
 PLACEMENT: Gutter up lights MUST be placed IN the 1st story gutter (8-10 ft high off ground).
-TARGET: Beams shine UPWARD to illuminate 2nd story sections (dormers, gables, 2nd story facade, peaks).
-NEVER place gutter lights in the roofline gutter at the top of the house - ONLY in the 1st story gutter.
+TARGET: Beams shine UPWARD to illuminate 2nd story sections - AI decides what to light based on the home's architecture.
 
-GUTTER MOUNTED UP LIGHTS ONLY - These shoot UPWARD:
-- GUTTER MOUNTED UP LIGHT: Visible bullet/flood fixture sits IN the metal gutter trough mounted inside the gutter inner wall, beam shoots UPWARD
-- The fixture is VISIBLE - you can see the bronze housing peaking out of the gutter
-- Light goes UP toward the 2nd story features, illuminating up from the gutter
-- The illuminated area is ABOVE where the fixture is mounted
+WHAT TO LIGHT (AI decides based on what's present):
+- Dormers (if present): one fixture centered below each dormer
+- 2nd story windows and siding
+- Gable peaks and architectural features
+- Any 2nd story sections visible above the 1st story roofline
+- Towers, turrets, pop-outs, box bays - any 2nd story section
 
-FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile, mounts INSIDE the gutter trough ONLY.
-HARD RULE - MANDATORY: Gutter up lights MUST be placed INSIDE the gutter trough. They sit IN the gutter channel itself. NEVER place these fixtures on the roof, on roof shingles, on the gutter lip edge, or on any roof surface. The fixture must be INSIDE the gutter.
-
-MOUNTING PHYSICS - CRITICAL:
-- Fixture MUST be mounted against the INNER GUTTER WALL (the wall closest to the house/fascia)
-- The fixture sits INSIDE the gutter channel, braced against the inner wall
-- Light beam projects UPWARD at an angle to reach the target (dormer, gable, or facade)
-- The beam MUST reach its target NO MATTER THE DISTANCE from the gutter
-- For distant targets: use higher wattage, narrower beam angles
-- For close targets: use lower wattage, wider beam angles
-- The light ALWAYS reaches and illuminates the intended target fully - never falls short
-
-INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement. Only illuminate the specific upper-story features specified (dormers, gables, second story facade). Do not light the entire roofline.`,
-    negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting or downlighting from gutter or fascia level.`,
-    subOptions: [
-      {
-        id: 'dormers',
-        label: 'Dormers',
-        description: 'Illuminating dormer faces',
-        prompt: `TARGET: Dormers - gutter-mounted uplights
-
-WHAT TO LIGHT:
-- ALL dormers on the roofline: gable, shed, hipped, eyebrow types
-- Wash the dormer FACE (front wall, trim, window frame)
-
-COUNT RULE (CRITICAL):
-- EXACTLY ONE (1) fixture per dormer
-- 2 dormers = 2 lights, 3 dormers = 3 lights
-- Do NOT use multiple lights per dormer
-
-PLACEMENT:
-- Mount INSIDE gutter trough directly BELOW each dormer
-- CENTERED horizontally under the dormer
-- Beam MUST reach and fully illuminate dormer face (10-25 ft distance)
-
-EXCLUSIONS:
-- Do NOT mount on dormer face, dormer roof, or main roof shingles
-- Do NOT aim directly into window glass
-- Do NOT skip dormers - all should be lit for balance
-
-COMPATIBILITY (when other sub-options selected):
-- Dormers takes PRIORITY over secondStoryFacade for dormer features
-- If secondStoryFacade selected: dormers handles all dormer illumination`,
-        negativePrompt: `ABSOLUTE PROHIBITION (DORMERS): EXACTLY ONE VERY SMALL DARK BRONZE light per dormer - no more, no less. Fixture must be TINY and mount INSIDE the gutter inner wall , CENTERED directly below dormer. Do NOT use large fixtures. Do NOT use brass or silver fixtures. Do NOT mount on gutter lip or fascia. Do NOT mount multiple lights per dormer. Do NOT place lights between dormers. Do NOT mount on dormer surface or roof shingles. Do NOT aim into window glass.`,
-        darkDescription: `Dormers remain UNLIT - no gutter-mounted uplights below dormers, dormer faces completely dark, dormer windows show only ambient reflection, dormers appear as dark shapes against roofline, no upward wash on dormer siding or trim.`
-      },
-    
-      {
-        id: 'secondStoryFacade',
-        label: '2nd Story Windows, Sidings, & Peaks',
-        description: 'Complete facade uplighting including windows, siding, and peaks',
-        prompt: `TARGET: 2nd story windows & peaks - first-story gutter-mounted uplights
-
-WHAT TO LIGHT:
-- ENTIRE 2nd story facade: windows, siding, trim, AND peaks above
-- Light shining up on 2nd story windows IS ACCEPTABLE and DESIRED
-- Include towers, turrets, pop-outs, windows, siding, box bays - any 2nd story section
-
-WHICH GUTTER (CRITICAL):
-- Mount in FIRST STORY gutter ONLY (typically 8-10 feet high off the ground)
-- ANY first-story gutter with a 2nd story above it is ELIGIBLE
-- Beam shoots UPWARD to illuminate 2nd story facade and peaks
-- Do NOT soffit from the 2nd story
-
-FIXTURE COUNT BY FACADE WIDTH:
-- Narrow (8-12 ft): 2-3 fixtures
-- Medium (12-20 ft): 3-4 fixtures
-- Wide (20+ ft): 4-6 fixtures
+FIXTURE COUNT (AI decides based on facade):
+- Analyze the 2nd story features present
+- Use enough fixtures to provide balanced coverage
+- Typically 2-6 fixtures depending on home size and features
 - Space 4-6 feet apart for even coverage
-- At least ONE fixture positioned to illuminate any area or peak above
+- One fixture per dormer if dormers are present
 
-PLACEMENT:
-- Distribute across facade to cover windows, siding, AND peaks
-- Use visual anchors: "below window 1", "between windows 2-3", "centered under peak" "bigger peaks add 2 lights"
-- Ensure FULL coverage of 2nd story facade with up lighting
-- For multi-section homes: fixtures in EACH first story gutter 
+MOUNTING (CRITICAL):
+- INSIDE the 1st story gutter trough ONLY
+- Against the inner gutter wall (closest to house/fascia)
+- Fixture sits IN the gutter channel, braced against inner wall
+- The fixture is VISIBLE - you can see the bronze housing in the gutter
+- NEVER on roof shingles, gutter lip, fascia board, or any roof surface
+- NEVER in the roofline gutter at the top of the house
 
-PEAK ILLUMINATION (when present):
-- Beam MUST continue PAST windows upwards to graze gable face to APEX
-- Creates dramatic vertical emphasis: windows and siding glowing + peak lit above
+FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile.
 
-EXCLUSIONS:
-- Do NOT mount in roofline gutter (top of house)
-- Do NOT confuse with DORMERS (use dormers preset for dormers)
-
-COMPATIBILITY (when other sub-options selected):
-- If DORMERS selected: skip fixtures directly below dormers`,
-        negativePrompt: `ABSOLUTE PROHIBITION (2ND STORY WINDOWS & PEAK): Do NOT illuminate second story facade from first story gutter. Do NOT mount uplights in first story gutter. Do NOT wash upper walls, windows, or peaks with upward light. Second story facade and gable peaks must remain dark. No gutter-mounted uplighting on second story.`,
-        darkDescription: `Second story facade and peaks remain DARK - no gutter-mounted uplights from first story level, 2nd story windows unlit, upper siding texture invisible, peaks above 2nd story completely dark, upper facade appears as dark silhouette against sky.`
-      }
-    ]
+BEAM REACH:
+- Beams MUST reach the 2nd story features (10-25 ft distance)
+- Light travels from gutter UP to illuminate features above
+- Beam should reach peaks/gables when present
+- For distant targets: higher wattage, narrower beam angles
+- The light ALWAYS reaches and illuminates the intended target fully`,
+    negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting from gutter level.`,
+    subOptions: []
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
