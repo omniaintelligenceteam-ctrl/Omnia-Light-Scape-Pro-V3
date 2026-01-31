@@ -170,7 +170,7 @@ export const analyzePropertyArchitecture = async (
   fixtureSubOptions: Record<string, string[]>,
   fixtureCounts: Record<string, number | null>
 ): Promise<PropertyAnalysis & { spatialMap?: SpatialMap }> => {
-  // Using Kimi K2.5 for property analysis (3-4x cheaper than Gemini)
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
   // Build user's fixture selection summary (from Fixture Summary box)
   const fixtureSelectionSummary = selectedFixtures.length > 0
@@ -327,30 +327,55 @@ Base your analysis on:
 - Siding up lights: one in each wall section between windows`;
 
   try {
-    const kimiPromise = callKimiVisionAPI(imageBase64, imageMimeType, analysisPrompt);
+    const analyzePromise = ai.models.generateContent({
+      model: ANALYSIS_MODEL_NAME,
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: imageBase64,
+              mimeType: imageMimeType,
+            },
+          },
+          {
+            text: analysisPrompt,
+          },
+        ],
+      },
+    });
 
-    const responseText = await withTimeout(
-      kimiPromise,
+    const response = await withTimeout(
+      analyzePromise,
       ANALYSIS_TIMEOUT_MS,
       'Property analysis timed out. Please try again.'
     );
 
-    // Clean up the response - remove any markdown code blocks if present
-    let jsonText = responseText.trim();
-    if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+      if (candidate.content && candidate.content.parts) {
+        const textPart = candidate.content.parts.find((p: { text?: string }) => p.text);
+        if (textPart && textPart.text) {
+          // Clean up the response - remove any markdown code blocks if present
+          let jsonText = textPart.text.trim();
+          if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+          }
+
+          try {
+            const analysis: PropertyAnalysis = JSON.parse(jsonText);
+            return analysis;
+          } catch (parseError) {
+            console.error('Failed to parse analysis JSON:', parseError);
+            console.error('Raw response:', textPart.text);
+            throw new Error('Failed to parse property analysis. Please try again.');
+          }
+        }
+      }
     }
 
-    try {
-      const analysis: PropertyAnalysis = JSON.parse(jsonText);
-      return analysis;
-    } catch (parseError) {
-      console.error('Failed to parse analysis JSON:', parseError);
-      console.error('Raw response:', responseText);
-      throw new Error('Failed to parse property analysis. Please try again.');
-    }
+    throw new Error('No analysis generated. Please try again.');
   } catch (error) {
-    console.error('Property Analysis Error (Kimi K2.5):', error);
+    console.error('Property Analysis Error:', error);
     throw error;
   }
 };
