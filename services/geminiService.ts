@@ -96,13 +96,13 @@ function buildPreferenceContext(preferences: UserPreferences | null | undefined)
 
 // Analysis model - Gemini 3 Pro for other analysis functions
 const ANALYSIS_MODEL_NAME = 'gemini-3-pro-preview';
-// Kimi K2.5 for property analysis (3-4x cheaper than Gemini)
-const KIMI_API_ENDPOINT = 'https://api.moonshot.ai/v1/chat/completions';
-const KIMI_MODEL_NAME = 'kimi-k2.5';
+// Kimi K2 for property analysis (3-4x cheaper than Gemini)
+const KIMI_API_ENDPOINT = 'https://api.moonshot.cn/v1/chat/completions';
+const KIMI_MODEL_NAME = 'kimi-k2-0711-preview';
 const ANALYSIS_TIMEOUT_MS = 60000; // 1 minute for analysis
 
 /**
- * Makes a vision request to Kimi K2.5 API (OpenAI-compatible format)
+ * Makes a vision request to Kimi K2 API (OpenAI-compatible format)
  */
 async function callKimiVisionAPI(
   imageBase64: string,
