@@ -6,12 +6,14 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, (process as any).cwd(), '');
   // Prioritize VITE_GEMINI_API_KEY as it's the specific one for this app, then fallback to generic API_KEY
   const apiKey = env.VITE_GEMINI_API_KEY || env.API_KEY || process.env.API_KEY;
+  const kimiApiKey = env.VITE_KIMI_API_KEY;
 
   return {
     plugins: [react()],
     define: {
       // Polyfill process.env.API_KEY for the Google GenAI SDK
-      'process.env.API_KEY': JSON.stringify(apiKey)
+      'process.env.API_KEY': JSON.stringify(apiKey),
+      'process.env.KIMI_API_KEY': JSON.stringify(kimiApiKey)
     },
     server: {
       // Proxy /api requests to the backend server during local development

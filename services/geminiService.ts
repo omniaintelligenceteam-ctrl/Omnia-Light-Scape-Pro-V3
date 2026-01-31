@@ -94,9 +94,70 @@ function buildPreferenceContext(preferences: UserPreferences | null | undefined)
   return contextLines.join('\n');
 }
 
-// Analysis model - Gemini 3 Pro for best reasoning + multimodal understanding (USER PREFERENCE: ALWAYS USE THE BEST)
+// Analysis model - Gemini 3 Pro for other analysis functions
 const ANALYSIS_MODEL_NAME = 'gemini-3-pro-preview';
+// Kimi K2.5 for property analysis (3-4x cheaper than Gemini)
+const KIMI_API_ENDPOINT = 'https://api.moonshot.ai/v1/chat/completions';
+const KIMI_MODEL_NAME = 'kimi-k2.5';
 const ANALYSIS_TIMEOUT_MS = 60000; // 1 minute for analysis
+
+/**
+ * Makes a vision request to Kimi K2.5 API (OpenAI-compatible format)
+ */
+async function callKimiVisionAPI(
+  imageBase64: string,
+  imageMimeType: string,
+  prompt: string
+): Promise<string> {
+  const kimiApiKey = (import.meta.env.VITE_KIMI_API_KEY as string) || (process.env.KIMI_API_KEY as string);
+
+  if (!kimiApiKey) {
+    throw new Error('Kimi API key not configured. Please set VITE_KIMI_API_KEY in your environment.');
+  }
+
+  const response = await fetch(KIMI_API_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${kimiApiKey}`,
+    },
+    body: JSON.stringify({
+      model: KIMI_MODEL_NAME,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${imageMimeType};base64,${imageBase64}`,
+              },
+            },
+            {
+              type: 'text',
+              text: prompt,
+            },
+          ],
+        },
+      ],
+      max_tokens: 4096,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Kimi API error:', errorText);
+    throw new Error(`Kimi API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+
+  if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+    return data.choices[0].message.content;
+  }
+
+  throw new Error('No response from Kimi API');
+}
 
 /**
  * Stage 1: ANALYZING
@@ -109,7 +170,7 @@ export const analyzePropertyArchitecture = async (
   fixtureSubOptions: Record<string, string[]>,
   fixtureCounts: Record<string, number | null>
 ): Promise<PropertyAnalysis & { spatialMap?: SpatialMap }> => {
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+  // Using Kimi K2.5 for property analysis (3-4x cheaper than Gemini)
 
   // Build user's fixture selection summary (from Fixture Summary box)
   const fixtureSelectionSummary = selectedFixtures.length > 0
@@ -266,55 +327,30 @@ Base your analysis on:
 - Siding up lights: one in each wall section between windows`;
 
   try {
-    const analyzePromise = ai.models.generateContent({
-      model: ANALYSIS_MODEL_NAME,
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data: imageBase64,
-              mimeType: imageMimeType,
-            },
-          },
-          {
-            text: analysisPrompt,
-          },
-        ],
-      },
-    });
+    const kimiPromise = callKimiVisionAPI(imageBase64, imageMimeType, analysisPrompt);
 
-    const response = await withTimeout(
-      analyzePromise,
+    const responseText = await withTimeout(
+      kimiPromise,
       ANALYSIS_TIMEOUT_MS,
       'Property analysis timed out. Please try again.'
     );
 
-    if (response.candidates && response.candidates.length > 0) {
-      const candidate = response.candidates[0];
-      if (candidate.content && candidate.content.parts) {
-        const textPart = candidate.content.parts.find(p => p.text);
-        if (textPart && textPart.text) {
-          // Clean up the response - remove any markdown code blocks if present
-          let jsonText = textPart.text.trim();
-          if (jsonText.startsWith('```')) {
-            jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-          }
-
-          try {
-            const analysis: PropertyAnalysis = JSON.parse(jsonText);
-            return analysis;
-          } catch (parseError) {
-            console.error('Failed to parse analysis JSON:', parseError);
-            console.error('Raw response:', textPart.text);
-            throw new Error('Failed to parse property analysis. Please try again.');
-          }
-        }
-      }
+    // Clean up the response - remove any markdown code blocks if present
+    let jsonText = responseText.trim();
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
     }
 
-    throw new Error('No analysis generated. Please try again.');
+    try {
+      const analysis: PropertyAnalysis = JSON.parse(jsonText);
+      return analysis;
+    } catch (parseError) {
+      console.error('Failed to parse analysis JSON:', parseError);
+      console.error('Raw response:', responseText);
+      throw new Error('Failed to parse property analysis. Please try again.');
+    }
   } catch (error) {
-    console.error('Property Analysis Error:', error);
+    console.error('Property Analysis Error (Kimi K2.5):', error);
     throw error;
   }
 };
