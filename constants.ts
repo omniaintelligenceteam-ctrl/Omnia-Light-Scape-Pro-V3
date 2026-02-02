@@ -2037,51 +2037,27 @@ export const DEFAULT_PRICING: FixturePricing[] = [
 export const STRIPE_CONFIG = {
   PLANS: {
     LITE_MONTHLY: {
-      id: 'price_1SuSG3Q1tit8mwraWdgBHUUQ',
-      price: 39,
+      id: 'price_1SwVzcQ1tit8mwramMR9HxCC',
+      price: 25,
       generations: 10,
       label: 'Lite'
     },
-    LITE_YEARLY: {
-      id: 'price_1SuSHNQ1tit8mwrauHW3CLCn',
-      price: 390,
-      generations: 120, // 10 per month * 12
-      label: 'Lite'
-    },
     STARTER_MONTHLY: {
-      id: 'price_1SuSSmQ1tit8mwralY1OAL5Xz',
-      price: 149,
-      generations: 50,
-      label: 'Starter'
-    },
-    STARTER_YEARLY: {
-      id: 'price_1SrNJdQ1tit8mwraqbC4ihcM',
-      price: 1490,
-      generations: 600, // 50 per month * 12
+      id: 'price_1SwW0RQ1tit8mwralZbcFmcH',
+      price: 55,
+      generations: 25,
       label: 'Starter'
     },
     PRO_MONTHLY: {
-      id: 'price_1SrNK5Q1tit8mwraTa5UHFWD',
-      price: 249,
-      generations: 125,
-      label: 'Pro'
-    },
-    PRO_YEARLY: {
-      id: 'price_1SrNKfQ1tit8mwrajmlqx1ak',
-      price: 2490,
-      generations: 1500, // 125 per month * 12
+      id: 'price_1SwVqqQ1tit8mwraJGxKUaQ1',
+      price: 99,
+      generations: 50,
       label: 'Pro'
     },
     ENTERPRISE_MONTHLY: {
-      id: 'price_1SrNLUQ1tit8mwraV4J0nB6T',
-      price: 599,
-      generations: -1, // unlimited
-      label: 'Enterprise'
-    },
-    ENTERPRISE_YEARLY: {
-      id: 'price_1SrNM8Q1tit8mwraPzrGelaH',
-      price: 5990,
-      generations: -1, // unlimited
+      id: 'price_1SwW1yQ1tit8mwra7FHYm8Si',
+      price: 179,
+      generations: 100,
       label: 'Enterprise'
     }
   }

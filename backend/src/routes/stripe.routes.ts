@@ -23,14 +23,12 @@ router.post('/checkout', async (req: Request<{}, {}, CheckoutRequest>, res: Resp
             return res.status(400).json({ error: 'Missing required fields: userId and priceId' });
         }
 
-        // Validate priceId against allowed values (all 6 tiers)
+        // Validate priceId against allowed values (monthly only)
         const allowedPriceIds = [
-            'price_1SrNHIQ1tit8mwraqKGAf2GL', // STARTER_MONTHLY
-            'price_1SrNJdQ1tit8mwraqbC4ihcM', // STARTER_YEARLY
-            'price_1SrNK5Q1tit8mwraTa5UHFWD', // PRO_MONTHLY
-            'price_1SrNKfQ1tit8mwrajmlqx1ak', // PRO_YEARLY
-            'price_1SrNLUQ1tit8mwraV4J0nB6T', // BUSINESS_MONTHLY
-            'price_1SrNM8Q1tit8mwraPzrGelaH', // BUSINESS_YEARLY
+            'price_1SwVzcQ1tit8mwramMR9HxCC', // LITE_MONTHLY
+            'price_1SwW0RQ1tit8mwralZbcFmcH', // STARTER_MONTHLY
+            'price_1SwVqqQ1tit8mwraJGxKUaQ1', // PRO_MONTHLY
+            'price_1SwW1yQ1tit8mwra7FHYm8Si', // ENTERPRISE_MONTHLY
         ];
 
         if (!allowedPriceIds.includes(priceId)) {
@@ -125,12 +123,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
 
                 // Map price ID to monthly limit
                 const priceToLimitMap: Record<string, number> = {
-                    'price_1SrNHIQ1tit8mwraqKGAf2GL': 50,    // STARTER_MONTHLY
-                    'price_1SrNJdQ1tit8mwraqbC4ihcM': 50,    // STARTER_YEARLY (50/month)
-                    'price_1SrNK5Q1tit8mwraTa5UHFWD': 125,   // PRO_MONTHLY
-                    'price_1SrNKfQ1tit8mwrajmlqx1ak': 125,   // PRO_YEARLY (125/month)
-                    'price_1SrNLUQ1tit8mwraV4J0nB6T': -1,    // BUSINESS_MONTHLY (unlimited)
-                    'price_1SrNM8Q1tit8mwraPzrGelaH': -1,    // BUSINESS_YEARLY (unlimited)
+                    'price_1SwVzcQ1tit8mwramMR9HxCC': 10,    // LITE_MONTHLY (10/month)
+                    'price_1SwW0RQ1tit8mwralZbcFmcH': 25,   // STARTER_MONTHLY (25/month)
+                    'price_1SwVqqQ1tit8mwraJGxKUaQ1': 50,    // PRO_MONTHLY (50/month)
+                    'price_1SwW1yQ1tit8mwra7FHYm8Si': 100,   // ENTERPRISE_MONTHLY (100/month)
                 };
 
                 const monthlyLimit = priceToLimitMap[priceId] || 0;

@@ -10,12 +10,10 @@ interface PricingProps {
   onClose: () => void;
 }
 
-type BillingCycle = 'monthly' | 'yearly';
 type PlanTier = 'lite' | 'starter' | 'pro' | 'enterprise';
 
 export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
   const { user } = useUser();
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,19 +38,15 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
-      // Map tier + billing cycle to price ID
+      // Map tier to price ID (monthly only)
       const priceIdMap: Record<string, string> = {
-        'lite-monthly': STRIPE_CONFIG.PLANS.LITE_MONTHLY.id,
-        'lite-yearly': STRIPE_CONFIG.PLANS.LITE_YEARLY.id,
-        'starter-monthly': STRIPE_CONFIG.PLANS.STARTER_MONTHLY.id,
-        'starter-yearly': STRIPE_CONFIG.PLANS.STARTER_YEARLY.id,
-        'pro-monthly': STRIPE_CONFIG.PLANS.PRO_MONTHLY.id,
-        'pro-yearly': STRIPE_CONFIG.PLANS.PRO_YEARLY.id,
-        'enterprise-monthly': STRIPE_CONFIG.PLANS.ENTERPRISE_MONTHLY.id,
-        'enterprise-yearly': STRIPE_CONFIG.PLANS.ENTERPRISE_YEARLY.id,
+        'lite': STRIPE_CONFIG.PLANS.LITE_MONTHLY.id,
+        'starter': STRIPE_CONFIG.PLANS.STARTER_MONTHLY.id,
+        'pro': STRIPE_CONFIG.PLANS.PRO_MONTHLY.id,
+        'enterprise': STRIPE_CONFIG.PLANS.ENTERPRISE_MONTHLY.id,
       };
 
-      const priceId = priceIdMap[`${tier}-${billingCycle}`];
+      const priceId = priceIdMap[tier];
       const { url } = await createCheckoutSession(user.id, priceId);
 
       if (url) {
@@ -70,7 +64,6 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       name: 'Lite',
       icon: Lightbulb,
       monthlyPrice: STRIPE_CONFIG.PLANS.LITE_MONTHLY.price,
-      yearlyPrice: STRIPE_CONFIG.PLANS.LITE_YEARLY.price,
       generations: STRIPE_CONFIG.PLANS.LITE_MONTHLY.generations,
       features: [
         '10 generations per month',
@@ -86,10 +79,9 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       name: 'Starter',
       icon: Sparkles,
       monthlyPrice: STRIPE_CONFIG.PLANS.STARTER_MONTHLY.price,
-      yearlyPrice: STRIPE_CONFIG.PLANS.STARTER_YEARLY.price,
       generations: STRIPE_CONFIG.PLANS.STARTER_MONTHLY.generations,
       features: [
-        '50 generations per month',
+        '25 generations per month',
         '4K exports & PDF downloads',
         'Quotes & proposals',
         'Basic support',
@@ -102,10 +94,9 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       name: 'Pro',
       icon: Zap,
       monthlyPrice: STRIPE_CONFIG.PLANS.PRO_MONTHLY.price,
-      yearlyPrice: STRIPE_CONFIG.PLANS.PRO_YEARLY.price,
       generations: STRIPE_CONFIG.PLANS.PRO_MONTHLY.generations,
       features: [
-        '125 generations per month',
+        '50 generations per month',
         '4K exports & PDF downloads',
         'Quotes & invoicing',
         'Email quotes & invoices',
@@ -121,10 +112,9 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       name: 'Enterprise',
       icon: Building2,
       monthlyPrice: STRIPE_CONFIG.PLANS.ENTERPRISE_MONTHLY.price,
-      yearlyPrice: STRIPE_CONFIG.PLANS.ENTERPRISE_YEARLY.price,
-      generations: -1,
+      generations: STRIPE_CONFIG.PLANS.ENTERPRISE_MONTHLY.generations,
       features: [
-        'Unlimited generations',
+        '100 generations per month',
         '4K exports & PDF downloads',
         'Quotes & invoicing',
         'Email quotes & invoices',
@@ -184,43 +174,16 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                 <Crown size={24} className="text-[#F6B45A]" />
               </motion.div>
               <h2 className="text-3xl font-bold tracking-tight text-white mb-2">Choose Your Plan</h2>
-              <p className="text-gray-400 text-sm leading-relaxed mb-6">
+              <p className="text-gray-400 text-sm leading-relaxed">
                 Unlock the full power of AI-generated lighting designs
               </p>
-
-              {/* Billing Toggle */}
-              <div className="inline-flex items-center gap-2 p-1 bg-white/5 rounded-full border border-white/10">
-                <button
-                  onClick={() => setBillingCycle('monthly')}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
-                    billingCycle === 'monthly'
-                      ? 'bg-[#F6B45A] text-black shadow-sm'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Monthly
-                </button>
-                <button
-                  onClick={() => setBillingCycle('yearly')}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all active:scale-95 flex items-center gap-2 ${
-                    billingCycle === 'yearly'
-                      ? 'bg-[#F6B45A] text-black shadow-sm'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Yearly
-                  <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
-                    Save 15%
-                  </span>
-                </button>
-              </div>
             </div>
 
             {/* Plans Grid */}
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {plans.map((plan, index) => {
                 const Icon = plan.icon;
-                const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+                const price = plan.monthlyPrice;
                 const isLoading = loadingPlan === plan.id;
 
                 return (
@@ -259,14 +222,10 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                       <div className="mb-6">
                         <div className="flex items-baseline gap-2">
                           <span className="text-4xl font-bold text-white">${price}</span>
-                          <span className="text-gray-500 text-sm">
-                            /{billingCycle === 'monthly' ? 'mo' : 'yr'}
-                          </span>
+                          <span className="text-gray-500 text-sm">/mo</span>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          {plan.generations === -1
-                            ? 'Unlimited generations'
-                            : `${plan.generations} generation${plan.generations > 1 ? 's' : ''} per ${billingCycle === 'monthly' ? 'month' : 'year'}`}
+                          {plan.generations} generation{plan.generations > 1 ? 's' : ''} per month
                         </p>
                       </div>
 
