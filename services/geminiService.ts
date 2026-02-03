@@ -289,12 +289,14 @@ Return this exact structure:
         "id": "corner_left",
         "type": "corner",
         "horizontalPosition": 0,
+        "verticalPosition": 50,
         "label": "Far left corner"
       },
       {
         "id": "window_1",
         "type": "window",
         "horizontalPosition": <0-100 percentage from left>,
+        "verticalPosition": <0-100 percentage from top>,
         "width": <percentage width of feature>,
         "label": "<descriptive label like 'First window from left'>"
       }
@@ -305,6 +307,7 @@ Return this exact structure:
         "fixtureType": "<fixture category id like 'up', 'path', etc>",
         "subOption": "<sub-option id like 'siding', 'windows', etc>",
         "horizontalPosition": <0-100 percentage from left>,
+        "verticalPosition": <0-100 percentage from top>,
         "anchor": "<description like 'right_of corner_left' or 'below window_1'>",
         "description": "<human-readable like 'At far LEFT corner, in landscaping bed'>"
       }
@@ -313,9 +316,9 @@ Return this exact structure:
 }
 
 SPATIAL MAPPING INSTRUCTIONS:
-1. Map all architectural features (windows, doors, columns, corners, dormers, gables, gutters) with horizontal positions (0% = far left, 100% = far right)
-2. For each selected fixture to place, specify EXACT horizontal position and anchor it to a feature
-3. Use percentage-based coordinates for precise placement
+1. Map all architectural features (windows, doors, columns, corners, dormers, gables, gutters) with BOTH horizontal (0%=left, 100%=right) AND vertical positions (0%=top, 100%=bottom)
+2. For each fixture placement, specify EXACT x,y coordinates as percentages
+3. Vertical position guideline: ground-level fixtures ~85-95%, window-level ~40-60%, roofline ~10-20%
 4. Create narrative descriptions for each fixture placement
 
 Base your analysis on:
@@ -764,9 +767,10 @@ Return ONLY a valid JSON object (no markdown, no code blocks):
       "fixtureType": "<fixture id>",
       "subOption": "<sub-option id>",
       "count": <number>,
-      "positions": ["<SPECIFIC position with visual anchor 1>", "<SPECIFIC position with visual anchor 2>", "..."],
+      "positions": ["<fallback text description 1>", "<fallback text description 2>", "..."],
       "spatialPositions": [
-        {"horizontalPosition": <0-100 percentage from left>, "anchor": "<reference like 'below window_1'>"},
+        {"x": <0-100 percentage from left>, "y": <0-100 percentage from top>},
+        {"x": <0-100>, "y": <0-100>},
         ...
       ],
       "spacing": "<spacing description>"
@@ -780,7 +784,7 @@ Return ONLY a valid JSON object (no markdown, no code blocks):
   "priorityOrder": ["<most important area>", "<second>", "..."]
 }
 
-CRITICAL: spatialPositions array MUST have the same length as positions array. Use the EXACT horizontalPosition percentages from the spatial map if provided.
+CRITICAL: spatialPositions array MUST have the same length as count. Use EXACT x,y percentage coordinates from the spatial map. Ground-level fixtures: y~85-95%, window-level: y~40-60%, roofline: y~10-20%.
 
 CRITICAL RULES:
 - positions array MUST have EXACTLY the same length as count (e.g., 6 count = 6 positions)
@@ -1048,7 +1052,7 @@ ${allowlistItems.map(item => `
 - ${item.fixtureLabel.toUpperCase()} / ${item.subOptionLabel.toUpperCase()}:
   - Count: ${item.count} fixtures
   - Positions: ${item.spatialPositions && item.spatialPositions.length > 0
-      ? item.spatialPositions.map((sp, i) => `FIXTURE ${i + 1}: at horizontal position ${Math.round(sp.horizontalPosition)}%${sp.anchor ? ` (${sp.anchor})` : ''}`).join('; ')
+      ? item.spatialPositions.map((sp, i) => `FIXTURE ${i + 1}: Place at [${sp.x?.toFixed(1) ?? '?'}%, ${sp.y?.toFixed(1) ?? '?'}%]`).join('; ')
       : item.positions.map((pos, i) => `FIXTURE ${i + 1}: ${pos}`).join('; ')}
   - Instructions: ${item.positivePrompt}${item.userPlacementNote ? `
   - USER NOTE (PRIORITY): "${item.userPlacementNote}"` : ''}
@@ -1367,20 +1371,27 @@ Be STRICT about fixture type control and count accuracy. These are the most impo
  * Creates the perfect final prompt by combining analysis, plan, and user preferences
  */
 export const buildFinalPrompt = (
-  analysis: PropertyAnalysis,
+  analysis: PropertyAnalysis & { spatialMap?: SpatialMap },
   plan: LightingPlan,
   colorTemp: string,
   userPreferences?: UserPreferences | null
 ): string => {
   const { architecture, landscaping, hardscape, recommendations } = analysis;
 
-  // Build placement instructions with exact positions
-  const placementInstructions = plan.placements.map(p => `
+  // Build placement instructions with exact x,y coordinates when available
+  const placementInstructions = plan.placements.map(p => {
+    const positions = p.spatialPositions && p.spatialPositions.length > 0
+      ? p.spatialPositions.map((sp, i) => `FIXTURE ${i + 1}: Place at [${sp.x?.toFixed(1) ?? '?'}%, ${sp.y?.toFixed(1) ?? '?'}%]`).join('\n  ')
+      : p.positions.join('; ');
+
+    return `
 ## ${p.fixtureType.toUpperCase()} LIGHTS - ${p.subOption.toUpperCase()}
-- Quantity: Place EXACTLY ${p.count} fixtures (count them!)
-- Positions: ${p.positions.join('; ')}
+- Quantity: Place EXACTLY ${p.count} fixtures
+- Positions:
+  ${positions}
 - Spacing: ${p.spacing}
-`).join('\n');
+`;
+  }).join('\n');
 
   // Build preference context if available
   const preferenceContext = buildPreferenceContext(userPreferences);
@@ -2251,10 +2262,12 @@ export function generateNarrativePlacement(
   narrative += `Scanning LEFT to RIGHT, you will see exactly ${sorted.length} fixtures:\n\n`;
 
   sorted.forEach((p, i) => {
-    // Always include exact horizontal position percentage for precise placement
-    const positionDesc = `at horizontal position ${Math.round(p.horizontalPosition)}%${p.anchor ? ` (${p.anchor})` : ''}`;
+    // Output exact x,y coordinates for precise placement
+    const xCoord = p.horizontalPosition.toFixed(1);
+    const yCoord = p.verticalPosition !== undefined ? p.verticalPosition.toFixed(1) : '?';
+    const coords = `Place at [${xCoord}%, ${yCoord}%]`;
 
-    narrative += `FIXTURE ${i + 1}: ${positionDesc} - ${p.description}\n`;
+    narrative += `FIXTURE ${i + 1}: ${coords}\n`;
   });
 
   narrative += `\nCOUNT CHECK: There are EXACTLY ${sorted.length} fixtures. No more, no less.\n`;
@@ -2271,14 +2284,15 @@ export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
   }
 
   let output = `\n## EXACT FIXTURE PLACEMENT MAP\n`;
-  output += `The facade spans 0% (far left) to 100% (far right).\n\n`;
+  output += `Coordinates: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom).\n\n`;
 
-  // Reference points
+  // Reference points with x,y coordinates
   if (spatialMap.features.length > 0) {
     output += `### REFERENCE POINTS:\n`;
     const sortedFeatures = [...spatialMap.features].sort((a, b) => a.horizontalPosition - b.horizontalPosition);
     sortedFeatures.forEach(f => {
-      output += `- ${f.label}: ${f.horizontalPosition}%\n`;
+      const yCoord = f.verticalPosition !== undefined ? f.verticalPosition.toFixed(1) : '?';
+      output += `- ${f.label}: [${f.horizontalPosition.toFixed(1)}%, ${yCoord}%]\n`;
     });
     output += '\n';
   }

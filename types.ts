@@ -309,6 +309,7 @@ export interface FeatureLocation {
   id: string;                    // "window_1", "tree_left", "entry_door"
   type: 'window' | 'door' | 'column' | 'tree' | 'corner' | 'dormer' | 'gable' | 'garage';
   horizontalPosition: number;    // 0-100 (% from left edge of facade)
+  verticalPosition?: number;     // 0-100 (% from top edge) - optional for features
   width?: number;                // Feature width as % of facade
   label: string;                 // "First window from left"
 }
@@ -318,6 +319,7 @@ export interface SpatialFixturePlacement {
   fixtureType: string;           // "up", "path", "gutter"
   subOption: string;             // "siding", "windows", "dormers"
   horizontalPosition: number;    // 0-100 (% from left edge)
+  verticalPosition: number;      // 0-100 (% from top edge)
   anchor: string;                // "right_of corner_left" or "below window_1"
   description: string;           // Human-readable: "At far LEFT corner, in landscaping bed"
 }
@@ -346,12 +348,12 @@ export interface FixturePlacement {
   fixtureType: string;
   subOption: string;
   count: number;
-  positions: string[];  // e.g., ["left of window 1", "between windows 2-3"]
+  positions: string[];  // e.g., ["left of window 1", "between windows 2-3"] - DEPRECATED, use spatialPositions
   spacing: string;      // e.g., "6-8 feet apart"
-  // Spatial coordinates from spatialMap for precise positioning
+  // Exact x,y coordinates for precise positioning (0-100 percentage)
   spatialPositions?: Array<{
-    horizontalPosition: number;  // 0-100 percentage from left
-    anchor?: string;             // e.g., "below window_1", "right_of corner_left"
+    x: number;  // 0-100 percentage from left edge
+    y: number;  // 0-100 percentage from top edge
   }>;
 }
 

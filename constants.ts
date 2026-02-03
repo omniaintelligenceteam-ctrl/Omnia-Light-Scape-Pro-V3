@@ -1,5 +1,5 @@
 
-import type { ColorTemperature, FixturePricing } from "./types";
+import type { ColorTemperature, FixturePricing, SpatialMap } from "./types";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // constants.ts - Lighting Design System Configuration
@@ -102,6 +102,19 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN
 - Vehicles, if present, remain unchanged
 - Outdoor furniture and decorations remain unchanged
 - Mailboxes, house numbers, and accessories remain unchanged
+
+═══════════════════════════════════════════════════════════════════════════════
+SPATIAL COORDINATE SYSTEM (EXACT FIXTURE PLACEMENT)
+═══════════════════════════════════════════════════════════════════════════════
+
+When fixture positions are specified, exact pixel coordinates [X%] will be provided:
+- X% = horizontal position from left edge (0% = far left, 100% = far right)
+
+CRITICAL RULES:
+- Place fixtures PRECISELY at the specified X% coordinates
+- These are exact placement requirements derived from AI property analysis
+- Coordinates represent ground-level fixture positions along the facade
+- Do NOT approximate - use the exact percentage positions provided
 
 ═══════════════════════════════════════════════════════════════════════════════
 NIGHTTIME SKY REQUIREMENTS (MANDATORY - CRITICAL)
@@ -525,7 +538,8 @@ export const GENERATION_SETTINGS: GenerationSettingsConfig = {
 export function buildFinalPrompt(
   activeFixtures: FixtureType[],
   activeSubOptions: Record<string, SubOption[]>,
-  allFixtureTypes: FixtureType[]
+  allFixtureTypes: FixtureType[],
+  spatialMap?: SpatialMap
 ): string {
   let finalPrompt = '';
   
@@ -552,7 +566,31 @@ export function buildFinalPrompt(
       }
     });
   }
-  
+
+  // 2.5. Add spatial coordinates if provided
+  if (spatialMap && spatialMap.placements.length > 0) {
+    finalPrompt += '=== EXACT FIXTURE COORDINATES [X%] ===\n\n';
+
+    // Group placements by fixture type
+    const byType = new Map<string, typeof spatialMap.placements[number][]>();
+    spatialMap.placements.forEach(p => {
+      if (!byType.has(p.fixtureType)) byType.set(p.fixtureType, []);
+      byType.get(p.fixtureType)!.push(p);
+    });
+
+    byType.forEach((placements, fixtureType) => {
+      finalPrompt += `--- ${fixtureType.toUpperCase()} POSITIONS ---\n`;
+      placements
+        .sort((a, b) => a.horizontalPosition - b.horizontalPosition)
+        .forEach((p, idx) => {
+          finalPrompt += `- Fixture ${idx + 1}: [${p.horizontalPosition}%] ${p.anchor} - ${p.description}\n`;
+        });
+      finalPrompt += `TOTAL: ${placements.length} fixture(s)\n\n`;
+    });
+
+    finalPrompt += 'CRITICAL: Place fixtures at these EXACT horizontal percentages. Do not approximate or add extra fixtures.\n\n';
+  }
+
   // 3. Add disabled fixture negative prompts
   const disabledFixtures = allFixtureTypes.filter(
     f => !activeFixtures.some(af => af.id === f.id)
