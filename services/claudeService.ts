@@ -404,12 +404,10 @@ export function generateNarrativePlacement(
   narrative += `Scanning LEFT to RIGHT, you will see exactly ${sorted.length} fixtures:\n\n`;
 
   sorted.forEach((p, i) => {
-    const positionDesc =
-      p.horizontalPosition < 15 ? 'near the left edge' :
-      p.horizontalPosition > 85 ? 'near the right edge' :
-      `at ${Math.round(p.horizontalPosition)}% from the left`;
+    // Always include exact horizontal position percentage for precise placement
+    const positionDesc = `at horizontal position ${Math.round(p.horizontalPosition)}%${p.anchor ? ` (${p.anchor})` : ''}`;
 
-    narrative += `${i + 1}. Fixture ${positionDesc} - ${p.description}\n`;
+    narrative += `FIXTURE ${i + 1}: ${positionDesc} - ${p.description}\n`;
   });
 
   narrative += `\nCOUNT CHECK: There are EXACTLY ${sorted.length} fixtures. No more, no less.\n`;

@@ -677,7 +677,7 @@ const PLANNING_TIMEOUT_MS = 60000; // 1 minute for planning
  * Replaces hardcoded TypeScript logic with contextual AI reasoning
  */
 export const planLightingWithAI = async (
-  analysis: PropertyAnalysis,
+  analysis: PropertyAnalysis & { spatialMap?: SpatialMap },
   userSelections: FixtureSelections,
   fixtureTypes: FixtureType[]
 ): Promise<LightingPlan> => {
@@ -722,7 +722,11 @@ ${userCountConstraints}
 === USER'S PLACEMENT NOTES (CRITICAL - FOLLOW THESE) ===
 ${userPlacementNotes}
 
+=== SPATIAL MAP (EXACT POSITIONS) ===
+${analysis.spatialMap ? formatSpatialMapForPrompt(analysis.spatialMap) : 'No spatial map available - use property analysis to determine positions'}
+
 IMPORTANT: If the user provided placement notes, use their descriptions as the PRIMARY guide for fixture positions. Their notes override default placement logic.
+IMPORTANT: If a spatial map is provided above, USE THE EXACT HORIZONTAL POSITIONS from it for each fixture.
 
 === YOUR TASK ===
 Create a detailed lighting plan with VISUAL ANCHORS for each fixture position.
@@ -761,6 +765,10 @@ Return ONLY a valid JSON object (no markdown, no code blocks):
       "subOption": "<sub-option id>",
       "count": <number>,
       "positions": ["<SPECIFIC position with visual anchor 1>", "<SPECIFIC position with visual anchor 2>", "..."],
+      "spatialPositions": [
+        {"horizontalPosition": <0-100 percentage from left>, "anchor": "<reference like 'below window_1'>"},
+        ...
+      ],
       "spacing": "<spacing description>"
     }
   ],
@@ -771,6 +779,8 @@ Return ONLY a valid JSON object (no markdown, no code blocks):
   },
   "priorityOrder": ["<most important area>", "<second>", "..."]
 }
+
+CRITICAL: spatialPositions array MUST have the same length as positions array. Use the EXACT horizontalPosition percentages from the spatial map if provided.
 
 CRITICAL RULES:
 - positions array MUST have EXACTLY the same length as count (e.g., 6 count = 6 positions)
@@ -837,7 +847,7 @@ const PROMPTING_TIMEOUT_MS = 60000; // 1 minute for prompt crafting
  * Replaces simple string concatenation with intelligent prompt engineering
  */
 export const craftPromptWithAI = async (
-  analysis: PropertyAnalysis,
+  analysis: PropertyAnalysis & { spatialMap?: SpatialMap },
   plan: LightingPlan,
   systemPrompt: SystemPromptConfig,
   fixtureTypes: FixtureType[],
@@ -893,6 +903,7 @@ The fixture should be PARTIALLY OBSCURED by the gutter walls because it sits INS
       subOptionLabel: subOption?.label || placement.subOption,
       count: placement.count,
       positions: placement.positions,
+      spatialPositions: placement.spatialPositions,  // Include spatial coordinates if available
       positivePrompt: (subOption?.prompt || fixtureType?.positivePrompt || '') + gutterVisualDescription,
       userPlacementNote: userNote,
     };
@@ -1036,7 +1047,9 @@ ${JSON.stringify(analysis, null, 2)}
 ${allowlistItems.map(item => `
 - ${item.fixtureLabel.toUpperCase()} / ${item.subOptionLabel.toUpperCase()}:
   - Count: ${item.count} fixtures
-  - Positions: ${item.positions.map((pos, i) => `FIXTURE ${i + 1}: ${pos}`).join('; ')}
+  - Positions: ${item.spatialPositions && item.spatialPositions.length > 0
+      ? item.spatialPositions.map((sp, i) => `FIXTURE ${i + 1}: at horizontal position ${Math.round(sp.horizontalPosition)}%${sp.anchor ? ` (${sp.anchor})` : ''}`).join('; ')
+      : item.positions.map((pos, i) => `FIXTURE ${i + 1}: ${pos}`).join('; ')}
   - Instructions: ${item.positivePrompt}${item.userPlacementNote ? `
   - USER NOTE (PRIORITY): "${item.userPlacementNote}"` : ''}
 `).join('\n')}
@@ -2238,12 +2251,10 @@ export function generateNarrativePlacement(
   narrative += `Scanning LEFT to RIGHT, you will see exactly ${sorted.length} fixtures:\n\n`;
 
   sorted.forEach((p, i) => {
-    const positionDesc =
-      p.horizontalPosition < 15 ? 'near the left edge' :
-      p.horizontalPosition > 85 ? 'near the right edge' :
-      `at ${Math.round(p.horizontalPosition)}% from the left`;
+    // Always include exact horizontal position percentage for precise placement
+    const positionDesc = `at horizontal position ${Math.round(p.horizontalPosition)}%${p.anchor ? ` (${p.anchor})` : ''}`;
 
-    narrative += `${i + 1}. Fixture ${positionDesc} - ${p.description}\n`;
+    narrative += `FIXTURE ${i + 1}: ${positionDesc} - ${p.description}\n`;
   });
 
   narrative += `\nCOUNT CHECK: There are EXACTLY ${sorted.length} fixtures. No more, no less.\n`;

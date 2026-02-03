@@ -348,6 +348,11 @@ export interface FixturePlacement {
   count: number;
   positions: string[];  // e.g., ["left of window 1", "between windows 2-3"]
   spacing: string;      // e.g., "6-8 feet apart"
+  // Spatial coordinates from spatialMap for precise positioning
+  spatialPositions?: Array<{
+    horizontalPosition: number;  // 0-100 percentage from left
+    anchor?: string;             // e.g., "below window_1", "right_of corner_left"
+  }>;
 }
 
 export interface LightingSettings {
