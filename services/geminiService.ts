@@ -46,6 +46,48 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): 
 }
 
 /**
+ * Retry helper with exponential backoff
+ * @param fn - Async function to retry
+ * @param maxAttempts - Maximum number of attempts (default: 3)
+ * @param initialDelayMs - Initial delay in ms before first retry (default: 2000)
+ * @returns Result of the function if successful
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number = 3,
+  initialDelayMs: number = 2000
+): Promise<T> {
+  let lastError: Error | unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const isTimeout = error instanceof Error && error.message.includes('timed out');
+      const isRetryable = isTimeout || (error instanceof Error && (
+        error.message.includes('503') ||
+        error.message.includes('429') ||
+        error.message.includes('ECONNRESET') ||
+        error.message.includes('network')
+      ));
+
+      if (attempt < maxAttempts && isRetryable) {
+        const delay = initialDelayMs * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+        console.warn(`[Retry] Attempt ${attempt}/${maxAttempts} failed, retrying in ${delay}ms...`,
+          error instanceof Error ? error.message : error);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else if (!isRetryable) {
+        // Non-retryable error, throw immediately
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Builds a preference context section for the AI prompt
  * This helps the AI maintain consistency with the user's preferred style
  * while still generating unique designs for each property
@@ -99,7 +141,7 @@ const ANALYSIS_MODEL_NAME = 'gemini-3-pro-preview';
 // Kimi K2 for property analysis (3-4x cheaper than Gemini)
 const KIMI_API_ENDPOINT = 'https://api.moonshot.ai/v1/chat/completions';
 const KIMI_MODEL_NAME = 'kimi-k2.5';
-const ANALYSIS_TIMEOUT_MS = 60000; // 1 minute for analysis
+const ANALYSIS_TIMEOUT_MS = 90000; // 90 seconds for analysis
 
 /**
  * Makes a vision request to Kimi K2 API (OpenAI-compatible format)
@@ -329,7 +371,8 @@ Base your analysis on:
 - Window up lights: one centered below each first-floor window
 - Siding up lights: one in each wall section between windows`;
 
-  try {
+  // Wrap the API call with retry logic (3 attempts, exponential backoff starting at 2s)
+  return withRetry(async () => {
     const analyzePromise = ai.models.generateContent({
       model: ANALYSIS_MODEL_NAME,
       contents: {
@@ -377,10 +420,7 @@ Base your analysis on:
     }
 
     throw new Error('No analysis generated. Please try again.');
-  } catch (error) {
-    console.error('Property Analysis Error:', error);
-    throw error;
-  }
+  }, 3, 2000); // 3 attempts, starting with 2 second delay
 };
 
 /**
@@ -512,7 +552,7 @@ Only return the JSON array, no other text.`;
  * Builds lighting plan with exact placements, optimal settings, and validated counts
  */
 export const buildLightingPlan = (
-  analysis: PropertyAnalysis,
+  analysis: PropertyAnalysis & { spatialMap?: SpatialMap },
   userSelections: FixtureSelections
 ): LightingPlan => {
   const { architecture, recommendations } = analysis;
@@ -557,12 +597,27 @@ export const buildLightingPlan = (
         // Determine spacing based on fixture type
         const spacing = getSpacingForFixture(fixtureType, subOption);
 
+        // Map spatialMap coordinates to spatialPositions if available
+        let spatialPositions: Array<{ x: number; y: number }> | undefined;
+        if (analysis.spatialMap) {
+          const matchingPlacements = analysis.spatialMap.placements.filter(
+            sp => sp.fixtureType === fixtureType && sp.subOption === subOption
+          );
+          if (matchingPlacements.length > 0) {
+            spatialPositions = matchingPlacements.map(sp => ({
+              x: sp.horizontalPosition,
+              y: sp.verticalPosition
+            }));
+          }
+        }
+
         placements.push({
           fixtureType,
           subOption,
           count,
           positions,
           spacing,
+          spatialPositions,
         });
       }
     });
@@ -820,6 +875,27 @@ CRITICAL RULES:
           try {
             const plan: LightingPlan = JSON.parse(jsonText);
             console.log('✓ AI Lighting Plan generated:', plan);
+
+            // Map spatialMap coordinates (horizontalPosition/verticalPosition) to spatialPositions (x/y)
+            if (analysis.spatialMap && analysis.spatialMap.placements.length > 0) {
+              plan.placements = plan.placements.map(placement => {
+                // Find matching placements from spatialMap
+                const matchingPlacements = analysis.spatialMap!.placements.filter(
+                  sp => sp.fixtureType === placement.fixtureType && sp.subOption === placement.subOption
+                );
+
+                if (matchingPlacements.length > 0) {
+                  // Map horizontalPosition/verticalPosition → x/y
+                  placement.spatialPositions = matchingPlacements.map(sp => ({
+                    x: sp.horizontalPosition,
+                    y: sp.verticalPosition
+                  }));
+                  console.log(`✓ Mapped ${matchingPlacements.length} coordinates for ${placement.fixtureType}/${placement.subOption}`);
+                }
+                return placement;
+              });
+            }
+
             return plan;
           } catch (parseError) {
             console.error('Failed to parse lighting plan JSON:', parseError);
@@ -1048,6 +1124,22 @@ Uniform wall wash = WRONG. Distinct pools with dark gaps = CORRECT.
 ${JSON.stringify(analysis, null, 2)}
 
 === EXCLUSIVE FIXTURE ALLOWLIST (Only these may appear) ===
+${(() => {
+  // Log coordinate data for verification
+  console.log('=== CRAFTING PROMPT - FIXTURE COORDINATES ===');
+  allowlistItems.forEach(item => {
+    if (item.spatialPositions && item.spatialPositions.length > 0) {
+      console.log(`${item.fixtureLabel}/${item.subOptionLabel} (${item.count} fixtures):`);
+      item.spatialPositions.forEach((sp, i) => {
+        console.log(`  FIXTURE ${i + 1}: [${sp.x?.toFixed(1) ?? '?'}%, ${sp.y?.toFixed(1) ?? '?'}%]`);
+      });
+    } else {
+      console.log(`${item.fixtureLabel}/${item.subOptionLabel}: NO SPATIAL COORDS - using text positions:`, item.positions);
+    }
+  });
+  console.log('===========================================');
+  return '';
+})()}
 ${allowlistItems.map(item => `
 - ${item.fixtureLabel.toUpperCase()} / ${item.subOptionLabel.toUpperCase()}:
   - Count: ${item.count} fixtures
@@ -1192,14 +1284,22 @@ export const validatePrompt = async (
     subOption: p.subOption,
     count: p.count,
     positionsCount: p.positions?.length || 0,
+    spatialPositionsCount: p.spatialPositions?.length || 0,
   }));
 
   // PRE-CHECK: Position count must match fixture count
   const positionMismatches: string[] = [];
   expectedCounts.forEach(c => {
-    if (c.positionsCount !== c.count) {
+    // Check text positions
+    if (c.positionsCount !== c.count && c.spatialPositionsCount === 0) {
       positionMismatches.push(
         `Position/count mismatch for ${c.type}/${c.subOption}: ${c.count} fixtures requested but ${c.positionsCount} positions specified`
+      );
+    }
+    // Check spatial positions if available
+    if (c.spatialPositionsCount > 0 && c.spatialPositionsCount !== c.count) {
+      positionMismatches.push(
+        `Coordinate/count mismatch for ${c.type}/${c.subOption}: ${c.count} fixtures but ${c.spatialPositionsCount} coordinates`
       );
     }
   });
@@ -1378,6 +1478,20 @@ export const buildFinalPrompt = (
 ): string => {
   const { architecture, landscaping, hardscape, recommendations } = analysis;
 
+  // Log coordinate data for verification (LEGACY FALLBACK)
+  console.log('=== BUILD FINAL PROMPT (LEGACY) - FIXTURE COORDINATES ===');
+  plan.placements.forEach(p => {
+    if (p.spatialPositions && p.spatialPositions.length > 0) {
+      console.log(`${p.fixtureType}/${p.subOption} (${p.count} fixtures):`);
+      p.spatialPositions.forEach((sp, i) => {
+        console.log(`  FIXTURE ${i + 1}: [${sp.x?.toFixed(1) ?? '?'}%, ${sp.y?.toFixed(1) ?? '?'}%]`);
+      });
+    } else {
+      console.log(`${p.fixtureType}/${p.subOption}: NO SPATIAL COORDS - using text positions:`, p.positions);
+    }
+  });
+  console.log('=========================================================');
+
   // Build placement instructions with exact x,y coordinates when available
   const placementInstructions = plan.placements.map(p => {
     const positions = p.spatialPositions && p.spatialPositions.length > 0
@@ -1430,6 +1544,49 @@ ${recommendations.notes}
 ${preferenceContext}
 `;
 };
+
+/**
+ * Validates that all fixture placements have valid coordinates before image generation.
+ * Throws an error if coordinates are missing or invalid.
+ */
+export function validateCoordinatesBeforeGeneration(plan: LightingPlan): void {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  plan.placements.forEach(p => {
+    if (!p.spatialPositions || p.spatialPositions.length === 0) {
+      // Missing coordinates is an ERROR - we need exact positions
+      errors.push(`${p.fixtureType}/${p.subOption}: no spatial coordinates provided (expected ${p.count})`);
+    } else if (p.spatialPositions.length !== p.count) {
+      // Count mismatch is an ERROR
+      errors.push(`${p.fixtureType}/${p.subOption}: coordinate count mismatch - expected ${p.count}, got ${p.spatialPositions.length}`);
+    } else {
+      // Validate coordinate values are in range
+      p.spatialPositions.forEach((sp, i) => {
+        if (typeof sp.x !== 'number' || typeof sp.y !== 'number') {
+          errors.push(`${p.fixtureType}/${p.subOption} fixture ${i + 1}: invalid coordinate type (x=${typeof sp.x}, y=${typeof sp.y})`);
+        } else if (sp.x < 0 || sp.x > 100 || sp.y < 0 || sp.y > 100) {
+          warnings.push(`${p.fixtureType}/${p.subOption} fixture ${i + 1}: coords out of range [${sp.x.toFixed(1)}%, ${sp.y.toFixed(1)}%]`);
+        } else {
+          // Log valid coordinates for verification
+          console.log(`✓ ${p.fixtureType}/${p.subOption} fixture ${i + 1}: [${sp.x.toFixed(1)}%, ${sp.y.toFixed(1)}%]`);
+        }
+      });
+    }
+  });
+
+  // Log warnings
+  if (warnings.length > 0) {
+    console.warn('Coordinate validation warnings:', warnings);
+  }
+
+  // Throw on errors
+  if (errors.length > 0) {
+    const errorMessage = `Missing or invalid coordinates:\n${errors.join('\n')}`;
+    console.error('Coordinate validation ERRORS:', errors);
+    throw new Error(errorMessage);
+  }
+}
 
 /**
  * VERIFICATION STEP: Double-check fixtures match Fixture Summary before generating

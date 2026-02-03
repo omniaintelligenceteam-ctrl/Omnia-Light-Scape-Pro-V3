@@ -59,7 +59,7 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
+import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, validateCoordinatesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
 import { analyzeWithClaude } from './services/claudeService';
 // IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
@@ -1920,6 +1920,11 @@ const App: React.FC = () => {
             },
             FIXTURE_TYPES
           );
+
+          // Validate spatial coordinates before proceeding - throws if missing
+          console.log('=== COORDINATE VALIDATION ===');
+          validateCoordinatesBeforeGeneration(plan);
+          console.log('=== COORDINATES VALIDATED ===');
 
           finalIntensity = plan.settings.intensity;
           finalBeamAngle = plan.settings.beamAngle;

@@ -107,13 +107,15 @@ ABSOLUTE CONSTRAINTS - VIOLATION IS FORBIDDEN
 SPATIAL COORDINATE SYSTEM (EXACT FIXTURE PLACEMENT)
 ═══════════════════════════════════════════════════════════════════════════════
 
-When fixture positions are specified, exact pixel coordinates [X%] will be provided:
+When fixture positions are specified, exact pixel coordinates [X%, Y%] will be provided:
 - X% = horizontal position from left edge (0% = far left, 100% = far right)
+- Y% = vertical position from top edge (0% = top of image, 100% = bottom of image)
 
 CRITICAL RULES:
-- Place fixtures PRECISELY at the specified X% coordinates
+- Place fixtures PRECISELY at the specified [X%, Y%] coordinates
 - These are exact placement requirements derived from AI property analysis
-- Coordinates represent ground-level fixture positions along the facade
+- X% positions fixtures horizontally along the facade
+- Y% positions fixtures vertically (ground-level fixtures typically Y% > 80%)
 - Do NOT approximate - use the exact percentage positions provided
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -569,7 +571,7 @@ export function buildFinalPrompt(
 
   // 2.5. Add spatial coordinates if provided
   if (spatialMap && spatialMap.placements.length > 0) {
-    finalPrompt += '=== EXACT FIXTURE COORDINATES [X%] ===\n\n';
+    finalPrompt += '=== EXACT FIXTURE COORDINATES [X%, Y%] ===\n\n';
 
     // Group placements by fixture type
     const byType = new Map<string, typeof spatialMap.placements[number][]>();
@@ -583,12 +585,12 @@ export function buildFinalPrompt(
       placements
         .sort((a, b) => a.horizontalPosition - b.horizontalPosition)
         .forEach((p, idx) => {
-          finalPrompt += `- Fixture ${idx + 1}: [${p.horizontalPosition}%] ${p.anchor} - ${p.description}\n`;
+          finalPrompt += `- Fixture ${idx + 1}: at [${p.horizontalPosition}%, ${p.verticalPosition}%] - ${p.description}\n`;
         });
       finalPrompt += `TOTAL: ${placements.length} fixture(s)\n\n`;
     });
 
-    finalPrompt += 'CRITICAL: Place fixtures at these EXACT horizontal percentages. Do not approximate or add extra fixtures.\n\n';
+    finalPrompt += 'CRITICAL: Place fixtures at these EXACT [X%, Y%] coordinates. Do not approximate or add extra fixtures.\n\n';
   }
 
   // 3. Add disabled fixture negative prompts
