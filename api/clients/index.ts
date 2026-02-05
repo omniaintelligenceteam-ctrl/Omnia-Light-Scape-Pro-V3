@@ -78,10 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('Error details:', error.details || 'No details');
     console.error('Error hint:', error.hint || 'No hint');
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      details: error.details || undefined,
-      hint: error.hint || undefined
+      error: 'Internal server error'
     });
   }
 }

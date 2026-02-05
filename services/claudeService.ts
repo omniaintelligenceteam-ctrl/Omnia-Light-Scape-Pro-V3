@@ -15,15 +15,17 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { PropertyAnalysis, UserPreferences, SpatialMap, SpatialFixturePlacement } from '../types';
 import { FIXTURE_TYPES, SYSTEM_PROMPT } from '../constants';
 
-// Initialize Anthropic client
+// SECURITY: Anthropic API calls should be proxied through a backend endpoint.
+// Direct browser usage with dangerouslyAllowBrowser exposes the API key to end users.
+// TODO: Move to /api/claude-analyze endpoint with server-side key.
 const getAnthropicClient = () => {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error('VITE_ANTHROPIC_API_KEY is not configured');
+    throw new Error('VITE_ANTHROPIC_API_KEY is not configured. NOTE: This key should be moved server-side.');
   }
   return new Anthropic({
     apiKey,
-    dangerouslyAllowBrowser: true // Required for browser-based usage
+    dangerouslyAllowBrowser: true // SECURITY WARNING: Exposes API key in browser JS bundle
   });
 };
 
