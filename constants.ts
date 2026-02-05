@@ -1082,10 +1082,10 @@ EXCLUSIONS:
     id: 'gutter',
     label: 'Gutter Mounted Up Lights',
     description: 'Up lights mounted in gutter illuminating up',
-    positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
+    positivePrompt: `CATEGORY ENABLED: 1ST STORY GUTTER-MOUNTED Up Lights (GROUND LEVEL - Y=85-95%).
 
-ASSUMPTION: A 1st story gutter ALWAYS exists.
-PLACEMENT: Gutter up lights MUST be placed IN the 1st story gutter (8-10 ft high off ground).
+ASSUMPTION: A 1st story gutter ALWAYS exists at GROUND LEVEL (8-10 ft high, Y=85-95%).
+PLACEMENT: Fixtures MUST be placed IN the 1st story gutter. GROUND LEVEL. NOT roof level.
 TARGET: Beams shine UPWARD to illuminate 2nd story sections - AI decides what to light based on the home's architecture.
 
 WHAT TO LIGHT (AI decides based on what's present):
