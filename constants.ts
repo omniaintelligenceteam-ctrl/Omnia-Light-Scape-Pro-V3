@@ -338,20 +338,15 @@ UP LIGHTS - SHARED ZONE RESOLUTION:
 4. SIDING fills REMAINING wall sections
    - After entryway, columns, and windows have their fixtures, siding fills gaps
 
-GUTTER UP LIGHTS - SHARED ZONE RESOLUTION:
-1. DORMERS takes PRIORITY for dormer features
-   - If secondStoryFacade would place a fixture below a dormer, SKIP IT
-   - Dormers sub-option handles all dormer illumination
-
-2. SECONDSTORYFACADE handles facades WITH peaks above
-   - If peaks AND secondStoryFacade both selected, secondStoryFacade handles peaks that are part of a 2nd story facade
-
-3. PEAKS handles STANDALONE gables only
-   - Gables that rise directly from ground level OR don't have a 2nd story facade below
-
-FIXTURE OVERLAP RULE:
-- NEVER place two fixtures within 2 feet of each other
-- If two sub-options would both place a fixture in the same spot, use the HIGHER PRIORITY option only
+GUTTER UP LIGHTS (1ST STORY ONLY):
+• Mount INSIDE 1st story gutter channel (Y=85-95%, 8-10ft high)
+• ONE fixture per 6-10 ft of gutter length
+• Bronze bullet-style fixtures
+• Shine UPWARD to roof line above
+• Skip areas beneath dormers, peaks, or architectural features
+• Gaps, downspouts, and corners are natural spacing guides
+• NO fixtures on 2nd story gutters
+• NO fixtures above 12ft height
 
 ═══════════════════════════════════════════════════════════════════════════════
 VALIDATION CHECK (PERFORM BEFORE GENERATING)
@@ -1071,26 +1066,26 @@ EXCLUSIONS:
   // ═══════════════════════════════════════════════════════════════════════════
   {
     id: 'gutter',
-    label: 'Gutter Mounted Up Lights',
-    description: 'Up lights mounted in gutter illuminating up',
+    label: 'Gutter Up Lights',
+    description: 'Up lights mounted in 1st story gutter illuminating up',
     positivePrompt: `CATEGORY ENABLED: Gutter-Mounted Up Lights.
 
 ASSUMPTION: A 1st story gutter ALWAYS exists.
 PLACEMENT: Gutter up lights MUST be placed IN the 1st story gutter (8-10 ft high off ground).
-TARGET: Beams shine UPWARD to illuminate 2nd story sections - AI decides what to light based on the home's architecture.
+TARGET: Beams shine UPWARD to illuminate features above - AI decides what to light based on the home's architecture.
 
 WHAT TO LIGHT (AI decides based on what's present):
 - Dormers (if present): one fixture centered below each dormer
 - 2nd story windows and siding
 - Gable peaks and architectural features
-- Any 2nd story sections visible above the 1st story roofline
-- Towers, turrets, pop-outs, box bays - any 2nd story section
+- Any sections visible above the 1st story roofline
+- Towers, turrets, pop-outs, box bays - any section
 
 FIXTURE COUNT (AI decides based on facade):
-- Analyze the 2nd story features present
+- Analyze above 1st story features present
 - Use enough fixtures to provide balanced coverage
 - Typically 2-6 fixtures depending on home size and features
-- Space 4-6 feet apart for even coverage
+- Space 6-10 feet apart for even coverage
 - One fixture per dormer if dormers are present
 
 MOUNTING (CRITICAL):
@@ -1105,35 +1100,12 @@ FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bra
 
 BEAM REACH:
 - Beams MUST reach the 2nd story features (10-25 ft distance)
-- Light travels from gutter UP to illuminate features above
+- Light travels from 1st story gutter UP to illuminate features above
 - Beam should reach peaks/gables when present
 - For distant targets: higher wattage, narrower beam angles
 - The light ALWAYS reaches and illuminates the intended target fully`,
-    negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting from gutter level.`,
-    subOptions: [
-      {
-        id: 'gutterUpLights',
-        label: 'Gutter Up Lights',
-        description: '1st story gutter up lights illuminating 2nd story',
-        prompt: `TARGET: 2nd story features from 1ST STORY GUTTER ONLY.
-
-CRITICAL RULE: ONLY 1ST STORY GUTTERS receive up lights.
-- 1st story gutter = 8-10 ft off ground
-- NEVER place lights in 2nd story gutters or roofline gutters
-- 2nd story gutters MUST remain empty - NO fixtures
-
-WHAT TO LIGHT (AI decides based on what's present):
-- Dormers: one fixture centered below each
-- 2nd story windows and siding
-- Gable peaks and architectural features
-- Any 2nd story section above the 1st story roofline
-
-FIXTURE COUNT (AI decides):
-- Typically 2-6 fixtures based on home size
-- One per dormer if dormers present
-- Space 4-6 feet apart for coverage`,
-        negativePrompt: `Do NOT place any up lights in 1st story gutters. 2nd story features must remain dark from gutter-level lighting.`,
-        darkDescription: `1st story gutters remain EMPTY - no gutter-mounted up lights, 2nd story features unlit from gutter level.`
+    negativePrompt: `HARD RULE: NO roofline/soffit lights at Y=40-60%. NO fixtures on roof shingles or fascia board. NO fixtures above 12ft height. NO 2nd story gutter lights.`,
+     darkDescription: `1st story gutters remain EMPTY - no gutter-mounted up lights, 2nd story features unlit from gutter level.`
       }
     ]
   },
