@@ -611,6 +611,19 @@ export const buildLightingPlan = (
           }
         }
 
+        // FIX #2: Gutter Y-coordinate enforcement
+        // Gutter fixtures MUST be at Y >= 80% (ground level), NOT roof at Y=20-30%
+        if (fixtureType === 'gutter' && spatialPositions) {
+          const invalidPositions = spatialPositions.filter(sp => sp.y < 80);
+          if (invalidPositions.length > 0) {
+            console.warn(`[Gutter Fix] ${invalidPositions.length} fixtures at Y < 80% (roof area) - clamping to Y=85%`);
+            spatialPositions = spatialPositions.map(sp => ({
+              x: sp.x,
+              y: sp.y < 80 ? 85 : sp.y // Force ground-level gutter position
+            }));
+          }
+        }
+
         placements.push({
           fixtureType,
           subOption,
