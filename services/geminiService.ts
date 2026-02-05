@@ -358,12 +358,26 @@ Return this exact structure:
 }
 
 SPATIAL MAPPING INSTRUCTIONS:
-1. Map all architectural features (windows, doors, columns, corners, dormers, gables, gutters) with BOTH horizontal (0%=left, 100%=right) AND vertical positions (0%=top, 100%=bottom)
+1. Map all architectural features with BOTH horizontal (0%=left, 100%=right) AND vertical positions (0%=top, 100%=bottom)
 2. For each fixture placement, specify EXACT x,y coordinates as percentages
-3. Vertical position guideline: ground-level fixtures ~85-95%, window-level ~40-60%, roofline ~10-20%
-4. Create narrative descriptions for each fixture placement
 
-Base your analysis on:
+MANDATORY Y-ZONE RANGES (CRITICAL — fixtures MUST be placed in these zones):
+- Up lights (siding, windows, columns, entryway, trees): Y = 85-95% (ground-staked at foundation)
+- Path lights (pathway, driveway, landscaping):           Y = 85-95% (ground-level in beds)
+- Core drill lights:                                      Y = 90-98% (flush in hardscape)
+- Well lights:                                            Y = 88-96% (flush with ground)
+- Gutter-mounted up lights:                               Y = 70-80% (1st story gutter — NOT roof peak)
+- Soffit lights:                                          Y = 70-78% (1st story eave underside)
+- Hardscape lights:                                       Y = 75-95% (under capstone/tread)
+- Holiday lights:                                         Y = 10-35% (roofline/peak edges)
+
+ANTI-BUNCHING RULES:
+- Siding up lights: start at far LEFT corner, then far RIGHT, fill evenly between
+- Window up lights: EXACTLY one per window, centered below each
+- Minimum X-spacing: 8% for siding, 6% for windows, 5% for gutter lights
+- Fixtures MUST span full facade width — no clustering in center
+
+Base analysis on:
 - Wall height determines intensity (taller = brighter)
 - Brick/stone needs narrow beam (15-30°) for texture grazing
 - Smooth siding works with wider beams (30-45°)
@@ -611,19 +625,6 @@ export const buildLightingPlan = (
           }
         }
 
-        // FIX #2: Gutter Y-coordinate enforcement
-        // Gutter fixtures MUST be at Y >= 80% (ground level), NOT roof at Y=20-30%
-        if (fixtureType === 'gutter' && spatialPositions) {
-          const invalidPositions = spatialPositions.filter(sp => sp.y < 80);
-          if (invalidPositions.length > 0) {
-            console.warn(`[Gutter Fix] ${invalidPositions.length} fixtures at Y < 80% (roof area) - clamping to Y=85%`);
-            spatialPositions = spatialPositions.map(sp => ({
-              x: sp.x,
-              y: sp.y < 80 ? 85 : sp.y // Force ground-level gutter position
-            }));
-          }
-        }
-
         placements.push({
           fixtureType,
           subOption,
@@ -636,7 +637,7 @@ export const buildLightingPlan = (
     });
   });
 
-  return {
+  const plan: LightingPlan = {
     placements,
     settings: {
       intensity,
@@ -645,6 +646,20 @@ export const buildLightingPlan = (
     },
     priorityOrder: recommendations.priority_areas,
   };
+
+  // Apply Y-zone validation and correction to ALL fixture types
+  const yZoneResult = validateAndCorrectYZones(plan);
+  if (yZoneResult.corrections > 0) {
+    console.log(`[buildLightingPlan] Corrected ${yZoneResult.corrections} Y-zone violations`);
+  }
+
+  // Check spatial distribution for bunching
+  const distResult = validateSpatialDistribution(plan);
+  if (distResult.warnings.length > 0) {
+    console.warn(`[buildLightingPlan] ${distResult.warnings.length} distribution warnings`);
+  }
+
+  return plan;
 };
 
 /**
@@ -909,6 +924,18 @@ CRITICAL RULES:
               });
             }
 
+            // Apply Y-zone validation and correction
+            const yZoneResult = validateAndCorrectYZones(plan);
+            if (yZoneResult.corrections > 0) {
+              console.log(`[planLightingWithAI] Corrected ${yZoneResult.corrections} Y-zone violations`);
+            }
+
+            // Check spatial distribution for bunching
+            const distResult = validateSpatialDistribution(plan);
+            if (distResult.warnings.length > 0) {
+              console.warn(`[planLightingWithAI] ${distResult.warnings.length} distribution warnings`);
+            }
+
             return plan;
           } catch (parseError) {
             console.error('Failed to parse lighting plan JSON:', parseError);
@@ -1121,6 +1148,24 @@ CRITICAL RESEARCH FINDINGS (you MUST apply these):
 6. For fixture counts, list EACH position individually with visual anchors
 7. Add VALIDATION language at the end with consequences
 8. Include DRAMATIC CONTRAST section for realistic professional lighting
+9. Include Y-ZONE ENFORCEMENT section with mandatory vertical coordinate ranges
+10. Include ANTI-BUNCHING rules requiring full-facade coverage
+
+=== Y-ZONE ENFORCEMENT (MOST CRITICAL — INCLUDE IN PROMPT) ===
+The final prompt MUST include a "## Y-ZONE ENFORCEMENT" section with:
+- Up lights: Y = 85-95% (ground-staked at foundation)
+- Path lights: Y = 85-95% (ground-level in beds)
+- Gutter lights: Y = 70-80% (1st story gutter trough — NOT roof peak)
+- Core drills: Y = 90-98% (flush in hardscape)
+- Holiday lights: Y = 10-35% (roofline/peak edges)
+This prevents the #1 error: gutter lights being placed at roof level instead of 1st story gutter.
+
+=== ANTI-BUNCHING ENFORCEMENT (INCLUDE IN PROMPT) ===
+The final prompt MUST include anti-bunching rules:
+- Siding: corner-first placement (far left, far right, then fill between)
+- Windows: EXACTLY one fixture per window, centered below each
+- Minimum X-spacing between same-type fixtures (8% for siding, 6% for windows)
+- Fixtures MUST span full facade width
 
 === LIGHTING STYLE REQUIREMENT (CRITICAL FOR REALISM) ===
 The final prompt MUST include a section titled "## LIGHTING STYLE - DRAMATIC CONTRAST" with:
@@ -1220,11 +1265,29 @@ WHAT TO AVOID:
 VALIDATION: Fixtures MUST have VISIBLE DARK GAPS between them.
 Uniform wall wash = INVALID. Distinct pools with shadows = VALID.
 
+## Y-ZONE ENFORCEMENT (MANDATORY VERTICAL PLACEMENT)
+Every fixture type MUST be placed within its mandatory Y-coordinate zone:
+- Up lights (all): Y = 85-95% (ground-staked at foundation)
+- Path lights (all): Y = 85-95% (ground-level in beds)
+- Gutter lights: Y = 70-80% (1st story gutter — NOT roof peak, NOT ground)
+- Core drills: Y = 90-98% (flush in hardscape)
+- Well lights: Y = 88-96% (flush with ground)
+- Soffit lights: Y = 70-78% (eave underside)
+- Holiday lights: Y = 10-35% (roofline/peak edges)
+
+VIOLATION = INVALID IMAGE. Gutter light at Y<65% or Y>85% = WRONG.
+
+## ANTI-BUNCHING RULES (SPATIAL DISTRIBUTION)
+- Siding up lights: Place far LEFT corner first, far RIGHT corner second, fill between
+- Window up lights: EXACTLY one per window, centered below each — count MUST match windows
+- Minimum X-spacing: 8% between siding fixtures, 6% between window fixtures, 5% between gutter
+- ALL facade-spanning fixtures MUST cover edge-to-edge, no center clustering
+
 ## EXACT FIXTURE PLACEMENTS
 For each selected fixture type, list:
-### [Fixture Type] - [Count] FIXTURES TOTAL
-FIXTURE 1: [Exact position with visual anchor]
-FIXTURE 2: [Exact position with visual anchor]
+### [Fixture Type] - [Count] FIXTURES TOTAL (Y-ZONE: [zone])
+FIXTURE 1: [X%, Y%] — [position with visual anchor]
+FIXTURE 2: [X%, Y%] — [position with visual anchor]
 ...
 
 ## SCENE PRESERVATION
@@ -1236,6 +1299,9 @@ CRITICAL: Before finalizing, verify:
 - Fixture counts match EXACTLY
 - All PROHIBITED fixtures remain completely dark
 - DARK GAPS visible between each fixture's light pool
+- ALL fixtures within their mandatory Y-ZONE
+- Fixtures span full facade (no center bunching)
+- Window fixtures are 1:1 with windows
 Any violation = INVALID IMAGE
 
 Return ONLY the final prompt text (no JSON, no code blocks).
@@ -1409,6 +1475,22 @@ ${SOFFIT_HIDDEN ? '' : `ALSO CHECK SOFFIT DISTINCTION:
 - FAIL if: fixtures described as in soffit/eave instead of in gutter
 - FAIL if: "soffit" appears without explicit prohibition/dark description`}
 ` : '- Gutter is NOT selected, skip this check'}
+
+## CRITICAL CHECK 7: Y-ZONE COMPLIANCE (ALL FIXTURE TYPES)
+For each fixture type in the prompt, verify the Y-coordinate ranges are correct:
+- Up lights mentioned with Y = 85-95%? PASS. Y < 80%? FAIL.
+- Path lights mentioned with Y = 85-95%? PASS. Y < 80%? FAIL.
+- Gutter lights mentioned with Y = 70-80%? PASS. Y < 65% or Y > 85%? FAIL.
+- Core drills mentioned with Y = 90-98%? PASS.
+- Holiday lights mentioned with Y = 10-35%? PASS.
+- If Y-zone ranges are NOT mentioned at all → FAIL (must be explicit)
+
+## CRITICAL CHECK 8: ANTI-BUNCHING / SPATIAL DISTRIBUTION
+- Does the prompt specify corner-first placement for siding? (left→right→fill)
+- Does the prompt specify one-per-window for window fixtures?
+- Does the prompt mention minimum X-spacing between fixtures?
+- FAIL if: no spatial distribution rules are present
+- FAIL if: no per-window explicit placement is specified for window fixtures
 
 Return ONLY a valid JSON object:
 
@@ -1601,6 +1683,187 @@ export function validateCoordinatesBeforeGeneration(plan: LightingPlan): void {
     throw new Error(errorMessage);
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Y-ZONE VALIDATION — Ensures fixtures are in correct vertical zones
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Mandatory Y-coordinate zones for each fixture type.
+ * Fixtures placed outside their zone are automatically corrected.
+ */
+const Y_ZONE_RANGES: Record<string, { min: number; max: number; label: string }> = {
+  'up':        { min: 85, max: 95, label: 'ground-staked at foundation' },
+  'path':      { min: 85, max: 95, label: 'ground-staked in landscaping beds' },
+  'coredrill': { min: 90, max: 98, label: 'flush-mounted in hardscape' },
+  'well':      { min: 88, max: 96, label: 'flush with ground grade' },
+  'gutter':    { min: 70, max: 80, label: '1st story gutter trough' },
+  'soffit':    { min: 70, max: 78, label: '1st story eave underside' },
+  'hardscape': { min: 75, max: 95, label: 'under capstone / under tread' },
+  'holiday':   { min: 10, max: 35, label: 'roofline / peak edges' },
+};
+
+/**
+ * Validates and corrects Y-coordinates for all fixture placements.
+ * Fixtures outside their mandatory zone are clamped to the center of the zone.
+ * Returns the number of corrections made.
+ */
+export function validateAndCorrectYZones(plan: LightingPlan): { corrections: number; details: string[] } {
+  const details: string[] = [];
+  let corrections = 0;
+
+  plan.placements.forEach(p => {
+    const zone = Y_ZONE_RANGES[p.fixtureType];
+    if (!zone) return; // Unknown fixture type — skip
+
+    if (p.spatialPositions && p.spatialPositions.length > 0) {
+      p.spatialPositions.forEach((sp, i) => {
+        if (typeof sp.y !== 'number') return;
+        
+        if (sp.y < zone.min || sp.y > zone.max) {
+          const oldY = sp.y;
+          // Clamp to center of zone
+          sp.y = Math.round((zone.min + zone.max) / 2);
+          corrections++;
+          details.push(
+            `[Y-ZONE FIX] ${p.fixtureType}/${p.subOption} fixture ${i + 1}: ` +
+            `Y=${oldY.toFixed(1)}% → Y=${sp.y}% (zone: ${zone.min}-${zone.max}% for ${zone.label})`
+          );
+        }
+      });
+    }
+  });
+
+  if (corrections > 0) {
+    console.warn(`[Y-Zone Validation] ${corrections} fixture(s) corrected:`, details);
+  } else {
+    console.log('✓ [Y-Zone Validation] All fixtures within correct zones');
+  }
+
+  return { corrections, details };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANTI-BUNCHING VALIDATION — Ensures even spatial distribution
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Minimum X-distance (%) between fixtures of the same type/suboption
+ */
+const MIN_X_SPACING: Record<string, number> = {
+  'up_siding':   8,
+  'up_windows':  6,
+  'up_trees':    10,
+  'path_pathway': 6,
+  'path_driveway': 6,
+  'gutter_gutterUpLights': 5,
+  'default':     5,
+};
+
+/**
+ * Validates spatial distribution and detects bunching.
+ * Returns warnings for clustered fixtures and edge-coverage gaps.
+ */
+export function validateSpatialDistribution(plan: LightingPlan): { warnings: string[]; redistributed: boolean } {
+  const warnings: string[] = [];
+  let redistributed = false;
+
+  plan.placements.forEach(p => {
+    if (!p.spatialPositions || p.spatialPositions.length < 2) return;
+
+    const key = `${p.fixtureType}_${p.subOption}`;
+    const minSpacing = MIN_X_SPACING[key] || MIN_X_SPACING['default'];
+
+    // Sort by X position
+    const sorted = [...p.spatialPositions].sort((a, b) => (a.x || 0) - (b.x || 0));
+
+    // Check minimum spacing between adjacent fixtures
+    for (let i = 1; i < sorted.length; i++) {
+      const dx = (sorted[i].x || 0) - (sorted[i - 1].x || 0);
+      if (dx < minSpacing) {
+        warnings.push(
+          `[BUNCHING] ${p.fixtureType}/${p.subOption}: fixtures ${i} and ${i + 1} ` +
+          `are only ${dx.toFixed(1)}% apart (min: ${minSpacing}%)`
+        );
+      }
+    }
+
+    // Check edge coverage: first fixture should be within 10% of left edge,
+    // last fixture within 10% of right edge (for facade-spanning types)
+    const facadeTypes = ['up_siding', 'gutter_gutterUpLights'];
+    if (facadeTypes.includes(key)) {
+      const firstX = sorted[0].x || 0;
+      const lastX = sorted[sorted.length - 1].x || 0;
+
+      if (firstX > 15) {
+        warnings.push(
+          `[EDGE GAP] ${p.fixtureType}/${p.subOption}: leftmost fixture at X=${firstX.toFixed(1)}% — ` +
+          `should be within 10% of left edge for full coverage`
+        );
+      }
+      if (lastX < 85) {
+        warnings.push(
+          `[EDGE GAP] ${p.fixtureType}/${p.subOption}: rightmost fixture at X=${lastX.toFixed(1)}% — ` +
+          `should be within 10% of right edge for full coverage`
+        );
+      }
+    }
+
+    // Check window fixtures: verify 1:1 mapping (count should match window count)
+    if (p.subOption === 'windows' && p.count > 1) {
+      // Check for duplicate X positions (2+ fixtures under same window)
+      const xPositions = sorted.map(s => Math.round((s.x || 0) / 3) * 3); // Group within 3%
+      const uniquePositions = new Set(xPositions);
+      if (uniquePositions.size < sorted.length) {
+        warnings.push(
+          `[WINDOW BUNCHING] ${p.fixtureType}/${p.subOption}: ${sorted.length} fixtures but only ` +
+          `${uniquePositions.size} unique positions — fixtures are bunching on same windows`
+        );
+      }
+    }
+  });
+
+  if (warnings.length > 0) {
+    console.warn('[Distribution Validation]', warnings);
+  } else {
+    console.log('✓ [Distribution Validation] No bunching or edge gaps detected');
+  }
+
+  return { warnings, redistributed };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRE-GENERATION HOUSE ANALYSIS STEP
+// Analyzes the house structure BEFORE fixture placement to create a feature map
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Pre-generation planning prompt that analyzes the house FIRST,
+ * creating a structural map before any fixtures are placed.
+ * This prevents the AI from confusing zones.
+ */
+export const PRE_GENERATION_ANALYSIS_PROMPT = `BEFORE placing any fixtures, analyze this house and create a structural zone map.
+
+STEP 1: Identify the house structure from TOP to BOTTOM:
+- Where is the roof peak? (Y = ?%)
+- Where is the 2nd story gutter/eave? (Y = ?%)  
+- Where is the 1st story gutter/eave? (Y = ?%)
+- Where is the foundation/ground level? (Y = ?%)
+
+STEP 2: Identify features LEFT to RIGHT:
+- Where is the left corner? (X = ?%)
+- Where are windows? (X = ?% for each)
+- Where is the entry door? (X = ?%)
+- Where is the right corner? (X = ?%)
+
+STEP 3: Create the zone map:
+- SKY ZONE: Y = 0% to [roof peak Y]
+- UPPER FACADE: Y = [roof peak] to [1st story gutter]
+- LOWER FACADE: Y = [1st story gutter] to [foundation]  
+- GROUND: Y = [foundation] to 100%
+
+This zone map determines WHERE each fixture type can be placed.
+Fixtures MUST go in their assigned zone — no exceptions.`;
 
 /**
  * VERIFICATION STEP: Double-check fixtures match Fixture Summary before generating
