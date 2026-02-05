@@ -691,14 +691,23 @@ COMPATIBILITY (when other sub-options also selected):
 
 WHAT TO LIGHT:
 - ALL first-story windows: single, double, triple, picture, bay
-- Illuminates window glass, frame, trim, casing, sill and above to the roofline
+- One fixture per window - NO EXCEPTIONS
 
 PLACEMENT BY WINDOW TYPE:
-- SINGLE window: center on glass horizontal middle
-- DOUBLE/MULLED window: center on mullion between panes
-- TRIPLE window: center on middle pane
-- BAY window: one fixture per flat section
-- ONE fixture per window - no exceptions
+SINGLE window: ONE fixture centered on glass
+DOUBLE/MULLED window: ONE fixture centered on mullion between panes  
+TRIPLE window: ONE fixture centered on middle pane
+BAY window: ONE fixture per flat section
+
+EXPLICIT WINDOW LIST (Count windows left-to-right, place ONE per window):
+- Window 1 (far left): ONE fixture centered below
+- Window 2 (left-center): ONE fixture centered below
+- Window 3 (right-center): ONE fixture centered below
+- Window 4 (far right): ONE fixture centered below
+- Continue for ALL windows visible
+
+VERIFICATION: Count fixtures = Count windows. If 4 windows, place 4 fixtures.
+NO BUNCHING - spread evenly, one per window.
 
 OBSTRUCTION RULE:
 - IGNORE landscaping - place fixture BEHIND foliage if needed
