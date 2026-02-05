@@ -966,7 +966,8 @@ GUTTER FIXTURE VISUAL APPEARANCE (CRITICAL):
 - Small bronze bullet fixture (size of a fist) peaking out over the roof INSIDE the metal gutter channel
 - The fixture is VISIBLE - you can see it sitting in the gutter trough
 - Light beam projects UPWARD from this fixture toward the target above
-- The gutter fixture is OUTSIDE the eave, sitting IN the metal gutter, shining UP
+- Y-COORDINATE: Must be Y=85-95% (near BOTTOM of image, ground level)
+- Y<80% IS WRONG - that's the roof. Gutter is LOW at Y=85-95%.
 
 *** CRITICAL MOUNTING LOCATION - INSIDE THE GUTTER TROUGH ***
 GUTTER ANATOMY: A gutter is a U-shaped metal channel that runs along the 1st story roofline to collect rainwater.
