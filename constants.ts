@@ -67,7 +67,7 @@ Imagine a luxury residential home as night falls. The sky becomes a pure black c
 
 Ground-mounted brass uplights create distinct vertical columns of warm amber light (2700K-3000K) that graze textured surfaces - revealing the depth of mortar joints in brick, the horizontal shadow lines between siding boards, the irregular facets of natural stone. Each fixture stands alone, its illumination separated by intentional dark gaps that define professional lighting design.
 
-The light follows the inverse square law: brightest at mid-wall where the narrow beam (15-25°) concentrates its energy, then gradually fading as it reaches the soffit line above. There are no harsh hot spots at the fixture base, no continuous wash of light blending pools together. Instead, there is rhythm - alternating zones of light and shadow that give the facade depth, drama, and dimension.
+The light follows the inverse square law: brightest at mid-wall where the narrow beam (15-25°) concentrates its energy, then gradually fading as it reaches the roofline above. There are no harsh hot spots at the fixture base, no continuous wash of light blending pools together. Instead, there is rhythm - alternating zones of light and shadow that give the facade depth, drama, and dimension.
 
 This is architectural lighting as art: controlled, intentional, and deeply respectful of both the home's character and the physics of light itself.
 
@@ -420,16 +420,16 @@ UP LIGHT PLACEMENT RULES (CRITICAL)
 - The fixture base should be nearly touching the foundation - 6 inches MAX
 
 ### BEAM HEIGHT (GUTTER LINE REACH - CRITICAL)
-- ALL up lights MUST reach the GUTTER LINE / SOFFIT directly above them
-- For 1ST STORY walls: beam reaches 1st story gutter/soffit (8-12 ft)
-- For 2ND STORY sections: beam MUST reach 2ND STORY soffit (18-25 ft)
+- ALL up lights MUST reach the GUTTER LINE directly above them
+- For 1ST STORY walls: beam reaches 1st story gutter/roof edge (8-12 ft)
+- For 2ND STORY sections: beam MUST reach 2nd story roofline (18-25 ft)
 - Each up light creates a vertical column from ground to the gutter line above it
-- The gutter/soffit underside MUST show visible illumination ("kiss" the roofline)
+- The gutter underside MUST show visible illumination ("kiss" the roofline)
 - NEVER stop the beam at 1st floor level on a 2-story facade
 
 ### HOT SPOT AVOIDANCE (CRITICAL FOR REALISM)
 - AVOID hot spots (overly bright areas at fixture base)
-- Light should be EVEN from base to soffit, not blinding at bottom
+- Light should be EVEN from base to roofline, not blinding at bottom
 - Technique: Angle fixture BACK 15-20 degrees from vertical
 - Beam should start on wall 12-18 inches above ground, NOT at fixture height
 - Light is BRIGHTEST at mid-wall, not at fixture base
@@ -438,7 +438,7 @@ UP LIGHT PLACEMENT RULES (CRITICAL)
 - 1ST STORY ONLY (8-12 ft): 3-5 watt LED appearance (200-400 lumens)
 - 2ND STORY REACH (18-25 ft): 6-10 watt LED appearance (500-800 lumens)
 - TALL FACADES (25+ ft): 10-15 watt LED appearance (800-1200 lumens)
-- Taller walls require brighter/higher wattage appearance to reach soffit
+- Taller walls require brighter/higher wattage appearance to reach roofline
 
 ═══════════════════════════════════════════════════════════════════════════════
 DRAMATIC CONTRAST WITH DARK GAPS (THE DEFINING VISUAL)
@@ -462,7 +462,7 @@ is the DRAMATIC INTERPLAY of LIGHT and DARK.
 - Beam angles: NARROW (15-25°) for dramatic contrast
 - Beam edges: SOFT and FEATHERED (6-12 inch transition zone)
 - Light physics: INVERSE SQUARE LAW - brightness = 1/(distance²)
-- Falloff: Brightest at mid-wall, gradual dimming toward soffit
+- Falloff: Brightest at mid-wall, gradual dimming toward roofline
 
 ═══════════════════════════════════════════════════════════════════════════════
 FINAL VALIDATION CHECKLIST
@@ -490,7 +490,7 @@ Before finalizing the image, verify:
 
 ### LIGHTING QUALITY
 - [ ] DARK GAPS visible between fixture illumination zones
-- [ ] Up lights reach soffit line with natural falloff
+- [ ] Up lights reach roofline with natural falloff
 - [ ] No hot spots at fixture bases
 - [ ] Professional dramatic contrast achieved
 
@@ -669,7 +669,7 @@ PLACEMENT:
 - Start at FAR LEFT corner, then FAR RIGHT corner, fill inward
 - Wide piers (>6 ft): two fixtures at 1/3 points
 - Narrow piers (<2 ft): single centered fixture
-- Beam MUST reach soffit/roofline
+- Beam MUST reach roofline
 
 EXCLUSIONS:
 - Do NOT place directly under windows (windows get separate fixtures if selected)
@@ -691,7 +691,7 @@ COMPATIBILITY (when other sub-options also selected):
 
 WHAT TO LIGHT:
 - ALL first-story windows: single, double, triple, picture, bay
-- Illuminates window glass, frame, trim, casing, sill and above to the soffit line
+- Illuminates window glass, frame, trim, casing, sill and above to the roofline
 
 PLACEMENT BY WINDOW TYPE:
 - SINGLE window: center on glass horizontal middle
@@ -755,7 +755,7 @@ COMPATIBILITY (when other sub-options also selected):
 
 WHAT TO LIGHT:
 - ALL vertical columnar elements: round columns, square pillars, porch posts, pilasters, stone/brick piers
-- Beam MUST reach capital, entablature, and soffit above
+- Beam MUST reach capital, entablature, and roofline above
 
 PLACEMENT:
 - ONE fixture at BASE of EACH column, centered on front face
@@ -963,7 +963,7 @@ PLACEMENT:
 - Drill into driveway concrete at BASE of each pier
 - Distance from wall: 4-6 inches for proper grazing angle
 - Centered on pier width, ONE fixture per pier
-- Beam MUST reach soffit above garage
+- Beam MUST reach roofline above garage
 
 EXCLUSIONS:
 - Do NOT place IN FRONT OF garage doors
@@ -979,7 +979,7 @@ EXCLUSIONS:
         prompt: `TARGET: Garage door panels - wall washing from in-ground fixtures
 
 WHAT TO LIGHT:
-- Each garage door panel AND wall above to soffit
+- Each garage door panel AND wall above to roofline
 - Use WIDE beam (wall wash, not narrow graze)
 
 FIXTURE COUNT BY DOOR TYPE:
@@ -990,13 +990,13 @@ FIXTURE COUNT BY DOOR TYPE:
 PLACEMENT:
 - Drill into driveway concrete, CENTERED in front of each door
 - Distance from door: 24-36 inches (further back than pier grazing)
-- Light MUST wash door face AND continue above to soffit
+- Light MUST wash door face AND continue above to roofline
 
 EXCLUSIONS:
 - Do NOT place at pier bases (garage_sides handles those)
 - Do NOT use narrow grazing beams
 - Do NOT use single fixture for double-wide doors`,
-        negativePrompt: `ABSOLUTE PROHIBITION (GARAGE DOOR): Do NOT place lights at pier bases. Do NOT use narrow grazing beams. Light MUST wash above door to soffit. Do NOT place closer than 24 inches to door face.`,
+        negativePrompt: `ABSOLUTE PROHIBITION (GARAGE DOOR): Do NOT place lights at pier bases. Do NOT use narrow grazing beams. Light MUST wash above door to roofline. Do NOT place closer than 24 inches to door face.`,
         darkDescription: `Garage doors receive NO wash lighting - no flush well lights in front of doors, door panels remain dark, siding above doors unlit, garage doors appear as dark rectangles, no illumination from driveway surface.`
       },
       {
