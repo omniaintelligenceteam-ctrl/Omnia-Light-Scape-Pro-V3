@@ -2591,9 +2591,9 @@ function buildEnhancedPrompt(
         prompt += `### "UP" MARKERS — Ground-Mounted Up Lights\n`;
         prompt += `- FIXTURE: Small brass/bronze cylinder ground stake, low-profile, nearly invisible at night\n`;
         prompt += `- MOUNTING: Staked into the ground AT THE BASE of the house foundation, within 6 inches of the wall\n`;
-        prompt += `- BEAM DIRECTION: Aims UPWARD — creates a vertical column of warm light washing UP the wall surface above\n`;
-        prompt += `- BEAM REACH: Must reach the gutter line / roofline directly above (8-25 ft depending on wall height)\n`;
-        prompt += `- LIGHT PHYSICS: Brightest at mid-wall height, gradual falloff toward roofline, NO hot spots at fixture base\n`;
+        prompt += `- BEAM DIRECTION: Aimed straight UP but LEANED BACK 15° from vertical (tilted slightly away from the wall). This prevents a harsh hot spot at the base and spreads the beam evenly up the entire wall.\n`;
+        prompt += `- BEAM REACH: The light column MUST illuminate the wall from bottom to top, reaching the gutter line / roofline directly above (8-25 ft). The beam does NOT stop at mid-wall — it lights the FULL HEIGHT.\n`;
+        prompt += `- LIGHT PHYSICS: Because of the 15° lean-back, light starts on the wall 12-18 inches above ground (not at the fixture). Brightest at mid-wall, even wash continuing up to the roofline, NO hot spots at the fixture base.\n`;
         prompt += `- THIS IS A GROUND-LEVEL FIXTURE — the brass cylinder sits at ground level, NOT mounted on the wall\n\n`;
       }
 
