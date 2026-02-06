@@ -74,6 +74,101 @@ export async function preDarkenImage(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// DRAW FIXTURE MARKERS (for Gemini visual guidance)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Marker color per fixture type so Gemini can distinguish them */
+const MARKER_COLORS: Record<string, string> = {
+  up:        '#FF0000', // red
+  soffit:    '#FF6600', // orange
+  path:      '#00FF00', // green
+  well:      '#FFFF00', // yellow
+  hardscape: '#FF00FF', // magenta
+};
+const DEFAULT_MARKER_COLOR = '#FF0000';
+
+/** Fixture type → human-readable label for the numbered marker */
+const MARKER_LABELS: Record<string, string> = {
+  up:        'UP',
+  soffit:    'DOWN',
+  path:      'PATH',
+  well:      'WELL',
+  hardscape: 'STEP',
+};
+
+/**
+ * Draw bright numbered markers on the image at each fixture position.
+ * Gemini can SEE these markers and knows exactly where to place lights.
+ *
+ * @param imageBase64 - Original image (raw base64, no prefix)
+ * @param spatialMap  - Fixture placements with positions
+ * @param mimeType    - Image MIME type
+ * @returns base64 of image with markers drawn (no data URI prefix)
+ */
+export async function drawFixtureMarkers(
+  imageBase64: string,
+  spatialMap: SpatialMap,
+  mimeType: string = 'image/jpeg'
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          reject(new Error('[CanvasNight] Failed to create canvas context for markers'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+
+        const markerRadius = Math.max(Math.round(img.width * 0.015), 12);
+
+        spatialMap.placements.forEach((placement, index) => {
+          const cx = (placement.horizontalPosition / 100) * img.width;
+          const cy = (placement.verticalPosition / 100) * img.height;
+          const color = MARKER_COLORS[placement.fixtureType] || DEFAULT_MARKER_COLOR;
+          const label = MARKER_LABELS[placement.fixtureType] || 'LIGHT';
+
+          // Bright filled circle
+          ctx.beginPath();
+          ctx.arc(cx, cy, markerRadius, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.stroke();
+
+          // Number inside the circle
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(index + 1), cx, cy);
+
+          // Label below the circle
+          ctx.fillStyle = color;
+          ctx.font = `bold ${Math.round(markerRadius * 0.8)}px Arial`;
+          ctx.fillText(label, cx, cy + markerRadius + Math.round(markerRadius * 0.7));
+        });
+
+        const dataUrl = canvas.toDataURL(mimeType, 0.92);
+        resolve(dataUrl.split(',')[1]);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    img.onerror = () => reject(new Error('[CanvasNight] Failed to load image for markers'));
+    img.src = `data:${mimeType};base64,${imageBase64}`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // GLOW CONFIGS PER FIXTURE TYPE
 // ═══════════════════════════════════════════════════════════════════════════════
 

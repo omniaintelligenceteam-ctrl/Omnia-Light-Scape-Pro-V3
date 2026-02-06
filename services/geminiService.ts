@@ -18,7 +18,7 @@ import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/house
 import { generateDayToNightBase64 } from "./icLightV2Service";
 import { batchInpaintFixtures } from "./fluxFillService";
 import { checkFalStatus } from "./falService";
-import { preDarkenImage } from "./canvasNightService";
+import { preDarkenImage, drawFixtureMarkers } from "./canvasNightService";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -2574,18 +2574,22 @@ function buildEnhancedPrompt(
     prompt += formatSpatialMapForPrompt(analysis.spatialMap);
     prompt += '\n';
 
-    // Manual placement: strict constraints — ONLY user-placed fixtures, nothing extra
+    // Manual placement: reference the visible colored markers drawn on the image
     if (isManualPlacement) {
       const count = analysis.spatialMap.placements.length;
-      prompt += `## CRITICAL: MANUAL PLACEMENT MODE\n`;
-      prompt += `The user has MANUALLY placed EXACTLY ${count} fixture(s) at the positions listed above.\n`;
+      prompt += `## CRITICAL: MANUAL PLACEMENT MODE — FOLLOW THE MARKERS\n`;
+      prompt += `The image contains EXACTLY ${count} bright colored numbered circle markers.\n`;
+      prompt += `Each marker shows EXACTLY where a lighting fixture must be placed.\n\n`;
       prompt += `STRICT RULES:\n`;
-      prompt += `- Place lighting fixtures ONLY at the ${count} positions specified above — NO OTHERS\n`;
-      prompt += `- DO NOT add any additional lights, glows, or illumination beyond these ${count} positions\n`;
-      prompt += `- DO NOT add ambient lighting, porch lights, window lights, or any light source not in the list\n`;
-      prompt += `- The TOTAL number of visible light sources in the final image MUST be EXACTLY ${count}\n`;
-      prompt += `- Each light must be positioned as close as possible to its specified percentage coordinates\n`;
-      prompt += `- If a coordinate says x=30%, y=75%, the light MUST appear at roughly 30% from the left edge and 75% from the top\n\n`;
+      prompt += `- Replace EACH numbered marker with a realistic professional landscape lighting fixture and its light glow\n`;
+      prompt += `- The light source MUST appear at the EXACT position of each marker — not nearby, not shifted\n`;
+      prompt += `- The colored marker circles and labels MUST be completely removed/replaced by the realistic light\n`;
+      prompt += `- Place EXACTLY ${count} lights total — one per marker. NO additional lights anywhere else\n`;
+      prompt += `- DO NOT add porch lights, window lights, ambient glow, or ANY light source that doesn't have a marker\n`;
+      prompt += `- If a marker says "UP", render an uplight beam going upward from that spot\n`;
+      prompt += `- If a marker says "PATH", render a path light with a downward glow pool at that spot\n`;
+      prompt += `- If a marker says "DOWN", render a soffit/downlight with light falling downward from that spot\n`;
+      prompt += `- FINAL CHECK: Count the lights — there must be EXACTLY ${count}, no more, no less\n\n`;
     }
   }
 
@@ -2752,9 +2756,18 @@ export const generateNightSceneEnhanced = async (
 
   // Step 3: Generate image with Gemini 3 Pro Image using enhanced prompt
   onStageUpdate?.('generating');
+
+  // Manual mode: draw visible markers on image so Gemini can SEE where to place lights
+  let imageForGemini = imageBase64;
+  if (manualSpatialMap && manualSpatialMap.placements.length > 0) {
+    console.log('[Enhanced Mode] Drawing fixture markers on image for Gemini...');
+    imageForGemini = await drawFixtureMarkers(imageBase64, manualSpatialMap, imageMimeType);
+    console.log('[Enhanced Mode] Markers drawn. Sending marked image to Gemini.');
+  }
+
   console.log('[Enhanced Mode] Step 3: Generating image with Gemini 3 Pro Image...');
   const result = await generateNightScene(
-    imageBase64,
+    imageForGemini,
     enhancedPrompt,
     imageMimeType,
     targetRatio,
