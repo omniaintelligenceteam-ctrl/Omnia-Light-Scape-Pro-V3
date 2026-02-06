@@ -2,15 +2,15 @@
  * fal.ai API Service
  *
  * Shared client for IC-Light V2 and FLUX Fill API calls.
- * Uses direct REST calls (no SDK dependency).
+ * Routes through /api/fal-proxy (Vercel serverless) to avoid CORS.
+ * API key stays server-side — never exposed to browser.
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const FAL_QUEUE_URL = 'https://queue.fal.run';
-const FAL_RUN_URL = 'https://fal.run';
+const FAL_PROXY_URL = '/api/fal-proxy';
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 150; // 5 minutes max
 
@@ -51,14 +51,6 @@ export type FalProgressCallback = (status: string, progress?: number) => void;
 // UTILITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function getFalApiKey(): string {
-  const key = (import.meta.env as Record<string, string>).VITE_FAL_API_KEY;
-  if (!key) {
-    throw new Error('VITE_FAL_API_KEY is not configured. Please add it to your .env file.');
-  }
-  return key;
-}
-
 /**
  * Convert base64 image to a data URI for fal.ai
  */
@@ -90,76 +82,72 @@ export async function fetchImageAsBase64(url: string): Promise<string> {
   });
 }
 
+/**
+ * Call the fal-proxy serverless function
+ */
+async function proxyFetch(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const response = await fetch(FAL_PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || `Proxy error (${response.status})`);
+  }
+
+  return data;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // CORE API
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Submit a request to fal.ai queue and poll for results
+ * Submit a request to fal.ai queue (via proxy) and poll for results
  */
 export async function falQueueRequest(
   modelId: string,
   input: Record<string, unknown>,
   onProgress?: FalProgressCallback
 ): Promise<FalResult> {
-  const apiKey = getFalApiKey();
-
-  // Submit to queue
+  // Submit to queue via proxy
   onProgress?.('Submitting request...', 5);
-  const submitResponse = await fetch(`${FAL_QUEUE_URL}/${modelId}`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(input),
-  });
+  const queueData = await proxyFetch({
+    action: 'submit',
+    modelId,
+    input,
+  }) as FalQueueResponse;
 
-  if (!submitResponse.ok) {
-    const errorText = await submitResponse.text();
-    throw new Error(`fal.ai submit error (${submitResponse.status}): ${errorText}`);
-  }
-
-  const queueData: FalQueueResponse = await submitResponse.json();
   const requestId = queueData.request_id;
-
   if (!requestId) {
     throw new Error('No request_id returned from fal.ai queue');
   }
 
-  // Poll for result
+  // Poll for result via proxy
   onProgress?.('Processing...', 15);
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
 
-    const statusResponse = await fetch(
-      `${FAL_QUEUE_URL}/${modelId}/requests/${requestId}/status`,
-      {
-        headers: { 'Authorization': `Key ${apiKey}` },
-      }
-    );
+    const statusData = await proxyFetch({
+      action: 'status',
+      modelId,
+      requestId,
+    }) as FalStatusResponse;
 
-    if (!statusResponse.ok) {
-      throw new Error(`fal.ai status check failed: ${statusResponse.statusText}`);
-    }
-
-    const statusData: FalStatusResponse = await statusResponse.json();
     const progress = Math.min(90, 15 + (attempt / MAX_POLL_ATTEMPTS) * 75);
 
     switch (statusData.status) {
       case 'COMPLETED': {
         onProgress?.('Complete!', 100);
-        // Fetch the result
-        const resultResponse = await fetch(
-          `${FAL_QUEUE_URL}/${modelId}/requests/${requestId}`,
-          {
-            headers: { 'Authorization': `Key ${apiKey}` },
-          }
-        );
-        if (!resultResponse.ok) {
-          throw new Error(`Failed to fetch result: ${resultResponse.statusText}`);
-        }
-        return await resultResponse.json();
+        const result = await proxyFetch({
+          action: 'result',
+          modelId,
+          requestId,
+        });
+        return result as unknown as FalResult;
       }
       case 'IN_QUEUE':
         onProgress?.('Waiting in queue...', progress);
@@ -176,42 +164,36 @@ export async function falQueueRequest(
 }
 
 /**
- * Make a synchronous request to fal.ai (for fast operations)
+ * Make a synchronous request to fal.ai (via proxy)
  */
 export async function falSyncRequest(
   modelId: string,
   input: Record<string, unknown>
 ): Promise<FalResult> {
-  const apiKey = getFalApiKey();
-
-  const response = await fetch(`${FAL_RUN_URL}/${modelId}`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(input),
+  const result = await proxyFetch({
+    action: 'submit',
+    modelId,
+    input,
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`fal.ai sync error (${response.status}): ${errorText}`);
-  }
-
-  return await response.json();
+  return result as unknown as FalResult;
 }
 
 /**
- * Check if fal.ai API is configured and accessible
+ * Check if fal.ai API is configured (proxy handles the key)
  */
 export async function checkFalStatus(): Promise<{ available: boolean; error?: string }> {
   try {
-    getFalApiKey();
+    // Quick check — proxy will return error if FAL_API_KEY is missing
+    await proxyFetch({ action: 'status', modelId: 'test', requestId: 'test' });
     return { available: true };
   } catch (error) {
-    return {
-      available: false,
-      error: error instanceof Error ? error.message : 'fal.ai API key not configured',
-    };
+    // A 400/404 from fal.ai actually means the proxy works (key is configured)
+    // Only a 500 with "FAL_API_KEY not configured" means it's broken
+    const msg = error instanceof Error ? error.message : '';
+    if (msg.includes('FAL_API_KEY not configured')) {
+      return { available: false, error: msg };
+    }
+    // Any other error means the proxy is reachable and key is set
+    return { available: true };
   }
 }
