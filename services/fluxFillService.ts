@@ -60,53 +60,6 @@ const FLUX_FILL_DEFAULTS: FluxFillSettings = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DIMENSION HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/** Load a base64 image and return its pixel dimensions */
-function getImageDimensions(base64: string, mimeType: string = 'image/jpeg'): Promise<{ w: number; h: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve({ w: img.width, h: img.height });
-    img.onerror = () => reject(new Error('[FLUX Fill] Failed to load image for dimension check'));
-    img.src = `data:${mimeType};base64,${base64}`;
-  });
-}
-
-/** Resize a base64 image to exact target dimensions using canvas */
-function resizeImageBase64(
-  base64: string,
-  targetW: number,
-  targetH: number,
-  mimeType: string = 'image/jpeg'
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      if (img.width === targetW && img.height === targetH) {
-        resolve(base64); // Already correct size
-        return;
-      }
-      console.log(`[FLUX Fill] Resizing image from ${img.width}x${img.height} to ${targetW}x${targetH}`);
-      const canvas = document.createElement('canvas');
-      canvas.width = targetW;
-      canvas.height = targetH;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('[FLUX Fill] Failed to create canvas for resize'));
-        return;
-      }
-      ctx.drawImage(img, 0, 0, targetW, targetH);
-      const outputMime = mimeType === 'image/png' ? 'image/png' : 'image/jpeg';
-      const quality = outputMime === 'image/jpeg' ? 0.92 : undefined;
-      resolve(canvas.toDataURL(outputMime, quality).split(',')[1]);
-    };
-    img.onerror = () => reject(new Error('[FLUX Fill] Failed to load image for resize'));
-    img.src = `data:${mimeType};base64,${base64}`;
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // SINGLE INPAINT
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -227,18 +180,11 @@ export async function batchInpaintFixtures(
   onProgress?: (stage: string, groupIndex: number, totalGroups: number) => void
 ): Promise<BatchInpaintResult> {
   try {
-    // Get ACTUAL dimensions of the base image (may differ from passed imageWidth/Height
-    // due to JPEG encoding in preDarkenImage)
-    const actualDims = await getImageDimensions(nightImageBase64, 'image/jpeg');
-    const maskW = actualDims.w;
-    const maskH = actualDims.h;
-    console.log(`[FLUX Fill] Base image actual: ${maskW}x${maskH}, passed: ${imageWidth}x${imageHeight}`);
-
-    // Generate masks at the ACTUAL image dimensions (ensures they match)
+    // Generate grouped masks from spatial map
     const maskGroups: MaskGroup[] = generateGroupedMasks(
       spatialMap,
-      maskW,
-      maskH
+      imageWidth,
+      imageHeight
     );
 
     if (maskGroups.length === 0) {
@@ -285,8 +231,7 @@ export async function batchInpaintFixtures(
       );
 
       if (result.success && result.imageBase64) {
-        // Resize output to match mask dimensions (FLUX Fill may output different size)
-        currentImageBase64 = await resizeImageBase64(result.imageBase64, maskW, maskH, 'image/jpeg');
+        currentImageBase64 = result.imageBase64;
         groupsProcessed++;
       } else {
         console.warn(`[FLUX Fill] Group ${i + 1} failed: ${result.error}. Continuing with previous image.`);

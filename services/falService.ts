@@ -36,11 +36,7 @@ export interface FalResult {
 export interface FalQueueResponse {
   request_id: string;
   status: string;
-  status_url?: string;
   response_url?: string;
-  cancel_url?: string;
-  // If fal.ai returns result directly (sync mode), these may be present
-  images?: FalImage[];
 }
 
 export interface FalStatusResponse {
@@ -66,36 +62,24 @@ export function toFalDataUri(base64: string, mimeType: string = 'image/jpeg'): s
 }
 
 /**
- * Fetch an image from URL and return as base64.
- * Tries direct fetch first; falls back to server-side proxy for CORS.
+ * Fetch an image from URL and return as base64
  */
 export async function fetchImageAsBase64(url: string): Promise<string> {
-  // Try direct browser fetch first (works if CDN has CORS headers)
-  try {
-    const response = await fetch(url);
-    if (response.ok) {
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          resolve(result.split(',')[1]);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch {
-    // CORS or network error — fall through to proxy
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.statusText}`);
   }
-
-  // Fall back to server-side proxy (avoids CORS)
-  console.log('[fal] Direct image fetch failed, using proxy...');
-  const result = await proxyFetch({ action: 'fetchImage', url });
-  if (!result.base64) {
-    throw new Error('Proxy fetchImage returned no base64 data');
-  }
-  return result.base64 as string;
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 /**
@@ -110,10 +94,6 @@ async function proxyFetch(body: Record<string, unknown>): Promise<Record<string,
 
   const data = await response.json();
 
-  if (data._proxyVersion) {
-    console.log(`[fal] Proxy version: ${data._proxyVersion}`);
-  }
-
   if (!response.ok) {
     throw new Error(data.error || `Proxy error (${response.status})`);
   }
@@ -126,9 +106,7 @@ async function proxyFetch(body: Record<string, unknown>): Promise<Record<string,
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Submit a request to fal.ai queue (via proxy) and poll for results.
- * Uses fal.ai's own status_url/response_url from the submit response
- * to avoid URL construction issues.
+ * Submit a request to fal.ai queue (via proxy) and poll for results
  */
 export async function falQueueRequest(
   modelId: string,
@@ -141,58 +119,34 @@ export async function falQueueRequest(
     action: 'submit',
     modelId,
     input,
-  }) as unknown as FalQueueResponse;
-
-  // If fal.ai returned the result directly (sync mode), use it immediately
-  if (queueData.images && queueData.images.length > 0) {
-    console.log('[fal] Got synchronous result (no queue)');
-    onProgress?.('Complete!', 100);
-    return queueData as unknown as FalResult;
-  }
+  }) as FalQueueResponse;
 
   const requestId = queueData.request_id;
   if (!requestId) {
     throw new Error('No request_id returned from fal.ai queue');
   }
 
-  // Use fal.ai's own URLs (more reliable than constructing them)
-  const statusUrl = queueData.status_url;
-  const responseUrl = queueData.response_url;
-  console.log(`[fal] Queue request ${requestId}, status_url: ${statusUrl || 'none'}, response_url: ${responseUrl || 'none'}`);
-
   // Poll for result via proxy
   onProgress?.('Processing...', 15);
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
 
-    let statusData: FalStatusResponse;
-
-    if (statusUrl) {
-      // Use fal.ai's own status URL (preferred — avoids 405 errors)
-      statusData = await proxyFetch({
-        action: 'fetchUrl',
-        url: statusUrl,
-      }) as unknown as FalStatusResponse;
-    } else {
-      // Legacy fallback: construct URL from modelId + requestId
-      statusData = await proxyFetch({
-        action: 'status',
-        modelId,
-        requestId,
-      }) as unknown as FalStatusResponse;
-    }
+    const statusData = await proxyFetch({
+      action: 'status',
+      modelId,
+      requestId,
+    }) as FalStatusResponse;
 
     const progress = Math.min(90, 15 + (attempt / MAX_POLL_ATTEMPTS) * 75);
 
     switch (statusData.status) {
       case 'COMPLETED': {
         onProgress?.('Complete!', 100);
-        let result: Record<string, unknown>;
-        if (responseUrl) {
-          result = await proxyFetch({ action: 'fetchUrl', url: responseUrl });
-        } else {
-          result = await proxyFetch({ action: 'result', modelId, requestId });
-        }
+        const result = await proxyFetch({
+          action: 'result',
+          modelId,
+          requestId,
+        });
         return result as unknown as FalResult;
       }
       case 'IN_QUEUE':
@@ -229,16 +183,17 @@ export async function falSyncRequest(
  */
 export async function checkFalStatus(): Promise<{ available: boolean; error?: string }> {
   try {
-    // Ping the proxy — returns quickly, confirms API key is configured
-    await proxyFetch({ action: 'ping' });
+    // Quick check — proxy will return error if FAL_API_KEY is missing
+    await proxyFetch({ action: 'status', modelId: 'test', requestId: 'test' });
     return { available: true };
   } catch (error) {
+    // A 400/404 from fal.ai actually means the proxy works (key is configured)
+    // Only a 500 with "FAL_API_KEY not configured" means it's broken
     const msg = error instanceof Error ? error.message : '';
     if (msg.includes('FAL_API_KEY not configured')) {
       return { available: false, error: msg };
     }
-    // If proxy is unreachable or returns unknown action, still try pipeline
-    // (old proxy versions without 'ping' will return 400, which is fine)
+    // Any other error means the proxy is reachable and key is set
     return { available: true };
   }
 }

@@ -18,7 +18,7 @@ import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/house
 import { generateDayToNightBase64 } from "./icLightV2Service";
 import { batchInpaintFixtures } from "./fluxFillService";
 import { checkFalStatus } from "./falService";
-import { preDarkenImage, drawFixtureMarkers, renderFixtureGlows } from "./canvasNightService";
+import { preDarkenImage, drawFixtureMarkers } from "./canvasNightService";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -2729,21 +2729,8 @@ export const generateNightSceneEnhanced = async (
           return `data:image/jpeg;base64,${nightBaseRaw}`;
         }
       } catch (multiModelError) {
-        console.error('[Multi-Model] Pipeline failed:', multiModelError);
-
-        // Manual mode: use canvas glows (preserves house 100%) instead of Gemini
-        if (manualSpatialMap && manualSpatialMap.placements.length > 0) {
-          try {
-            console.log('[Multi-Model] Falling back to canvas glow rendering (preserves original house)...');
-            const darkened = await preDarkenImage(imageBase64, imageMimeType);
-            const withGlows = await renderFixtureGlows(darkened, manualSpatialMap);
-            console.log('[Multi-Model] Canvas glow fallback complete.');
-            return `data:image/jpeg;base64,${withGlows}`;
-          } catch (canvasError) {
-            console.error('[Multi-Model] Canvas glow fallback also failed:', canvasError);
-          }
-        }
-        // Non-manual mode or canvas failed: fall through to Gemini pipeline
+        console.error('[Multi-Model] Pipeline failed, falling back to Gemini:', multiModelError);
+        // Fall through to Gemini pipeline below
       }
     }
   }

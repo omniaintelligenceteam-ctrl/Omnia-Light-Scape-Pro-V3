@@ -230,14 +230,6 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     intensity: 0.70,
     pool: true,
   },
-  gutter: {
-    color: [255, 220, 150],   // warm white (same as uplight)
-    radiusX: 0.05,
-    radiusY: 0.15,            // vertical cone pointing down from gutter
-    offsetY: 0.08,            // glow below the mount point
-    intensity: 0.80,
-    pool: false,
-  },
 };
 
 const DEFAULT_GLOW: GlowConfig = {
