@@ -137,10 +137,9 @@ function drawFixtureMask(
 
   // Convert percentage position to pixels
   const centerX = (placement.horizontalPosition / 100) * imageWidth;
-  // Vertical position: use a default based on fixture type if not in spatial map
-  // Uplights are typically at 70-80% height (near ground), path lights at 85-90%
   const verticalPercent = getVerticalPosition(placement);
   const centerY = (verticalPercent / 100) * imageHeight;
+  console.log(`[Mask] ${placement.fixtureType} mask at (${centerX.toFixed(0)}, ${centerY.toFixed(0)})px = (${placement.horizontalPosition.toFixed(1)}%, ${verticalPercent.toFixed(1)}%) on ${imageWidth}x${imageHeight}`);
 
   // Calculate mask dimensions with padding
   const maskWidth = config.widthRatio * imageWidth * config.padding;
@@ -175,10 +174,16 @@ function drawFixtureMask(
 }
 
 /**
- * Estimate vertical position for a fixture based on its type and anchor.
- * Uses sensible defaults when spatial map doesn't include explicit vertical positions.
+ * Get vertical position for a fixture.
+ * Uses the explicit verticalPosition from the placement when available (manual mode),
+ * otherwise estimates based on anchor text and fixture type defaults.
  */
 function getVerticalPosition(placement: SpatialFixturePlacement): number {
+  // If verticalPosition is explicitly set (manual placement), use it directly
+  if (placement.verticalPosition !== undefined && placement.verticalPosition > 0) {
+    return placement.verticalPosition;
+  }
+
   const anchor = (placement.anchor || '').toLowerCase();
 
   // Check for explicit vertical hints in the anchor description

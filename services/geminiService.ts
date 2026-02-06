@@ -18,7 +18,7 @@ import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/house
 import { generateDayToNightBase64 } from "./icLightV2Service";
 import { batchInpaintFixtures } from "./fluxFillService";
 import { checkFalStatus } from "./falService";
-import { preDarkenImage, renderFixtureGlows } from "./canvasNightService";
+import { preDarkenImage } from "./canvasNightService";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -2658,14 +2658,35 @@ export const generateNightSceneEnhanced = async (
         const nightBaseRaw = preDarkened;
         console.log('[Multi-Model] Using canvas-darkened image as nighttime base (IC-Light V2 skipped).');
 
-        // Stage 4b: Render fixture glows with canvas (instant, no API calls)
+        // Stage 4b: Place fixtures with FLUX Fill (via Vercel proxy)
         if (spatialMap && spatialMap.placements.length > 0) {
           onStageUpdate?.('placing');
-          console.log(`[Multi-Model] Rendering ${spatialMap.placements.length} fixture glows with canvas...`);
+          console.log(`[Multi-Model] Stage 4b: Placing ${spatialMap.placements.length} fixtures with FLUX Fill...`);
+          for (const p of spatialMap.placements) {
+            console.log(`  [Fixture] ${p.fixtureType}/${p.subOption} at (${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%) — ${p.anchor}`);
+          }
 
-          const withGlows = await renderFixtureGlows(nightBaseRaw, spatialMap, imageMimeType);
-          console.log('[Multi-Model] Fixture glow rendering complete.');
-          return `data:image/jpeg;base64,${withGlows}`;
+          const batchResult = await batchInpaintFixtures(
+            nightBaseRaw,
+            spatialMap,
+            imageWidth,
+            imageHeight,
+            undefined,
+            (stage, groupIdx, totalGroups) => {
+              onStageUpdate?.(`placing_${groupIdx + 1}_of_${totalGroups}`);
+              console.log(`[Multi-Model] FLUX Fill: ${stage}`);
+            }
+          );
+
+          if (batchResult.success && batchResult.finalImageBase64 && batchResult.groupsProcessed > 0) {
+            console.log(`[Multi-Model] FLUX Fill complete. Groups: ${batchResult.groupsProcessed} ok, ${batchResult.groupsFailed} failed`);
+            return `data:image/jpeg;base64,${batchResult.finalImageBase64}`;
+          } else {
+            // FLUX Fill failed — throw so we fall through to Gemini pipeline
+            const reason = batchResult.error || `${batchResult.groupsFailed} groups failed`;
+            console.error('[Multi-Model] FLUX Fill failed:', reason);
+            throw new Error(`FLUX Fill failed: ${reason}`);
+          }
         } else {
           console.warn('[Multi-Model] No spatial map available. Returning nighttime base.');
           return `data:image/jpeg;base64,${nightBaseRaw}`;
