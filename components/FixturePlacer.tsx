@@ -73,10 +73,32 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
   const [showSettings, setShowSettings] = useState(false);
 
   // Selected fixture helper
-  const selectedFixture = useMemo(() => 
+  const selectedFixture = useMemo(() =>
     fixtures.find(f => f.id === selectedId),
     [fixtures, selectedId]
   );
+
+  // Compute actual image bounds within container (accounting for object-contain letterboxing)
+  const imageBounds = useMemo(() => {
+    if (!imageRef.current || containerSize.width === 0 || containerSize.height === 0) {
+      return { offsetX: 0, offsetY: 0, width: containerSize.width || 1, height: containerSize.height || 1 };
+    }
+    const img = imageRef.current;
+    const containerAspect = containerSize.width / containerSize.height;
+    const imageAspect = img.naturalWidth / img.naturalHeight;
+
+    if (containerAspect > imageAspect) {
+      // Container wider than image: horizontal letterboxing
+      const renderedHeight = containerSize.height;
+      const renderedWidth = containerSize.height * imageAspect;
+      return { offsetX: (containerSize.width - renderedWidth) / 2, offsetY: 0, width: renderedWidth, height: renderedHeight };
+    } else {
+      // Container taller than image: vertical letterboxing
+      const renderedWidth = containerSize.width;
+      const renderedHeight = containerSize.width / imageAspect;
+      return { offsetX: 0, offsetY: (containerSize.height - renderedHeight) / 2, width: renderedWidth, height: renderedHeight };
+    }
+  }, [containerSize, imageLoaded]);
 
   // Load image and set up canvas
   useEffect(() => {
@@ -217,8 +239,14 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
     if (readOnly || isDragging) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    let x = ((e.clientX - rect.left) / rect.width) * 100;
-    let y = ((e.clientY - rect.top) / rect.height) * 100;
+    // Convert container click to image-relative coordinates (accounting for object-contain letterboxing)
+    let x = ((e.clientX - rect.left - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((e.clientY - rect.top - imageBounds.offsetY) / imageBounds.height) * 100;
+
+    // Ignore clicks outside the actual image area
+    if (x < -2 || x > 102 || y < -2 || y > 102) return;
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
 
     // Snap to grid if enabled
     if (snapToGrid) {
@@ -226,10 +254,10 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
       y = Math.round(y / gridSize) * gridSize;
     }
 
-    // Check if clicking on existing fixture
+    // Check if clicking on existing fixture (using image-relative coords → container pixels)
     const clickedFixture = fixtures.find(f => {
-      const fx = (f.x / 100) * rect.width;
-      const fy = (f.y / 100) * rect.height;
+      const fx = imageBounds.offsetX + (f.x / 100) * imageBounds.width;
+      const fy = imageBounds.offsetY + (f.y / 100) * imageBounds.height;
       const distance = Math.sqrt(
         Math.pow(e.clientX - rect.left - fx, 2) +
         Math.pow(e.clientY - rect.top - fy, 2)
@@ -247,7 +275,7 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
       setSelectedId(newFixture.id);
       triggerHaptic('medium');
     }
-  }, [fixtures, activeType, readOnly, isDragging, snapToGrid, gridSize]);
+  }, [fixtures, activeType, readOnly, isDragging, snapToGrid, gridSize, imageBounds]);
 
   /**
    * Handle fixture drag start
@@ -264,8 +292,8 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
 
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
-      const fx = (fixture.x / 100) * rect.width;
-      const fy = (fixture.y / 100) * rect.height;
+      const fx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+      const fy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
       setDragOffset({
         x: e.clientX - rect.left - fx,
         y: e.clientY - rect.top - fy
@@ -273,7 +301,7 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
     }
 
     triggerHaptic('light');
-  }, [fixtures, readOnly]);
+  }, [fixtures, readOnly, imageBounds]);
 
   /**
    * Handle fixture drag move
@@ -284,8 +312,8 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    let x = ((e.clientX - rect.left - dragOffset.x) / rect.width) * 100;
-    let y = ((e.clientY - rect.top - dragOffset.y) / rect.height) * 100;
+    let x = ((e.clientX - rect.left - dragOffset.x - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((e.clientY - rect.top - dragOffset.y - imageBounds.offsetY) / imageBounds.height) * 100;
 
     // Clamp to bounds
     x = Math.max(0, Math.min(100, x));
@@ -300,7 +328,7 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
     setFixtures(prev => prev.map(f =>
       f.id === selectedId ? { ...f, x, y } : f
     ));
-  }, [isDragging, selectedId, dragOffset, readOnly, snapToGrid, gridSize]);
+  }, [isDragging, selectedId, dragOffset, readOnly, snapToGrid, gridSize, imageBounds]);
 
   /**
    * Handle fixture drag end
@@ -311,6 +339,35 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
       triggerHaptic('light');
     }
   }, [isDragging]);
+
+  /**
+   * Handle right-click to delete nearest fixture
+   */
+  const handleRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (readOnly) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    // Find nearest fixture within 30px
+    let nearest: { id: string; dist: number } | null = null;
+    for (const f of fixtures) {
+      const fx = imageBounds.offsetX + (f.x / 100) * imageBounds.width;
+      const fy = imageBounds.offsetY + (f.y / 100) * imageBounds.height;
+      const dist = Math.sqrt(Math.pow(clickX - fx, 2) + Math.pow(clickY - fy, 2));
+      if (dist < 30 && (!nearest || dist < nearest.dist)) {
+        nearest = { id: f.id, dist };
+      }
+    }
+
+    if (nearest) {
+      setFixtures(prev => prev.filter(f => f.id !== nearest!.id));
+      if (selectedId === nearest.id) setSelectedId(null);
+      triggerHaptic('medium');
+    }
+  }, [fixtures, readOnly, imageBounds, selectedId]);
 
   /**
    * Delete selected fixture
@@ -569,6 +626,7 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
         ref={containerRef}
         className="relative flex-1 cursor-crosshair overflow-hidden"
         onClick={handleCanvasClick}
+        onContextMenu={handleRightClick}
         onMouseMove={handleDragMove}
         onMouseUp={handleDragEnd}
         onMouseLeave={handleDragEnd}
@@ -615,8 +673,8 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
               key={fixture.id}
               className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-${fixture.locked ? 'not-allowed' : 'move'}`}
               style={{
-                left: `${fixture.x}%`,
-                top: `${fixture.y}%`,
+                left: imageBounds.offsetX + (fixture.x / 100) * imageBounds.width,
+                top: imageBounds.offsetY + (fixture.y / 100) * imageBounds.height,
                 zIndex: isSelected ? 100 : 10
               }}
               initial={{ scale: 0 }}

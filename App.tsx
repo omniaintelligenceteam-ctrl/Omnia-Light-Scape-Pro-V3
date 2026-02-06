@@ -1741,7 +1741,7 @@ const App: React.FC = () => {
     }
 
     // Validation
-    if (selectedFixtures.length === 0 && !prompt) {
+    if (selectedFixtures.length === 0 && !prompt && !(placementMode === 'manual' && manualFixtures.length > 0)) {
         setIsLoading(false);
         setError("Please select at least one lighting type or enter custom instructions.");
         return;
