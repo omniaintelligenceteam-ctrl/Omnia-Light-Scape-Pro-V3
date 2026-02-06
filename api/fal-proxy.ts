@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const FAL_QUEUE_URL = 'https://queue.fal.run';
+const PROXY_VERSION = '2026-02-06-v3';
 
 /**
  * Vercel serverless proxy for fal.ai API calls.
@@ -8,6 +9,7 @@ const FAL_QUEUE_URL = 'https://queue.fal.run';
  * API key stays server-side (process.env.FAL_API_KEY).
  *
  * Actions:
+ *   ping      - Health check (returns version, confirms API key is set)
  *   submit    - POST to fal.ai queue (send model + input)
  *   status    - GET request status (poll) — legacy, use fetchUrl instead
  *   result    - GET completed result — legacy, use fetchUrl instead
@@ -45,6 +47,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     switch (action) {
+      case 'ping': {
+        return res.status(200).json({ ok: true, _proxyVersion: PROXY_VERSION });
+      }
+
       case 'submit': {
         const response = await fetch(`${FAL_QUEUE_URL}/${modelId}`, {
           method: 'POST',

@@ -110,6 +110,10 @@ async function proxyFetch(body: Record<string, unknown>): Promise<Record<string,
 
   const data = await response.json();
 
+  if (data._proxyVersion) {
+    console.log(`[fal] Proxy version: ${data._proxyVersion}`);
+  }
+
   if (!response.ok) {
     throw new Error(data.error || `Proxy error (${response.status})`);
   }
@@ -225,17 +229,16 @@ export async function falSyncRequest(
  */
 export async function checkFalStatus(): Promise<{ available: boolean; error?: string }> {
   try {
-    // Quick check — proxy will return error if FAL_API_KEY is missing
-    await proxyFetch({ action: 'status', modelId: 'test', requestId: 'test' });
+    // Ping the proxy — returns quickly, confirms API key is configured
+    await proxyFetch({ action: 'ping' });
     return { available: true };
   } catch (error) {
-    // A 400/404 from fal.ai actually means the proxy works (key is configured)
-    // Only a 500 with "FAL_API_KEY not configured" means it's broken
     const msg = error instanceof Error ? error.message : '';
     if (msg.includes('FAL_API_KEY not configured')) {
       return { available: false, error: msg };
     }
-    // Any other error means the proxy is reachable and key is set
+    // If proxy is unreachable or returns unknown action, still try pipeline
+    // (old proxy versions without 'ping' will return 400, which is fine)
     return { available: true };
   }
 }
