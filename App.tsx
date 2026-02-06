@@ -1322,13 +1322,14 @@ const App: React.FC = () => {
     uplight: '#FF0000', downlight: '#FF6600', path_light: '#00FF00',
     well_light: '#FFFF00', step_light: '#FF00FF', gutter_uplight: '#00CCFF',
     spot: '#FF0000', wall_wash: '#FF0000', bollard: '#00FF00',
+    coredrill: '#FFA500',
   };
 
   // Pipeline ID → hex color (for cursor when a button is selected)
   const PIPELINE_MARKER_COLOR: Record<string, string> = {
     up: '#FF0000', soffit: '#FF6600', path: '#00FF00',
     well: '#FFFF00', hardscape: '#FF00FF', gutter: '#00CCFF',
-    coredrill: '#FFFF00', holiday: '#FF0000',
+    coredrill: '#FFA500', holiday: '#FF0000',
   };
 
   function getManualCursor(hexColor: string): string {

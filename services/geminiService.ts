@@ -2641,6 +2641,18 @@ function buildEnhancedPrompt(
         prompt += `- Grazes window frames, columns, or wall surfaces depending on position\n\n`;
       }
 
+      if (presentTypes.has('coredrill')) {
+        prompt += `### "COREDRILL" MARKERS — Flush In-Ground Core Drill Lights\n`;
+        prompt += `- FIXTURE: Flush-mounted well light recessed into CONCRETE or PAVERS, brass/stainless housing, tempered glass lens, vehicle-rated\n`;
+        prompt += `- MOUNTING: Core-drilled into hardscape (concrete driveway, paver walkway), completely FLUSH with grade, ZERO protrusion above surface\n`;
+        prompt += `- BEAM DIRECTION: Aims UPWARD to graze the wall/pier/column surface directly above the fixture\n`;
+        prompt += `- TYPICAL USE: Garage door piers (flanking garage doors), concrete walkways, driveways\n`;
+        prompt += `- The light washes UP the vertical wall/pier surface above it, reaching the roofline\n`;
+        prompt += `- Distance from wall: 4-6 inches for proper grazing angle\n`;
+        prompt += `- THIS IS NOT A TREE UPLIGHT — these are embedded in CONCRETE near walls/piers, NOT in landscape beds\n`;
+        prompt += `- THIS IS NOT A PROTRUDING UPLIGHT — there is NO brass cylinder sticking up. The fixture is INVISIBLE, flush with the concrete surface\n\n`;
+      }
+
       // Critical confusion prevention
       prompt += `## CRITICAL CONFUSION PREVENTION\n`;
       if (presentTypes.has('gutter')) {
@@ -2649,6 +2661,17 @@ function buildEnhancedPrompt(
         prompt += `- SOFFIT DOWNLIGHT: Recessed in the overhang ceiling → beam shoots DOWNWARD at ground\n`;
         prompt += `- These are OPPOSITE directions. If a marker says "GUTTER", the light MUST go UP.\n`;
         prompt += `- If you render a downward-facing light for a "GUTTER" marker, you have made an error — fix it.\n`;
+      }
+      if (presentTypes.has('coredrill') && presentTypes.has('up')) {
+        prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
+        prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
+        prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
+        prompt += `- If a marker says "COREDRILL", there must be NO visible fixture — only the light beam on the wall above.\n`;
+      }
+      if (presentTypes.has('coredrill') && presentTypes.has('well')) {
+        prompt += `### COREDRILL ≠ WELL (Different locations)\n`;
+        prompt += `- COREDRILL: Flush in CONCRETE/PAVERS near walls and garage piers\n`;
+        prompt += `- WELL: Flush in LANDSCAPE BEDS near trees\n`;
       }
       if (presentTypes.has('up')) {
         prompt += `- "UP" fixtures are at GROUND LEVEL aiming upward — NOT sconces, NOT wall-mounted, NOT high-mounted\n`;
@@ -2687,7 +2710,8 @@ function buildEnhancedPrompt(
         path: 'brass path light bollard',
         well: 'in-ground well light (beam UP)',
         hardscape: 'under-tread step light',
-        gutter: 'gutter-mounted uplight (beam UP from gutter)'
+        gutter: 'gutter-mounted uplight (beam UP from gutter)',
+        coredrill: 'flush in-ground core drill light (beam UP from concrete)'
       };
       analysis.spatialMap.placements.forEach((p, i) => {
         const label = labelMap[p.fixtureType] || 'light';

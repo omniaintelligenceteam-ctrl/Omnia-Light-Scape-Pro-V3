@@ -85,6 +85,7 @@ const MARKER_COLORS: Record<string, string> = {
   well:      '#FFFF00', // yellow
   hardscape: '#FF00FF', // magenta
   gutter:    '#00CCFF', // cyan
+  coredrill: '#FFA500', // amber-orange
 };
 const DEFAULT_MARKER_COLOR = '#FF0000';
 
@@ -96,6 +97,7 @@ const MARKER_LABELS: Record<string, string> = {
   well:      'WELL',
   hardscape: 'STEP',
   gutter:    'GUTTER',
+  coredrill: 'COREDRILL',
 };
 
 /**

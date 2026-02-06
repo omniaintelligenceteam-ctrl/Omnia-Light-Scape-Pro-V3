@@ -14,7 +14,8 @@ export type FixtureCategory =
   | 'well_light'     // In-ground fixtures
   | 'bollard'        // Pathway bollards
   | 'step_light'     // Stair/step lighting
-  | 'gutter_uplight'; // Gutter-mounted uplight (inside gutter channel)
+  | 'gutter_uplight' // Gutter-mounted uplight (inside gutter channel)
+  | 'coredrill';     // Flush in-ground core drill lights (concrete/pavers)
 
 /**
  * Individual light fixture with position and properties
@@ -278,6 +279,25 @@ export const FIXTURE_PRESETS: FixturePreset[] = [
       blurRadius: 25,
       coreIntensity: 0.85,
       falloffExponent: 1.5,
+      direction: 'up'
+    }
+  },
+  {
+    type: 'coredrill',
+    name: 'Core Drill Light',
+    description: 'Flush in-ground lights in concrete/pavers',
+    icon: '⊙',
+    defaultIntensity: 0.85,
+    defaultColorTemp: 3000,
+    defaultBeamAngle: 25,
+    glowConfig: {
+      baseHeight: 0.18,
+      baseWidth: 0.05,
+      primaryColor: [255, 225, 160],
+      layers: 4,
+      blurRadius: 25,
+      coreIntensity: 0.9,
+      falloffExponent: 1.4,
       direction: 'up'
     }
   }

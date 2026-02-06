@@ -28,6 +28,7 @@ const CATEGORY_TO_PIPELINE_TYPE: Record<FixtureCategory, string> = {
   bollard:        'path',
   step_light:     'hardscape',
   gutter_uplight: 'gutter',
+  coredrill:      'coredrill',
 };
 
 /**
@@ -37,7 +38,7 @@ const CATEGORY_TO_PIPELINE_TYPE: Record<FixtureCategory, string> = {
 export const PIPELINE_TYPE_TO_CATEGORY: Record<string, FixtureCategory> = {
   'up':        'uplight',
   'path':      'path_light',
-  'coredrill': 'well_light',
+  'coredrill': 'coredrill',
   'gutter':    'gutter_uplight',
   'hardscape': 'step_light',
   'well':      'well_light',
@@ -70,6 +71,8 @@ function inferSubOption(fixture: LightFixture): string {
       return 'steps';
     case 'well':
       return 'trees';
+    case 'coredrill':
+      return 'garage_sides';
     default:
       return 'general';
   }
