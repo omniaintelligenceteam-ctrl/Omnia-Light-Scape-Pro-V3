@@ -111,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       {/* Top gradient line */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-      <div className="flex flex-col items-center px-2 md:px-6 lg:px-8 py-1.5 md:py-4 lg:py-5">
+      <div className="flex flex-col items-center px-2 md:px-6 lg:px-8 py-1.5 md:py-2 lg:py-2.5">
         {/* Navigation Container */}
         <div className="flex items-center justify-center gap-1.5 md:gap-4 lg:gap-5 w-full max-w-xl lg:max-w-2xl">
           {menuItems.map((item) => {
@@ -122,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               <motion.button
                 key={item.id}
                 onClick={() => handleTabChange(item.id)}
-                className="relative flex-1 flex flex-col items-center justify-center gap-1 md:gap-2 lg:gap-2.5 py-2.5 md:py-5 lg:py-6 min-h-[50px] md:min-h-[64px] rounded-xl md:rounded-2xl lg:rounded-3xl transition-all duration-300 touch-manipulation select-none"
+                className="relative flex-1 flex flex-col items-center justify-center gap-1 md:gap-1 lg:gap-1.5 py-2.5 md:py-2.5 lg:py-3 min-h-[50px] md:min-h-[36px] rounded-xl md:rounded-xl lg:rounded-2xl transition-all duration-300 touch-manipulation select-none"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.95, y: 1 }}
                 style={{
@@ -134,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 <AnimatePresence>
                   {isActive && (
                     <motion.div
-                      className="absolute -inset-4 md:-inset-5 lg:-inset-6 rounded-3xl md:rounded-[2rem] lg:rounded-[2.5rem] pointer-events-none"
+                      className="absolute -inset-4 md:-inset-3 lg:-inset-3 rounded-3xl md:rounded-2xl lg:rounded-2xl pointer-events-none"
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
                 {/* 3D Button base - bottom layer (shadow/depth) */}
                 <div
-                  className="absolute inset-0 rounded-xl md:rounded-2xl lg:rounded-3xl"
+                  className="absolute inset-0 rounded-xl md:rounded-xl lg:rounded-xl"
                   style={{
                     background: isActive
                       ? 'linear-gradient(to bottom, #8a5a1a 0%, #6d4515 100%)'
@@ -163,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
                 {/* 3D Button main surface */}
                 <motion.div
-                  className="absolute inset-0 rounded-xl md:rounded-2xl lg:rounded-3xl overflow-hidden"
+                  className="absolute inset-0 rounded-xl md:rounded-xl lg:rounded-xl overflow-hidden"
                   initial={false}
                   animate={{
                     y: isActive ? 1 : 0,
@@ -183,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 >
                   {/* Top highlight for 3D effect */}
                   <div
-                    className="absolute inset-x-0 top-0 h-1/3 rounded-t-xl md:rounded-t-2xl lg:rounded-t-3xl"
+                    className="absolute inset-x-0 top-0 h-1/3 rounded-t-xl md:rounded-t-xl lg:rounded-t-xl"
                     style={{
                       background: isActive
                         ? 'linear-gradient(to bottom, rgba(255,255,255,0.25) 0%, transparent 100%)'
@@ -193,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
                   {/* Bottom shadow for 3D depth */}
                   <div
-                    className="absolute inset-x-0 bottom-0 h-1/4 rounded-b-xl md:rounded-b-2xl lg:rounded-b-3xl"
+                    className="absolute inset-x-0 bottom-0 h-1/4 rounded-b-xl md:rounded-b-xl lg:rounded-b-xl"
                     style={{
                       background: 'linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%)',
                     }}
@@ -229,7 +229,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                             transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 1.5 }}
                           >
                             <FolderOpen
-                              className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
+                              className="w-5 h-5 md:w-5 md:h-5 lg:w-5 lg:h-5 text-[#1a1a1a] drop-shadow-sm"
                               strokeWidth={2.5}
                             />
                           </motion.div>
@@ -238,7 +238,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     </motion.div>
                   ) : item.id === 'projects' ? (
                     <FolderClosed
-                      className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
+                      className="w-5 h-5 md:w-5 md:h-5 lg:w-5 lg:h-5 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Schedule - Calendar check animation */
@@ -250,13 +250,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 1 }}
                     >
                       <CalendarCheck
-                        className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
+                        className="w-5 h-5 md:w-5 md:h-5 lg:w-5 lg:h-5 text-[#1a1a1a] drop-shadow-sm"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : item.id === 'schedule' ? (
                     <Calendar
-                      className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-400"
+                      className="w-5 h-5 md:w-5 md:h-5 lg:w-5 lg:h-5 text-gray-400"
                       strokeWidth={2}
                     />
                   ) : /* Settings - Gear rotation animation */
@@ -268,13 +268,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                       transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
                       <Settings
-                        className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#1a1a1a] drop-shadow-sm"
+                        className="w-5 h-5 md:w-5 md:h-5 lg:w-5 lg:h-5 text-[#1a1a1a] drop-shadow-sm"
                         strokeWidth={2.5}
                       />
                     </motion.div>
                   ) : (
                     <Icon
-                      className={`w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-all duration-300 ${
+                      className={`w-5 h-5 md:w-5 md:h-5 lg:w-5 lg:h-5 transition-all duration-300 ${
                         isActive
                           ? 'text-[#1a1a1a] drop-shadow-sm'
                           : 'text-gray-400'
@@ -330,7 +330,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
                 {/* Label */}
                 <motion.span
-                  className={`relative z-10 text-[9px] md:text-xs lg:text-sm font-semibold uppercase tracking-wide md:tracking-wider transition-all duration-300 whitespace-nowrap ${
+                  className={`relative z-10 text-[9px] md:text-[9px] lg:text-[10px] font-semibold uppercase tracking-wide md:tracking-wider transition-all duration-300 whitespace-nowrap ${
                     isActive
                       ? 'text-[#1a1a1a] font-bold drop-shadow-sm'
                       : 'text-gray-400'

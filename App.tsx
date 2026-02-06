@@ -383,6 +383,8 @@ const App: React.FC = () => {
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [manualFixtures, setManualFixtures] = useState<LightFixture[]>([]);
   const [activeManualFixtureType, setActiveManualFixtureType] = useState<string | null>(null);
+  const draggingFixtureRef = useRef<string | null>(null);
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Favorite Presets State
   interface FixturePreset {
@@ -1306,57 +1308,13 @@ const App: React.FC = () => {
   };
 
   // ═══ Manual Placement Handlers ═══
-  const handleManualPlacement = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!activeManualFixtureType) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const containerWidth = rect.width;
-    const containerHeight = rect.height;
-
-    // Find the image element to get natural dimensions for letterboxing calc
-    const imgElement = e.currentTarget.parentElement?.querySelector('img');
-    if (!imgElement) return;
-
-    const imgNaturalAspect = imgElement.naturalWidth / imgElement.naturalHeight;
-    const containerAspect = containerWidth / containerHeight;
-
-    let offsetX = 0, offsetY = 0, renderedWidth = containerWidth, renderedHeight = containerHeight;
-
-    if (containerAspect > imgNaturalAspect) {
-      renderedHeight = containerHeight;
-      renderedWidth = containerHeight * imgNaturalAspect;
-      offsetX = (containerWidth - renderedWidth) / 2;
-    } else {
-      renderedWidth = containerWidth;
-      renderedHeight = containerWidth / imgNaturalAspect;
-      offsetY = (containerHeight - renderedHeight) / 2;
-    }
-
-    let x = ((e.clientX - rect.left - offsetX) / renderedWidth) * 100;
-    let y = ((e.clientY - rect.top - offsetY) / renderedHeight) * 100;
-
-    // Ignore clicks outside image bounds
-    if (x < 0 || x > 100 || y < 0 || y > 100) return;
-    x = Math.max(0, Math.min(100, x));
-    y = Math.max(0, Math.min(100, y));
-
-    const fixtureCategory = PIPELINE_TYPE_TO_CATEGORY[activeManualFixtureType];
-    if (!fixtureCategory) return;
-
-    const newFixture = createFixture(x, y, fixtureCategory);
-    setManualFixtures(prev => [...prev, newFixture]);
-  }, [activeManualFixtureType]);
-
-  const handleManualRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (manualFixtures.length === 0) return;
-
+  const getImageRelativeCoords = useCallback((e: React.MouseEvent<HTMLDivElement>): { x: number; y: number } | null => {
     const rect = e.currentTarget.getBoundingClientRect();
     const containerWidth = rect.width;
     const containerHeight = rect.height;
 
     const imgElement = e.currentTarget.parentElement?.querySelector('img');
-    if (!imgElement) return;
+    if (!imgElement) return null;
 
     const imgNaturalAspect = imgElement.naturalWidth / imgElement.naturalHeight;
     const containerAspect = containerWidth / containerHeight;
@@ -1376,19 +1334,85 @@ const App: React.FC = () => {
     const x = ((e.clientX - rect.left - offsetX) / renderedWidth) * 100;
     const y = ((e.clientY - rect.top - offsetY) / renderedHeight) * 100;
 
-    // Find nearest fixture within 5% radius
+    if (x < 0 || x > 100 || y < 0 || y > 100) return null;
+    return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
+  }, []);
+
+  const findNearestFixture = useCallback((x: number, y: number, radius: number = 5) => {
     let nearest: { fixture: LightFixture; dist: number } | null = null;
     for (const f of manualFixtures) {
       const dist = Math.sqrt(Math.pow(x - f.x, 2) + Math.pow(y - f.y, 2));
-      if (dist < 5 && (!nearest || dist < nearest.dist)) {
+      if (dist < radius && (!nearest || dist < nearest.dist)) {
         nearest = { fixture: f, dist };
       }
     }
-
-    if (nearest) {
-      setManualFixtures(prev => prev.filter(f => f.id !== nearest!.fixture.id));
-    }
+    return nearest;
   }, [manualFixtures]);
+
+  const handleManualMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // Left click only
+    const coords = getImageRelativeCoords(e);
+    if (!coords) return;
+
+    mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+
+    // Check if clicking near an existing fixture → start drag
+    const nearest = findNearestFixture(coords.x, coords.y);
+    if (nearest) {
+      draggingFixtureRef.current = nearest.fixture.id;
+      e.preventDefault();
+      return;
+    }
+  }, [getImageRelativeCoords, findNearestFixture]);
+
+  const handleManualMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!draggingFixtureRef.current) return;
+    const coords = getImageRelativeCoords(e);
+    if (!coords) return;
+
+    setManualFixtures(prev => prev.map(f =>
+      f.id === draggingFixtureRef.current ? { ...f, x: coords.x, y: coords.y } : f
+    ));
+  }, [getImageRelativeCoords]);
+
+  const handleManualMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const wasDragging = draggingFixtureRef.current !== null;
+    draggingFixtureRef.current = null;
+
+    // If we were dragging, don't place a new fixture
+    if (wasDragging) return;
+
+    // Quick click → place new fixture
+    if (!activeManualFixtureType) return;
+    const coords = getImageRelativeCoords(e);
+    if (!coords) return;
+
+    // Check mouse didn't move significantly (prevents accidental placement after drag attempts)
+    if (mouseDownPosRef.current) {
+      const dx = Math.abs(e.clientX - mouseDownPosRef.current.x);
+      const dy = Math.abs(e.clientY - mouseDownPosRef.current.y);
+      if (dx > 3 || dy > 3) return;
+    }
+
+    const fixtureCategory = PIPELINE_TYPE_TO_CATEGORY[activeManualFixtureType];
+    if (!fixtureCategory) return;
+
+    const newFixture = createFixture(coords.x, coords.y, fixtureCategory);
+    setManualFixtures(prev => [...prev, newFixture]);
+  }, [activeManualFixtureType, getImageRelativeCoords]);
+
+  const handleManualRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (manualFixtures.length === 0) return;
+
+    const coords = getImageRelativeCoords(e);
+    if (!coords) return;
+
+    const nearest = findNearestFixture(coords.x, coords.y);
+    if (nearest) {
+      setManualFixtures(prev => prev.filter(f => f.id !== nearest.fixture.id));
+    }
+  }, [manualFixtures, getImageRelativeCoords, findNearestFixture]);
 
   const togglePendingOption = (optId: string) => {
     setPendingOptions(prev => {
@@ -4737,8 +4761,10 @@ Notes: ${invoice.notes || 'N/A'}
                         {/* Manual placement click overlay */}
                         {placementMode === 'manual' && previewUrl && (
                           <div
-                            className={`absolute top-0 left-0 right-0 aspect-[16/10] md:aspect-[16/9] z-10 rounded-2xl overflow-hidden ${activeManualFixtureType ? 'cursor-crosshair' : ''}`}
-                            onClick={activeManualFixtureType ? handleManualPlacement : undefined}
+                            className={`absolute top-0 left-0 right-0 aspect-[16/10] md:aspect-[16/9] z-10 rounded-2xl overflow-hidden ${draggingFixtureRef.current ? 'cursor-grabbing' : activeManualFixtureType ? 'cursor-crosshair' : 'cursor-default'}`}
+                            onMouseDown={handleManualMouseDown}
+                            onMouseMove={handleManualMouseMove}
+                            onMouseUp={handleManualMouseUp}
                             onContextMenu={handleManualRightClick}
                           >
                             {/* Placed fixture markers */}
@@ -4750,7 +4776,7 @@ Notes: ${invoice.notes || 'N/A'}
                               return (
                                 <div
                                   key={fixture.id}
-                                  className="absolute pointer-events-none"
+                                  className="absolute pointer-events-none cursor-grab"
                                   style={{
                                     left: `${fixture.x}%`,
                                     top: `${fixture.y}%`,
