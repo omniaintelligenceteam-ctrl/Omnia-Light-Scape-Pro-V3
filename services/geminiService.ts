@@ -2602,7 +2602,8 @@ export const generateNightSceneEnhanced = async (
   beamAngle: number,
   targetRatio: string,
   userPreferences?: UserPreferences | null,
-  onStageUpdate?: (stage: string) => void
+  onStageUpdate?: (stage: string) => void,
+  manualSpatialMap?: SpatialMap
 ): Promise<string> => {
 
   // ─── MULTI-MODEL PIPELINE (IC-Light V2 + FLUX Fill) ───────────────────────
@@ -2616,18 +2617,28 @@ export const generateNightSceneEnhanced = async (
       // Fall through to Gemini pipeline below
     } else {
       try {
-        // Stage 1: Analyze property (same as Gemini pipeline)
-        onStageUpdate?.('analyzing');
-        console.log('[Multi-Model] Stage 1: Analyzing property...');
-        const analysis = await analyzePropertyArchitecture(
-          imageBase64,
-          imageMimeType,
-          selectedFixtures,
-          fixtureSubOptions,
-          fixtureCounts
-        );
+        // Stage 1: Analyze property OR use manual spatial map
+        let spatialMap: SpatialMap | undefined;
 
-        console.log('[Multi-Model] Analysis complete. Spatial map:', analysis.spatialMap ? 'included' : 'not included');
+        if (manualSpatialMap) {
+          // Manual mode: skip AI analysis, use user-placed fixture positions directly
+          onStageUpdate?.('analyzing');
+          console.log('[Multi-Model] Using manual spatial map (skipping AI analysis):', manualSpatialMap.placements.length, 'fixtures');
+          spatialMap = manualSpatialMap;
+        } else {
+          // Auto mode: AI analyzes property and recommends positions
+          onStageUpdate?.('analyzing');
+          console.log('[Multi-Model] Stage 1: Analyzing property...');
+          const analysis = await analyzePropertyArchitecture(
+            imageBase64,
+            imageMimeType,
+            selectedFixtures,
+            fixtureSubOptions,
+            fixtureCounts
+          );
+          spatialMap = analysis.spatialMap;
+          console.log('[Multi-Model] Analysis complete. Spatial map:', spatialMap ? 'included' : 'not included');
+        }
 
         // Get original image dimensions (used for masks — these MUST match the base image)
         const originalImg = await loadImageFromBase64(`data:${imageMimeType};base64,${imageBase64}`);
@@ -2670,16 +2681,16 @@ export const generateNightSceneEnhanced = async (
         }
 
         // Stage 4b: Place fixtures with FLUX Fill (if spatial map available)
-        if (analysis.spatialMap && analysis.spatialMap.placements.length > 0) {
+        if (spatialMap && spatialMap.placements.length > 0) {
           onStageUpdate?.('placing');
           console.log('[Multi-Model] Stage 4b: Placing fixtures with FLUX Fill...');
 
           const batchResult = await batchInpaintFixtures(
             nightBaseRaw,
-            analysis.spatialMap,
+            spatialMap,
             imageWidth,
             imageHeight,
-            analysis.architecture?.facade_materials,
+            undefined, // facade_materials not available in manual mode
             (stage, groupIdx, totalGroups) => {
               onStageUpdate?.(`placing_${groupIdx + 1}_of_${totalGroups}`);
               console.log(`[Multi-Model] FLUX Fill: ${stage}`);

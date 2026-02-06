@@ -45,78 +45,78 @@ interface MaskShapeConfig {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const MASK_SHAPES: Record<string, MaskShapeConfig> = {
-  // Uplights: Tall vertical ellipse covering wall area above fixture
+  // Uplights: Tall vertical ellipse covering wall area above fixture + light spill
   up: {
-    widthRatio: 0.08,
+    widthRatio: 0.14,
+    heightRatio: 0.40,
+    shape: 'ellipse',
+    verticalOffsetRatio: -0.15, // Shifted up (light goes upward)
+    padding: 1.4,
+  },
+  // Path lights: Circle at ground level with light pool
+  path: {
+    widthRatio: 0.10,
+    heightRatio: 0.10,
+    shape: 'ellipse',
+    verticalOffsetRatio: 0,
+    padding: 1.5,
+  },
+  // Gutter lights: Horizontal strip along gutter line with spill
+  gutter: {
+    widthRatio: 0.10,
+    heightRatio: 0.14,
+    shape: 'ellipse',
+    verticalOffsetRatio: -0.03, // Slightly above fixture position
+    padding: 1.4,
+  },
+  // Soffit/downlights: Downward cone shape with light pool below
+  soffit: {
+    widthRatio: 0.12,
     heightRatio: 0.25,
     shape: 'ellipse',
-    verticalOffsetRatio: -0.12, // Shifted up (light goes upward)
-    padding: 1.2,
+    verticalOffsetRatio: 0.10, // Shifted down (light goes downward)
+    padding: 1.4,
   },
-  // Path lights: Small circle at ground level
-  path: {
-    widthRatio: 0.06,
-    heightRatio: 0.06,
-    shape: 'ellipse',
-    verticalOffsetRatio: 0,
-    padding: 1.3,
-  },
-  // Gutter lights: Thin horizontal strip along gutter line
-  gutter: {
-    widthRatio: 0.06,
+  // Hardscape lights: Circle with visible glow
+  hardscape: {
+    widthRatio: 0.08,
     heightRatio: 0.08,
     shape: 'ellipse',
-    verticalOffsetRatio: -0.02, // Slightly above fixture position
-    padding: 1.2,
-  },
-  // Soffit/downlights: Downward cone shape
-  soffit: {
-    widthRatio: 0.07,
-    heightRatio: 0.15,
-    shape: 'ellipse',
-    verticalOffsetRatio: 0.07, // Shifted down (light goes downward)
-    padding: 1.2,
-  },
-  // Hardscape lights: Small flush circle
-  hardscape: {
-    widthRatio: 0.05,
-    heightRatio: 0.05,
-    shape: 'ellipse',
     verticalOffsetRatio: 0,
-    padding: 1.3,
+    padding: 1.5,
   },
-  // Core drill lights: Small in-ground circle
+  // Core drill lights: In-ground circle with glow
   coredrill: {
-    widthRatio: 0.05,
-    heightRatio: 0.05,
+    widthRatio: 0.08,
+    heightRatio: 0.08,
     shape: 'ellipse',
     verticalOffsetRatio: 0,
-    padding: 1.3,
+    padding: 1.5,
   },
-  // Well lights: Medium circle with upward emphasis
+  // Well lights: Medium circle with strong upward emphasis
   well: {
-    widthRatio: 0.06,
-    heightRatio: 0.15,
+    widthRatio: 0.10,
+    heightRatio: 0.25,
     shape: 'ellipse',
-    verticalOffsetRatio: -0.06,
-    padding: 1.2,
+    verticalOffsetRatio: -0.10,
+    padding: 1.4,
   },
   // Holiday lights: Wide horizontal strip
   holiday: {
-    widthRatio: 0.15,
-    heightRatio: 0.04,
+    widthRatio: 0.20,
+    heightRatio: 0.06,
     shape: 'rect',
     verticalOffsetRatio: 0,
-    padding: 1.1,
+    padding: 1.3,
   },
 };
 
 const DEFAULT_MASK_SHAPE: MaskShapeConfig = {
-  widthRatio: 0.07,
-  heightRatio: 0.12,
+  widthRatio: 0.12,
+  heightRatio: 0.20,
   shape: 'ellipse',
-  verticalOffsetRatio: -0.05,
-  padding: 1.2,
+  verticalOffsetRatio: -0.08,
+  padding: 1.4,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

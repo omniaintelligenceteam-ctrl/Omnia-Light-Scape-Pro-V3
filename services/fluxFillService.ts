@@ -56,7 +56,7 @@ export interface BatchInpaintResult {
 const FLUX_FILL_DEFAULTS: FluxFillSettings = {
   seed: undefined,
   outputFormat: 'jpeg',
-  safetyTolerance: 2,
+  safetyTolerance: 5,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -143,7 +143,7 @@ function buildFixturePrompt(
 
   if (!template) {
     // Fallback generic prompt
-    return `professional landscape lighting fixture, warm 2700K glow, photorealistic night scene, realistic light pool on surface`;
+    return `BRIGHT GLOWING professional landscape lighting fixture, VISIBLE bright warm 2700K light source, strong luminous glow, BRIGHT light pool on surface, photorealistic night scene, high contrast bright light against dark background`;
   }
 
   // Append material context if available

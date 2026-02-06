@@ -46,12 +46,13 @@ export async function preDarkenImage(
         const data = imageData.data;
 
         for (let i = 0; i < data.length; i += 4) {
-          // Apply nighttime color shift:
-          // - Reduce all channels (darken by ~65-70%)
-          // - Blue channel stays relatively brighter (moonlit feel)
-          data[i]     = data[i]     * 0.12;  // R — heavy reduction
-          data[i + 1] = data[i + 1] * 0.14;  // G — heavy reduction
-          data[i + 2] = data[i + 2] * 0.28;  // B — less reduction (blue moonlight)
+          // Apply twilight/dusk color shift:
+          // - Darken by ~50-55% while keeping enough detail for FLUX Fill
+          // - Blue channel brighter (moonlit ambiance)
+          // - Values tuned so FLUX Fill can render visible bright fixtures
+          data[i]     = data[i]     * 0.22;  // R — significant reduction
+          data[i + 1] = data[i + 1] * 0.25;  // G — significant reduction
+          data[i + 2] = data[i + 2] * 0.40;  // B — moderate reduction (blue tint)
           // Alpha unchanged
         }
 

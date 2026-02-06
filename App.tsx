@@ -19,6 +19,9 @@ import { BillingSuccess } from './components/BillingSuccess';
 import { BillingCanceled } from './components/BillingCanceled';
 import { ClientPortal } from './components/ClientPortal';
 import { generateBOM } from './utils/bomCalculator';
+import { FixturePlacer } from './components/FixturePlacer';
+import type { LightFixture } from './types/fixtures';
+import { convertFixturesToSpatialMap, deriveSelections } from './utils/fixtureConverter';
 import { detectConflicts, ConflictResult, formatTimeSlot } from './utils/scheduleConflictDetection';
 import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
@@ -62,7 +65,7 @@ import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, validateCoordinatesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
 import { analyzeWithClaude } from './services/claudeService';
 // IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
-import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal } from 'lucide-react';
+import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal, Crosshair } from 'lucide-react';
 import { FIXTURE_TYPES, VISIBLE_FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
 import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
 
@@ -375,6 +378,9 @@ const App: React.FC = () => {
   const [fixtureCounts, setFixtureCounts] = useState<Record<string, number | null>>({});
   // Placement Notes State (user describes where they want fixtures)
   const [fixturePlacementNotes, setFixturePlacementNotes] = useState<Record<string, string>>({});
+  // Manual Placement Mode (click-to-place on image)
+  const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
+  const [manualFixtures, setManualFixtures] = useState<LightFixture[]>([]);
 
   // Favorite Presets State
   interface FixturePreset {
@@ -1776,23 +1782,32 @@ const App: React.FC = () => {
 
       let result: string;
 
+      // Derive fixture selections from manual placements if in manual mode
+      const isManualMode = placementMode === 'manual' && manualFixtures.length > 0;
+      const manualSpatialMap = isManualMode ? convertFixturesToSpatialMap(manualFixtures) : undefined;
+      const effectiveFixtures = isManualMode ? deriveSelections(manualFixtures).selectedFixtures : selectedFixtures;
+      const effectiveSubOptions = isManualMode ? deriveSelections(manualFixtures).fixtureSubOptions : fixtureSubOptions;
+      const effectiveCounts = isManualMode ? deriveSelections(manualFixtures).fixtureCounts : fixtureCounts;
+
       // === ENHANCED MODE: Gemini Pro 3 Only (Claude Quality, Lower Cost) ===
       if (generationMode === 'enhanced') {
         console.log('Using ENHANCED MODE (Gemini Pro 3 only - replaces Claude)...');
+        if (isManualMode) console.log('Manual placement mode: using', manualFixtures.length, 'manually placed fixtures');
         setGenerationStage('analyzing');
 
         result = await generateNightSceneEnhanced(
           base64,
           mimeType,
-          selectedFixtures,
-          fixtureSubOptions,
-          fixtureCounts,
+          effectiveFixtures,
+          effectiveSubOptions,
+          effectiveCounts,
           colorPrompt,
           lightIntensity,
           beamAngle,
           targetRatio,
           userPreferences,
-          (stage) => setGenerationStage(stage as typeof generationStage)
+          (stage) => setGenerationStage(stage as typeof generationStage),
+          manualSpatialMap
         );
       }
       // === HYBRID MODE: Claude Opus 4.5 + Nano Banana Pro (Best Quality) ===
@@ -4647,14 +4662,78 @@ Notes: ${invoice.notes || 'N/A'}
                                         </div>
                                         <div>
                                             <h3 className="text-sm font-semibold text-white tracking-tight">Select Fixtures</h3>
-                                            <p className="text-xs text-gray-500">Choose fixture types and quantities</p>
+                                            <p className="text-xs text-gray-500">
+                                                {placementMode === 'manual' ? 'Tap on the image to place fixtures' : 'Choose fixture types and quantities'}
+                                            </p>
                                         </div>
                                     </div>
                                     <span className="text-[10px] font-medium text-gray-500 bg-white/5 px-2.5 py-1 rounded-full">
-                                        {selectedFixtures.length} selected
+                                        {placementMode === 'manual' ? `${manualFixtures.length} placed` : `${selectedFixtures.length} selected`}
                                     </span>
                                 </div>
-                                {/* Presets Row */}
+
+                                {/* Placement Mode Toggle */}
+                                {file && (
+                                    <div className="flex items-center gap-1 bg-[#0d0d0d] rounded-xl border border-white/10 p-1">
+                                        <button
+                                            onClick={() => setPlacementMode('auto')}
+                                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                                                placementMode === 'auto'
+                                                    ? 'bg-[#F6B45A] text-black'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <Wand2 className="w-3.5 h-3.5" />
+                                            AI Auto-Place
+                                        </button>
+                                        <button
+                                            onClick={() => setPlacementMode('manual')}
+                                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                                                placementMode === 'manual'
+                                                    ? 'bg-[#F6B45A] text-black'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <Crosshair className="w-3.5 h-3.5" />
+                                            Manual Place
+                                        </button>
+                                    </div>
+                                )}
+                                {/* Manual Placement Mode: FixturePlacer */}
+                                {placementMode === 'manual' && previewUrl && (
+                                    <div className="flex flex-col gap-3">
+                                        <div className="rounded-xl overflow-hidden border border-white/10" style={{ maxHeight: '55vh' }}>
+                                            <FixturePlacer
+                                                imageUrl={previewUrl}
+                                                initialFixtures={manualFixtures}
+                                                onFixturesChange={setManualFixtures}
+                                                showPreview={true}
+                                            />
+                                        </div>
+                                        {manualFixtures.length > 0 && (
+                                            <div className="bg-[#0d0d0d] rounded-xl border border-white/10 p-3">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-semibold text-white">
+                                                        {manualFixtures.length} fixture{manualFixtures.length !== 1 ? 's' : ''} placed
+                                                    </span>
+                                                    <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                                                        {Object.entries(
+                                                            manualFixtures.reduce((acc, f) => {
+                                                                acc[f.type] = (acc[f.type] || 0) + 1;
+                                                                return acc;
+                                                            }, {} as Record<string, number>)
+                                                        ).map(([type, count]) => (
+                                                            <span key={type} className="bg-white/5 px-2 py-0.5 rounded-full">{count}x {type.replace('_', ' ')}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Auto Placement Mode: Presets */}
+                                {placementMode === 'auto' && (
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {fixturePresets.length > 0 && (
                                         <div className="flex items-center gap-1 flex-wrap">
@@ -4695,9 +4774,11 @@ Notes: ${invoice.notes || 'N/A'}
                                         </button>
                                     )}
                                 </div>
+                                )}
                             </div>
 
                             {/* Fixture Grid - Premium minimal buttons */}
+                            {placementMode === 'auto' && (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                                 {VISIBLE_FIXTURE_TYPES.map((ft) => {
                                     const isSelected = selectedFixtures.includes(ft.id);
@@ -4828,8 +4909,10 @@ Notes: ${invoice.notes || 'N/A'}
                                     );
                                 })}
                             </div>
+                            )}
 
                             {/* Fixture Summary - Shows configured quantities */}
+                            {placementMode === 'auto' && (
                             <AnimatePresence>
                                 {selectedFixtures.length > 0 && selectedFixtures.some(fId => (fixtureSubOptions[fId] || []).length > 0) && (
                                     <motion.div
@@ -4938,6 +5021,7 @@ Notes: ${invoice.notes || 'N/A'}
                                     </motion.div>
                                 )}
                             </AnimatePresence>
+                            )}
                         </div>
 
                         {/* Responsive container - Generate button above notes on mobile */}
@@ -5019,12 +5103,12 @@ Notes: ${invoice.notes || 'N/A'}
                                 setTimeout(() => setShowRipple(false), 600);
                                 handleGenerate();
                             }}
-                            disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
+                            disabled={!file || (placementMode === 'manual' ? manualFixtures.length === 0 : (selectedFixtures.length === 0 && !prompt)) || isLoading}
                             aria-label={isLoading ? 'Generating lighting design, please wait' : generationComplete ? 'Generation complete' : 'Generate lighting scene design'}
                             aria-busy={isLoading}
                             className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2 order-1 md:order-3"
-                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.02, y: -4 } : {}}
-                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.97 } : {}}
+                            whileHover={!(!file || (placementMode === 'manual' ? manualFixtures.length === 0 : (selectedFixtures.length === 0 && !prompt)) || isLoading) ? { scale: 1.02, y: -4 } : {}}
+                            whileTap={!(!file || (placementMode === 'manual' ? manualFixtures.length === 0 : (selectedFixtures.length === 0 && !prompt)) || isLoading) ? { scale: 0.97 } : {}}
                         >
                             {/* === IDLE STATE: Ambient Glow Pulse === */}
                             <motion.div
