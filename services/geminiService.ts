@@ -2543,23 +2543,42 @@ function buildEnhancedPrompt(
   });
 
   // Start building the comprehensive prompt
-  let prompt = SYSTEM_PROMPT.masterInstruction + '\n\n';
+  let prompt = '';
 
-  // Add fixture inventory
-  prompt += `## COMPLETE FIXTURE INVENTORY\n`;
-  prompt += `This image will contain EXACTLY these fixtures and NO OTHERS:\n`;
-  prompt += inventoryAllowlist || '- None selected\n';
-  if (totalFixtureCount > 0) {
-    prompt += `\nTOTAL FIXTURES IN IMAGE: ${totalFixtureCount}\n`;
+  if (isManualPlacement) {
+    // Manual mode: strict executor preamble — no creative vision, pure execution
+    const manualCount = analysis.spatialMap?.placements.length || 0;
+    prompt += `YOU ARE A PRECISION LIGHTING PLACEMENT TOOL.\n\n`;
+    prompt += `ABSOLUTE RULES:\n`;
+    prompt += `1. Render EXACTLY the fixture types specified — no substitutions\n`;
+    prompt += `2. Place fixtures at EXACTLY the positions marked — no repositioning\n`;
+    prompt += `3. Render EXACTLY ${manualCount} light sources — NO MORE, NO LESS\n`;
+    prompt += `4. Areas without markers MUST remain COMPLETELY DARK — zero ambient light, zero fill\n`;
+    prompt += `5. Do NOT add lights "for realism," "rhythm," "to complete the design," or for ANY other reason\n`;
+    prompt += `6. The home's architecture, landscaping, and hardscape must be PIXEL-PERFECT identical to the source\n`;
+    prompt += `7. ANY light source not corresponding to a numbered marker is a FAILURE\n\n`;
+    prompt += `FRAMING: Output MUST have the EXACT same framing and composition as the source image. Do NOT crop, zoom, or reframe.\n`;
+    prompt += `SKY: Pure black sky with full moon. No stars, gradients, blue tones, or atmospheric glow.\n\n`;
+  } else {
+    // Auto mode: full creative masterInstruction
+    prompt += SYSTEM_PROMPT.masterInstruction + '\n\n';
+
+    // Add fixture inventory (auto mode only — manual mode uses marker checklist instead)
+    prompt += `## COMPLETE FIXTURE INVENTORY\n`;
+    prompt += `This image will contain EXACTLY these fixtures and NO OTHERS:\n`;
+    prompt += inventoryAllowlist || '- None selected\n';
+    if (totalFixtureCount > 0) {
+      prompt += `\nTOTAL FIXTURES IN IMAGE: ${totalFixtureCount}\n`;
+    }
+    prompt += '\n';
+
+    // Add prohibition verification (auto mode only)
+    prompt += `## PROHIBITION VERIFICATION\n`;
+    prompt += `These fixture types MUST NOT appear AT ALL (ZERO instances):\n`;
+    prompt += inventoryProhibitions || '- None\n';
+    prompt += '\n';
+    prompt += `VERIFICATION RULE: Before finalizing the image, mentally count all fixtures. If the count exceeds the inventory above, REMOVE the extras. If any prohibited fixture types appear, REMOVE them entirely.\n\n`;
   }
-  prompt += '\n';
-
-  // Add prohibition verification
-  prompt += `## PROHIBITION VERIFICATION\n`;
-  prompt += `These fixture types MUST NOT appear AT ALL (ZERO instances):\n`;
-  prompt += inventoryProhibitions || '- None\n';
-  prompt += '\n';
-  prompt += `VERIFICATION RULE: Before finalizing the image, mentally count all fixtures. If the count exceeds the inventory above, REMOVE the extras. If any prohibited fixture types appear, REMOVE them entirely.\n\n`;
 
   // Add spatial placement map if available
   if (analysis.spatialMap && analysis.spatialMap.placements.length > 0) {
@@ -2741,8 +2760,10 @@ function buildEnhancedPrompt(
   prompt += `- Light Intensity: ${lightIntensity}%\n`;
   prompt += `- Beam Angle: ${beamAngle}°\n\n`;
 
-  // Add closing reinforcement
-  prompt += SYSTEM_PROMPT.closingReinforcement;
+  // Add closing reinforcement (auto mode only — manual mode uses strict executor preamble)
+  if (!isManualPlacement) {
+    prompt += SYSTEM_PROMPT.closingReinforcement;
+  }
 
   return prompt;
 }
