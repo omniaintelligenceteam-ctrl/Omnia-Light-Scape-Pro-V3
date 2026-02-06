@@ -1,18 +1,13 @@
-import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useRef, useState, useCallback, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import {
-  Plus, Trash2, Move, Lock, Unlock, Eye, EyeOff,
-  Grid, RotateCcw, Download, Upload, Settings, X,
-  Sun, Moon, Crosshair, Layers, Copy, Clipboard
+  Trash2, Lock, Unlock,
+  Grid, RotateCcw, Download, Crosshair, Layers, Copy, Clipboard, Undo2, Redo2
 } from 'lucide-react';
 import {
   LightFixture,
   FixtureCategory,
-  FixturePlacementState,
-  FIXTURE_PRESETS,
   getFixturePreset,
   createFixture,
-  kelvinToRGB
 } from '../types/fixtures';
 
 // Haptic feedback helper
@@ -23,54 +18,108 @@ const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
   }
 };
 
-interface FixturePlacerProps {
-  imageUrl: string;
-  initialFixtures?: LightFixture[];
-  onFixturesChange?: (fixtures: LightFixture[]) => void;
-  onExport?: (fixtures: LightFixture[]) => void;
-  readOnly?: boolean;
-  showPreview?: boolean;
+// Custom cursor: arrow pointer + colored dot
+function getPlacementCursor(hexColor: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="8" cy="8" r="7" fill="${hexColor}" stroke="white" stroke-width="1.5" opacity="0.9"/><path d="M8 8 L8 26 L13 21 L18 30 L21 28 L16 20 L23 20 Z" fill="white" stroke="black" stroke-width="1.2"/></svg>`;
+  return `url('data:image/svg+xml,${encodeURIComponent(svg)}') 8 8, auto`;
 }
 
-/**
- * FixturePlacer Component
- * 
- * Canvas overlay for placing and positioning light fixtures on property images.
- * Provides an intuitive interface for:
- * - Click-to-place fixture markers
- * - Drag-to-reposition fixtures
- * - Fixture type selection
- * - Intensity/color temperature controls
- * - Real-time glow preview
- */
-export const FixturePlacer: React.FC<FixturePlacerProps> = ({
-  imageUrl,
-  initialFixtures = [],
+export interface FixturePlacerProps {
+  imageUrl: string;
+  fixtures: LightFixture[];
+  onFixturesChange: (fixtures: LightFixture[]) => void;
+  activeFixtureType: FixtureCategory | null;
+  markerColors: Record<string, string>;
+  cursorColor?: string;
+  imageNaturalAspect?: number;
+  containerClassName?: string;
+  readOnly?: boolean;
+}
+
+export interface FixturePlacerHandle {
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  clearAll: () => void;
+}
+
+const MAX_HISTORY = 50;
+
+export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>(({
+  fixtures,
   onFixturesChange,
-  onExport,
+  activeFixtureType,
+  markerColors,
+  cursorColor,
+  imageNaturalAspect = 16 / 10,
+  containerClassName,
   readOnly = false,
-  showPreview = true
-}) => {
+}, ref) => {
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const touchStartRef = useRef<{ x: number; y: number; fixtureId: string | null; time: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // State
-  const [fixtures, setFixtures] = useState<LightFixture[]>(initialFixtures);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeType, setActiveType] = useState<FixtureCategory>('uplight');
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [showGrid, setShowGrid] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(false);
-  const [gridSize, setGridSize] = useState(5); // 5% grid
-  const [showGlowPreview, setShowGlowPreview] = useState(showPreview);
-  const [showToolbar, setShowToolbar] = useState(true);
+  const [gridSize] = useState(5);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+
+  // Undo/Redo history
+  const [history, setHistory] = useState<LightFixture[][]>([fixtures]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Sync external fixture changes into history (e.g., external clear)
+  const prevFixturesRef = useRef(fixtures);
+  useEffect(() => {
+    if (prevFixturesRef.current !== fixtures) {
+      // External change detected — only reset history if it's a fundamentally different set
+      // (e.g., clear all from parent). Skip if it's our own change propagating back.
+      const prevLen = prevFixturesRef.current.length;
+      const newLen = fixtures.length;
+      if (newLen === 0 && prevLen > 0) {
+        // External clear
+        setHistory([[]]);
+        setHistoryIndex(0);
+      }
+      prevFixturesRef.current = fixtures;
+    }
+  }, [fixtures]);
+
+  const pushToHistory = useCallback((newFixtures: LightFixture[]) => {
+    setHistory(prev => {
+      const sliced = prev.slice(0, historyIndex + 1);
+      const updated = [...sliced, newFixtures].slice(-MAX_HISTORY);
+      return updated;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, MAX_HISTORY - 1));
+    prevFixturesRef.current = newFixtures;
+    onFixturesChange(newFixtures);
+  }, [historyIndex, onFixturesChange]);
+
+  const undo = useCallback(() => {
+    if (!canUndo) return;
+    const prev = history[historyIndex - 1];
+    setHistoryIndex(i => i - 1);
+    prevFixturesRef.current = prev;
+    onFixturesChange(prev);
+  }, [canUndo, history, historyIndex, onFixturesChange]);
+
+  const redo = useCallback(() => {
+    if (!canRedo) return;
+    const next = history[historyIndex + 1];
+    setHistoryIndex(i => i + 1);
+    prevFixturesRef.current = next;
+    onFixturesChange(next);
+  }, [canRedo, history, historyIndex, onFixturesChange]);
 
   // Selected fixture helper
   const selectedFixture = useMemo(() =>
@@ -78,321 +127,280 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
     [fixtures, selectedId]
   );
 
-  // Compute actual image bounds within container (accounting for object-contain letterboxing)
+  // Compute image bounds accounting for letterboxing
   const imageBounds = useMemo(() => {
-    if (!imageRef.current || containerSize.width === 0 || containerSize.height === 0) {
+    if (containerSize.width === 0 || containerSize.height === 0) {
       return { offsetX: 0, offsetY: 0, width: containerSize.width || 1, height: containerSize.height || 1 };
     }
-    const img = imageRef.current;
     const containerAspect = containerSize.width / containerSize.height;
-    const imageAspect = img.naturalWidth / img.naturalHeight;
-
-    if (containerAspect > imageAspect) {
-      // Container wider than image: horizontal letterboxing
+    if (containerAspect > imageNaturalAspect) {
       const renderedHeight = containerSize.height;
-      const renderedWidth = containerSize.height * imageAspect;
+      const renderedWidth = containerSize.height * imageNaturalAspect;
       return { offsetX: (containerSize.width - renderedWidth) / 2, offsetY: 0, width: renderedWidth, height: renderedHeight };
     } else {
-      // Container taller than image: vertical letterboxing
       const renderedWidth = containerSize.width;
-      const renderedHeight = containerSize.width / imageAspect;
+      const renderedHeight = containerSize.width / imageNaturalAspect;
       return { offsetX: 0, offsetY: (containerSize.height - renderedHeight) / 2, width: renderedWidth, height: renderedHeight };
     }
-  }, [containerSize, imageLoaded]);
-
-  // Load image and set up canvas
-  useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      imageRef.current = img;
-      setImageLoaded(true);
-    };
-    img.src = imageUrl;
-  }, [imageUrl]);
+  }, [containerSize, imageNaturalAspect]);
 
   // Handle container resize
   useEffect(() => {
     if (!containerRef.current) return;
-
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
-        setContainerSize({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height
-        });
+        setContainerSize({ width: entry.contentRect.width, height: entry.contentRect.height });
       }
     });
-
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
 
-  // Notify parent of changes
-  useEffect(() => {
-    onFixturesChange?.(fixtures);
-  }, [fixtures, onFixturesChange]);
-
-  // Draw preview canvas with glow effects
-  useEffect(() => {
-    if (!showGlowPreview || !previewCanvasRef.current || !imageLoaded || !imageRef.current) return;
-
-    const canvas = previewCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const img = imageRef.current;
-    canvas.width = img.width;
-    canvas.height = img.height;
-
-    // Draw base image
-    ctx.drawImage(img, 0, 0);
-
-    // Draw glow effects for each fixture
-    fixtures.forEach(fixture => {
-      drawFixtureGlow(ctx, fixture, img.width, img.height);
-    });
-  }, [fixtures, showGlowPreview, imageLoaded, containerSize]);
-
-  /**
-   * Draw a fixture's glow effect on the canvas
-   */
-  const drawFixtureGlow = useCallback((
-    ctx: CanvasRenderingContext2D,
-    fixture: LightFixture,
-    width: number,
-    height: number
-  ) => {
-    const preset = getFixturePreset(fixture.type);
-    const glow = preset.glowConfig;
-    
-    // Convert percentage position to pixels
-    const x = (fixture.x / 100) * width;
-    const y = (fixture.y / 100) * height;
-    
-    // Get color from fixture temperature
-    const color = kelvinToRGB(fixture.colorTemp);
-    
-    // Calculate glow dimensions
-    const glowHeight = glow.baseHeight * height * fixture.intensity;
-    const glowWidth = glow.baseWidth * width * fixture.intensity;
-
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-
-    // Draw multiple gradient layers for realistic falloff
-    for (let layer = 0; layer < glow.layers; layer++) {
-      const layerScale = 1 - (layer * 0.15);
-      const h = glowHeight * layerScale;
-      const w = glowWidth * layerScale;
-      const alpha = 0.15 * fixture.intensity * layerScale;
-
-      // Create gradient based on direction
-      let gradient: CanvasGradient;
-      
-      switch (glow.direction) {
-        case 'up':
-          gradient = ctx.createRadialGradient(x, y, 0, x, y - h/2, Math.max(w, h));
-          break;
-        case 'down':
-          gradient = ctx.createRadialGradient(x, y, 0, x, y + h/2, Math.max(w, h));
-          break;
-        case 'omni':
-        default:
-          gradient = ctx.createRadialGradient(x, y, 0, x, y, Math.max(w, h));
-      }
-
-      gradient.addColorStop(0, `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`);
-      gradient.addColorStop(0.5, `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha * 0.4})`);
-      gradient.addColorStop(1, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0)`);
-
-      ctx.fillStyle = gradient;
-      
-      // Draw ellipse for directional lights, circle for omni
-      ctx.beginPath();
-      if (glow.direction === 'up') {
-        ctx.ellipse(x, y - h/3, w, h, 0, 0, Math.PI * 2);
-      } else if (glow.direction === 'down') {
-        ctx.ellipse(x, y + h/3, w, h, 0, 0, Math.PI * 2);
-      } else {
-        ctx.arc(x, y, Math.max(w, h), 0, Math.PI * 2);
-      }
-      ctx.fill();
-    }
-
-    // Draw bright core
-    const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, 15);
-    coreGradient.addColorStop(0, `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${glow.coreIntensity})`);
-    coreGradient.addColorStop(1, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0)`);
-    ctx.fillStyle = coreGradient;
-    ctx.beginPath();
-    ctx.arc(x, y, 15, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  }, []);
-
-  /**
-   * Handle click to place new fixture
-   */
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (readOnly || isDragging) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    // Convert container click to image-relative coordinates (accounting for object-contain letterboxing)
-    let x = ((e.clientX - rect.left - imageBounds.offsetX) / imageBounds.width) * 100;
-    let y = ((e.clientY - rect.top - imageBounds.offsetY) / imageBounds.height) * 100;
-
-    // Ignore clicks outside the actual image area
-    if (x < -2 || x > 102 || y < -2 || y > 102) return;
+  // Convert screen coords to image-relative percentage
+  const toImageCoords = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    let x = ((clientX - rect.left - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((clientY - rect.top - imageBounds.offsetY) / imageBounds.height) * 100;
+    if (x < -2 || x > 102 || y < -2 || y > 102) return null;
     x = Math.max(0, Math.min(100, x));
     y = Math.max(0, Math.min(100, y));
-
-    // Snap to grid if enabled
     if (snapToGrid) {
       x = Math.round(x / gridSize) * gridSize;
       y = Math.round(y / gridSize) * gridSize;
     }
+    return { x, y };
+  }, [imageBounds, snapToGrid, gridSize]);
 
-    // Check if clicking on existing fixture (using image-relative coords → container pixels)
-    const clickedFixture = fixtures.find(f => {
-      const fx = imageBounds.offsetX + (f.x / 100) * imageBounds.width;
-      const fy = imageBounds.offsetY + (f.y / 100) * imageBounds.height;
-      const distance = Math.sqrt(
-        Math.pow(e.clientX - rect.left - fx, 2) +
-        Math.pow(e.clientY - rect.top - fy, 2)
-      );
-      return distance < 20;
-    });
-
-    if (clickedFixture) {
-      setSelectedId(clickedFixture.id);
-      triggerHaptic('light');
-    } else {
-      // Place new fixture
-      const newFixture = createFixture(x, y, activeType);
-      setFixtures(prev => [...prev, newFixture]);
-      setSelectedId(newFixture.id);
-      triggerHaptic('medium');
-    }
-  }, [fixtures, activeType, readOnly, isDragging, snapToGrid, gridSize, imageBounds]);
-
-  /**
-   * Handle fixture drag start
-   */
-  const handleDragStart = useCallback((e: React.MouseEvent, fixtureId: string) => {
-    if (readOnly) return;
-    
-    const fixture = fixtures.find(f => f.id === fixtureId);
-    if (!fixture || fixture.locked) return;
-
-    e.stopPropagation();
-    setIsDragging(true);
-    setSelectedId(fixtureId);
-
+  // Find fixture near a screen position
+  const findFixtureAtScreen = useCallback((clientX: number, clientY: number, radius = 20): LightFixture | null => {
     const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) {
-      const fx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
-      const fy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
-      setDragOffset({
-        x: e.clientX - rect.left - fx,
-        y: e.clientY - rect.top - fy
-      });
-    }
-
-    triggerHaptic('light');
-  }, [fixtures, readOnly, imageBounds]);
-
-  /**
-   * Handle fixture drag move
-   */
-  const handleDragMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !selectedId || readOnly) return;
-
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    let x = ((e.clientX - rect.left - dragOffset.x - imageBounds.offsetX) / imageBounds.width) * 100;
-    let y = ((e.clientY - rect.top - dragOffset.y - imageBounds.offsetY) / imageBounds.height) * 100;
-
-    // Clamp to bounds
-    x = Math.max(0, Math.min(100, x));
-    y = Math.max(0, Math.min(100, y));
-
-    // Snap to grid
-    if (snapToGrid) {
-      x = Math.round(x / gridSize) * gridSize;
-      y = Math.round(y / gridSize) * gridSize;
-    }
-
-    setFixtures(prev => prev.map(f =>
-      f.id === selectedId ? { ...f, x, y } : f
-    ));
-  }, [isDragging, selectedId, dragOffset, readOnly, snapToGrid, gridSize, imageBounds]);
-
-  /**
-   * Handle fixture drag end
-   */
-  const handleDragEnd = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
-      triggerHaptic('light');
-    }
-  }, [isDragging]);
-
-  /**
-   * Handle right-click to delete nearest fixture
-   */
-  const handleRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (readOnly) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    // Find nearest fixture within 30px
-    let nearest: { id: string; dist: number } | null = null;
+    if (!rect) return null;
+    const sx = clientX - rect.left;
+    const sy = clientY - rect.top;
+    let nearest: { fixture: LightFixture; dist: number } | null = null;
     for (const f of fixtures) {
       const fx = imageBounds.offsetX + (f.x / 100) * imageBounds.width;
       const fy = imageBounds.offsetY + (f.y / 100) * imageBounds.height;
-      const dist = Math.sqrt(Math.pow(clickX - fx, 2) + Math.pow(clickY - fy, 2));
-      if (dist < 30 && (!nearest || dist < nearest.dist)) {
-        nearest = { id: f.id, dist };
+      const dist = Math.sqrt(Math.pow(sx - fx, 2) + Math.pow(sy - fy, 2));
+      if (dist < radius && (!nearest || dist < nearest.dist)) {
+        nearest = { fixture: f, dist };
       }
     }
+    return nearest?.fixture ?? null;
+  }, [fixtures, imageBounds]);
 
-    if (nearest) {
-      setFixtures(prev => prev.filter(f => f.id !== nearest!.id));
-      if (selectedId === nearest.id) setSelectedId(null);
+  // ── Mouse Handlers ──
+
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (readOnly || e.button !== 0) return;
+    mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+
+    const fixture = findFixtureAtScreen(e.clientX, e.clientY);
+    if (fixture) {
+      if (fixture.locked) {
+        setSelectedId(fixture.id);
+        return;
+      }
+      e.preventDefault();
+      setIsDragging(true);
+      setSelectedId(fixture.id);
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        const fx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+        const fy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+        dragOffsetRef.current = { x: e.clientX - rect.left - fx, y: e.clientY - rect.top - fy };
+      }
+      triggerHaptic('light');
+    }
+  }, [readOnly, findFixtureAtScreen, imageBounds]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !selectedId || readOnly) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    let x = ((e.clientX - rect.left - dragOffsetRef.current.x - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((e.clientY - rect.top - dragOffsetRef.current.y - imageBounds.offsetY) / imageBounds.height) * 100;
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
+    if (snapToGrid) {
+      x = Math.round(x / gridSize) * gridSize;
+      y = Math.round(y / gridSize) * gridSize;
+    }
+    // Update position live (no history push during drag)
+    const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
+    prevFixturesRef.current = updated;
+    onFixturesChange(updated);
+  }, [isDragging, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange]);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      // Push final drag position to history
+      pushToHistory(fixtures);
+      setIsDragging(false);
+      triggerHaptic('light');
+      return;
+    }
+
+    // Quick click → place new fixture
+    if (!activeFixtureType || readOnly) return;
+    if (mouseDownPosRef.current) {
+      const dx = Math.abs(e.clientX - mouseDownPosRef.current.x);
+      const dy = Math.abs(e.clientY - mouseDownPosRef.current.y);
+      if (dx > 3 || dy > 3) return;
+    }
+
+    // Don't place if clicking on existing fixture
+    const existing = findFixtureAtScreen(e.clientX, e.clientY);
+    if (existing) {
+      setSelectedId(existing.id);
+      return;
+    }
+
+    const coords = toImageCoords(e.clientX, e.clientY);
+    if (!coords) return;
+
+    const newFixture = createFixture(coords.x, coords.y, activeFixtureType);
+    pushToHistory([...fixtures, newFixture]);
+    setSelectedId(newFixture.id);
+    triggerHaptic('medium');
+  }, [isDragging, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory]);
+
+  const handleRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (readOnly) return;
+    const fixture = findFixtureAtScreen(e.clientX, e.clientY, 30);
+    if (fixture) {
+      const updated = fixtures.filter(f => f.id !== fixture.id);
+      pushToHistory(updated);
+      if (selectedId === fixture.id) setSelectedId(null);
       triggerHaptic('medium');
     }
-  }, [fixtures, readOnly, imageBounds, selectedId]);
+  }, [readOnly, fixtures, findFixtureAtScreen, selectedId, pushToHistory]);
 
-  /**
-   * Delete selected fixture
-   */
+  // ── Touch Handlers ──
+
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (readOnly || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const fixture = findFixtureAtScreen(touch.clientX, touch.clientY);
+
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      fixtureId: fixture?.id ?? null,
+      time: Date.now(),
+    };
+
+    if (fixture) {
+      setSelectedId(fixture.id);
+      if (!fixture.locked) {
+        // Start drag
+        setIsDragging(true);
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+          const fx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+          const fy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+          dragOffsetRef.current = { x: touch.clientX - rect.left - fx, y: touch.clientY - rect.top - fy };
+        }
+        // Long-press to delete (500ms)
+        longPressTimerRef.current = setTimeout(() => {
+          const updated = fixtures.filter(f => f.id !== fixture.id);
+          pushToHistory(updated);
+          setSelectedId(null);
+          setIsDragging(false);
+          triggerHaptic('heavy');
+        }, 500);
+      }
+      triggerHaptic('light');
+    }
+  }, [readOnly, findFixtureAtScreen, imageBounds, fixtures, pushToHistory]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    // Cancel long-press on movement
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (!isDragging || !selectedId || readOnly) return;
+    const touch = e.touches[0];
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    let x = ((touch.clientX - rect.left - dragOffsetRef.current.x - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((touch.clientY - rect.top - dragOffsetRef.current.y - imageBounds.offsetY) / imageBounds.height) * 100;
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
+    if (snapToGrid) {
+      x = Math.round(x / gridSize) * gridSize;
+      y = Math.round(y / gridSize) * gridSize;
+    }
+    const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
+    prevFixturesRef.current = updated;
+    onFixturesChange(updated);
+  }, [isDragging, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    if (isDragging) {
+      pushToHistory(fixtures);
+      setIsDragging(false);
+      triggerHaptic('light');
+      touchStartRef.current = null;
+      return;
+    }
+
+    // Quick tap → place new fixture
+    if (!touchStartRef.current || touchStartRef.current.fixtureId) {
+      touchStartRef.current = null;
+      return;
+    }
+    if (!activeFixtureType || readOnly) {
+      touchStartRef.current = null;
+      return;
+    }
+
+    const changedTouch = e.changedTouches[0];
+    if (changedTouch) {
+      const dx = Math.abs(changedTouch.clientX - touchStartRef.current.x);
+      const dy = Math.abs(changedTouch.clientY - touchStartRef.current.y);
+      if (dx > 10 || dy > 10) {
+        touchStartRef.current = null;
+        return;
+      }
+      const coords = toImageCoords(touchStartRef.current.x, touchStartRef.current.y);
+      if (coords) {
+        const newFixture = createFixture(coords.x, coords.y, activeFixtureType);
+        pushToHistory([...fixtures, newFixture]);
+        setSelectedId(newFixture.id);
+        triggerHaptic('medium');
+      }
+    }
+    touchStartRef.current = null;
+  }, [isDragging, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory]);
+
+  // ── Toolbar Actions ──
+
   const deleteSelected = useCallback(() => {
     if (!selectedId) return;
-    setFixtures(prev => prev.filter(f => f.id !== selectedId));
+    const updated = fixtures.filter(f => f.id !== selectedId);
+    pushToHistory(updated);
     setSelectedId(null);
     triggerHaptic('medium');
-  }, [selectedId]);
+  }, [selectedId, fixtures, pushToHistory]);
 
-  /**
-   * Toggle lock on selected fixture
-   */
   const toggleLock = useCallback(() => {
     if (!selectedId) return;
-    setFixtures(prev => prev.map(f =>
+    const updated = fixtures.map(f =>
       f.id === selectedId ? { ...f, locked: !f.locked } : f
-    ));
+    );
+    pushToHistory(updated);
     triggerHaptic('light');
-  }, [selectedId]);
+  }, [selectedId, fixtures, pushToHistory]);
 
-  /**
-   * Duplicate selected fixture
-   */
   const duplicateSelected = useCallback(() => {
     if (!selectedFixture) return;
     const newFixture: LightFixture = {
@@ -400,67 +408,45 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
       id: `fixture_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       x: Math.min(100, selectedFixture.x + 5),
       y: Math.min(100, selectedFixture.y + 5),
-      locked: false
+      locked: false,
     };
-    setFixtures(prev => [...prev, newFixture]);
+    pushToHistory([...fixtures, newFixture]);
     setSelectedId(newFixture.id);
     triggerHaptic('medium');
-  }, [selectedFixture]);
+  }, [selectedFixture, fixtures, pushToHistory]);
 
-  /**
-   * Update selected fixture properties
-   */
-  const updateSelectedFixture = useCallback((updates: Partial<LightFixture>) => {
-    if (!selectedId) return;
-    setFixtures(prev => prev.map(f =>
-      f.id === selectedId ? { ...f, ...updates } : f
-    ));
-  }, [selectedId]);
-
-  /**
-   * Clear all fixtures
-   */
   const clearAll = useCallback(() => {
+    if (fixtures.length === 0) return;
     if (window.confirm('Remove all fixtures?')) {
-      setFixtures([]);
+      pushToHistory([]);
       setSelectedId(null);
       triggerHaptic('heavy');
     }
-  }, []);
+  }, [fixtures, pushToHistory]);
 
-  /**
-   * Export fixtures to JSON
-   */
   const handleExport = useCallback(() => {
-    onExport?.(fixtures);
-    
-    // Also copy to clipboard
     const data = JSON.stringify(fixtures, null, 2);
     navigator.clipboard.writeText(data);
     triggerHaptic('medium');
-  }, [fixtures, onExport]);
+  }, [fixtures]);
 
-  /**
-   * Import fixtures from clipboard
-   */
   const handleImport = useCallback(async () => {
     try {
       const text = await navigator.clipboard.readText();
       const imported = JSON.parse(text);
       if (Array.isArray(imported)) {
-        setFixtures(imported);
+        pushToHistory(imported);
         triggerHaptic('medium');
       }
     } catch {
       console.error('Failed to import fixtures');
     }
-  }, []);
+  }, [pushToHistory]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return;
-
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       switch (e.key) {
         case 'Delete':
         case 'Backspace':
@@ -470,184 +456,161 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
           setSelectedId(null);
           break;
         case 'd':
-          if (e.metaKey || e.ctrlKey) {
-            e.preventDefault();
-            duplicateSelected();
-          }
+          if (e.metaKey || e.ctrlKey) { e.preventDefault(); duplicateSelected(); }
           break;
         case 'l':
-          if (e.metaKey || e.ctrlKey) {
-            e.preventDefault();
-            toggleLock();
-          }
+          if (e.metaKey || e.ctrlKey) { e.preventDefault(); toggleLock(); }
           break;
         case 'g':
-          if (!e.metaKey && !e.ctrlKey) {
-            setShowGrid(prev => !prev);
+          if (!e.metaKey && !e.ctrlKey) setShowGrid(prev => !prev);
+          break;
+        case 'z':
+          if (e.metaKey || e.ctrlKey) {
+            e.preventDefault();
+            if (e.shiftKey) { redo(); } else { undo(); }
           }
           break;
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteSelected, duplicateSelected, toggleLock]);
+  }, [deleteSelected, duplicateSelected, toggleLock, undo, redo]);
+
+  // Expose imperative handle
+  useImperativeHandle(ref, () => ({
+    undo,
+    redo,
+    get canUndo() { return historyIndex > 0; },
+    get canRedo() { return historyIndex < history.length - 1; },
+    clearAll,
+  }), [undo, redo, historyIndex, history.length, clearAll]);
+
+  const cursorStyle = isDragging
+    ? 'grabbing'
+    : (activeFixtureType && cursorColor)
+      ? getPlacementCursor(cursorColor)
+      : 'default';
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-gray-900 rounded-xl overflow-hidden">
-      {/* Toolbar */}
-      <AnimatePresence>
-        {showToolbar && (
-          <motion.div
-            initial={{ y: -50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -50, opacity: 0 }}
-            className="flex items-center gap-2 p-2 bg-gray-800 border-b border-gray-700"
+    <div className={containerClassName || 'relative w-full h-full'}>
+      {/* Floating Toolbar */}
+      {!readOnly && (
+        <div className="absolute top-2 left-2 right-2 z-20 flex items-center gap-1.5 p-1.5 bg-[#0d0d0d]/90 backdrop-blur border border-white/10 rounded-xl overflow-x-auto">
+          {/* Grid toggle */}
+          <button
+            onClick={() => setShowGrid(prev => !prev)}
+            className={`p-1.5 rounded-lg transition-all ${showGrid ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            title="Toggle Grid (G)"
           >
-            {/* Fixture Type Selector */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-gray-700 rounded-lg overflow-x-auto">
-              {FIXTURE_PRESETS.filter(p => ['uplight', 'downlight', 'path_light', 'gutter_uplight', 'well_light', 'spot'].includes(p.type)).map(preset => (
-                <button
-                  key={preset.type}
-                  onClick={() => setActiveType(preset.type)}
-                  className={`p-2 rounded transition-colors ${
-                    activeType === preset.type
-                      ? 'bg-amber-500 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-600'
-                  }`}
-                  title={preset.name}
-                >
-                  <span className="text-lg">{preset.icon}</span>
-                </button>
-              ))}
-            </div>
+            <Grid size={16} />
+          </button>
 
-            <div className="w-px h-6 bg-gray-600" />
+          {/* Snap to grid */}
+          <button
+            onClick={() => setSnapToGrid(prev => !prev)}
+            className={`p-1.5 rounded-lg transition-all ${snapToGrid ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            title="Snap to Grid"
+          >
+            <Crosshair size={16} />
+          </button>
 
-            {/* Tools */}
-            <button
-              onClick={() => setShowGrid(prev => !prev)}
-              className={`p-2 rounded transition-colors ${
-                showGrid ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-              title="Toggle Grid (G)"
-            >
-              <Grid size={18} />
-            </button>
+          <div className="w-px h-5 bg-white/10 flex-shrink-0" />
 
-            <button
-              onClick={() => setSnapToGrid(prev => !prev)}
-              className={`p-2 rounded transition-colors ${
-                snapToGrid ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-              title="Snap to Grid"
-            >
-              <Crosshair size={18} />
-            </button>
+          {/* Selected fixture actions (contextual) */}
+          {selectedFixture && (
+            <>
+              <button
+                onClick={duplicateSelected}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                title="Duplicate (Ctrl+D)"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={toggleLock}
+                className={`p-1.5 rounded-lg transition-all ${selectedFixture.locked ? 'text-[#F6B45A]' : 'text-gray-400 hover:text-[#F6B45A] hover:bg-white/5'}`}
+                title="Lock/Unlock (Ctrl+L)"
+              >
+                {selectedFixture.locked ? <Lock size={16} /> : <Unlock size={16} />}
+              </button>
+              <button
+                onClick={deleteSelected}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
+                title="Delete (Del)"
+              >
+                <Trash2 size={16} />
+              </button>
+              <div className="w-px h-5 bg-white/10 flex-shrink-0" />
+            </>
+          )}
 
-            <button
-              onClick={() => setShowGlowPreview(prev => !prev)}
-              className={`p-2 rounded transition-colors ${
-                showGlowPreview ? 'bg-amber-500 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-              title="Toggle Glow Preview"
-            >
-              {showGlowPreview ? <Eye size={18} /> : <EyeOff size={18} />}
-            </button>
+          {/* Import/Export */}
+          <button
+            onClick={handleImport}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+            title="Import from Clipboard"
+          >
+            <Clipboard size={16} />
+          </button>
+          <button
+            onClick={handleExport}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+            title="Export to Clipboard"
+          >
+            <Download size={16} />
+          </button>
 
-            <div className="w-px h-6 bg-gray-600" />
+          <div className="w-px h-5 bg-white/10 flex-shrink-0" />
 
-            {/* Selected fixture actions */}
-            {selectedFixture && (
-              <>
-                <button
-                  onClick={duplicateSelected}
-                  className="p-2 rounded text-gray-400 hover:text-white transition-colors"
-                  title="Duplicate (Ctrl+D)"
-                >
-                  <Copy size={18} />
-                </button>
-                <button
-                  onClick={toggleLock}
-                  className={`p-2 rounded transition-colors ${
-                    selectedFixture.locked ? 'text-amber-500' : 'text-gray-400 hover:text-white'
-                  }`}
-                  title="Lock/Unlock (Ctrl+L)"
-                >
-                  {selectedFixture.locked ? <Lock size={18} /> : <Unlock size={18} />}
-                </button>
-                <button
-                  onClick={deleteSelected}
-                  className="p-2 rounded text-gray-400 hover:text-red-500 transition-colors"
-                  title="Delete (Del)"
-                >
-                  <Trash2 size={18} />
-                </button>
-                <div className="w-px h-6 bg-gray-600" />
-              </>
-            )}
+          {/* Undo/Redo */}
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 size={16} />
+          </button>
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 size={16} />
+          </button>
 
-            {/* Actions */}
-            <button
-              onClick={clearAll}
-              className="p-2 rounded text-gray-400 hover:text-red-500 transition-colors"
-              title="Clear All"
-            >
-              <RotateCcw size={18} />
-            </button>
+          {/* Clear All */}
+          <button
+            onClick={clearAll}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
+            title="Clear All"
+          >
+            <RotateCcw size={16} />
+          </button>
 
-            <button
-              onClick={handleImport}
-              className="p-2 rounded text-gray-400 hover:text-white transition-colors"
-              title="Import from Clipboard"
-            >
-              <Clipboard size={18} />
-            </button>
+          {/* Fixture count (right-aligned) */}
+          <div className="ml-auto flex items-center gap-1.5 text-[10px] text-gray-500 flex-shrink-0">
+            <Layers size={12} />
+            <span>{fixtures.length}</span>
+          </div>
+        </div>
+      )}
 
-            <button
-              onClick={handleExport}
-              className="p-2 rounded text-gray-400 hover:text-white transition-colors"
-              title="Export to Clipboard"
-            >
-              <Download size={18} />
-            </button>
-
-            {/* Fixture count */}
-            <div className="ml-auto flex items-center gap-2 text-sm text-gray-400">
-              <Layers size={14} />
-              <span>{fixtures.length} fixtures</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main Canvas Area */}
+      {/* Interactive Surface */}
       <div
         ref={containerRef}
-        className="relative flex-1 cursor-crosshair overflow-hidden"
-        onClick={handleCanvasClick}
+        className="absolute inset-0"
+        style={{ cursor: cursorStyle, touchAction: 'none' }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={() => { if (isDragging) { pushToHistory(fixtures); setIsDragging(false); } }}
         onContextMenu={handleRightClick}
-        onMouseMove={handleDragMove}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {/* Base Image */}
-        <img
-          src={imageUrl}
-          alt="Property"
-          className="absolute inset-0 w-full h-full object-contain"
-          draggable={false}
-        />
-
-        {/* Glow Preview Canvas (overlay) */}
-        {showGlowPreview && imageLoaded && (
-          <canvas
-            ref={previewCanvasRef}
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none mix-blend-screen"
-            style={{ opacity: 0.8 }}
-          />
-        )}
-
         {/* Grid Overlay */}
         {showGrid && (
           <div
@@ -657,7 +620,7 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
                 linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
               `,
-              backgroundSize: `${gridSize}% ${gridSize}%`
+              backgroundSize: `${gridSize}% ${gridSize}%`,
             }}
           />
         )}
@@ -666,146 +629,65 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
         {fixtures.map(fixture => {
           const isSelected = fixture.id === selectedId;
           const preset = getFixturePreset(fixture.type);
-          const color = kelvinToRGB(fixture.colorTemp);
+          const hexColor = markerColors[fixture.type] || '#FF0000';
 
           return (
-            <motion.div
+            <div
               key={fixture.id}
-              className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-${fixture.locked ? 'not-allowed' : 'move'}`}
+              className="absolute pointer-events-none"
               style={{
                 left: imageBounds.offsetX + (fixture.x / 100) * imageBounds.width,
                 top: imageBounds.offsetY + (fixture.y / 100) * imageBounds.height,
-                zIndex: isSelected ? 100 : 10
+                transform: 'translate(-50%, -50%)',
+                zIndex: isSelected ? 100 : 10,
               }}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              onMouseDown={(e) => handleDragStart(e, fixture.id)}
             >
-              {/* Outer glow ring */}
+              {/* Glow effect */}
               <div
-                className={`absolute inset-0 rounded-full transition-all duration-200 ${
-                  isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-transparent' : ''
-                }`}
+                className="absolute rounded-full"
                 style={{
-                  width: 32,
-                  height: 32,
-                  marginLeft: -16,
-                  marginTop: -16,
-                  background: `radial-gradient(circle, rgba(${color[0]}, ${color[1]}, ${color[2]}, ${fixture.intensity * 0.8}) 0%, transparent 70%)`,
-                  boxShadow: `0 0 ${20 * fixture.intensity}px rgba(${color[0]}, ${color[1]}, ${color[2]}, ${fixture.intensity * 0.5})`
+                  width: 80,
+                  height: 80,
+                  left: -40,
+                  top: -40,
+                  background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
+                  filter: 'blur(4px)',
                 }}
               />
-
-              {/* Fixture icon */}
+              {/* Core dot */}
               <div
-                className={`relative flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-bold transition-all ${
-                  isSelected
-                    ? 'bg-amber-500 border-white scale-110'
-                    : 'bg-gray-800 border-amber-500 hover:scale-105'
-                } ${fixture.locked ? 'opacity-50' : ''}`}
+                className={`relative flex items-center justify-center w-6 h-6 rounded-full border-2 transition-transform ${
+                  isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
+                } ${fixture.locked ? 'opacity-60' : ''}`}
                 style={{
-                  color: isSelected ? 'white' : `rgb(${color[0]}, ${color[1]}, ${color[2]})`
+                  left: -12,
+                  top: -12,
+                  backgroundColor: hexColor,
+                  borderColor: 'white',
+                  boxShadow: `0 0 16px ${hexColor}B3`,
                 }}
               >
-                {preset.icon}
+                <span className="text-[10px] text-white font-bold">{preset.icon}</span>
                 {fixture.locked && (
-                  <Lock size={10} className="absolute -top-1 -right-1 text-amber-400" />
+                  <Lock size={8} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
                 )}
               </div>
-
-              {/* Label */}
-              {fixture.label && (
-                <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 text-xs text-white bg-black/50 px-1 rounded whitespace-nowrap">
-                  {fixture.label}
-                </div>
-              )}
-            </motion.div>
+            </div>
           );
         })}
-      </div>
 
-      {/* Properties Panel (when fixture selected) */}
-      <AnimatePresence>
-        {selectedFixture && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="absolute bottom-0 left-0 right-0 bg-gray-800/95 backdrop-blur border-t border-gray-700 p-4"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-white font-medium flex items-center gap-2">
-                <span className="text-lg">{getFixturePreset(selectedFixture.type).icon}</span>
-                {getFixturePreset(selectedFixture.type).name}
-              </h3>
-              <button
-                onClick={() => setSelectedId(null)}
-                className="p-1 text-gray-400 hover:text-white"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {/* Intensity */}
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">
-                  Intensity: {Math.round(selectedFixture.intensity * 100)}%
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={selectedFixture.intensity * 100}
-                  onChange={(e) => updateSelectedFixture({ intensity: parseInt(e.target.value) / 100 })}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                />
-              </div>
-
-              {/* Color Temperature */}
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">
-                  Color: {selectedFixture.colorTemp}K
-                </label>
-                <input
-                  type="range"
-                  min="2700"
-                  max="5000"
-                  step="100"
-                  value={selectedFixture.colorTemp}
-                  onChange={(e) => updateSelectedFixture({ colorTemp: parseInt(e.target.value) })}
-                  className="w-full h-2 bg-gradient-to-r from-orange-400 via-yellow-200 to-blue-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              {/* Beam Angle */}
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">
-                  Beam: {selectedFixture.beamAngle}°
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="120"
-                  value={selectedFixture.beamAngle}
-                  onChange={(e) => updateSelectedFixture({ beamAngle: parseInt(e.target.value) })}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                />
-              </div>
-            </div>
-
-            {/* Position display */}
-            <div className="mt-3 text-xs text-gray-500 flex items-center gap-4">
-              <span>Position: ({selectedFixture.x.toFixed(1)}%, {selectedFixture.y.toFixed(1)}%)</span>
-              <span>ID: {selectedFixture.id.slice(-8)}</span>
-            </div>
-          </motion.div>
+        {/* Active tool indicator */}
+        {activeFixtureType && !readOnly && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur px-3 py-1 rounded-full text-[10px] text-[#F6B45A] font-medium flex items-center gap-1.5 pointer-events-none">
+            <Crosshair className="w-3 h-3" />
+            Tap to place {getFixturePreset(activeFixtureType).name}
+          </div>
         )}
-      </AnimatePresence>
-
+      </div>
     </div>
   );
-};
+});
+
+FixturePlacer.displayName = 'FixturePlacer';
 
 export default FixturePlacer;

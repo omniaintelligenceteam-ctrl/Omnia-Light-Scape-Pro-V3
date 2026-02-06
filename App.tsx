@@ -20,8 +20,8 @@ import { BillingCanceled } from './components/BillingCanceled';
 import { ClientPortal } from './components/ClientPortal';
 import { generateBOM } from './utils/bomCalculator';
 import { FixturePlacer } from './components/FixturePlacer';
+import type { FixturePlacerHandle } from './components/FixturePlacer';
 import type { LightFixture } from './types/fixtures';
-import { createFixture, kelvinToRGB, getFixturePreset } from './types/fixtures';
 import { convertFixturesToSpatialMap, deriveSelections, PIPELINE_TYPE_TO_CATEGORY } from './utils/fixtureConverter';
 import { detectConflicts, ConflictResult, formatTimeSlot } from './utils/scheduleConflictDetection';
 import { useUserSync } from './hooks/useUserSync';
@@ -383,8 +383,7 @@ const App: React.FC = () => {
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [manualFixtures, setManualFixtures] = useState<LightFixture[]>([]);
   const [activeManualFixtureType, setActiveManualFixtureType] = useState<string | null>(null);
-  const draggingFixtureRef = useRef<string | null>(null);
-  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const fixturePlacerRef = useRef<FixturePlacerHandle>(null);
   const [imageNaturalAspect, setImageNaturalAspect] = useState<number>(16 / 10);
 
   // Favorite Presets State
@@ -1332,119 +1331,7 @@ const App: React.FC = () => {
     coredrill: '#FFA500', holiday: '#FF0000',
   };
 
-  function getManualCursor(hexColor: string): string {
-    // 36x36 SVG: arrow pointer + smaller colored dot at tip matching reduced AI marker size
-    // Dot is 14px diameter (r=7) centered at (8,8), arrow hangs below-right
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="8" cy="8" r="7" fill="${hexColor}" stroke="white" stroke-width="1.5" opacity="0.9"/><path d="M8 8 L8 26 L13 21 L18 30 L21 28 L16 20 L23 20 Z" fill="white" stroke="black" stroke-width="1.2"/></svg>`;
-    return `url('data:image/svg+xml,${encodeURIComponent(svg)}') 8 8, auto`;
-  }
-
-  // ═══ Manual Placement Handlers ═══
-  const getImageRelativeCoords = useCallback((e: React.MouseEvent<HTMLDivElement>): { x: number; y: number } | null => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const containerWidth = rect.width;
-    const containerHeight = rect.height;
-
-    const imgElement = e.currentTarget.parentElement?.querySelector('img');
-    if (!imgElement) return null;
-
-    const imgNaturalAspect = imgElement.naturalWidth / imgElement.naturalHeight;
-    const containerAspect = containerWidth / containerHeight;
-
-    let offsetX = 0, offsetY = 0, renderedWidth = containerWidth, renderedHeight = containerHeight;
-
-    if (containerAspect > imgNaturalAspect) {
-      renderedHeight = containerHeight;
-      renderedWidth = containerHeight * imgNaturalAspect;
-      offsetX = (containerWidth - renderedWidth) / 2;
-    } else {
-      renderedWidth = containerWidth;
-      renderedHeight = containerWidth / imgNaturalAspect;
-      offsetY = (containerHeight - renderedHeight) / 2;
-    }
-
-    const x = ((e.clientX - rect.left - offsetX) / renderedWidth) * 100;
-    const y = ((e.clientY - rect.top - offsetY) / renderedHeight) * 100;
-
-    if (x < 0 || x > 100 || y < 0 || y > 100) return null;
-    return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
-  }, []);
-
-  const findNearestFixture = useCallback((x: number, y: number, radius: number = 5) => {
-    let nearest: { fixture: LightFixture; dist: number } | null = null;
-    for (const f of manualFixtures) {
-      const dist = Math.sqrt(Math.pow(x - f.x, 2) + Math.pow(y - f.y, 2));
-      if (dist < radius && (!nearest || dist < nearest.dist)) {
-        nearest = { fixture: f, dist };
-      }
-    }
-    return nearest;
-  }, [manualFixtures]);
-
-  const handleManualMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return; // Left click only
-    const coords = getImageRelativeCoords(e);
-    if (!coords) return;
-
-    mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
-
-    // Check if clicking near an existing fixture → start drag
-    const nearest = findNearestFixture(coords.x, coords.y);
-    if (nearest) {
-      draggingFixtureRef.current = nearest.fixture.id;
-      e.preventDefault();
-      return;
-    }
-  }, [getImageRelativeCoords, findNearestFixture]);
-
-  const handleManualMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!draggingFixtureRef.current) return;
-    const coords = getImageRelativeCoords(e);
-    if (!coords) return;
-
-    setManualFixtures(prev => prev.map(f =>
-      f.id === draggingFixtureRef.current ? { ...f, x: coords.x, y: coords.y } : f
-    ));
-  }, [getImageRelativeCoords]);
-
-  const handleManualMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const wasDragging = draggingFixtureRef.current !== null;
-    draggingFixtureRef.current = null;
-
-    // If we were dragging, don't place a new fixture
-    if (wasDragging) return;
-
-    // Quick click → place new fixture
-    if (!activeManualFixtureType) return;
-    const coords = getImageRelativeCoords(e);
-    if (!coords) return;
-
-    // Check mouse didn't move significantly (prevents accidental placement after drag attempts)
-    if (mouseDownPosRef.current) {
-      const dx = Math.abs(e.clientX - mouseDownPosRef.current.x);
-      const dy = Math.abs(e.clientY - mouseDownPosRef.current.y);
-      if (dx > 3 || dy > 3) return;
-    }
-
-    const fixtureCategory = PIPELINE_TYPE_TO_CATEGORY[activeManualFixtureType];
-    if (!fixtureCategory) return;
-
-    const newFixture = createFixture(coords.x, coords.y, fixtureCategory);
-    setManualFixtures(prev => [...prev, newFixture]);
-  }, [activeManualFixtureType, getImageRelativeCoords]);
-
-  const handleManualRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (manualFixtures.length === 0) return;
-
-    const coords = getImageRelativeCoords(e);
-    if (!coords) return;
-
-    const nearest = findNearestFixture(coords.x, coords.y);
-    if (nearest) {
-      setManualFixtures(prev => prev.filter(f => f.id !== nearest.fixture.id));
-    }
-  }, [manualFixtures, getImageRelativeCoords, findNearestFixture]);
+  // Manual placement handlers are now in FixturePlacer component
 
   const togglePendingOption = (optId: string) => {
     setPendingOptions(prev => {
@@ -4792,92 +4679,17 @@ Notes: ${invoice.notes || 'N/A'}
 
                         {/* Manual placement click overlay */}
                         {placementMode === 'manual' && previewUrl && (
-                          <div
-                            className="absolute top-0 left-0 right-0 aspect-[16/10] md:aspect-[16/9] z-10 rounded-2xl overflow-hidden"
-                            style={{
-                              cursor: draggingFixtureRef.current
-                                ? 'grabbing'
-                                : activeManualFixtureType
-                                  ? getManualCursor(PIPELINE_MARKER_COLOR[activeManualFixtureType] || '#FF0000')
-                                  : 'default',
-                            }}
-                            onMouseDown={handleManualMouseDown}
-                            onMouseMove={handleManualMouseMove}
-                            onMouseUp={handleManualMouseUp}
-                            onContextMenu={handleManualRightClick}
-                          >
-                            {/* Placed fixture markers — inner div matches rendered image area */}
-                            {(() => {
-                              const containerAspect = typeof window !== 'undefined' && window.innerWidth >= 768 ? 16 / 9 : 16 / 10;
-                              let imgLeft = 0, imgTop = 0, imgWidth = 100, imgHeight = 100;
-
-                              if (containerAspect > imageNaturalAspect) {
-                                imgWidth = (imageNaturalAspect / containerAspect) * 100;
-                                imgLeft = (100 - imgWidth) / 2;
-                              } else {
-                                imgHeight = (containerAspect / imageNaturalAspect) * 100;
-                                imgTop = (100 - imgHeight) / 2;
-                              }
-
-                              return (
-                                <div
-                                  className="absolute pointer-events-none"
-                                  style={{ left: `${imgLeft}%`, top: `${imgTop}%`, width: `${imgWidth}%`, height: `${imgHeight}%` }}
-                                >
-                                  {manualFixtures.map(fixture => {
-                                    const preset = getFixturePreset(fixture.type);
-                                    const hexColor = FIXTURE_MARKER_COLOR[fixture.type] || '#FF0000';
-
-                                    return (
-                                      <div
-                                        key={fixture.id}
-                                        className="absolute pointer-events-none"
-                                        style={{
-                                          left: `${fixture.x}%`,
-                                          top: `${fixture.y}%`,
-                                          transform: 'translate(-50%, -50%)',
-                                        }}
-                                      >
-                                        {/* Glow effect */}
-                                        <div
-                                          className="absolute rounded-full"
-                                          style={{
-                                            width: 80,
-                                            height: 80,
-                                            left: -40,
-                                            top: -40,
-                                            background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
-                                            filter: 'blur(4px)',
-                                          }}
-                                        />
-                                        {/* Core dot */}
-                                        <div
-                                          className="relative flex items-center justify-center w-6 h-6 rounded-full border-2"
-                                          style={{
-                                            left: -12,
-                                            top: -12,
-                                            backgroundColor: hexColor,
-                                            borderColor: 'white',
-                                            boxShadow: `0 0 16px ${hexColor}B3`,
-                                          }}
-                                        >
-                                          <span className="text-[10px] text-white font-bold">{preset.icon}</span>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Active tool indicator */}
-                            {activeManualFixtureType && (
-                              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur px-3 py-1 rounded-full text-[10px] text-[#F6B45A] font-medium flex items-center gap-1.5 pointer-events-none">
-                                <Crosshair className="w-3 h-3" />
-                                Tap to place {VISIBLE_FIXTURE_TYPES.find(ft => ft.id === activeManualFixtureType)?.label}
-                              </div>
-                            )}
-                          </div>
+                          <FixturePlacer
+                            ref={fixturePlacerRef}
+                            imageUrl={previewUrl}
+                            fixtures={manualFixtures}
+                            onFixturesChange={setManualFixtures}
+                            activeFixtureType={activeManualFixtureType ? (PIPELINE_TYPE_TO_CATEGORY[activeManualFixtureType] ?? null) : null}
+                            markerColors={FIXTURE_MARKER_COLOR}
+                            cursorColor={activeManualFixtureType ? (PIPELINE_MARKER_COLOR[activeManualFixtureType] || '#FF0000') : undefined}
+                            imageNaturalAspect={imageNaturalAspect}
+                            containerClassName="absolute top-0 left-0 right-0 aspect-[16/10] md:aspect-[16/9] z-10 rounded-2xl overflow-hidden"
+                          />
                         )}
                     </div>
 
@@ -4949,13 +4761,13 @@ Notes: ${invoice.notes || 'N/A'}
                                                     <span key={type} className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-gray-400">{count}x {type.replace('_', ' ')}</span>
                                                 ))}
                                                 <button
-                                                    onClick={() => setManualFixtures(prev => prev.slice(0, -1))}
+                                                    onClick={() => fixturePlacerRef.current?.undo()}
                                                     className="text-gray-400 hover:text-white text-[10px] flex items-center gap-1 ml-1"
                                                 >
                                                     <Undo2 className="w-3 h-3" /> Undo
                                                 </button>
                                                 <button
-                                                    onClick={() => setManualFixtures([])}
+                                                    onClick={() => fixturePlacerRef.current?.clearAll()}
                                                     className="text-red-400 hover:text-red-300 text-[10px] ml-1"
                                                 >
                                                     Clear All
