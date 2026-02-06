@@ -1307,6 +1307,26 @@ const App: React.FC = () => {
     }
   };
 
+  // ═══ Manual Placement Colors & Cursor ═══
+  // Match canvasNightService.ts MARKER_COLORS so dots look the same as what Gemini sees
+  const FIXTURE_MARKER_COLOR: Record<string, string> = {
+    uplight: '#FF0000', downlight: '#FF6600', path_light: '#00FF00',
+    well_light: '#FFFF00', step_light: '#FF00FF', gutter_uplight: '#00CCFF',
+    spot: '#FF0000', wall_wash: '#FF0000', bollard: '#00FF00',
+  };
+
+  // Pipeline ID → hex color (for cursor when a button is selected)
+  const PIPELINE_MARKER_COLOR: Record<string, string> = {
+    up: '#FF0000', soffit: '#FF6600', path: '#00FF00',
+    well: '#FFFF00', hardscape: '#FF00FF', gutter: '#00CCFF',
+    coredrill: '#FFFF00', holiday: '#FF0000',
+  };
+
+  function getManualCursor(hexColor: string): string {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M4 4 L4 22 L10 16 L16 26 L20 24 L14 14 L22 14 Z" fill="white" stroke="black" stroke-width="1.5"/><circle cx="4" cy="4" r="3" fill="${hexColor}" stroke="white" stroke-width="1"/></svg>`;
+    return `url('data:image/svg+xml,${encodeURIComponent(svg)}') 4 4, auto`;
+  }
+
   // ═══ Manual Placement Handlers ═══
   const getImageRelativeCoords = useCallback((e: React.MouseEvent<HTMLDivElement>): { x: number; y: number } | null => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -4761,7 +4781,14 @@ Notes: ${invoice.notes || 'N/A'}
                         {/* Manual placement click overlay */}
                         {placementMode === 'manual' && previewUrl && (
                           <div
-                            className={`absolute top-0 left-0 right-0 aspect-[16/10] md:aspect-[16/9] z-10 rounded-2xl overflow-hidden ${draggingFixtureRef.current ? 'cursor-grabbing' : activeManualFixtureType ? 'cursor-crosshair' : 'cursor-default'}`}
+                            className="absolute top-0 left-0 right-0 aspect-[16/10] md:aspect-[16/9] z-10 rounded-2xl overflow-hidden"
+                            style={{
+                              cursor: draggingFixtureRef.current
+                                ? 'grabbing'
+                                : activeManualFixtureType
+                                  ? getManualCursor(PIPELINE_MARKER_COLOR[activeManualFixtureType] || '#FF0000')
+                                  : 'default',
+                            }}
                             onMouseDown={handleManualMouseDown}
                             onMouseMove={handleManualMouseMove}
                             onMouseUp={handleManualMouseUp}
@@ -4770,13 +4797,12 @@ Notes: ${invoice.notes || 'N/A'}
                             {/* Placed fixture markers */}
                             {manualFixtures.map(fixture => {
                               const preset = getFixturePreset(fixture.type);
-                              const color = kelvinToRGB(fixture.colorTemp);
-                              const rgb = `${color[0]}, ${color[1]}, ${color[2]}`;
+                              const hexColor = FIXTURE_MARKER_COLOR[fixture.type] || '#FF0000';
 
                               return (
                                 <div
                                   key={fixture.id}
-                                  className="absolute pointer-events-none cursor-grab"
+                                  className="absolute pointer-events-none"
                                   style={{
                                     left: `${fixture.x}%`,
                                     top: `${fixture.y}%`,
@@ -4787,26 +4813,26 @@ Notes: ${invoice.notes || 'N/A'}
                                   <div
                                     className="absolute rounded-full"
                                     style={{
-                                      width: 60,
-                                      height: 60,
-                                      left: -30,
-                                      top: -30,
-                                      background: `radial-gradient(circle, rgba(${rgb}, 0.5) 0%, rgba(${rgb}, 0.15) 50%, transparent 70%)`,
+                                      width: 80,
+                                      height: 80,
+                                      left: -40,
+                                      top: -40,
+                                      background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
                                       filter: 'blur(4px)',
                                     }}
                                   />
                                   {/* Core dot */}
                                   <div
-                                    className="relative flex items-center justify-center w-4 h-4 rounded-full border-2"
+                                    className="relative flex items-center justify-center w-6 h-6 rounded-full border-2"
                                     style={{
-                                      left: -8,
-                                      top: -8,
-                                      backgroundColor: `rgba(${rgb}, 0.9)`,
+                                      left: -12,
+                                      top: -12,
+                                      backgroundColor: hexColor,
                                       borderColor: 'white',
-                                      boxShadow: `0 0 12px rgba(${rgb}, 0.7)`,
+                                      boxShadow: `0 0 16px ${hexColor}B3`,
                                     }}
                                   >
-                                    <span className="text-[8px] text-white font-bold">{preset.icon}</span>
+                                    <span className="text-[10px] text-white font-bold">{preset.icon}</span>
                                   </div>
                                 </div>
                               );
