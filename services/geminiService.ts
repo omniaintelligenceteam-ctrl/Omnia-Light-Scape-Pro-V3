@@ -2577,12 +2577,16 @@ function buildEnhancedPrompt(
       prompt += `- The light source MUST appear at the EXACT position of each marker — not nearby, not shifted\n`;
       prompt += `- The colored marker circles and labels MUST be completely removed/replaced by the realistic light\n`;
       prompt += `- Place EXACTLY ${count} lights total — one per marker. NO additional lights anywhere else\n`;
-      prompt += `- If a marker says "UP", render a ground-mounted uplight with a warm beam washing upward on the wall\n`;
+      prompt += `- If a marker says "UP", render a ground-mounted uplight: a small brass cylinder stake at GROUND LEVEL, beam washing UPWARD on the wall/surface above it\n`;
       prompt += `- If a marker says "PATH", render a path light bollard with a warm downward glow pool on the ground\n`;
-      prompt += `- If a marker says "DOWN", render a soffit/downlight shining downward from that spot\n`;
-      prompt += `- If a marker says "WELL", render an in-ground well light with an upward beam\n`;
+      prompt += `- If a marker says "DOWN", render a soffit/downlight recessed in the soffit overhang, beam shining DOWNWARD at the ground below\n`;
+      prompt += `- If a marker says "WELL", render an in-ground well light flush with the ground, beam aimed upward\n`;
       prompt += `- If a marker says "STEP", render a hardscape/step light with a soft horizontal glow\n`;
-      prompt += `- If a marker says "GUTTER", render a gutter-mounted uplight sitting inside the gutter channel, beam aimed upward at the roofline\n\n`;
+      prompt += `- If a marker says "GUTTER", render a gutter-mounted uplight: a small brass/bronze fixture clipped or mounted INSIDE the rain gutter channel. The beam aims UPWARD illuminating the roofline fascia and eave from below. This is NOT a soffit downlight — the light shines UP, not down. The fixture sits in the gutter, visible from below.\n\n`;
+      prompt += `CRITICAL CONFUSION PREVENTION:\n`;
+      prompt += `- "GUTTER" ≠ "DOWN/SOFFIT". Gutter = fixture IN the gutter, beam UP at roofline. Soffit = recessed in overhang, beam DOWN at ground.\n`;
+      prompt += `- If a marker says "GUTTER", you MUST render an UPWARD-facing light in the gutter — NEVER a downlight in the soffit.\n`;
+      prompt += `- If a marker says "UP", the fixture is at GROUND LEVEL aiming up — not mounted high on the wall.\n\n`;
       prompt += `ABSOLUTELY FORBIDDEN — DO NOT ADD:\n`;
       prompt += `- ANY light that does not have a corresponding numbered marker\n`;
       prompt += `- Porch lights, sconces, window glow, interior lights, string lights\n`;
@@ -2600,6 +2604,11 @@ function buildEnhancedPrompt(
         prompt += `  ${i + 1}. Marker #${i + 1} → ${label} at ${hDir}, ${vDir} of the house\n`;
       });
       prompt += `\nTOTAL: ${count} markers = EXACTLY ${count} lights. Areas without markers MUST stay dark.\n\n`;
+      prompt += `FINAL VERIFICATION — COUNT EVERY LIGHT IN YOUR OUTPUT:\n`;
+      prompt += `- You MUST render EXACTLY ${count} visible light sources. Count them.\n`;
+      prompt += `- If you count fewer than ${count}, you MISSED a marker. Go back and add the missing light.\n`;
+      prompt += `- If you count more than ${count}, you added an UNAUTHORIZED light. Remove it.\n`;
+      prompt += `- Every marker position MUST have a corresponding visible light glow in the output.\n\n`;
     }
   }
 
