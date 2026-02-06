@@ -15,6 +15,9 @@ import {
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
+import { generateDayToNightBase64 } from "./icLightV2Service";
+import { batchInpaintFixtures } from "./fluxFillService";
+import { checkFalStatus } from "./falService";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -32,6 +35,11 @@ const API_TIMEOUT_MS = 120000;
 
 // Temporary: Hide all soffit references from AI prompts (set to false to restore)
 const SOFFIT_HIDDEN = true;
+
+// Pipeline mode: 'gemini' (current) or 'multimodel' (IC-Light V2 + FLUX Fill)
+// Set VITE_PIPELINE_MODE=multimodel in .env to enable the multi-model pipeline
+export const PIPELINE_MODE: 'gemini' | 'multimodel' =
+  (import.meta.env.VITE_PIPELINE_MODE as string) === 'multimodel' ? 'multimodel' : 'gemini';
 
 /**
  * Wraps a promise with a timeout
@@ -2592,11 +2600,98 @@ export const generateNightSceneEnhanced = async (
   lightIntensity: number,
   beamAngle: number,
   targetRatio: string,
-  userPreferences?: UserPreferences | null
+  userPreferences?: UserPreferences | null,
+  onStageUpdate?: (stage: string) => void
 ): Promise<string> => {
+
+  // ─── MULTI-MODEL PIPELINE (IC-Light V2 + FLUX Fill) ───────────────────────
+  if (PIPELINE_MODE === 'multimodel') {
+    console.log('[Multi-Model] Starting IC-Light V2 + FLUX Fill pipeline...');
+
+    // Verify fal.ai is available before starting
+    const falStatus = await checkFalStatus();
+    if (!falStatus.available) {
+      console.warn('[Multi-Model] fal.ai not available, falling back to Gemini:', falStatus.error);
+      // Fall through to Gemini pipeline below
+    } else {
+      try {
+        // Stage 1: Analyze property (same as Gemini pipeline)
+        onStageUpdate?.('analyzing');
+        console.log('[Multi-Model] Stage 1: Analyzing property...');
+        const analysis = await analyzePropertyArchitecture(
+          imageBase64,
+          imageMimeType,
+          selectedFixtures,
+          fixtureSubOptions,
+          fixtureCounts
+        );
+
+        console.log('[Multi-Model] Analysis complete. Spatial map:', analysis.spatialMap ? 'included' : 'not included');
+
+        // Stage 4a: Day-to-night conversion with IC-Light V2
+        onStageUpdate?.('converting');
+        console.log('[Multi-Model] Stage 4a: Converting to nighttime with IC-Light V2...');
+        const nightBase = await generateDayToNightBase64(
+          imageBase64,
+          imageMimeType,
+          (status, progress) => {
+            console.log(`[Multi-Model] IC-Light V2: ${status} (${progress}%)`);
+          }
+        );
+
+        console.log('[Multi-Model] Day-to-night conversion complete.');
+
+        // Stage 4b: Place fixtures with FLUX Fill (if spatial map available)
+        if (analysis.spatialMap && analysis.spatialMap.placements.length > 0) {
+          onStageUpdate?.('placing');
+          console.log('[Multi-Model] Stage 4b: Placing fixtures with FLUX Fill...');
+
+          // Get image dimensions from the nighttime base
+          const nightImg = await loadImageFromBase64(nightBase);
+          const imageWidth = nightImg.width;
+          const imageHeight = nightImg.height;
+
+          // Extract base64 from data URI for FLUX Fill
+          const nightBaseRaw = nightBase.includes(',')
+            ? nightBase.split(',')[1]
+            : nightBase;
+
+          const batchResult = await batchInpaintFixtures(
+            nightBaseRaw,
+            analysis.spatialMap,
+            imageWidth,
+            imageHeight,
+            analysis.architecture?.facade_materials,
+            (stage, groupIdx, totalGroups) => {
+              onStageUpdate?.(`placing_${groupIdx + 1}_of_${totalGroups}`);
+              console.log(`[Multi-Model] FLUX Fill: ${stage}`);
+            }
+          );
+
+          if (batchResult.success && batchResult.finalImageBase64) {
+            console.log(`[Multi-Model] Fixture placement complete. Groups processed: ${batchResult.groupsProcessed}, failed: ${batchResult.groupsFailed}`);
+            return `data:image/jpeg;base64,${batchResult.finalImageBase64}`;
+          } else {
+            console.warn('[Multi-Model] FLUX Fill batch failed:', batchResult.error);
+            console.log('[Multi-Model] Returning IC-Light V2 nighttime base without fixtures.');
+            return nightBase;
+          }
+        } else {
+          console.warn('[Multi-Model] No spatial map available. Returning IC-Light V2 base.');
+          return nightBase;
+        }
+      } catch (multiModelError) {
+        console.error('[Multi-Model] Pipeline failed, falling back to Gemini:', multiModelError);
+        // Fall through to Gemini pipeline below
+      }
+    }
+  }
+
+  // ─── GEMINI PIPELINE (default / fallback) ─────────────────────────────────
   console.log('[Enhanced Mode] Starting Gemini-only generation...');
 
   // Step 1: Analyze property with Gemini (includes spatial mapping)
+  onStageUpdate?.('analyzing');
   console.log('[Enhanced Mode] Step 1: Analyzing property with Gemini Pro 3...');
   const analysis = await analyzePropertyArchitecture(
     imageBase64,
@@ -2623,10 +2718,11 @@ export const generateNightSceneEnhanced = async (
   console.log('[Enhanced Mode] Enhanced prompt built. Length:', enhancedPrompt.length, 'characters');
 
   // Step 3: Generate image with Gemini 3 Pro Image using enhanced prompt
+  onStageUpdate?.('generating');
   console.log('[Enhanced Mode] Step 3: Generating image with Gemini 3 Pro Image...');
   const result = await generateNightScene(
     imageBase64,
-    enhancedPrompt, // User instructions (our comprehensive enhanced prompt)
+    enhancedPrompt,
     imageMimeType,
     targetRatio,
     lightIntensity,
@@ -2638,6 +2734,18 @@ export const generateNightSceneEnhanced = async (
   console.log('[Enhanced Mode] Generation complete!');
   return result;
 };
+
+/**
+ * Load an image from a base64 data URI to get its dimensions.
+ */
+function loadImageFromBase64(dataUri: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUri;
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ENHANCED ANALYSIS INTEGRATION

@@ -2471,3 +2471,48 @@ export const QUICK_ANALYSIS_PROMPT = `Analyze this property photo and provide:
 6. Recommended lighting approach
 
 Return a brief JSON summary for initial fixture suggestions.`;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FLUX FILL INPAINTING PROMPT TEMPLATES
+// Used by the multi-model pipeline for mask-based fixture placement
+// Each prompt describes what a specific fixture type should look like
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const FLUX_FILL_PROMPTS: Record<string, string> = {
+  // ── Uplights ──────────────────────────────────────────────────────────────
+  up_siding: "warm 2700K brass ground-mounted landscape uplight, narrow beam grazing upward on wall siding, dramatic vertical light pool revealing texture, soft feathered beam edges, professional landscape lighting, photorealistic night photograph",
+  up_windows: "warm 2700K brass ground-mounted uplight centered below window, narrow beam washing upward, light pool illuminating wall beneath window frame, professional landscape lighting, photorealistic night scene",
+  up_columns: "warm 2700K brass ground-mounted uplight at column base, tight narrow beam grazing upward on column surface, dramatic vertical light accent, professional landscape lighting, photorealistic night photograph",
+  up_entryway: "warm 2700K brass ground-mounted uplight flanking entry door, narrow beam washing upward on wall beside doorway, welcoming entry lighting, professional landscape lighting, photorealistic night scene",
+  up_trees: "warm 2700K brass ground-mounted uplight at tree base, light washing up trunk and into canopy from below, dramatic tree uplighting with shadows in branches, professional landscape lighting, photorealistic night photograph",
+  up: "warm 2700K brass ground-mounted landscape uplight, narrow beam grazing upward on surface, dramatic light pool, professional landscape lighting, photorealistic night photograph",
+
+  // ── Path Lights ───────────────────────────────────────────────────────────
+  path_walkway: "22-inch tall brass dome path light on walkway edge, warm 2700K omnidirectional glow illuminating walkway surface, soft circular light pool on ground, professional landscape lighting, photorealistic night scene",
+  path_driveway: "22-inch tall brass dome path light along driveway edge, warm 2700K omnidirectional glow on driveway surface, soft circular light pool, professional landscape lighting, photorealistic night scene",
+  path: "22-inch tall brass dome path light, warm 2700K omnidirectional glow on ground surface, soft circular light pool, professional landscape lighting, photorealistic night scene",
+
+  // ── Gutter Lights ─────────────────────────────────────────────────────────
+  gutter_peaks: "small bronze uplight fixture inside metal gutter trough, beam shining upward illuminating gable peak above, subtle accent light on roofline, fixture barely visible from ground, professional landscape lighting, photorealistic night photograph",
+  gutter_dormers: "small bronze uplight fixture inside metal gutter trough near dormer, beam shining upward illuminating dormer face, subtle accent light, fixture barely visible from ground, professional landscape lighting, photorealistic night photograph",
+  gutter_secondStoryFacade: "small bronze uplight fixture inside metal gutter trough, beam shining upward illuminating second story facade above, subtle wash of light on upper wall, professional landscape lighting, photorealistic night photograph",
+  gutter: "small bronze uplight fixture inside metal gutter trough, beam shining upward toward roofline, subtle accent light, fixture barely visible from ground, professional landscape lighting, photorealistic night photograph",
+
+  // ── Hardscape Lights ──────────────────────────────────────────────────────
+  hardscape_steps: "recessed LED step light in concrete or stone step riser, warm 2700K glow illuminating step tread below, subtle safety lighting, professional landscape lighting, photorealistic night scene",
+  hardscape_patio: "flush-mounted in-ground well light in patio surface, warm 2700K upward glow, subtle accent in hardscape, professional landscape lighting, photorealistic night scene",
+  hardscape_retaining_walls: "recessed LED light in retaining wall cap, warm 2700K glow illuminating wall face below, subtle accent lighting, professional landscape lighting, photorealistic night scene",
+  hardscape: "flush-mounted hardscape light, warm 2700K glow on stone or concrete surface, subtle accent, professional landscape lighting, photorealistic night scene",
+
+  // ── Core Drill Lights ─────────────────────────────────────────────────────
+  coredrill: "flush-mounted in-grade core drill light, warm 2700K narrow beam shining upward from ground surface, dramatic accent light, professional landscape lighting, photorealistic night photograph",
+
+  // ── Well Lights ───────────────────────────────────────────────────────────
+  well: "in-ground well light flush with ground surface, warm 2700K narrow beam projecting upward, dramatic accent lighting, brass fixture ring visible at ground level, professional landscape lighting, photorealistic night photograph",
+
+  // ── Soffit / Downlights ───────────────────────────────────────────────────
+  soffit: "small recessed LED downlight in soffit or eave, warm 3000K beam shining downward creating pool of light on ground below, subtle overhead accent, professional landscape lighting, photorealistic night scene",
+
+  // ── Holiday Lights ────────────────────────────────────────────────────────
+  holiday: "warm white string lights along roofline, evenly spaced bulbs creating festive outline of roofline, professional holiday lighting installation, photorealistic night photograph",
+};

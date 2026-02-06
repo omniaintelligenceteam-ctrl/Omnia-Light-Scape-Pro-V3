@@ -422,7 +422,7 @@ const App: React.FC = () => {
 
   // Auto-prompt feature: Property analysis state
   const [, setPropertyAnalysis] = useState<PropertyAnalysis | null>(null);
-  const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'validating' | 'generating'>('idle');
+  const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'validating' | 'generating' | 'converting' | 'placing'>('idle');
 
   // Generation mode: 'enhanced' = Gemini Pro 3 only (Claude quality, lower cost), 'hybrid' = Claude Opus 4.5 + Gemini (premium), 'direct' = Gemini only (fast)
   const [generationMode] = useState<'enhanced' | 'hybrid' | 'direct' | 'full'>('enhanced');
@@ -1791,7 +1791,8 @@ const App: React.FC = () => {
           lightIntensity,
           beamAngle,
           targetRatio,
-          userPreferences
+          userPreferences,
+          (stage) => setGenerationStage(stage as typeof generationStage)
         );
       }
       // === HYBRID MODE: Claude Opus 4.5 + Nano Banana Pro (Best Quality) ===
