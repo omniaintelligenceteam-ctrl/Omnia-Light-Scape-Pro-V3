@@ -746,18 +746,6 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Instructions overlay (when empty) */}
-      {fixtures.length === 0 && !readOnly && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-black/60 text-white px-6 py-4 rounded-lg text-center">
-            <Plus size={24} className="mx-auto mb-2 text-amber-500" />
-            <p className="font-medium">Click anywhere to place a light</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Select fixture type from toolbar above
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

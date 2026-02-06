@@ -4702,7 +4702,7 @@ Notes: ${invoice.notes || 'N/A'}
                                 {/* Manual Placement Mode: FixturePlacer */}
                                 {placementMode === 'manual' && previewUrl && (
                                     <div className="flex flex-col gap-3">
-                                        <div className="rounded-xl overflow-hidden border border-white/10" style={{ maxHeight: '55vh' }}>
+                                        <div className="rounded-xl overflow-hidden border border-white/10" style={{ height: '55vh' }}>
                                             <FixturePlacer
                                                 imageUrl={previewUrl}
                                                 initialFixtures={manualFixtures}
