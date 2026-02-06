@@ -1333,8 +1333,10 @@ const App: React.FC = () => {
   };
 
   function getManualCursor(hexColor: string): string {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M4 4 L4 22 L10 16 L16 26 L20 24 L14 14 L22 14 Z" fill="white" stroke="black" stroke-width="1.5"/><circle cx="4" cy="4" r="3" fill="${hexColor}" stroke="white" stroke-width="1"/></svg>`;
-    return `url('data:image/svg+xml,${encodeURIComponent(svg)}') 4 4, auto`;
+    // 36x36 SVG: arrow pointer + smaller colored dot at tip matching reduced AI marker size
+    // Dot is 14px diameter (r=7) centered at (8,8), arrow hangs below-right
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="8" cy="8" r="7" fill="${hexColor}" stroke="white" stroke-width="1.5" opacity="0.9"/><path d="M8 8 L8 26 L13 21 L18 30 L21 28 L16 20 L23 20 Z" fill="white" stroke="black" stroke-width="1.2"/></svg>`;
+    return `url('data:image/svg+xml,${encodeURIComponent(svg)}') 8 8, auto`;
   }
 
   // ═══ Manual Placement Handlers ═══

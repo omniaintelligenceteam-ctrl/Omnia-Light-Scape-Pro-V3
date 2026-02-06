@@ -130,7 +130,7 @@ export async function drawFixtureMarkers(
 
         ctx.drawImage(img, 0, 0);
 
-        const markerRadius = Math.max(Math.round(img.width * 0.025), 18);
+        const markerRadius = Math.max(Math.round(img.width * 0.015), 12);
 
         spatialMap.placements.forEach((placement, index) => {
           const cx = (placement.horizontalPosition / 100) * img.width;
