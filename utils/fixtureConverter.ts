@@ -30,6 +30,21 @@ const CATEGORY_TO_PIPELINE_TYPE: Record<FixtureCategory, string> = {
   gutter_uplight: 'gutter',
 };
 
+/**
+ * Reverse mapping: pipeline fixtureType IDs → FixtureCategory.
+ * Used by manual mode to create LightFixture objects from VISIBLE_FIXTURE_TYPES button clicks.
+ */
+export const PIPELINE_TYPE_TO_CATEGORY: Record<string, FixtureCategory> = {
+  'up':        'uplight',
+  'path':      'path_light',
+  'coredrill': 'well_light',
+  'gutter':    'gutter_uplight',
+  'hardscape': 'step_light',
+  'well':      'well_light',
+  'holiday':   'spot',
+  'soffit':    'downlight',
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -21,7 +21,8 @@ import { ClientPortal } from './components/ClientPortal';
 import { generateBOM } from './utils/bomCalculator';
 import { FixturePlacer } from './components/FixturePlacer';
 import type { LightFixture } from './types/fixtures';
-import { convertFixturesToSpatialMap, deriveSelections } from './utils/fixtureConverter';
+import { createFixture, kelvinToRGB, getFixturePreset } from './types/fixtures';
+import { convertFixturesToSpatialMap, deriveSelections, PIPELINE_TYPE_TO_CATEGORY } from './utils/fixtureConverter';
 import { detectConflicts, ConflictResult, formatTimeSlot } from './utils/scheduleConflictDetection';
 import { useUserSync } from './hooks/useUserSync';
 import { useProjects } from './hooks/useProjects';
@@ -381,6 +382,7 @@ const App: React.FC = () => {
   // Manual Placement Mode (click-to-place on image)
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [manualFixtures, setManualFixtures] = useState<LightFixture[]>([]);
+  const [activeManualFixtureType, setActiveManualFixtureType] = useState<string | null>(null);
 
   // Favorite Presets State
   interface FixturePreset {
@@ -1302,6 +1304,91 @@ const App: React.FC = () => {
         });
     }
   };
+
+  // ═══ Manual Placement Handlers ═══
+  const handleManualPlacement = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!activeManualFixtureType) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const containerWidth = rect.width;
+    const containerHeight = rect.height;
+
+    // Find the image element to get natural dimensions for letterboxing calc
+    const imgElement = e.currentTarget.querySelector('img');
+    if (!imgElement) return;
+
+    const imgNaturalAspect = imgElement.naturalWidth / imgElement.naturalHeight;
+    const containerAspect = containerWidth / containerHeight;
+
+    let offsetX = 0, offsetY = 0, renderedWidth = containerWidth, renderedHeight = containerHeight;
+
+    if (containerAspect > imgNaturalAspect) {
+      renderedHeight = containerHeight;
+      renderedWidth = containerHeight * imgNaturalAspect;
+      offsetX = (containerWidth - renderedWidth) / 2;
+    } else {
+      renderedWidth = containerWidth;
+      renderedHeight = containerWidth / imgNaturalAspect;
+      offsetY = (containerHeight - renderedHeight) / 2;
+    }
+
+    let x = ((e.clientX - rect.left - offsetX) / renderedWidth) * 100;
+    let y = ((e.clientY - rect.top - offsetY) / renderedHeight) * 100;
+
+    // Ignore clicks outside image bounds
+    if (x < 0 || x > 100 || y < 0 || y > 100) return;
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
+
+    const fixtureCategory = PIPELINE_TYPE_TO_CATEGORY[activeManualFixtureType];
+    if (!fixtureCategory) return;
+
+    const newFixture = createFixture(x, y, fixtureCategory);
+    setManualFixtures(prev => [...prev, newFixture]);
+  }, [activeManualFixtureType]);
+
+  const handleManualRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (manualFixtures.length === 0) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const containerWidth = rect.width;
+    const containerHeight = rect.height;
+
+    const imgElement = e.currentTarget.querySelector('img');
+    if (!imgElement) return;
+
+    const imgNaturalAspect = imgElement.naturalWidth / imgElement.naturalHeight;
+    const containerAspect = containerWidth / containerHeight;
+
+    let offsetX = 0, offsetY = 0, renderedWidth = containerWidth, renderedHeight = containerHeight;
+
+    if (containerAspect > imgNaturalAspect) {
+      renderedHeight = containerHeight;
+      renderedWidth = containerHeight * imgNaturalAspect;
+      offsetX = (containerWidth - renderedWidth) / 2;
+    } else {
+      renderedWidth = containerWidth;
+      renderedHeight = containerWidth / imgNaturalAspect;
+      offsetY = (containerHeight - renderedHeight) / 2;
+    }
+
+    const x = ((e.clientX - rect.left - offsetX) / renderedWidth) * 100;
+    const y = ((e.clientY - rect.top - offsetY) / renderedHeight) * 100;
+
+    // Find nearest fixture within 5% radius
+    let nearest: { fixture: LightFixture; dist: number } | null = null;
+    for (const f of manualFixtures) {
+      const dist = Math.sqrt(Math.pow(x - f.x, 2) + Math.pow(y - f.y, 2));
+      if (dist < 5 && (!nearest || dist < nearest.dist)) {
+        nearest = { fixture: f, dist };
+      }
+    }
+
+    if (nearest) {
+      setManualFixtures(prev => prev.filter(f => f.id !== nearest!.fixture.id));
+    }
+  }, [manualFixtures]);
 
   const togglePendingOption = (optId: string) => {
     setPendingOptions(prev => {
@@ -3628,7 +3715,7 @@ Notes: ${invoice.notes || 'N/A'}
               {/* Background Ambient Glow */}
               <div className="absolute top-[-10%] left-[20%] w-[60%] h-[500px] bg-[#F6B45A]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-              <div className="max-w-4xl mx-auto min-h-full px-3 py-4 md:p-8 flex flex-col justify-start md:justify-center relative z-10">
+              <div className="max-w-7xl mx-auto min-h-full px-3 py-4 md:px-12 md:py-8 flex flex-col justify-start md:justify-center relative z-10">
                 
                 {/* MODE 1: RESULT VIEW (Generated Image Only) */}
                 {generatedImage ? (
@@ -4646,6 +4733,68 @@ Notes: ${invoice.notes || 'N/A'}
                           onImageSelect={handleImageSelect}
                           onClear={handleClear}
                         />
+
+                        {/* Manual placement click overlay */}
+                        {placementMode === 'manual' && previewUrl && (
+                          <div
+                            className={`absolute top-0 left-0 right-0 aspect-[16/10] md:aspect-[16/9] z-10 rounded-2xl overflow-hidden ${activeManualFixtureType ? 'cursor-crosshair' : ''}`}
+                            onClick={activeManualFixtureType ? handleManualPlacement : undefined}
+                            onContextMenu={handleManualRightClick}
+                          >
+                            {/* Placed fixture markers */}
+                            {manualFixtures.map(fixture => {
+                              const preset = getFixturePreset(fixture.type);
+                              const color = kelvinToRGB(fixture.colorTemp);
+                              const rgb = `${color[0]}, ${color[1]}, ${color[2]}`;
+
+                              return (
+                                <div
+                                  key={fixture.id}
+                                  className="absolute pointer-events-none"
+                                  style={{
+                                    left: `${fixture.x}%`,
+                                    top: `${fixture.y}%`,
+                                    transform: 'translate(-50%, -50%)',
+                                  }}
+                                >
+                                  {/* Glow effect */}
+                                  <div
+                                    className="absolute rounded-full"
+                                    style={{
+                                      width: 60,
+                                      height: 60,
+                                      left: -30,
+                                      top: -30,
+                                      background: `radial-gradient(circle, rgba(${rgb}, 0.5) 0%, rgba(${rgb}, 0.15) 50%, transparent 70%)`,
+                                      filter: 'blur(4px)',
+                                    }}
+                                  />
+                                  {/* Core dot */}
+                                  <div
+                                    className="relative flex items-center justify-center w-4 h-4 rounded-full border-2"
+                                    style={{
+                                      left: -8,
+                                      top: -8,
+                                      backgroundColor: `rgba(${rgb}, 0.9)`,
+                                      borderColor: 'white',
+                                      boxShadow: `0 0 12px rgba(${rgb}, 0.7)`,
+                                    }}
+                                  >
+                                    <span className="text-[8px] text-white font-bold">{preset.icon}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* Active tool indicator */}
+                            {activeManualFixtureType && (
+                              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur px-3 py-1 rounded-full text-[10px] text-[#F6B45A] font-medium flex items-center gap-1.5 pointer-events-none">
+                                <Crosshair className="w-3 h-3" />
+                                Tap to place {VISIBLE_FIXTURE_TYPES.find(ft => ft.id === activeManualFixtureType)?.label}
+                              </div>
+                            )}
+                          </div>
+                        )}
                     </div>
 
                     {/* Controls */}
@@ -4676,7 +4825,7 @@ Notes: ${invoice.notes || 'N/A'}
                                 {file && (
                                     <div className="flex items-center gap-1 bg-[#0d0d0d] rounded-xl border border-white/10 p-1">
                                         <button
-                                            onClick={() => setPlacementMode('auto')}
+                                            onClick={() => { setPlacementMode('auto'); setActiveManualFixtureType(null); }}
                                             className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                                                 placementMode === 'auto'
                                                     ? 'bg-[#F6B45A] text-black'
@@ -4699,36 +4848,36 @@ Notes: ${invoice.notes || 'N/A'}
                                         </button>
                                     </div>
                                 )}
-                                {/* Manual Placement Mode: FixturePlacer */}
-                                {placementMode === 'manual' && previewUrl && (
-                                    <div className="flex flex-col gap-3">
-                                        <div className="rounded-xl overflow-hidden border border-white/10" style={{ height: '55vh' }}>
-                                            <FixturePlacer
-                                                imageUrl={previewUrl}
-                                                initialFixtures={manualFixtures}
-                                                onFixturesChange={setManualFixtures}
-                                                showPreview={true}
-                                            />
-                                        </div>
-                                        {manualFixtures.length > 0 && (
-                                            <div className="bg-[#0d0d0d] rounded-xl border border-white/10 p-3">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-semibold text-white">
-                                                        {manualFixtures.length} fixture{manualFixtures.length !== 1 ? 's' : ''} placed
-                                                    </span>
-                                                    <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                                                        {Object.entries(
-                                                            manualFixtures.reduce((acc, f) => {
-                                                                acc[f.type] = (acc[f.type] || 0) + 1;
-                                                                return acc;
-                                                            }, {} as Record<string, number>)
-                                                        ).map(([type, count]) => (
-                                                            <span key={type} className="bg-white/5 px-2 py-0.5 rounded-full">{count}x {type.replace('_', ' ')}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
+                                {/* Manual Placement Mode: Summary bar */}
+                                {placementMode === 'manual' && manualFixtures.length > 0 && (
+                                    <div className="bg-[#0d0d0d] rounded-xl border border-white/10 p-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-white">
+                                                {manualFixtures.length} fixture{manualFixtures.length !== 1 ? 's' : ''} placed
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                {Object.entries(
+                                                    manualFixtures.reduce((acc, f) => {
+                                                        acc[f.type] = (acc[f.type] || 0) + 1;
+                                                        return acc;
+                                                    }, {} as Record<string, number>)
+                                                ).map(([type, count]) => (
+                                                    <span key={type} className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-gray-400">{count}x {type.replace('_', ' ')}</span>
+                                                ))}
+                                                <button
+                                                    onClick={() => setManualFixtures(prev => prev.slice(0, -1))}
+                                                    className="text-gray-400 hover:text-white text-[10px] flex items-center gap-1 ml-1"
+                                                >
+                                                    <Undo2 className="w-3 h-3" /> Undo
+                                                </button>
+                                                <button
+                                                    onClick={() => setManualFixtures([])}
+                                                    className="text-red-400 hover:text-red-300 text-[10px] ml-1"
+                                                >
+                                                    Clear All
+                                                </button>
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
                                 )}
 
@@ -4777,27 +4926,47 @@ Notes: ${invoice.notes || 'N/A'}
                                 )}
                             </div>
 
-                            {/* Fixture Grid - Premium minimal buttons */}
-                            {placementMode === 'auto' && (
+                            {/* Fixture Grid - Premium minimal buttons (shown in both auto & manual modes) */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                                 {VISIBLE_FIXTURE_TYPES.map((ft) => {
-                                    const isSelected = selectedFixtures.includes(ft.id);
+                                    const isManual = placementMode === 'manual';
+                                    // Auto mode: multi-select toggle
+                                    const isSelectedAuto = selectedFixtures.includes(ft.id);
+                                    // Manual mode: single active tool
+                                    const isActiveManual = activeManualFixtureType === ft.id;
+                                    const isHighlighted = isManual ? isActiveManual : isSelectedAuto;
+
+                                    // Count of placed fixtures of this type in manual mode
+                                    const manualCount = isManual
+                                      ? manualFixtures.filter(f => {
+                                          const pipelineId = Object.entries(PIPELINE_TYPE_TO_CATEGORY).find(([, cat]) => cat === f.type)?.[0];
+                                          return pipelineId === ft.id;
+                                        }).length
+                                      : 0;
+
                                     const subOpts = fixtureSubOptions[ft.id];
-                                    const hasSubOpts = subOpts && subOpts.length > 0;
+                                    const hasSubOpts = !isManual && subOpts && subOpts.length > 0;
 
                                     return (
                                         <motion.button
                                             key={ft.id}
-                                            onClick={() => toggleFixture(ft.id)}
+                                            onClick={() => {
+                                              if (isManual) {
+                                                // Single-select: toggle active tool
+                                                setActiveManualFixtureType(prev => prev === ft.id ? null : ft.id);
+                                              } else {
+                                                toggleFixture(ft.id);
+                                              }
+                                            }}
                                             className={`group relative overflow-visible rounded-xl transition-all duration-300 ${
-                                                isSelected
+                                                isHighlighted
                                                     ? 'bg-[#F6B45A]'
                                                     : 'bg-[#0d0d0d] hover:bg-[#F6B45A]/10 active:bg-[#F6B45A]'
                                             }`}
                                             initial={false}
                                             animate={{
-                                                y: isSelected ? -3 : 0,
-                                                boxShadow: isSelected
+                                                y: isHighlighted ? -3 : 0,
+                                                boxShadow: isHighlighted
                                                     ? '0 8px 32px rgba(246,180,90,0.5), 0 4px 12px rgba(246,180,90,0.3), 0 0 0 1px rgba(246,180,90,0.2)'
                                                     : '0 0 0 rgba(246,180,90,0)'
                                             }}
@@ -4807,7 +4976,7 @@ Notes: ${invoice.notes || 'N/A'}
                                         >
                                             {/* Gold underglow effect when selected */}
                                             <AnimatePresence>
-                                                {isSelected && (
+                                                {isHighlighted && (
                                                     <motion.div
                                                         className="absolute -bottom-2 left-1/2 w-3/4 h-4 rounded-full pointer-events-none"
                                                         style={{
@@ -4825,14 +4994,14 @@ Notes: ${invoice.notes || 'N/A'}
 
                                             {/* Border with hover color change */}
                                             <div className={`absolute inset-0 rounded-xl border transition-all duration-200 ${
-                                                isSelected
+                                                isHighlighted
                                                     ? 'border-[#F6B45A]'
                                                     : 'border-white/10 group-hover:border-[#F6B45A]/50 group-active:border-[#F6B45A]'
                                             }`} />
 
                                             {/* Sparkle/twinkle effect when selected */}
                                             <AnimatePresence>
-                                                {isSelected && (
+                                                {isHighlighted && (
                                                     <>
                                                         {[...Array(4)].map((_, i) => (
                                                             <motion.div
@@ -4864,14 +5033,25 @@ Notes: ${invoice.notes || 'N/A'}
                                             <div className="relative z-10 flex items-center justify-center gap-1.5 py-2 px-3 md:py-3 md:px-5">
                                                 {/* Label with hover color change */}
                                                 <span className={`text-xs md:text-sm font-semibold tracking-wide transition-colors duration-200 whitespace-nowrap ${
-                                                    isSelected
+                                                    isHighlighted
                                                         ? 'text-black'
                                                         : 'text-gray-400 group-hover:text-[#F6B45A] group-active:text-black'
                                                 }`}>
                                                     {ft.label}
                                                 </span>
 
-                                                {/* Sub-options indicator */}
+                                                {/* Manual mode: count badge */}
+                                                {isManual && manualCount > 0 && (
+                                                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                                        isHighlighted
+                                                            ? 'bg-black/15 text-black/70'
+                                                            : 'bg-white/10 text-gray-500'
+                                                    }`}>
+                                                        {manualCount}
+                                                    </span>
+                                                )}
+
+                                                {/* Auto mode: Sub-options indicator */}
                                                 <AnimatePresence mode="wait">
                                                     {hasSubOpts && (
                                                         <motion.span
@@ -4881,7 +5061,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                             exit={{ opacity: 0, scale: 0.8, width: 0 }}
                                                             transition={{ duration: 0.15, ease: 'easeOut' }}
                                                             className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-colors duration-200 ${
-                                                                isSelected
+                                                                isHighlighted
                                                                     ? 'bg-black/15 text-black/70'
                                                                     : 'bg-white/10 text-gray-500 group-hover:bg-[#F6B45A]/20 group-hover:text-[#F6B45A]'
                                                             }`}
@@ -4891,16 +5071,19 @@ Notes: ${invoice.notes || 'N/A'}
                                                     )}
                                                 </AnimatePresence>
 
-                                                {/* Checkmark when selected - with sparkle */}
+                                                {/* Icon: Crosshair in manual mode, Checkmark in auto mode */}
                                                 <AnimatePresence>
-                                                    {isSelected && (
+                                                    {isHighlighted && (
                                                         <motion.div
                                                             initial={{ scale: 0, opacity: 0, rotate: -180 }}
                                                             animate={{ scale: 1, opacity: 1, rotate: 0 }}
                                                             exit={{ scale: 0, opacity: 0 }}
                                                             transition={{ type: "spring", stiffness: 500, damping: 25 }}
                                                         >
-                                                            <Check className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                                            {isManual
+                                                              ? <Crosshair className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                                              : <Check className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                                            }
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
@@ -4909,7 +5092,6 @@ Notes: ${invoice.notes || 'N/A'}
                                     );
                                 })}
                             </div>
-                            )}
 
                             {/* Fixture Summary - Shows configured quantities */}
                             {placementMode === 'auto' && (
