@@ -2508,7 +2508,8 @@ function buildEnhancedPrompt(
   fixtureCounts: Record<string, number | null>,
   colorTemperaturePrompt: string,
   lightIntensity: number,
-  beamAngle: number
+  beamAngle: number,
+  isManualPlacement: boolean = false
 ): string {
   // Build fixture inventory
   let inventoryAllowlist = '';
@@ -2572,6 +2573,20 @@ function buildEnhancedPrompt(
   if (analysis.spatialMap && analysis.spatialMap.placements.length > 0) {
     prompt += formatSpatialMapForPrompt(analysis.spatialMap);
     prompt += '\n';
+
+    // Manual placement: strict constraints — ONLY user-placed fixtures, nothing extra
+    if (isManualPlacement) {
+      const count = analysis.spatialMap.placements.length;
+      prompt += `## CRITICAL: MANUAL PLACEMENT MODE\n`;
+      prompt += `The user has MANUALLY placed EXACTLY ${count} fixture(s) at the positions listed above.\n`;
+      prompt += `STRICT RULES:\n`;
+      prompt += `- Place lighting fixtures ONLY at the ${count} positions specified above — NO OTHERS\n`;
+      prompt += `- DO NOT add any additional lights, glows, or illumination beyond these ${count} positions\n`;
+      prompt += `- DO NOT add ambient lighting, porch lights, window lights, or any light source not in the list\n`;
+      prompt += `- The TOTAL number of visible light sources in the final image MUST be EXACTLY ${count}\n`;
+      prompt += `- Each light must be positioned as close as possible to its specified percentage coordinates\n`;
+      prompt += `- If a coordinate says x=30%, y=75%, the light MUST appear at roughly 30% from the left edge and 75% from the top\n\n`;
+    }
   }
 
   // Add lighting parameters
@@ -2714,6 +2729,12 @@ export const generateNightSceneEnhanced = async (
 
   console.log('[Enhanced Mode] Analysis complete. Spatial map:', analysis.spatialMap ? 'included' : 'not included');
 
+  // If manual placements exist, override the AI spatial map with user's placements
+  if (manualSpatialMap && manualSpatialMap.placements.length > 0) {
+    console.log(`[Enhanced Mode] Overriding AI spatial map with ${manualSpatialMap.placements.length} manual placements`);
+    analysis.spatialMap = manualSpatialMap;
+  }
+
   // Step 2: Build enhanced prompt using Claude's quality approach
   console.log('[Enhanced Mode] Step 2: Building enhanced prompt...');
   const enhancedPrompt = buildEnhancedPrompt(
@@ -2723,7 +2744,8 @@ export const generateNightSceneEnhanced = async (
     fixtureCounts,
     colorTemperaturePrompt,
     lightIntensity,
-    beamAngle
+    beamAngle,
+    !!manualSpatialMap
   );
 
   console.log('[Enhanced Mode] Enhanced prompt built. Length:', enhancedPrompt.length, 'characters');
