@@ -1314,7 +1314,7 @@ const App: React.FC = () => {
     const containerHeight = rect.height;
 
     // Find the image element to get natural dimensions for letterboxing calc
-    const imgElement = e.currentTarget.querySelector('img');
+    const imgElement = e.currentTarget.parentElement?.querySelector('img');
     if (!imgElement) return;
 
     const imgNaturalAspect = imgElement.naturalWidth / imgElement.naturalHeight;
@@ -1355,7 +1355,7 @@ const App: React.FC = () => {
     const containerWidth = rect.width;
     const containerHeight = rect.height;
 
-    const imgElement = e.currentTarget.querySelector('img');
+    const imgElement = e.currentTarget.parentElement?.querySelector('img');
     if (!imgElement) return;
 
     const imgNaturalAspect = imgElement.naturalWidth / imgElement.naturalHeight;
