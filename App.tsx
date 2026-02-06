@@ -385,6 +385,7 @@ const App: React.FC = () => {
   const [activeManualFixtureType, setActiveManualFixtureType] = useState<string | null>(null);
   const draggingFixtureRef = useRef<string | null>(null);
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const [imageNaturalAspect, setImageNaturalAspect] = useState<number>(16 / 10);
 
   // Favorite Presets State
   interface FixturePreset {
@@ -764,6 +765,14 @@ const App: React.FC = () => {
     };
     fetchUserPreferences();
   }, [user?.id]);
+
+  // Track uploaded image's natural aspect ratio for letterbox-aware dot positioning
+  useEffect(() => {
+    if (!previewUrl) return;
+    const img = new window.Image();
+    img.onload = () => setImageNaturalAspect(img.naturalWidth / img.naturalHeight);
+    img.src = previewUrl;
+  }, [previewUrl]);
 
   // Helper function to save feedback to the API
   const saveFeedback = async (
@@ -4794,49 +4803,69 @@ Notes: ${invoice.notes || 'N/A'}
                             onMouseUp={handleManualMouseUp}
                             onContextMenu={handleManualRightClick}
                           >
-                            {/* Placed fixture markers */}
-                            {manualFixtures.map(fixture => {
-                              const preset = getFixturePreset(fixture.type);
-                              const hexColor = FIXTURE_MARKER_COLOR[fixture.type] || '#FF0000';
+                            {/* Placed fixture markers — inner div matches rendered image area */}
+                            {(() => {
+                              const containerAspect = typeof window !== 'undefined' && window.innerWidth >= 768 ? 16 / 9 : 16 / 10;
+                              let imgLeft = 0, imgTop = 0, imgWidth = 100, imgHeight = 100;
+
+                              if (containerAspect > imageNaturalAspect) {
+                                imgWidth = (imageNaturalAspect / containerAspect) * 100;
+                                imgLeft = (100 - imgWidth) / 2;
+                              } else {
+                                imgHeight = (containerAspect / imageNaturalAspect) * 100;
+                                imgTop = (100 - imgHeight) / 2;
+                              }
 
                               return (
                                 <div
-                                  key={fixture.id}
                                   className="absolute pointer-events-none"
-                                  style={{
-                                    left: `${fixture.x}%`,
-                                    top: `${fixture.y}%`,
-                                    transform: 'translate(-50%, -50%)',
-                                  }}
+                                  style={{ left: `${imgLeft}%`, top: `${imgTop}%`, width: `${imgWidth}%`, height: `${imgHeight}%` }}
                                 >
-                                  {/* Glow effect */}
-                                  <div
-                                    className="absolute rounded-full"
-                                    style={{
-                                      width: 80,
-                                      height: 80,
-                                      left: -40,
-                                      top: -40,
-                                      background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
-                                      filter: 'blur(4px)',
-                                    }}
-                                  />
-                                  {/* Core dot */}
-                                  <div
-                                    className="relative flex items-center justify-center w-6 h-6 rounded-full border-2"
-                                    style={{
-                                      left: -12,
-                                      top: -12,
-                                      backgroundColor: hexColor,
-                                      borderColor: 'white',
-                                      boxShadow: `0 0 16px ${hexColor}B3`,
-                                    }}
-                                  >
-                                    <span className="text-[10px] text-white font-bold">{preset.icon}</span>
-                                  </div>
+                                  {manualFixtures.map(fixture => {
+                                    const preset = getFixturePreset(fixture.type);
+                                    const hexColor = FIXTURE_MARKER_COLOR[fixture.type] || '#FF0000';
+
+                                    return (
+                                      <div
+                                        key={fixture.id}
+                                        className="absolute pointer-events-none"
+                                        style={{
+                                          left: `${fixture.x}%`,
+                                          top: `${fixture.y}%`,
+                                          transform: 'translate(-50%, -50%)',
+                                        }}
+                                      >
+                                        {/* Glow effect */}
+                                        <div
+                                          className="absolute rounded-full"
+                                          style={{
+                                            width: 80,
+                                            height: 80,
+                                            left: -40,
+                                            top: -40,
+                                            background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
+                                            filter: 'blur(4px)',
+                                          }}
+                                        />
+                                        {/* Core dot */}
+                                        <div
+                                          className="relative flex items-center justify-center w-6 h-6 rounded-full border-2"
+                                          style={{
+                                            left: -12,
+                                            top: -12,
+                                            backgroundColor: hexColor,
+                                            borderColor: 'white',
+                                            boxShadow: `0 0 16px ${hexColor}B3`,
+                                          }}
+                                        >
+                                          <span className="text-[10px] text-white font-bold">{preset.icon}</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               );
-                            })}
+                            })()}
 
                             {/* Active tool indicator */}
                             {activeManualFixtureType && (
