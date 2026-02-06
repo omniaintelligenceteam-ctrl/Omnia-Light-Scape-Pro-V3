@@ -964,32 +964,21 @@ export const craftPromptWithAI = async (
     const gutterVisualDescription = placement.fixtureType === 'gutter' ? `
 
 GUTTER FIXTURE VISUAL APPEARANCE (CRITICAL):
-- Small bronze bullet fixture (size of a fist) peaking out over the roof INSIDE the metal gutter channel
-- The fixture is VISIBLE - you can see it sitting in the gutter trough
-- Light beam projects UPWARD from this fixture toward the target above
-- Y-COORDINATE: Must be Y=85-95% (near BOTTOM of image, ground level)
-- Y<80% IS WRONG - that's the roof. Gutter is LOW at Y=85-95%.
+- Small bronze bullet fixture sitting IN the rain gutter channel at the 1st story roofline
+- The gutter is the horizontal metal channel at the BOTTOM EDGE of the 1st story roof (Y=85-95%)
+- The fixture sits INSIDE this channel — you see a small bronze dot peeking out of the gutter
+- Light beam projects UPWARD from this fixture toward 2nd story features above
 
-*** CRITICAL MOUNTING LOCATION - INSIDE THE GUTTER TROUGH ***
-GUTTER ANATOMY: A gutter is a U-shaped metal channel that runs along the 1st story roofline to collect rainwater.
-- The INSIDE of the gutter is the U-shaped channel where water flows
-- Fixtures MUST sit INSIDE this U-shaped channel, against the INNER WALL (closest to house)
-- The fixture is PARTIALLY HIDDEN by the gutter walls - only the top is visible from below
+WHERE THE FIXTURE IS:
+- IN the horizontal rain gutter at the 1st story roof edge
+- NOT on the roof shingles, NOT on the fascia board, NOT on the wall
+- The fixture is SMALL and partially hidden by the gutter walls
 
-MANDATORY PLACEMENT:
-- INSIDE the 1st story gutter trough (in the U-channel where water flows)
-- Against the INNER GUTTER WALL (the wall closest to the fascia/house)
-- The fixture sits DOWN inside the gutter channel
-
-ABSOLUTELY FORBIDDEN PLACEMENTS:
-- ON THE ROOF SURFACE (shingles) - NEVER
-- ON THE GUTTER LIP/EDGE (the outer rim of the gutter) - NEVER
-- ON TOP OF THE GUTTER (sitting on the visible edge) - NEVER
-- ON THE FASCIA BOARD (the vertical board behind the gutter) - NEVER
-- ANYWHERE prominently visible on the roofline - NEVER
-
-VISUAL TEST: If you can see the entire fixture from ground level, it's placed WRONG.
-The fixture should be PARTIALLY OBSCURED by the gutter walls because it sits INSIDE the channel.` : '';
+VISUAL TEST:
+- CORRECT: Small bronze dot visible inside the gutter channel, beam going UP
+- WRONG: Fixture sitting ON TOP of roof shingles
+- WRONG: Fixture mounted on the wall or fascia
+- WRONG: Fixture that looks like a soffit downlight (beam going DOWN)` : '';
 
     return {
       fixture: placement.fixtureType,

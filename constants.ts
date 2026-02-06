@@ -956,29 +956,37 @@ INSTRUCTION: Refer STRICTLY to the active sub-option prompts for exact placement
         id: 'garage_sides',
         label: 'Garage Sides',
         description: 'Piers flanking & between doors',
-        prompt: `TARGET: Garage piers - wall grazing from in-ground fixtures
+        prompt: `TARGET: Garage piers ONLY - wall grazing from in-ground fixtures
+
+DEFINITION - WHAT IS A "PIER":
+- A PIER is a solid vertical wall section (stone, brick, stucco) that flanks or separates garage door openings
+- Piers are the SOLID WALL STRIPS beside and between garage doors
+- A garage door OPENING is the large rectangular void/panel where the door sits
+- PIERS ≠ DOORS. Piers are SOLID WALL. Doors are OPENINGS.
 
 WHAT TO LIGHT:
-- ALL vertical wall surfaces (piers) flanking garage doors
+- ONLY the solid wall piers flanking and between garage doors
 - FAR LEFT pier, FAR RIGHT pier, and CENTER pier(s) between doors
 
 FIXTURE COUNT BY CONFIGURATION:
-- SINGLE-CAR GARAGE: 2 fixtures (left + right piers)
-- DOUBLE-WIDE DOOR: 2 fixtures (left + right piers)
-- TWO SINGLE DOORS with center pier: 3 fixtures
-- THREE-CAR GARAGE: 4 fixtures
+- SINGLE-CAR GARAGE: 2 fixtures (left pier + right pier)
+- DOUBLE-WIDE DOOR: 2 fixtures (left pier + right pier)
+- TWO SINGLE DOORS with center pier: 3 fixtures (left pier + center pier + right pier)
+- THREE-CAR GARAGE: 4 fixtures (one per pier)
 
 PLACEMENT:
-- Drill into driveway concrete at BASE of each pier
+- Drill into driveway concrete at BASE of each solid wall pier
 - Distance from wall: 4-6 inches for proper grazing angle
 - Centered on pier width, ONE fixture per pier
-- Beam MUST reach roofline above garage
+- Beam MUST reach roofline above the pier
 
-EXCLUSIONS:
-- Do NOT place IN FRONT OF garage doors
-- Do NOT place in center of driveway driving path
-- Do NOT aim beams at door panels - piers only`,
-        negativePrompt: `ABSOLUTE PROHIBITION (GARAGE SIDES): Do NOT place lights in front of garage doors. Do NOT place in center of driveway. Do NOT use protruding fixtures. Flush-mount in concrete only, aimed at PIERS.`,
+ABSOLUTE EXCLUSIONS:
+- NEVER place directly in front of a garage door panel/opening
+- NEVER place in the center of a garage door opening
+- NEVER place in the driving lane of the driveway
+- NEVER aim beams at door panels - PIERS (solid wall sections) ONLY
+- If a fixture's beam would hit a garage door panel instead of solid wall, it is WRONG`,
+        negativePrompt: `ABSOLUTE PROHIBITION (GARAGE SIDES): Do NOT place lights in front of or centered on garage door openings. Do NOT place in the driveway driving lane. Fixtures go at the BASE of solid wall PIERS only — the vertical wall strips beside and between garage doors. If a light is in front of a garage door panel, it is WRONG — move it to the nearest pier.`,
         darkDescription: `Garage piers remain UNLIT - no flush-mounted well lights at pier bases, no vertical light columns grazing pier faces, garage pier texture invisible, piers appear as dark vertical surfaces flanking doors.`
       },
       {
@@ -1095,20 +1103,13 @@ WHAT TO LIGHT (AI decides based on what's present):
 - Any 2nd story sections visible above the 1st story roofline
 - Towers, turrets, pop-outs, box bays - any 2nd story section
 
-FIXTURE COUNT (AI decides based on facade):
-- Analyze the 2nd story features present
-- Use enough fixtures to provide balanced coverage
-- Typically 2-6 fixtures depending on home size and features
-- Space 4-6 feet apart for even coverage
-- One fixture per dormer if dormers are present
+FIXTURE COUNT: Use the EXACT count specified in the design request. Do NOT add extra fixtures. Do NOT decide your own count. Space fixtures 4-6 feet apart for even coverage.
 
 MOUNTING (CRITICAL):
-- INSIDE the 1st story gutter trough ONLY
-- Against the inner gutter wall (closest to house/fascia)
-- Fixture sits IN the gutter channel, braced against inner wall
-- The fixture is VISIBLE - you can see the bronze housing in the gutter
-- NEVER on roof shingles, gutter lip, fascia board, or any roof surface
-- NEVER in the roofline gutter at the top of the house
+- INSIDE the 1st story rain gutter channel (the horizontal metal trough at the roof edge)
+- Fixture is a small bronze dot visible inside the gutter, partially hidden by gutter walls
+- NEVER on roof shingles, wall surface, fascia board, or any non-gutter surface
+- NEVER in 2nd story or top-of-house gutters — 1st story gutter ONLY
 
 FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile.
 
@@ -1137,10 +1138,7 @@ WHAT TO LIGHT (AI decides based on what's present):
 - Gable peaks and architectural features
 - Any 2nd story section above the 1st story roofline
 
-FIXTURE COUNT (AI decides):
-- Typically 2-6 fixtures based on home size
-- One per dormer if dormers present
-- Space 4-6 feet apart for coverage`,
+FIXTURE COUNT: Use the EXACT count from the design request. Do NOT add or remove fixtures beyond what is specified. Space 4-6 feet apart.`,
         negativePrompt: `Do NOT place any up lights in 1st story gutters. 2nd story features must remain dark from gutter-level lighting.`,
         darkDescription: `1st story gutters remain EMPTY - no gutter-mounted up lights, 2nd story features unlit from gutter level.`
       }
