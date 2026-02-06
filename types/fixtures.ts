@@ -5,15 +5,16 @@
  */
 
 // Fixture type categories matching common landscape lighting fixtures
-export type FixtureCategory = 
-  | 'uplight'      // Wall wash, tree uplighting
-  | 'downlight'    // Soffit, overhead lighting
-  | 'path_light'   // Walkway, border lights
-  | 'spot'         // Focused accent lighting
-  | 'wall_wash'    // Wide-angle wall illumination
-  | 'well_light'   // In-ground fixtures
-  | 'bollard'      // Pathway bollards
-  | 'step_light';  // Stair/step lighting
+export type FixtureCategory =
+  | 'uplight'        // Wall wash, tree uplighting
+  | 'downlight'      // Soffit, overhead lighting
+  | 'path_light'     // Walkway, border lights
+  | 'spot'           // Focused accent lighting
+  | 'wall_wash'      // Wide-angle wall illumination
+  | 'well_light'     // In-ground fixtures
+  | 'bollard'        // Pathway bollards
+  | 'step_light'     // Stair/step lighting
+  | 'gutter_uplight'; // Gutter-mounted uplight (inside gutter channel)
 
 /**
  * Individual light fixture with position and properties
@@ -259,6 +260,25 @@ export const FIXTURE_PRESETS: FixturePreset[] = [
       coreIntensity: 0.65,
       falloffExponent: 2.2,
       direction: 'down'
+    }
+  },
+  {
+    type: 'gutter_uplight',
+    name: 'Gutter Light',
+    description: 'Gutter-mounted uplight inside channel',
+    icon: '⌐',
+    defaultIntensity: 0.8,
+    defaultColorTemp: 2700,
+    defaultBeamAngle: 30,
+    glowConfig: {
+      baseHeight: 0.20,
+      baseWidth: 0.06,
+      primaryColor: [255, 210, 130],
+      layers: 4,
+      blurRadius: 25,
+      coreIntensity: 0.85,
+      falloffExponent: 1.5,
+      direction: 'up'
     }
   }
 ];

@@ -505,8 +505,8 @@ export const FixturePlacer: React.FC<FixturePlacerProps> = ({
             className="flex items-center gap-2 p-2 bg-gray-800 border-b border-gray-700"
           >
             {/* Fixture Type Selector */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-gray-700 rounded-lg">
-              {FIXTURE_PRESETS.slice(0, 5).map(preset => (
+            <div className="flex items-center gap-1 px-2 py-1 bg-gray-700 rounded-lg overflow-x-auto">
+              {FIXTURE_PRESETS.filter(p => ['uplight', 'downlight', 'path_light', 'gutter_uplight', 'well_light', 'spot'].includes(p.type)).map(preset => (
                 <button
                   key={preset.type}
                   onClick={() => setActiveType(preset.type)}

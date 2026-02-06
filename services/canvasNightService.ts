@@ -84,6 +84,7 @@ const MARKER_COLORS: Record<string, string> = {
   path:      '#00FF00', // green
   well:      '#FFFF00', // yellow
   hardscape: '#FF00FF', // magenta
+  gutter:    '#00CCFF', // cyan
 };
 const DEFAULT_MARKER_COLOR = '#FF0000';
 
@@ -94,6 +95,7 @@ const MARKER_LABELS: Record<string, string> = {
   path:      'PATH',
   well:      'WELL',
   hardscape: 'STEP',
+  gutter:    'GUTTER',
 };
 
 /**
@@ -126,7 +128,7 @@ export async function drawFixtureMarkers(
 
         ctx.drawImage(img, 0, 0);
 
-        const markerRadius = Math.max(Math.round(img.width * 0.015), 12);
+        const markerRadius = Math.max(Math.round(img.width * 0.025), 18);
 
         spatialMap.placements.forEach((placement, index) => {
           const cx = (placement.horizontalPosition / 100) * img.width;

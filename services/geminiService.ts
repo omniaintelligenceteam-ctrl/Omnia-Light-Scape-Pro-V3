@@ -2581,15 +2581,33 @@ function buildEnhancedPrompt(
       prompt += `The image contains EXACTLY ${count} bright colored numbered circle markers.\n`;
       prompt += `Each marker shows EXACTLY where a lighting fixture must be placed.\n\n`;
       prompt += `STRICT RULES:\n`;
-      prompt += `- Replace EACH numbered marker with a realistic professional landscape lighting fixture and its light glow\n`;
+      prompt += `- Replace EACH numbered marker with a realistic professional landscape lighting fixture and its warm light glow\n`;
       prompt += `- The light source MUST appear at the EXACT position of each marker — not nearby, not shifted\n`;
       prompt += `- The colored marker circles and labels MUST be completely removed/replaced by the realistic light\n`;
       prompt += `- Place EXACTLY ${count} lights total — one per marker. NO additional lights anywhere else\n`;
-      prompt += `- DO NOT add porch lights, window lights, ambient glow, or ANY light source that doesn't have a marker\n`;
-      prompt += `- If a marker says "UP", render an uplight beam going upward from that spot\n`;
-      prompt += `- If a marker says "PATH", render a path light with a downward glow pool at that spot\n`;
-      prompt += `- If a marker says "DOWN", render a soffit/downlight with light falling downward from that spot\n`;
-      prompt += `- FINAL CHECK: Count the lights — there must be EXACTLY ${count}, no more, no less\n\n`;
+      prompt += `- If a marker says "UP", render a ground-mounted uplight with a warm beam washing upward on the wall\n`;
+      prompt += `- If a marker says "PATH", render a path light bollard with a warm downward glow pool on the ground\n`;
+      prompt += `- If a marker says "DOWN", render a soffit/downlight shining downward from that spot\n`;
+      prompt += `- If a marker says "WELL", render an in-ground well light with an upward beam\n`;
+      prompt += `- If a marker says "STEP", render a hardscape/step light with a soft horizontal glow\n`;
+      prompt += `- If a marker says "GUTTER", render a gutter-mounted uplight sitting inside the gutter channel, beam aimed upward at the roofline\n\n`;
+      prompt += `ABSOLUTELY FORBIDDEN — DO NOT ADD:\n`;
+      prompt += `- ANY light that does not have a corresponding numbered marker\n`;
+      prompt += `- Porch lights, sconces, window glow, interior lights, string lights\n`;
+      prompt += `- Ambient illumination or sky glow beyond what the ${count} fixtures produce\n`;
+      prompt += `- Decorative lights on walls, doors, columns, or any surface without a marker\n`;
+      prompt += `- The areas of the house WITHOUT a marker must remain DARK with no lighting\n\n`;
+
+      // Explicit checklist so Gemini verifies every single marker
+      prompt += `MARKER CHECKLIST — verify EVERY marker is converted to a light:\n`;
+      const labelMap: Record<string, string> = { up: 'uplight', soffit: 'downlight', path: 'path light', well: 'well light', hardscape: 'step light', gutter: 'gutter-mounted uplight' };
+      analysis.spatialMap.placements.forEach((p, i) => {
+        const label = labelMap[p.fixtureType] || 'light';
+        const hDir = p.horizontalPosition < 33 ? 'left side' : p.horizontalPosition > 66 ? 'right side' : 'center';
+        const vDir = p.verticalPosition < 33 ? 'upper area' : p.verticalPosition > 66 ? 'lower area' : 'mid-height';
+        prompt += `  ${i + 1}. Marker #${i + 1} → ${label} at ${hDir}, ${vDir} of the house\n`;
+      });
+      prompt += `\nTOTAL: ${count} markers = EXACTLY ${count} lights. Areas without markers MUST stay dark.\n\n`;
     }
   }
 

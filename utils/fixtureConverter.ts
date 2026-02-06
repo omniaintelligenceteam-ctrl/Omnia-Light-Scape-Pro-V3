@@ -19,14 +19,15 @@ import type { SpatialMap, SpatialFixturePlacement } from '../types';
  * Pipeline mask shapes (maskService.ts) and prompts (FLUX_FILL_PROMPTS) use these keys.
  */
 const CATEGORY_TO_PIPELINE_TYPE: Record<FixtureCategory, string> = {
-  uplight:    'up',
-  downlight:  'soffit',
-  path_light: 'path',
-  spot:       'up',
-  wall_wash:  'up',
-  well_light: 'well',
-  bollard:    'path',
-  step_light: 'hardscape',
+  uplight:        'up',
+  downlight:      'soffit',
+  path_light:     'path',
+  spot:           'up',
+  wall_wash:      'up',
+  well_light:     'well',
+  bollard:        'path',
+  step_light:     'hardscape',
+  gutter_uplight: 'gutter',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
