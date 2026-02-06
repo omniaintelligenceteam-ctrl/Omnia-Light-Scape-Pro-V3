@@ -18,6 +18,7 @@ import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/house
 import { generateDayToNightBase64 } from "./icLightV2Service";
 import { batchInpaintFixtures } from "./fluxFillService";
 import { checkFalStatus } from "./falService";
+import { preDarkenImage } from "./canvasNightService";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -2628,33 +2629,50 @@ export const generateNightSceneEnhanced = async (
 
         console.log('[Multi-Model] Analysis complete. Spatial map:', analysis.spatialMap ? 'included' : 'not included');
 
-        // Stage 4a: Day-to-night conversion with IC-Light V2
-        onStageUpdate?.('converting');
-        console.log('[Multi-Model] Stage 4a: Converting to nighttime with IC-Light V2...');
-        const nightBase = await generateDayToNightBase64(
-          imageBase64,
-          imageMimeType,
-          (status, progress) => {
-            console.log(`[Multi-Model] IC-Light V2: ${status} (${progress}%)`);
-          }
-        );
+        // Get original image dimensions (used for masks — these MUST match the base image)
+        const originalImg = await loadImageFromBase64(`data:${imageMimeType};base64,${imageBase64}`);
+        const imageWidth = originalImg.width;
+        const imageHeight = originalImg.height;
+        console.log(`[Multi-Model] Original image dimensions: ${imageWidth}x${imageHeight}`);
 
-        console.log('[Multi-Model] Day-to-night conversion complete.');
+        // Pre-darken the original image with canvas (preserves 100% composition)
+        onStageUpdate?.('converting');
+        console.log('[Multi-Model] Pre-darkening image with canvas...');
+        const preDarkened = await preDarkenImage(imageBase64, imageMimeType);
+        console.log('[Multi-Model] Pre-darkening complete.');
+
+        // Stage 4a: Refine with IC-Light V2 (using pre-darkened input)
+        let nightBaseRaw = preDarkened; // Fallback: use canvas-darkened image
+        try {
+          console.log('[Multi-Model] Stage 4a: Refining nighttime scene with IC-Light V2...');
+          const nightBaseDataUri = await generateDayToNightBase64(
+            preDarkened, // Send pre-darkened image, NOT the original daytime
+            imageMimeType,
+            (status, progress) => {
+              console.log(`[Multi-Model] IC-Light V2: ${status} (${progress}%)`);
+            }
+          );
+
+          // Validate IC-Light V2 output dimensions match original
+          const nightImg = await loadImageFromBase64(nightBaseDataUri);
+          if (nightImg.width === imageWidth && nightImg.height === imageHeight) {
+            nightBaseRaw = nightBaseDataUri.includes(',')
+              ? nightBaseDataUri.split(',')[1]
+              : nightBaseDataUri;
+            console.log('[Multi-Model] IC-Light V2 refinement complete. Dimensions match.');
+          } else {
+            console.warn(`[Multi-Model] IC-Light V2 changed dimensions (${nightImg.width}x${nightImg.height} vs ${imageWidth}x${imageHeight}). Using canvas-darkened fallback.`);
+            // nightBaseRaw stays as preDarkened
+          }
+        } catch (icLightError) {
+          console.warn('[Multi-Model] IC-Light V2 failed, using canvas-darkened image:', icLightError);
+          // nightBaseRaw stays as preDarkened
+        }
 
         // Stage 4b: Place fixtures with FLUX Fill (if spatial map available)
         if (analysis.spatialMap && analysis.spatialMap.placements.length > 0) {
           onStageUpdate?.('placing');
           console.log('[Multi-Model] Stage 4b: Placing fixtures with FLUX Fill...');
-
-          // Get image dimensions from the nighttime base
-          const nightImg = await loadImageFromBase64(nightBase);
-          const imageWidth = nightImg.width;
-          const imageHeight = nightImg.height;
-
-          // Extract base64 from data URI for FLUX Fill
-          const nightBaseRaw = nightBase.includes(',')
-            ? nightBase.split(',')[1]
-            : nightBase;
 
           const batchResult = await batchInpaintFixtures(
             nightBaseRaw,
@@ -2673,12 +2691,12 @@ export const generateNightSceneEnhanced = async (
             return `data:image/jpeg;base64,${batchResult.finalImageBase64}`;
           } else {
             console.warn('[Multi-Model] FLUX Fill batch failed:', batchResult.error);
-            console.log('[Multi-Model] Returning IC-Light V2 nighttime base without fixtures.');
-            return nightBase;
+            console.log('[Multi-Model] Returning nighttime base without fixtures.');
+            return `data:image/jpeg;base64,${nightBaseRaw}`;
           }
         } else {
-          console.warn('[Multi-Model] No spatial map available. Returning IC-Light V2 base.');
-          return nightBase;
+          console.warn('[Multi-Model] No spatial map available. Returning nighttime base.');
+          return `data:image/jpeg;base64,${nightBaseRaw}`;
         }
       } catch (multiModelError) {
         console.error('[Multi-Model] Pipeline failed, falling back to Gemini:', multiModelError);

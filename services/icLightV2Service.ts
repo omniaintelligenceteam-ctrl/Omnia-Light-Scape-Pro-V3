@@ -47,12 +47,12 @@ const IC_LIGHT_V2_MODEL = 'fal-ai/iclight-v2';
 
 export const IC_LIGHT_V2_DEFAULTS: ICLightV2Settings = {
   initialLatent: 'Bottom',  // Uplighting from ground level
-  guidanceScale: 5,
+  guidanceScale: 7,         // Higher = stronger prompt adherence
   numInferenceSteps: 28,
-  cfg: 1.5,
-  enableHrFix: true,        // Better detail for architectural features
-  lowresDenoise: 0.98,
-  highresDenoise: 0.95,
+  cfg: 3.0,                 // Higher = more constrained output
+  enableHrFix: false,       // Disabled — second pass amplifies hallucination
+  lowresDenoise: 0.35,      // Was 0.98 — low value preserves architecture
+  highresDenoise: 0.30,     // Was 0.95 — low value preserves architecture
   seed: undefined,
 };
 
@@ -61,11 +61,11 @@ export const IC_LIGHT_V2_DEFAULTS: ICLightV2Settings = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const IC_LIGHT_V2_PROMPTS = {
-  /** Base day-to-night conversion — creates dark nighttime scene without fixtures */
-  dayToNight: `nighttime photograph of residential home exterior, dark night sky, no artificial lighting, no landscape lights, dark ambient conditions, moonlit atmosphere, photorealistic, high quality night photography, preserving all architectural details exactly`,
+  /** Base day-to-night conversion — refines a pre-darkened image into a realistic night scene */
+  dayToNight: `nighttime photograph of this EXACT residential home exterior, PRESERVE all architectural details IDENTICALLY — same windows, same doors, same roofline, same columns, same facade proportions, same perspective. Dark night sky, no artificial lighting, no landscape lights, moonlit ambient conditions, photorealistic high quality night photography. DO NOT change, add, remove, or modify ANY architectural elements. ONLY change the lighting and atmosphere.`,
 
   /** Negative prompt to prevent unwanted additions */
-  negative: `daylight, sunshine, blue sky, clouds, artificial lights, landscape lights, uplights, path lights, bright windows, neon, harsh lighting, overexposed, blurry, low quality, deformed architecture`,
+  negative: `different building, altered architecture, changed structure, new windows, modified roofline, different facade, extra details, daylight, sunshine, blue sky, clouds, artificial lights, landscape lights, uplights, path lights, bright windows, neon, harsh lighting, overexposed, blurry, low quality, deformed`,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
