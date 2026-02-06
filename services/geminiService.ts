@@ -18,7 +18,7 @@ import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/house
 import { generateDayToNightBase64 } from "./icLightV2Service";
 import { batchInpaintFixtures } from "./fluxFillService";
 import { checkFalStatus } from "./falService";
-import { preDarkenImage } from "./canvasNightService";
+import { preDarkenImage, renderFixtureGlows } from "./canvasNightService";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -2658,31 +2658,14 @@ export const generateNightSceneEnhanced = async (
         const nightBaseRaw = preDarkened;
         console.log('[Multi-Model] Using canvas-darkened image as nighttime base (IC-Light V2 skipped).');
 
-        // Stage 4b: Place fixtures with FLUX Fill (if spatial map available)
+        // Stage 4b: Render fixture glows with canvas (instant, no API calls)
         if (spatialMap && spatialMap.placements.length > 0) {
           onStageUpdate?.('placing');
-          console.log('[Multi-Model] Stage 4b: Placing fixtures with FLUX Fill...');
+          console.log(`[Multi-Model] Rendering ${spatialMap.placements.length} fixture glows with canvas...`);
 
-          const batchResult = await batchInpaintFixtures(
-            nightBaseRaw,
-            spatialMap,
-            imageWidth,
-            imageHeight,
-            undefined, // facade_materials not available in manual mode
-            (stage, groupIdx, totalGroups) => {
-              onStageUpdate?.(`placing_${groupIdx + 1}_of_${totalGroups}`);
-              console.log(`[Multi-Model] FLUX Fill: ${stage}`);
-            }
-          );
-
-          if (batchResult.success && batchResult.finalImageBase64) {
-            console.log(`[Multi-Model] Fixture placement complete. Groups processed: ${batchResult.groupsProcessed}, failed: ${batchResult.groupsFailed}`);
-            return `data:image/jpeg;base64,${batchResult.finalImageBase64}`;
-          } else {
-            console.warn('[Multi-Model] FLUX Fill batch failed:', batchResult.error);
-            console.log('[Multi-Model] Returning nighttime base without fixtures.');
-            return `data:image/jpeg;base64,${nightBaseRaw}`;
-          }
+          const withGlows = await renderFixtureGlows(nightBaseRaw, spatialMap, imageMimeType);
+          console.log('[Multi-Model] Fixture glow rendering complete.');
+          return `data:image/jpeg;base64,${withGlows}`;
         } else {
           console.warn('[Multi-Model] No spatial map available. Returning nighttime base.');
           return `data:image/jpeg;base64,${nightBaseRaw}`;
