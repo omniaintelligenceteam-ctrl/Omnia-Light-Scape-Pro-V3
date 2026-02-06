@@ -15,10 +15,7 @@ import {
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
-import { generateDayToNightBase64 } from "./icLightV2Service";
-import { batchInpaintFixtures } from "./fluxFillService";
-import { checkFalStatus } from "./falService";
-import { preDarkenImage, drawFixtureMarkers } from "./canvasNightService";
+import { drawFixtureMarkers } from "./canvasNightService";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -36,11 +33,6 @@ const API_TIMEOUT_MS = 120000;
 
 // Temporary: Hide all soffit references from AI prompts (set to false to restore)
 const SOFFIT_HIDDEN = true;
-
-// Pipeline mode: 'gemini' (current) or 'multimodel' (IC-Light V2 + FLUX Fill)
-// Set VITE_PIPELINE_MODE=multimodel in .env to enable the multi-model pipeline
-export const PIPELINE_MODE: 'gemini' | 'multimodel' =
-  (import.meta.env.VITE_PIPELINE_MODE as string) === 'multimodel' ? 'multimodel' : 'gemini';
 
 /**
  * Wraps a promise with a timeout
@@ -2643,100 +2635,8 @@ export const generateNightSceneEnhanced = async (
   manualSpatialMap?: SpatialMap
 ): Promise<string> => {
 
-  // ─── MULTI-MODEL PIPELINE (IC-Light V2 + FLUX Fill) ───────────────────────
-  if (PIPELINE_MODE === 'multimodel') {
-    console.log('[Multi-Model] Starting IC-Light V2 + FLUX Fill pipeline...');
-
-    // Verify fal.ai is available before starting
-    const falStatus = await checkFalStatus();
-    if (!falStatus.available) {
-      console.warn('[Multi-Model] fal.ai not available, falling back to Gemini:', falStatus.error);
-      // Fall through to Gemini pipeline below
-    } else {
-      try {
-        // Stage 1: Analyze property OR use manual spatial map
-        let spatialMap: SpatialMap | undefined;
-
-        if (manualSpatialMap) {
-          // Manual mode: skip AI analysis, use user-placed fixture positions directly
-          onStageUpdate?.('analyzing');
-          console.log('[Multi-Model] Using manual spatial map (skipping AI analysis):', manualSpatialMap.placements.length, 'fixtures');
-          spatialMap = manualSpatialMap;
-        } else {
-          // Auto mode: AI analyzes property and recommends positions
-          onStageUpdate?.('analyzing');
-          console.log('[Multi-Model] Stage 1: Analyzing property...');
-          const analysis = await analyzePropertyArchitecture(
-            imageBase64,
-            imageMimeType,
-            selectedFixtures,
-            fixtureSubOptions,
-            fixtureCounts
-          );
-          spatialMap = analysis.spatialMap;
-          console.log('[Multi-Model] Analysis complete. Spatial map:', spatialMap ? 'included' : 'not included');
-        }
-
-        // Get original image dimensions (used for masks — these MUST match the base image)
-        const originalImg = await loadImageFromBase64(`data:${imageMimeType};base64,${imageBase64}`);
-        const imageWidth = originalImg.width;
-        const imageHeight = originalImg.height;
-        console.log(`[Multi-Model] Original image dimensions: ${imageWidth}x${imageHeight}`);
-
-        // Pre-darken the original image with canvas (preserves 100% composition)
-        onStageUpdate?.('converting');
-        console.log('[Multi-Model] Pre-darkening image with canvas...');
-        const preDarkened = await preDarkenImage(imageBase64, imageMimeType);
-        console.log('[Multi-Model] Pre-darkening complete.');
-
-        // Use canvas pre-darkened image directly as nighttime base.
-        // IC-Light V2 was destroying the house architecture, so we skip it.
-        // Canvas darkening preserves 100% of the original composition.
-        const nightBaseRaw = preDarkened;
-        console.log('[Multi-Model] Using canvas-darkened image as nighttime base (IC-Light V2 skipped).');
-
-        // Stage 4b: Place fixtures with FLUX Fill (via Vercel proxy)
-        if (spatialMap && spatialMap.placements.length > 0) {
-          onStageUpdate?.('placing');
-          console.log(`[Multi-Model] Stage 4b: Placing ${spatialMap.placements.length} fixtures with FLUX Fill...`);
-          for (const p of spatialMap.placements) {
-            console.log(`  [Fixture] ${p.fixtureType}/${p.subOption} at (${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%) — ${p.anchor}`);
-          }
-
-          const batchResult = await batchInpaintFixtures(
-            nightBaseRaw,
-            spatialMap,
-            imageWidth,
-            imageHeight,
-            undefined,
-            (stage, groupIdx, totalGroups) => {
-              onStageUpdate?.(`placing_${groupIdx + 1}_of_${totalGroups}`);
-              console.log(`[Multi-Model] FLUX Fill: ${stage}`);
-            }
-          );
-
-          if (batchResult.success && batchResult.finalImageBase64 && batchResult.groupsProcessed > 0) {
-            console.log(`[Multi-Model] FLUX Fill complete. Groups: ${batchResult.groupsProcessed} ok, ${batchResult.groupsFailed} failed`);
-            return `data:image/jpeg;base64,${batchResult.finalImageBase64}`;
-          } else {
-            // FLUX Fill failed — throw so we fall through to Gemini pipeline
-            const reason = batchResult.error || `${batchResult.groupsFailed} groups failed`;
-            console.error('[Multi-Model] FLUX Fill failed:', reason);
-            throw new Error(`FLUX Fill failed: ${reason}`);
-          }
-        } else {
-          console.warn('[Multi-Model] No spatial map available. Returning nighttime base.');
-          return `data:image/jpeg;base64,${nightBaseRaw}`;
-        }
-      } catch (multiModelError) {
-        console.error('[Multi-Model] Pipeline failed, falling back to Gemini:', multiModelError);
-        // Fall through to Gemini pipeline below
-      }
-    }
-  }
-
-  // ─── GEMINI PIPELINE (default / fallback) ─────────────────────────────────
-  console.log('[Enhanced Mode] Starting Gemini-only generation...');
+  // ─── GEMINI PIPELINE ───────────────────────────────────────────────────────
+  console.log('[Enhanced Mode] Starting Gemini generation...');
 
   // Step 1: Analyze property with Gemini (includes spatial mapping)
   onStageUpdate?.('analyzing');
@@ -2798,18 +2698,6 @@ export const generateNightSceneEnhanced = async (
   console.log('[Enhanced Mode] Generation complete!');
   return result;
 };
-
-/**
- * Load an image from a base64 data URI to get its dimensions.
- */
-function loadImageFromBase64(dataUri: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = dataUri;
-  });
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ENHANCED ANALYSIS INTEGRATION
