@@ -646,30 +646,30 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
               <div
                 className="absolute rounded-full"
                 style={{
-                  width: 80,
-                  height: 80,
-                  left: -40,
-                  top: -40,
+                  width: 64,
+                  height: 64,
+                  left: -32,
+                  top: -32,
                   background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
                   filter: 'blur(4px)',
                 }}
               />
               {/* Core dot */}
               <div
-                className={`relative flex items-center justify-center w-6 h-6 rounded-full border-2 transition-transform ${
+                className={`relative flex items-center justify-center w-5 h-5 rounded-full border-2 transition-transform ${
                   isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
                 } ${fixture.locked ? 'opacity-60' : ''}`}
                 style={{
-                  left: -12,
-                  top: -12,
+                  left: -10,
+                  top: -10,
                   backgroundColor: hexColor,
                   borderColor: 'white',
-                  boxShadow: `0 0 16px ${hexColor}B3`,
+                  boxShadow: `0 0 12px ${hexColor}B3`,
                 }}
               >
-                <span className="text-[10px] text-white font-bold">{preset.icon}</span>
+                <span className="text-[9px] text-white font-bold leading-none">{preset.icon}</span>
                 {fixture.locked && (
-                  <Lock size={8} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
+                  <Lock size={7} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
                 )}
               </div>
             </div>
