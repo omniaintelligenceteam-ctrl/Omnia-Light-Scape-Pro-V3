@@ -2758,6 +2758,262 @@ function buildEnhancedPrompt(
 }
 
 /**
+ * Builds a prompt specifically for manual placement mode.
+ * Skips all AI decision-making language — pure executor instructions.
+ * Does NOT require PropertyAnalysis (no analyzePropertyArchitecture() call needed).
+ */
+function buildManualPrompt(
+  spatialMap: SpatialMap,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number
+): string {
+  const count = spatialMap.placements.length;
+  const presentTypes = new Set(spatialMap.placements.map(p => p.fixtureType));
+
+  let prompt = '';
+
+  // 1. Executor preamble — strict, no creative vision
+  prompt += `YOU ARE A PRECISION LIGHTING PLACEMENT TOOL.\n\n`;
+  prompt += `ABSOLUTE RULES:\n`;
+  prompt += `1. Render EXACTLY the fixture types specified — no substitutions\n`;
+  prompt += `2. Place fixtures at EXACTLY the positions marked — no repositioning\n`;
+  prompt += `3. Render EXACTLY ${count} light sources — NO MORE, NO LESS\n`;
+  prompt += `4. Areas without markers MUST remain COMPLETELY DARK — zero ambient light, zero fill\n`;
+  prompt += `5. Do NOT add lights "for realism," "rhythm," "to complete the design," or for ANY other reason\n`;
+  prompt += `6. The home's architecture, landscaping, and hardscape must be PIXEL-PERFECT identical to the source\n`;
+  prompt += `7. ANY light source not corresponding to a numbered marker is a FAILURE\n\n`;
+  prompt += `FRAMING: Output MUST have the EXACT same framing and composition as the source image. Do NOT crop, zoom, or reframe.\n`;
+  prompt += `SKY: Pure black sky with full moon. No stars, gradients, blue tones, or atmospheric glow.\n\n`;
+
+  // 2. Dual-image reference
+  prompt += `## DUAL-IMAGE REFERENCE\n`;
+  prompt += `You are given TWO images:\n`;
+  prompt += `- IMAGE 1: The clean, unmodified original photograph — use this as your BASE for the output\n`;
+  prompt += `- IMAGE 2: The same photograph with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
+  prompt += `Your task: Generate a night scene based on IMAGE 1, placing professional landscape lighting fixtures at the EXACT positions shown by the markers in IMAGE 2. The output should look like IMAGE 1 transformed into a professional night scene with NO colored markers visible.\n\n`;
+
+  // 3. Manual placement header
+  prompt += `## CRITICAL: MANUAL PLACEMENT MODE — EXACTLY ${count} LIGHTS, ZERO EXTRAS\n`;
+  prompt += `IMAGE 2 contains EXACTLY ${count} bright colored numbered circle markers.\n`;
+  prompt += `Each marker shows the EXACT position and type of lighting fixture to place.\n`;
+  prompt += `Place EXACTLY ${count} lights total — one per marker. ZERO additional lights anywhere.\n\n`;
+
+  // 4. Spatial map with exact coordinates
+  prompt += formatSpatialMapForPrompt(spatialMap);
+  prompt += '\n';
+
+  // 5. Fixture visual descriptions (only for types actually placed)
+  prompt += `## FIXTURE TYPE REFERENCE — WHAT EACH MARKER LABEL MEANS\n\n`;
+
+  if (presentTypes.has('up')) {
+    prompt += `### "UP" MARKERS — Ground-Mounted Up Lights\n`;
+    prompt += `- FIXTURE: Small brass/bronze cylinder ground stake, low-profile, nearly invisible at night\n`;
+    prompt += `- MOUNTING: Staked into the ground AT THE BASE of the house foundation, within 6 inches of the wall\n`;
+    prompt += `- BEAM DIRECTION: Aimed straight UP but LEANED BACK 15° from vertical (tilted slightly away from the wall). This prevents a harsh hot spot at the base and spreads the beam evenly up the entire wall.\n`;
+    prompt += `- BEAM REACH: The light column MUST illuminate the wall from bottom to top, reaching the gutter line / roofline directly above (8-25 ft). The beam does NOT stop at mid-wall — it lights the FULL HEIGHT.\n`;
+    prompt += `- LIGHT PHYSICS: Because of the 15° lean-back, light starts on the wall 12-18 inches above ground (not at the fixture). Brightest at mid-wall, even wash continuing up to the roofline, NO hot spots at the fixture base.\n`;
+    prompt += `- THIS IS A GROUND-LEVEL FIXTURE — the brass cylinder sits at ground level, NOT mounted on the wall\n\n`;
+  }
+
+  if (presentTypes.has('gutter')) {
+    prompt += `### "GUTTER" MARKERS — Gutter-Mounted UP Lights (THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
+    prompt += `- FIXTURE: Compact brass bullet or mini flood up light with gutter-mount bracket\n`;
+    prompt += `- MOUNTING: INSIDE the 1st story rain gutter trough, braced against inner wall closest to fascia\n`;
+    prompt += `- The fixture sits IN the gutter channel — you can see the bronze housing sitting in the gutter\n`;
+    prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features, roofline fascia, dormers, and gables ABOVE the gutter\n`;
+    prompt += `- BEAM REACH: 10-25 ft upward from the gutter to illuminate features above\n`;
+    prompt += `- THIS IS AN UP LIGHT that happens to be mounted in the gutter. Light goes UP, never down.\n`;
+    prompt += `- NEVER mount on roof shingles, gutter lip, fascia board, or soffit\n`;
+    prompt += `- NEVER render this as a soffit downlight or any downward-facing fixture\n\n`;
+  }
+
+  if (presentTypes.has('path')) {
+    prompt += `### "PATH" MARKERS — Path Lights\n`;
+    prompt += `- FIXTURE: Cast brass "china hat" or dome-top path light, ~22 inches tall, solid brass with aged bronze patina\n`;
+    prompt += `- MOUNTING: Post-mounted, staked in landscaping beds alongside walkways (NOT on pavement)\n`;
+    prompt += `- BEAM DIRECTION: 360-degree omnidirectional downward distribution from under the hat\n`;
+    prompt += `- LIGHT POOL: 6-8 foot diameter warm pools on the ground around the fixture\n\n`;
+  }
+
+  if (presentTypes.has('well')) {
+    prompt += `### "WELL" MARKERS — In-Ground Well Lights\n`;
+    prompt += `- FIXTURE: Flush-mounted in-ground well light, brass housing, tempered glass lens, zero protrusion\n`;
+    prompt += `- MOUNTING: Completely flush with grade at ground level\n`;
+    prompt += `- BEAM DIRECTION: Aims UPWARD — typically used to uplight trees and canopy\n`;
+    prompt += `- LIGHT PHYSICS: Beam originates at ground level, projects upward; reveals bark texture, creates shadows in foliage\n\n`;
+  }
+
+  if (presentTypes.has('hardscape')) {
+    prompt += `### "STEP" MARKERS — Hardscape / Step Lights\n`;
+    prompt += `- FIXTURE: Linear LED light bar (7-19" length), low-profile brass housing, 12V\n`;
+    prompt += `- MOUNTING: Under the tread nosing (front edge of step), facing downward\n`;
+    prompt += `- BEAM DIRECTION: Projects DOWNWARD from under tread to illuminate the riser below\n`;
+    prompt += `- Creates clear visual definition of each step edge; light spills onto the next tread below\n\n`;
+  }
+
+  if (presentTypes.has('soffit')) {
+    prompt += `### "DOWN" MARKERS — Soffit Downlights\n`;
+    prompt += `- FIXTURE: Recessed canless LED downlight, flush-mounted in soffit, IP65+ rated\n`;
+    prompt += `- MOUNTING: Flush inside the soffit/roof overhang, no protrusion below soffit plane\n`;
+    prompt += `- BEAM DIRECTION: Projects DOWNWARD from soffit toward ground\n`;
+    prompt += `- Grazes window frames, columns, or wall surfaces depending on position\n\n`;
+  }
+
+  if (presentTypes.has('coredrill')) {
+    prompt += `### "COREDRILL" MARKERS — Flush In-Ground Core Drill Lights\n`;
+    prompt += `- FIXTURE: Flush-mounted well light recessed into CONCRETE or PAVERS, brass/stainless housing, tempered glass lens, vehicle-rated\n`;
+    prompt += `- MOUNTING: Core-drilled into hardscape (concrete driveway, paver walkway), completely FLUSH with grade, ZERO protrusion above surface\n`;
+    prompt += `- BEAM DIRECTION: Aims UPWARD to graze the wall/pier/column surface directly above the fixture\n`;
+    prompt += `- TYPICAL USE: Garage door piers (flanking garage doors), concrete walkways, driveways\n`;
+    prompt += `- The light washes UP the vertical wall/pier surface above it, reaching the roofline\n`;
+    prompt += `- Distance from wall: 4-6 inches for proper grazing angle\n`;
+    prompt += `- THIS IS NOT A TREE UPLIGHT — these are embedded in CONCRETE near walls/piers, NOT in landscape beds\n`;
+    prompt += `- THIS IS NOT A PROTRUDING UPLIGHT — there is NO brass cylinder sticking up. The fixture is INVISIBLE, flush with the concrete surface\n\n`;
+  }
+
+  // 6. Confusion prevention
+  prompt += `## CRITICAL CONFUSION PREVENTION\n`;
+  if (presentTypes.has('gutter')) {
+    prompt += `### GUTTER ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
+    prompt += `- GUTTER UP LIGHT: Brass fixture sitting IN the rain gutter channel → beam shoots UPWARD at 2nd story/roofline\n`;
+    prompt += `- SOFFIT DOWNLIGHT: Recessed in the overhang ceiling → beam shoots DOWNWARD at ground\n`;
+    prompt += `- These are OPPOSITE directions. If a marker says "GUTTER", the light MUST go UP.\n`;
+    prompt += `- If you render a downward-facing light for a "GUTTER" marker, you have made an error — fix it.\n`;
+  }
+  if (presentTypes.has('coredrill') && presentTypes.has('up')) {
+    prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
+    prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
+    prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
+    prompt += `- If a marker says "COREDRILL", there must be NO visible fixture — only the light beam on the wall above.\n`;
+  }
+  if (presentTypes.has('coredrill') && presentTypes.has('well')) {
+    prompt += `### COREDRILL ≠ WELL (Different locations)\n`;
+    prompt += `- COREDRILL: Flush in CONCRETE/PAVERS near walls and garage piers\n`;
+    prompt += `- WELL: Flush in LANDSCAPE BEDS near trees\n`;
+  }
+  if (presentTypes.has('up')) {
+    prompt += `- "UP" fixtures are at GROUND LEVEL aiming upward — NOT sconces, NOT wall-mounted, NOT high-mounted\n`;
+  }
+  prompt += `- Every marker label tells you the EXACT fixture type. NEVER substitute one type for another.\n\n`;
+
+  // 7. Dramatic lighting style
+  prompt += `## DRAMATIC LIGHTING STYLE (MANDATORY)\n`;
+  prompt += `- Each fixture creates a DISTINCT, ISOLATED pool of light\n`;
+  prompt += `- DARK GAPS between fixtures are MANDATORY — light pools do NOT blend into continuous wash\n`;
+  prompt += `- Beam angle: 15-25° narrow spot for dramatic contrast\n`;
+  prompt += `- INVERSE SQUARE LAW: Brightest at mid-point, rapid dimming with distance from fixture\n`;
+  prompt += `- Soft beam edges: 6-12 inch feathered transitions, never crisp circles or hard edges\n`;
+  prompt += `- Color temperature: warm amber (2700K-3000K)\n`;
+  prompt += `- Shadows are as important as light — professional lighting REQUIRES intentional dark areas between fixtures\n\n`;
+
+  // 8. Absolute prohibition
+  prompt += `## ABSOLUTELY FORBIDDEN — ZERO TOLERANCE\n`;
+  prompt += `The following must have ZERO instances in the output:\n`;
+  prompt += `- ANY light source without a corresponding numbered marker in IMAGE 2\n`;
+  if (!presentTypes.has('soffit')) {
+    prompt += `- ANY soffit downlights or recessed overhead lights (NONE were placed by the user)\n`;
+  }
+  prompt += `- Porch lights, sconces, lanterns, string lights, pendant lights\n`;
+  prompt += `- Window glow, interior lights, ambient room lighting visible through glass\n`;
+  prompt += `- Ambient illumination or sky glow beyond what the ${count} placed fixtures produce\n`;
+  prompt += `- Decorative lights on walls, doors, columns, or any surface without a marker\n`;
+  prompt += `- Areas of the house WITHOUT a marker MUST remain COMPLETELY DARK — no exceptions\n`;
+  prompt += `- If you find yourself adding a light that doesn't correspond to a marker, STOP and REMOVE it\n\n`;
+
+  // 9. Marker checklist
+  prompt += `## MARKER CHECKLIST — Verify EVERY marker is converted:\n`;
+  const labelMap: Record<string, string> = {
+    up: 'ground-mounted uplight (beam UP)',
+    soffit: 'soffit downlight (beam DOWN)',
+    path: 'brass path light bollard',
+    well: 'in-ground well light (beam UP)',
+    hardscape: 'under-tread step light',
+    gutter: 'gutter-mounted uplight (beam UP from gutter)',
+    coredrill: 'flush in-ground core drill light (beam UP from concrete)'
+  };
+  spatialMap.placements.forEach((p, i) => {
+    const label = labelMap[p.fixtureType] || 'light';
+    const hDir = p.horizontalPosition < 33 ? 'left side' : p.horizontalPosition > 66 ? 'right side' : 'center';
+    const vDir = p.verticalPosition < 33 ? 'upper area' : p.verticalPosition > 66 ? 'lower area' : 'mid-height';
+    prompt += `  ${i + 1}. Marker #${i + 1} → ${label} at ${hDir}, ${vDir}\n`;
+  });
+  prompt += `\nTOTAL: ${count} markers = EXACTLY ${count} lights in the output. No more, no less.\n\n`;
+
+  // 10. Final verification
+  prompt += `## FINAL VERIFICATION — COUNT EVERY LIGHT IN YOUR OUTPUT\n`;
+  prompt += `1. Count all visible light sources in your generated image\n`;
+  prompt += `2. You MUST have EXACTLY ${count} light sources — one for each marker\n`;
+  prompt += `3. If you count FEWER than ${count}: you MISSED a marker — go back and add the missing light\n`;
+  prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light — REMOVE it immediately\n`;
+  prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, GUTTER=upward beam from gutter, PATH=bollard, etc.)\n`;
+  if (presentTypes.has('gutter') && !presentTypes.has('soffit')) {
+    prompt += `6. Verify ZERO soffit/downlights exist — the user placed GUTTER up lights, NOT soffit downlights\n`;
+  }
+  prompt += `\n`;
+
+  // 11. Lighting parameters
+  prompt += `## LIGHTING PARAMETERS\n`;
+  prompt += `- Color Temperature: ${colorTemperaturePrompt}\n`;
+  prompt += `- Light Intensity: ${lightIntensity}%\n`;
+  prompt += `- Beam Angle: ${beamAngle}°\n\n`;
+
+  return prompt;
+}
+
+/**
+ * Streamlined manual-mode generation.
+ * Skips analyzePropertyArchitecture() entirely — no AI analysis, no competing suggestions.
+ * Builds a strict executor prompt and sends clean + marked images to Gemini.
+ */
+export const generateManualScene = async (
+  imageBase64: string,
+  imageMimeType: string,
+  spatialMap: SpatialMap,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number,
+  targetRatio: string,
+  userPreferences?: UserPreferences | null,
+  onStageUpdate?: (stage: string) => void
+): Promise<string> => {
+  console.log('[Manual Mode] Starting streamlined manual generation...');
+  console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
+
+  // Skip analysis entirely — go straight to prompt building
+  onStageUpdate?.('generating');
+
+  const manualPrompt = buildManualPrompt(
+    spatialMap,
+    colorTemperaturePrompt,
+    lightIntensity,
+    beamAngle
+  );
+  console.log('[Manual Mode] Prompt built. Length:', manualPrompt.length, 'characters');
+
+  // Draw fixture markers on image copy for visual reference
+  console.log('[Manual Mode] Drawing fixture markers...');
+  const markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
+  console.log('[Manual Mode] Markers drawn. Sending to Gemini...');
+
+  // Call existing generateNightScene with clean + marked images
+  const result = await generateNightScene(
+    imageBase64,
+    manualPrompt,
+    imageMimeType,
+    targetRatio,
+    lightIntensity,
+    beamAngle,
+    colorTemperaturePrompt,
+    userPreferences,
+    markedImage
+  );
+
+  console.log('[Manual Mode] Generation complete!');
+  return result;
+};
+
+/**
  * Enhanced Night Scene Generation using Gemini Pro 3 Only
  * This replaces the Claude + Gemini hybrid mode with a Gemini-only pipeline
  * while maintaining the same quality through ported features

@@ -63,7 +63,7 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, validateCoordinatesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
+import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, generateManualScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, validateCoordinatesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
 import { analyzeWithClaude } from './services/claudeService';
 // IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal, Crosshair } from 'lucide-react';
@@ -1821,24 +1821,42 @@ const App: React.FC = () => {
 
       // === ENHANCED MODE: Gemini Pro 3 Only (Claude Quality, Lower Cost) ===
       if (generationMode === 'enhanced') {
-        console.log('Using ENHANCED MODE (Gemini Pro 3 only - replaces Claude)...');
-        if (isManualMode) console.log('Manual placement mode: using', manualFixtures.length, 'manually placed fixtures');
-        setGenerationStage('analyzing');
+        if (isManualMode && manualSpatialMap) {
+          // MANUAL MODE: Streamlined path — skip analysis, direct to generation
+          console.log('Using MANUAL MODE (streamlined, no analysis)...');
+          console.log(`Manual placement mode: ${manualFixtures.length} fixtures`);
 
-        result = await generateNightSceneEnhanced(
-          base64,
-          mimeType,
-          effectiveFixtures,
-          effectiveSubOptions,
-          effectiveCounts,
-          colorPrompt,
-          lightIntensity,
-          beamAngle,
-          targetRatio,
-          userPreferences,
-          (stage) => setGenerationStage(stage as typeof generationStage),
-          manualSpatialMap
-        );
+          result = await generateManualScene(
+            base64,
+            mimeType,
+            manualSpatialMap,
+            colorPrompt,
+            lightIntensity,
+            beamAngle,
+            targetRatio,
+            userPreferences,
+            (stage) => setGenerationStage(stage as typeof generationStage)
+          );
+        } else {
+          // AUTO MODE: Full pipeline with analysis (unchanged)
+          console.log('Using ENHANCED MODE (Gemini Pro 3 only - replaces Claude)...');
+          setGenerationStage('analyzing');
+
+          result = await generateNightSceneEnhanced(
+            base64,
+            mimeType,
+            effectiveFixtures,
+            effectiveSubOptions,
+            effectiveCounts,
+            colorPrompt,
+            lightIntensity,
+            beamAngle,
+            targetRatio,
+            userPreferences,
+            (stage) => setGenerationStage(stage as typeof generationStage),
+            manualSpatialMap
+          );
+        }
       }
       // === HYBRID MODE: Claude Opus 4.5 + Nano Banana Pro (Best Quality) ===
       else if (generationMode === 'hybrid') {
