@@ -2652,33 +2652,11 @@ export const generateNightSceneEnhanced = async (
         const preDarkened = await preDarkenImage(imageBase64, imageMimeType);
         console.log('[Multi-Model] Pre-darkening complete.');
 
-        // Stage 4a: Refine with IC-Light V2 (using pre-darkened input)
-        let nightBaseRaw = preDarkened; // Fallback: use canvas-darkened image
-        try {
-          console.log('[Multi-Model] Stage 4a: Refining nighttime scene with IC-Light V2...');
-          const nightBaseDataUri = await generateDayToNightBase64(
-            preDarkened, // Send pre-darkened image, NOT the original daytime
-            imageMimeType,
-            (status, progress) => {
-              console.log(`[Multi-Model] IC-Light V2: ${status} (${progress}%)`);
-            }
-          );
-
-          // Validate IC-Light V2 output dimensions match original
-          const nightImg = await loadImageFromBase64(nightBaseDataUri);
-          if (nightImg.width === imageWidth && nightImg.height === imageHeight) {
-            nightBaseRaw = nightBaseDataUri.includes(',')
-              ? nightBaseDataUri.split(',')[1]
-              : nightBaseDataUri;
-            console.log('[Multi-Model] IC-Light V2 refinement complete. Dimensions match.');
-          } else {
-            console.warn(`[Multi-Model] IC-Light V2 changed dimensions (${nightImg.width}x${nightImg.height} vs ${imageWidth}x${imageHeight}). Using canvas-darkened fallback.`);
-            // nightBaseRaw stays as preDarkened
-          }
-        } catch (icLightError) {
-          console.warn('[Multi-Model] IC-Light V2 failed, using canvas-darkened image:', icLightError);
-          // nightBaseRaw stays as preDarkened
-        }
+        // Use canvas pre-darkened image directly as nighttime base.
+        // IC-Light V2 was destroying the house architecture, so we skip it.
+        // Canvas darkening preserves 100% of the original composition.
+        const nightBaseRaw = preDarkened;
+        console.log('[Multi-Model] Using canvas-darkened image as nighttime base (IC-Light V2 skipped).');
 
         // Stage 4b: Place fixtures with FLUX Fill (if spatial map available)
         if (spatialMap && spatialMap.placements.length > 0) {
