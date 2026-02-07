@@ -3018,6 +3018,7 @@ function buildManualPrompt(
     prompt += `- Match vertical position EXACTLY — if marker is at 80% from top, light must be at 80% from top\n`;
     prompt += `- DO NOT "snap" fixtures to architectural features — marker position overrides any perceived "correct" location\n`;
     prompt += `- If a marker appears in an unusual position, TRUST THE MARKER — the user placed it deliberately\n`;
+    prompt += `- For GUTTER markers specifically: the marker Y% position IS where the gutter is located in the image — even if you cannot clearly see a gutter at that location in the photo\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
   } else {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
@@ -3031,6 +3032,7 @@ function buildManualPrompt(
     prompt += `- Match vertical position EXACTLY — if marker is at 80% from top, light must be at 80% from top\n`;
     prompt += `- DO NOT "snap" fixtures to architectural features — marker position overrides any perceived "correct" location\n`;
     prompt += `- If a marker appears in an unusual position, TRUST THE MARKER — the user placed it deliberately\n`;
+    prompt += `- For GUTTER markers specifically: the marker Y% position IS where the gutter is located in the image — even if you cannot clearly see a gutter at that location in the photo\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
   }
 
@@ -3072,9 +3074,10 @@ function buildManualPrompt(
     prompt += `### "UP" MARKERS — Ground-Mounted Up Lights\n`;
     prompt += `- FIXTURE: Small brass/bronze cylinder ground stake, low-profile, nearly invisible at night\n`;
     prompt += `- MOUNTING: Staked into the ground AT THE BASE of the house foundation, within 6 inches of the wall\n`;
-    prompt += `- BEAM DIRECTION: Aimed straight UP but LEANED BACK 15° from vertical (tilted slightly away from the wall). This prevents a harsh hot spot at the base and spreads the beam evenly up the entire wall.\n`;
+    prompt += `- BEAM DIRECTION: Aimed straight UP but LEANED BACK 15° from vertical (tilted slightly away from the wall). This prevents a harsh hot spot at the base and creates a NARROW COLUMN of light up the wall — NOT a wide wash.\n`;
     prompt += `- BEAM REACH: The light column MUST illuminate the wall from bottom to top, reaching the gutter line / roofline directly above (8-25 ft). The beam does NOT stop at mid-wall — it lights the FULL HEIGHT.\n`;
-    prompt += `- LIGHT PHYSICS: Because of the 15° lean-back, light starts on the wall 12-18 inches above ground (not at the fixture). Brightest at mid-wall, even wash continuing up to the roofline, NO hot spots at the fixture base.\n`;
+    prompt += `- LIGHT PHYSICS: Because of the 15° lean-back, light starts on the wall 12-18 inches above ground (not at the fixture). Brightest at mid-wall, narrow column of light continuing up to the roofline with natural falloff at the edges, NO hot spots at the fixture base.\n`;
+    prompt += `- BEAM WIDTH: Each uplight creates a NARROW column (15-25° beam angle). Adjacent uplights MUST have VISIBLE DARK GAPS between their beams — the columns do NOT merge into a continuous wash.\n`;
     prompt += `- THIS IS A GROUND-LEVEL FIXTURE — the brass cylinder sits at ground level, NOT mounted on the wall\n\n`;
   }
 
@@ -3087,7 +3090,9 @@ function buildManualPrompt(
     prompt += `- BEAM REACH: 10-25 ft upward from the gutter to illuminate features above\n`;
     prompt += `- THIS IS AN UP LIGHT that happens to be mounted in the gutter. Light goes UP, never down.\n`;
     prompt += `- NEVER mount on roof shingles, gutter lip, fascia board, or soffit\n`;
-    prompt += `- NEVER render this as a soffit downlight or any downward-facing fixture\n\n`;
+    prompt += `- NEVER render this as a soffit downlight or any downward-facing fixture\n`;
+    prompt += `- CRITICAL FOR GROUND-LEVEL PHOTOS: You may not be able to clearly see the gutter in the image. The marker position tells you EXACTLY where the gutter is — mount the fixture at the marker's Y% coordinate. Do NOT try to visually locate the gutter; TRUST THE MARKER POSITION.\n`;
+    prompt += `- The marker's Y coordinate = the gutter's vertical position in the image\n\n`;
   }
 
   if (presentTypes.has('path')) {
@@ -3170,7 +3175,9 @@ function buildManualPrompt(
   prompt += `- INVERSE SQUARE LAW: Brightest at mid-point, rapid dimming with distance from fixture\n`;
   prompt += `- Soft beam edges: 6-12 inch feathered transitions, never crisp circles or hard edges\n`;
   prompt += `- Color temperature: warm amber (2700K-3000K)\n`;
-  prompt += `- Shadows are as important as light — professional lighting REQUIRES intentional dark areas between fixtures\n\n`;
+  prompt += `- Shadows are as important as light — professional lighting REQUIRES intentional dark areas between fixtures\n`;
+  prompt += `- WALL SECTIONS between uplight beams MUST show VISIBLE DARK GAPS — if two uplights are 10ft apart, the wall between them must have a noticeably darker zone\n`;
+  prompt += `- Each uplight creates a NARROW COLUMN, not a wide wash — adjacent columns do NOT merge into continuous illumination\n\n`;
 
   // 8. Absolute prohibition
   prompt += `## ABSOLUTELY FORBIDDEN — ZERO TOLERANCE\n`;
