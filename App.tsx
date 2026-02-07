@@ -423,6 +423,7 @@ const App: React.FC = () => {
   const [customPricing, setCustomPricing] = useState<CustomPricingItem[]>([]);
 
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [nightBaseCache, setNightBaseCache] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [generationComplete, setGenerationComplete] = useState<boolean>(false);
@@ -821,10 +822,10 @@ const App: React.FC = () => {
 
   // Status messages for loading screen - 100 seconds total, even pace
   const statusMessages = [
-    "Processing Image",
-    "Analyzing Geometry",
-    "Generating Design",
-    "Placing Lights",
+    "Converting to Nighttime",
+    "Analyzing Scene",
+    "Painting Gradients",
+    "Adding Lighting Effects",
     "Illuminating",
     "Final Touches"
   ];
@@ -1252,6 +1253,7 @@ const App: React.FC = () => {
     setFile(selectedFile);
     setPreviewUrl(getPreviewUrl(selectedFile));
     setGeneratedImage(null);
+    setNightBaseCache(null);
     setGenerationHistory([]); // Clear history on new photo
     setError(null);
     setShowFeedback(false);
@@ -1263,6 +1265,7 @@ const App: React.FC = () => {
     setFile(null);
     setPreviewUrl(null);
     setGeneratedImage(null);
+    setNightBaseCache(null);
     setGenerationHistory([]); // Clear history on clear
     setPrompt('');
     setSelectedFixtures([]);
@@ -1829,7 +1832,7 @@ const App: React.FC = () => {
           console.log(`  Types: ${[...new Set(manualFixtures.map(f => f.type))].join(', ')}`);
           console.log(`  Spatial map placements: ${manualSpatialMap.placements.length}`);
 
-          result = await generateManualScene(
+          const manualResult = await generateManualScene(
             base64,
             mimeType,
             manualSpatialMap,
@@ -1839,8 +1842,11 @@ const App: React.FC = () => {
             targetRatio,
             userPreferences,
             (stage) => setGenerationStage(stage as typeof generationStage),
-            manualFixtures
+            manualFixtures,
+            nightBaseCache ?? undefined
           );
+          result = manualResult.result;
+          setNightBaseCache(manualResult.nightBase);
         } else {
           // AUTO MODE: Full pipeline with analysis (unchanged)
           console.log('Using ENHANCED MODE (Gemini Pro 3 only - replaces Claude)...');

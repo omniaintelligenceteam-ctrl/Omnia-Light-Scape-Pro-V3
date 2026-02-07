@@ -2840,45 +2840,49 @@ function buildManualPrompt(
     coredrill: { hex: '#FFA500', name: 'AMBER' },
   };
 
-  // 1. Executor preamble — strict, no creative vision
+  // 1. Executor preamble — two-pass: IMAGE 1 is nighttime base, IMAGE 2 is gradient guide
   prompt += `YOU ARE A PRECISION LIGHTING PLACEMENT TOOL.\n\n`;
+  prompt += `IMAGE 1 is a nighttime photograph of a house with NO lights on.\n`;
+  prompt += `IMAGE 2 is the SAME house with gradient overlays showing where lighting effects should appear.\n\n`;
+  prompt += `YOUR TASK: Add photorealistic warm landscape lighting effects to IMAGE 1 at the exact positions and directions shown by the gradients in IMAGE 2.\n\n`;
   prompt += `ABSOLUTE RULES:\n`;
   prompt += `1. Render EXACTLY the fixture types specified — no substitutions\n`;
   prompt += `2. Place fixtures at EXACTLY the positions marked — no repositioning\n`;
   prompt += `3. Render EXACTLY ${count} light sources — NO MORE, NO LESS\n`;
-  prompt += `4. Areas without markers MUST remain COMPLETELY DARK — zero ambient light, zero fill\n`;
-  prompt += `5. Do NOT add lights "for realism," "rhythm," "to complete the design," or for ANY other reason\n`;
-  prompt += `6. The home's architecture, landscaping, and hardscape must be PIXEL-PERFECT identical to the source\n`;
-  prompt += `7. ANY light source not corresponding to a numbered marker is a FAILURE\n\n`;
+  prompt += `4. Areas without markers MUST remain COMPLETELY DARK\n`;
+  prompt += `5. Do NOT add lights for ANY reason not marked in IMAGE 2\n`;
+  prompt += `6. Architecture and landscaping must be IDENTICAL to IMAGE 1\n`;
+  prompt += `7. Remove ALL gradient overlays, labels, and markers — output is a CLEAN photo\n`;
+  prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
 
-  // 1b. Essential preservation rules (moved from auto-mode system prompt)
+  // 1b. Essential preservation rules
   prompt += `## FRAMING & COMPOSITION PRESERVATION (CRITICAL)\n`;
-  prompt += `- Output MUST have the EXACT SAME framing and composition as the source image\n`;
+  prompt += `- Output MUST have the EXACT SAME framing and composition as IMAGE 1\n`;
   prompt += `- Keep the ENTIRE house in frame — do NOT crop, zoom in, or cut off any part\n`;
   prompt += `- Do NOT change the camera angle, perspective, or viewpoint\n`;
-  prompt += `- The aspect ratio and boundaries must match the source image exactly\n\n`;
+  prompt += `- The aspect ratio and boundaries must match IMAGE 1 exactly\n\n`;
 
   prompt += `## PIXEL-PERFECT PRESERVATION\n`;
-  prompt += `- The generated image must be a 1:1 edit of the source photo\n`;
-  prompt += `- Every building, tree, bush, object MUST appear EXACTLY as shown in source\n`;
-  prompt += `- You are ONLY permitted to: darken the scene to night, add the specific requested light fixtures\n`;
-  prompt += `- FORBIDDEN: Adding new trees, bushes, walkways, driveways, patios, steps, railings, windows, doors, or any matter not in the source\n`;
-  prompt += `- If source has NO sidewalk, output has NO sidewalk. If source has NO driveway, output has NO driveway.\n\n`;
+  prompt += `- The generated image must be a 1:1 edit of IMAGE 1\n`;
+  prompt += `- Every building, tree, bush, object MUST appear EXACTLY as shown in IMAGE 1\n`;
+  prompt += `- You are ONLY permitted to add the specific requested light fixtures — nothing else changes\n`;
+  prompt += `- FORBIDDEN: Adding new trees, bushes, walkways, driveways, patios, steps, railings, windows, doors, or any matter not in IMAGE 1\n`;
+  prompt += `- If IMAGE 1 has NO sidewalk, output has NO sidewalk. If IMAGE 1 has NO driveway, output has NO driveway.\n\n`;
 
-  prompt += `## SKY & DARKNESS\n`;
-  prompt += `- Transform to DEEP 1AM NIGHTTIME — NOT twilight, NOT dusk, but TRUE NIGHT\n`;
-  prompt += `- Sky must be PITCH BLACK with no gradients, no blue tones, no ambient glow\n`;
-  prompt += `- Unlit areas should be so dark you can BARELY make out shapes and forms\n`;
+  prompt += `## DARKNESS PRESERVATION\n`;
+  prompt += `- IMAGE 1 is ALREADY correctly dark — PRESERVE this darkness level exactly\n`;
+  prompt += `- Do NOT brighten the sky, add ambient light, or lighten shadows\n`;
+  prompt += `- Sky must remain pitch black — no blue gradients, no twilight glow\n`;
+  prompt += `- Unlit areas stay exactly as dark as they appear in IMAGE 1\n`;
   prompt += `- Only the landscape lighting fixtures provide meaningful illumination\n`;
-  prompt += `- Include a realistic full moon providing EXTREMELY SUBTLE edge lighting only on rooflines\n`;
   prompt += `- Light pools on ground: soft feathered edges. Hard surfaces reflect slightly more than grass/mulch.\n\n`;
 
   // 2. Image reference instruction (gradient map or marker-only)
   if (hasGradientImage) {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
     prompt += `You are given TWO task images:\n`;
-    prompt += `- IMAGE 1 (CLEAN): The unmodified original photograph — use as your BASE\n`;
-    prompt += `- IMAGE 2 (ANNOTATED GUIDE): The same photo with semi-transparent directional hints and numbered markers\n\n`;
+    prompt += `- IMAGE 1 (NIGHTTIME BASE): A nighttime photograph of the house with NO lights on — use as your BASE\n`;
+    prompt += `- IMAGE 2 (ANNOTATED GUIDE): The same house (daytime) with semi-transparent directional hints and numbered markers showing where to add lights\n\n`;
 
     prompt += `## CRITICAL: CLEAN OUTPUT — NO ANNOTATIONS VISIBLE\n`;
     prompt += `The colored markers, numbers, text labels, and gradient overlays in IMAGE 2 are INVISIBLE GUIDES ONLY.\n`;
@@ -2925,9 +2929,9 @@ function buildManualPrompt(
   } else {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
     prompt += `You are given TWO task images (the last two images in this message):\n`;
-    prompt += `- CLEAN IMAGE: The clean, unmodified original photograph — use this as your BASE for the output\n`;
-    prompt += `- MARKED IMAGE: The same photograph with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
-    prompt += `Your task: Generate a night scene based on the CLEAN IMAGE, placing professional landscape lighting fixtures at the EXACT positions shown by the markers in the MARKED IMAGE. The output should look like the CLEAN IMAGE transformed into a professional night scene with NO colored markers visible.\n\n`;
+    prompt += `- IMAGE 1 (NIGHTTIME BASE): A nighttime photograph of the house with NO lights on — use this as your BASE\n`;
+    prompt += `- MARKED IMAGE: The same house (daytime) with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
+    prompt += `Your task: Add professional landscape lighting effects to IMAGE 1 at the EXACT positions shown by the markers in the MARKED IMAGE. The output should look like IMAGE 1 with realistic lighting added — NO colored markers visible.\n\n`;
     prompt += `CRITICAL: Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
     prompt += `The crosshair lines through each marker indicate the precise center.\n`;
     prompt += `Do NOT offset the fixture from the marker — the marker center IS the fixture position.\n`;
@@ -3268,9 +3272,67 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
 }
 
 /**
- * Streamlined manual-mode generation.
- * Skips analyzePropertyArchitecture() entirely — no AI analysis, no competing suggestions.
- * Builds a strict executor prompt and sends clean + marked images to Gemini.
+ * PASS 1: Convert daytime photo to clean nighttime base with NO lights.
+ * Result is cached by the caller so subsequent generations skip this step.
+ */
+export async function generateNightBase(
+  imageBase64: string,
+  imageMimeType: string,
+  aspectRatio: string
+): Promise<string> {
+  console.log('[Pass 1] Generating nighttime base (no lights)...');
+
+  const prompt = `Convert this daytime photograph into a photorealistic nighttime scene.
+
+REQUIREMENTS:
+- Deep 1AM darkness — pitch black sky, subtle stars, faint moon glow on clouds
+- The house and landscaping should be barely visible — deep shadows everywhere
+- Do NOT add ANY lighting fixtures, landscape lights, porch lights, sconces, or any artificial light sources
+- Every window MUST be completely dark — no interior lights visible
+- The entire scene should appear as if all power is off — naturally dark with only moonlight
+- Preserve the EXACT framing, composition, architecture, and all objects pixel-perfect
+- Do NOT add, remove, or modify any architectural elements, trees, bushes, or hardscape
+- The ONLY change is the time of day: daytime → deep nighttime`;
+
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+  const resized = await resizeImageBase64(imageBase64, imageMimeType);
+
+  const response = await withTimeout(
+    ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: { parts: [
+        { inlineData: { data: resized, mimeType: imageMimeType } },
+        { text: prompt }
+      ]},
+      config: {
+        imageConfig: { imageSize: "2K", aspectRatio },
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        ],
+      },
+    }),
+    API_TIMEOUT_MS,
+    'Night base generation timed out.'
+  );
+
+  if (response.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData?.data) {
+        console.log('[Pass 1] Nighttime base generated successfully.');
+        return part.inlineData.data;
+      }
+    }
+  }
+  throw new Error('Night base generation returned no image.');
+}
+
+/**
+ * Streamlined manual-mode generation (TWO-PASS).
+ * Pass 1: Convert daytime → nighttime (cached via nightBaseBase64 param).
+ * Pass 2: Add lighting effects to nighttime base using gradient overlays.
  */
 export const generateManualScene = async (
   imageBase64: string,
@@ -3282,10 +3344,12 @@ export const generateManualScene = async (
   targetRatio: string,
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
-  fixtures?: LightFixture[]
-): Promise<string> => {
-  console.log('[Manual Mode] Starting streamlined manual generation...');
+  fixtures?: LightFixture[],
+  nightBaseBase64?: string
+): Promise<{ result: string; nightBase: string }> => {
+  console.log('[Manual Mode] Starting two-pass manual generation...');
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
+  console.log(`[Manual Mode] Night base cached: ${!!nightBaseBase64}`);
 
   // Validate placements before spending an API call
   const validation = validateManualPlacements(spatialMap);
@@ -3294,10 +3358,19 @@ export const generateManualScene = async (
     throw new Error(`Manual placement validation failed:\n${validation.errors.join('\n')}`);
   }
 
-  // Skip analysis entirely — go straight to prompt building
+  // ── PASS 1: Nighttime conversion (cached) ──────────────────────────────────
+  let nightBase: string;
+  if (nightBaseBase64) {
+    console.log('[Pass 1] Using cached nighttime base — skipping generation.');
+    nightBase = nightBaseBase64;
+  } else {
+    onStageUpdate?.('converting');
+    nightBase = await generateNightBase(imageBase64, imageMimeType, targetRatio);
+  }
+
+  // ── Gradient generation (painted on ORIGINAL daytime image for contrast) ───
   onStageUpdate?.('generating');
 
-  // Generate gradient map if fixtures are provided (combined gradients + markers)
   const hasGradients = !!(fixtures && fixtures.length > 0);
   let gradientImage: string | undefined;
   let markedImage: string | undefined;
@@ -3307,7 +3380,6 @@ export const generateManualScene = async (
     gradientImage = await paintLightGradients(imageBase64, fixtures!, imageMimeType);
     console.log('[Manual Mode] Gradient map painted (includes numbered markers).');
   } else {
-    // Fallback: markers-only (no gradient cones)
     console.log('[Manual Mode] Drawing fixture markers...');
     markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
     console.log('[Manual Mode] Markers drawn.');
@@ -3336,11 +3408,12 @@ export const generateManualScene = async (
     console.warn('[Manual Mode] Reference loading failed (non-blocking):', err);
   }
 
-  console.log('[Manual Mode] Sending to Gemini...');
+  // ── PASS 2: Add lighting effects to nighttime base ─────────────────────────
+  onStageUpdate?.('placing');
+  console.log('[Pass 2] Sending nighttime base + gradient to Gemini for lighting...');
 
-  // Call generateNightScene with rawPromptMode=true to bypass auto-mode system prompt
   const result = await generateNightScene(
-    imageBase64,
+    nightBase,        // Pass the nighttime base as primary image (not daytime)
     manualPrompt,
     imageMimeType,
     targetRatio,
@@ -3349,19 +3422,19 @@ export const generateManualScene = async (
     colorTemperaturePrompt,
     userPreferences,
     markedImage,
-    true, // rawPromptMode: send manual prompt directly, skip auto-mode wrapper
+    true,
     referenceParts.length > 0 ? referenceParts : undefined,
     gradientImage
   );
 
-  console.log('[Manual Mode] Generation complete!');
+  console.log('[Pass 2] Lighting generation complete!');
 
-  // Post-generation verification (non-blocking — logs results, does not retry)
+  // Post-generation verification (non-blocking)
   onStageUpdate?.('verifying');
   const verification = await verifyGeneratedImage(result, imageMimeType, spatialMap.placements);
   console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} — ${verification.details}`);
 
-  return result;
+  return { result, nightBase };
 };
 
 /**
