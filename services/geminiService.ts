@@ -2471,7 +2471,7 @@ export function generateNarrativePlacement(
   // Per-fixture "render as" micro-descriptions for type reinforcement
   const renderAsMap: Record<string, string> = {
     up: 'brass cylinder ground stake at wall base, beam UPWARD',
-    gutter: 'brass bullet fixture IN gutter channel, beam UPWARD — NOT a soffit downlight',
+    gutter: 'brass bullet fixture mounted at roof edge, beam UPWARD at 2nd story — NOT a soffit downlight',
     path: 'brass dome-top bollard in landscaping, 360° ground pool',
     well: 'flush in-ground well light, beam UPWARD at tree canopy',
     hardscape: 'linear LED bar under step tread, beam DOWNWARD onto riser',
@@ -2889,7 +2889,7 @@ function buildManualPrompt(
   // 1b. Exclusive fixture allowlist
   const allowlistLabelMap: Record<string, string> = {
     up: 'Ground-mounted uplight (brass cylinder, beam UP)',
-    gutter: 'Gutter-mounted uplight (brass bullet IN gutter, beam UP)',
+    gutter: 'Mounted uplight at 1st-story roof edge (brass bullet, beam UP at 2nd story)',
     path: 'Path light bollard (brass dome-top, 360° ground pool)',
     well: 'In-ground well light (flush, beam UP at trees)',
     hardscape: 'Step/hardscape light (LED bar under tread, beam DOWN)',
@@ -2918,7 +2918,7 @@ function buildManualPrompt(
   if (nonSelectedTypes.length > 0) {
     const darkDescriptions: Record<string, string> = {
       up: 'Wall bases remain in shadow, NO upward beam columns on walls from ground level',
-      gutter: 'Gutters are dark, NO upward illumination from gutter channels onto 2nd story',
+      gutter: 'Roof edge is dark, NO mounted uplights, NO upward illumination onto 2nd story from the roofline',
       path: 'No bollard fixtures, no circular ground pools along walkways',
       well: 'No flush in-ground lights in landscape beds, no tree uplighting from ground',
       hardscape: 'Step risers remain dark, no light bars under treads',
@@ -2926,10 +2926,12 @@ function buildManualPrompt(
       coredrill: 'Concrete/paver surfaces have no flush lights, no wall-grazing from driveways',
     };
 
+    const promptLabelMap: Record<string, string> = { gutter: 'MOUNTED UPLIGHT' };
     prompt += `## THESE FIXTURE TYPES WERE NOT SELECTED — THEY MUST NOT APPEAR\n`;
     for (const type of nonSelectedTypes) {
       if (darkDescriptions[type]) {
-        prompt += `- ${type.toUpperCase()}: ${darkDescriptions[type]}\n`;
+        const label = promptLabelMap[type] || type.toUpperCase();
+        prompt += `- ${label}: ${darkDescriptions[type]}\n`;
       }
     }
     prompt += `\n`;
@@ -2938,7 +2940,7 @@ function buildManualPrompt(
   // 1d. Type authority rule
   prompt += `## TYPE AUTHORITY RULE\n`;
   prompt += `The fixture TYPE is determined EXCLUSIVELY by the marker label — NEVER by location.\n`;
-  prompt += `- A marker labeled "GUTTER" at ANY position = gutter uplight, regardless of surroundings\n`;
+  prompt += `- A marker labeled "MOUNTED" at ANY position = mounted uplight at the roof edge, beam UP — regardless of surroundings\n`;
   prompt += `- A marker labeled "UP" at ANY position = ground-mounted uplight, regardless of surroundings\n`;
   prompt += `- You MUST NOT substitute one fixture type for another based on where the marker is placed\n`;
   prompt += `- The user placed each marker deliberately — the marker label IS the user's intent\n\n`;
@@ -2992,12 +2994,12 @@ function buildManualPrompt(
     prompt += `- Light that looks like it comes from a real landscape lighting fixture\n\n`;
 
     prompt += `## DIRECTION RULES\n`;
-    prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, gutter lights, core drills)\n`;
+    prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, mounted uplights, core drills)\n`;
     prompt += `- Downward-pointing hints = light beams going DOWN (soffit downlights, step lights)\n`;
     prompt += `- Circular hints = omnidirectional ground-level pools (path lights, bollards)\n`;
     prompt += `- NEVER reverse the indicated direction\n`;
-    prompt += `- GUTTER LIGHTS are mounted INSIDE the gutter channel and beam UPWARD onto the roof/fascia — they are NOT soffit downlights\n`;
-    prompt += `- If a marker is at the gutter/roofline with an upward hint, render light going UP — NEVER render it as a downlight\n\n`;
+    prompt += `- MOUNTED UPLIGHTS beam UPWARD from the roof edge toward the 2nd story — they are NOT soffit downlights\n`;
+    prompt += `- If a marker is at the roofline with an upward hint, render light going UP — NEVER render it as a downlight\n\n`;
 
     prompt += `## COUNT RULES\n`;
     prompt += `The guide contains EXACTLY ${count} fixture positions.\n`;
@@ -3018,7 +3020,7 @@ function buildManualPrompt(
     prompt += `- Match vertical position EXACTLY — if marker is at 80% from top, light must be at 80% from top\n`;
     prompt += `- DO NOT "snap" fixtures to architectural features — marker position overrides any perceived "correct" location\n`;
     prompt += `- If a marker appears in an unusual position, TRUST THE MARKER — the user placed it deliberately\n`;
-    prompt += `- For GUTTER markers specifically: the marker Y% position IS where the gutter is located in the image — even if you cannot clearly see a gutter at that location in the photo\n`;
+    prompt += `- For MOUNTED markers specifically: the marker Y% position IS where the fixture is mounted — even if you cannot clearly see the roof edge at that location in the photo\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
   } else {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
@@ -3032,7 +3034,7 @@ function buildManualPrompt(
     prompt += `- Match vertical position EXACTLY — if marker is at 80% from top, light must be at 80% from top\n`;
     prompt += `- DO NOT "snap" fixtures to architectural features — marker position overrides any perceived "correct" location\n`;
     prompt += `- If a marker appears in an unusual position, TRUST THE MARKER — the user placed it deliberately\n`;
-    prompt += `- For GUTTER markers specifically: the marker Y% position IS where the gutter is located in the image — even if you cannot clearly see a gutter at that location in the photo\n`;
+    prompt += `- For MOUNTED markers specifically: the marker Y% position IS where the fixture is mounted — even if you cannot clearly see the roof edge at that location in the photo\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
   }
 
@@ -3044,7 +3046,7 @@ function buildManualPrompt(
     if (c) {
       const labelMap2: Record<string, string> = {
         up: 'UP light (ground-mounted, beam UP)',
-        gutter: 'GUTTER light (in gutter, beam UP)',
+        gutter: 'MOUNTED uplight (mounted at roof edge, beam UP at 2nd story — NOT a soffit downlight)',
         path: 'PATH light (bollard on ground)',
         well: 'WELL light (in-ground, beam UP at trees)',
         hardscape: 'STEP/HARDSCAPE light (under tread)',
@@ -3054,7 +3056,7 @@ function buildManualPrompt(
       prompt += `- ${c.name} circle (${c.hex}) = ${labelMap2[type] || type}\n`;
     }
   }
-  prompt += `\nEach marker also has a TEXT LABEL below it (UP, GUTTER, PATH, etc.) confirming the type.\n`;
+  prompt += `\nEach marker also has a TEXT LABEL below it (UP, MOUNTED, PATH, etc.) confirming the type.\n`;
   prompt += `The NUMBER inside each circle is the fixture sequence number.\n\n`;
 
   // 3. Manual placement header
@@ -3082,17 +3084,15 @@ function buildManualPrompt(
   }
 
   if (presentTypes.has('gutter')) {
-    prompt += `### "GUTTER" MARKERS — Gutter-Mounted UP Lights (THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
-    prompt += `- FIXTURE: Compact brass bullet or mini flood up light with gutter-mount bracket\n`;
-    prompt += `- MOUNTING: INSIDE the 1st story rain gutter trough, braced against inner wall closest to fascia\n`;
-    prompt += `- The fixture sits IN the gutter channel — you can see the bronze housing sitting in the gutter\n`;
-    prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features, roofline fascia, dormers, and gables ABOVE the gutter\n`;
-    prompt += `- BEAM REACH: 10-25 ft upward from the gutter to illuminate features above\n`;
-    prompt += `- THIS IS AN UP LIGHT that happens to be mounted in the gutter. Light goes UP, never down.\n`;
-    prompt += `- NEVER mount on roof shingles, gutter lip, fascia board, or soffit\n`;
-    prompt += `- NEVER render this as a soffit downlight or any downward-facing fixture\n`;
-    prompt += `- CRITICAL FOR GROUND-LEVEL PHOTOS: You may not be able to clearly see the gutter in the image. The marker position tells you EXACTLY where the gutter is — mount the fixture at the marker's Y% coordinate. Do NOT try to visually locate the gutter; TRUST THE MARKER POSITION.\n`;
-    prompt += `- The marker's Y coordinate = the gutter's vertical position in the image\n\n`;
+    prompt += `### "MOUNTED" MARKERS — Mounted UP Lights (THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
+    prompt += `- FIXTURE: Compact brass bullet or mini flood UP light with mounting bracket\n`;
+    prompt += `- MOUNTING: Mounted at the 1st-story roof edge, at the marker's exact Y% position\n`;
+    prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features, roofline fascia, dormers, and gables ABOVE the mounting point\n`;
+    prompt += `- BEAM REACH: 10-25 ft upward from the mounting point to illuminate features above\n`;
+    prompt += `- THIS IS AN UP LIGHT — light goes UP toward the 2nd story, NEVER down toward the ground.\n`;
+    prompt += `- NEVER render this as a soffit downlight, recessed downlight, or any downward-facing fixture\n`;
+    prompt += `- The marker position tells you EXACTLY where this fixture is mounted. Mount the fixture at the marker's Y% coordinate.\n`;
+    prompt += `- CRITICAL FOR GROUND-LEVEL PHOTOS: You may not be able to clearly see the roof edge. TRUST THE MARKER POSITION — it shows exactly where to mount the fixture.\n\n`;
   }
 
   if (presentTypes.has('path')) {
@@ -3141,11 +3141,11 @@ function buildManualPrompt(
 
   // 6. Confusion prevention (UNCONDITIONAL — always include all distinctions)
   prompt += `## CRITICAL CONFUSION PREVENTION\n`;
-  prompt += `### GUTTER ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
-  prompt += `- GUTTER UP LIGHT: Brass fixture sitting IN the rain gutter channel → beam shoots UPWARD at 2nd story/roofline\n`;
+  prompt += `### MOUNTED ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
+  prompt += `- MOUNTED UP LIGHT: Brass fixture at the roof edge → beam shoots UPWARD at 2nd story/roofline\n`;
   prompt += `- SOFFIT DOWNLIGHT: Recessed in the overhang ceiling → beam shoots DOWNWARD at ground\n`;
-  prompt += `- These are OPPOSITE directions. If a marker says "GUTTER", the light MUST go UP.\n`;
-  prompt += `- If you render a downward-facing light for a "GUTTER" marker, you have made an error — fix it.\n`;
+  prompt += `- These are OPPOSITE directions. If a marker says "MOUNTED", the light MUST go UP.\n`;
+  prompt += `- If you render a downward-facing light for a "MOUNTED" marker, you have made an error — fix it.\n`;
   prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
   prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
   prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
@@ -3158,8 +3158,8 @@ function buildManualPrompt(
 
   // 6b. Common mistakes section
   prompt += `## COMMON MISTAKES TO AVOID\n`;
-  prompt += `- WRONG: Rendering a soffit downlight when marker says "GUTTER" (because it's near the roofline)\n`;
-  prompt += `  RIGHT: Gutter markers = light goes UP from gutter channel, regardless of position\n`;
+  prompt += `- WRONG: Rendering a soffit downlight when marker says "MOUNTED" (because it's near the roofline)\n`;
+  prompt += `  RIGHT: MOUNTED markers = light goes UP from the roof edge toward 2nd story, regardless of position\n`;
   prompt += `- WRONG: Rendering a visible brass cylinder for a "COREDRILL" marker\n`;
   prompt += `  RIGHT: Coredrill = invisible flush fixture in concrete, only the light beam is visible\n`;
   prompt += `- WRONG: Rendering a path light as a ground-level uplight (or vice versa)\n`;
@@ -3206,7 +3206,7 @@ function buildManualPrompt(
     path: 'brass path light bollard',
     well: 'in-ground well light (beam UP)',
     hardscape: 'under-tread step light',
-    gutter: 'gutter-mounted uplight (beam UP from gutter)',
+    gutter: 'mounted uplight at roof edge (beam UP at 2nd story)',
     coredrill: 'flush in-ground core drill light (beam UP from concrete)'
   };
   spatialMap.placements.forEach((p, i) => {
@@ -3221,10 +3221,10 @@ function buildManualPrompt(
   prompt += `2. You MUST have EXACTLY ${count} light sources — one for each marker\n`;
   prompt += `3. If you count FEWER than ${count}: you MISSED a marker — go back and add the missing light\n`;
   prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light — REMOVE it immediately\n`;
-  prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, GUTTER=upward beam from gutter, PATH=bollard, etc.)\n`;
+  prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, MOUNTED=upward beam from roof edge, PATH=bollard, etc.)\n`;
   let verifyNum = 6;
   if (presentTypes.has('gutter') && !presentTypes.has('soffit')) {
-    prompt += `${verifyNum}. Verify ZERO soffit/downlights exist — the user placed GUTTER up lights, NOT soffit downlights\n`;
+    prompt += `${verifyNum}. Verify ZERO soffit/downlights exist — the user placed MOUNTED up lights, NOT soffit downlights\n`;
     verifyNum++;
   }
   prompt += `${verifyNum}. For each light, verify it is within 3% of the marker's x,y coordinates\n`;
