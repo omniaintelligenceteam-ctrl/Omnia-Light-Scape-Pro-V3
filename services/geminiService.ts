@@ -16,6 +16,9 @@ import {
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
 import { drawFixtureMarkers } from "./canvasNightService";
+import { buildReferenceParts } from "./referenceLibrary";
+import { paintLightGradients } from "./lightGradientPainter";
+import type { LightFixture } from "../types/fixtures";
 
 // Type for validation response
 export interface PromptValidationResult {
@@ -1681,7 +1684,9 @@ export const generateNightScene = async (
   colorTemperaturePrompt: string = "Use Soft White (3000K) for all lights.",
   userPreferences?: UserPreferences | null,
   markedImageBase64?: string,
-  rawPromptMode?: boolean
+  rawPromptMode?: boolean,
+  prefixParts?: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }>,
+  gradientImageBase64?: string
 ): Promise<string> => {
 
   // Initialization: The API key is obtained from environment variable
@@ -2124,10 +2129,16 @@ ${preferenceContext}
 
   try {
     // Build parts array — send both clean + marked images for manual placement mode
-    const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [
-      { inlineData: { data: imageBase64, mimeType: imageMimeType } },
-    ];
-    if (markedImageBase64) {
+    const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
+    // Inject reference examples (few-shot) before user images if provided
+    if (prefixParts && prefixParts.length > 0) {
+      imageParts.push(...prefixParts);
+    }
+    imageParts.push({ inlineData: { data: imageBase64, mimeType: imageMimeType } });
+    // Prefer gradient image (includes markers) over markers-only
+    if (gradientImageBase64) {
+      imageParts.push({ inlineData: { data: gradientImageBase64, mimeType: imageMimeType } });
+    } else if (markedImageBase64) {
       imageParts.push({ inlineData: { data: markedImageBase64, mimeType: imageMimeType } });
     }
     // rawPromptMode: send userInstructions directly, skip auto-mode system prompt wrapper
@@ -2772,7 +2783,8 @@ function buildManualPrompt(
   spatialMap: SpatialMap,
   colorTemperaturePrompt: string,
   lightIntensity: number,
-  beamAngle: number
+  beamAngle: number,
+  hasGradientImage?: boolean
 ): string {
   const count = spatialMap.placements.length;
   const presentTypes = new Set(spatialMap.placements.map(p => p.fixtureType));
@@ -2823,20 +2835,44 @@ function buildManualPrompt(
   prompt += `- Include a realistic full moon providing EXTREMELY SUBTLE edge lighting only on rooflines\n`;
   prompt += `- Light pools on ground: soft feathered edges. Hard surfaces reflect slightly more than grass/mulch.\n\n`;
 
-  // 2. Dual-image reference + marker center instruction
-  prompt += `## DUAL-IMAGE REFERENCE\n`;
-  prompt += `You are given TWO images:\n`;
-  prompt += `- IMAGE 1: The clean, unmodified original photograph — use this as your BASE for the output\n`;
-  prompt += `- IMAGE 2: The same photograph with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
-  prompt += `Your task: Generate a night scene based on IMAGE 1, placing professional landscape lighting fixtures at the EXACT positions shown by the markers in IMAGE 2. The output should look like IMAGE 1 transformed into a professional night scene with NO colored markers visible.\n\n`;
-  prompt += `CRITICAL: Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
-  prompt += `The crosshair lines through each marker indicate the precise center.\n`;
-  prompt += `Do NOT offset the fixture from the marker — the marker center IS the fixture position.\n`;
-  prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
+  // 2. Image reference instruction (gradient map or marker-only)
+  if (hasGradientImage) {
+    prompt += `## DUAL-IMAGE REFERENCE\n`;
+    prompt += `You are given TWO task images:\n`;
+    prompt += `- IMAGE 1 (CLEAN): The unmodified original photograph — use as BASE\n`;
+    prompt += `- IMAGE 2 (GRADIENT MAP): The same photo darkened, with:\n`;
+    prompt += `  - WARM DIRECTIONAL LIGHT CONES showing exactly where each light beam goes\n`;
+    prompt += `  - NUMBERED COLORED MARKERS at each fixture position with type labels\n\n`;
+    prompt += `IMAGE 2 is your PRIMARY VISUAL GUIDE:\n`;
+    prompt += `- Each warm cone shows the EXACT direction and spread of the light beam\n`;
+    prompt += `- Upward cones = light beams going UP the wall (uplights, gutter lights, core drills)\n`;
+    prompt += `- Downward cones = light beams going DOWN (soffit downlights, step lights)\n`;
+    prompt += `- Circular pools = omnidirectional ground-level light (path lights, bollards)\n`;
+    prompt += `- The SHAPE of each cone shows the beam angle (narrow = spot, wide = flood)\n`;
+    prompt += `- FOLLOW THESE GRADIENTS EXACTLY — do NOT reverse any light direction\n\n`;
+    prompt += `CRITICAL DIRECTION RULE: If a gradient cone points UPWARD, the light MUST go UP.\n`;
+    prompt += `If it points DOWNWARD, it MUST go DOWN. NEVER reverse the direction.\n\n`;
+    prompt += `The gradient map contains EXACTLY ${count} gradient regions.\n`;
+    prompt += `Your output MUST contain EXACTLY ${count} corresponding light effects.\n`;
+    prompt += `Any area WITHOUT a gradient cone MUST remain COMPLETELY DARK.\n\n`;
+    prompt += `Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
+    prompt += `The crosshair lines through each marker indicate the precise center.\n`;
+    prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
+  } else {
+    prompt += `## DUAL-IMAGE REFERENCE\n`;
+    prompt += `You are given TWO task images (the last two images in this message):\n`;
+    prompt += `- CLEAN IMAGE: The clean, unmodified original photograph — use this as your BASE for the output\n`;
+    prompt += `- MARKED IMAGE: The same photograph with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
+    prompt += `Your task: Generate a night scene based on the CLEAN IMAGE, placing professional landscape lighting fixtures at the EXACT positions shown by the markers in the MARKED IMAGE. The output should look like the CLEAN IMAGE transformed into a professional night scene with NO colored markers visible.\n\n`;
+    prompt += `CRITICAL: Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
+    prompt += `The crosshair lines through each marker indicate the precise center.\n`;
+    prompt += `Do NOT offset the fixture from the marker — the marker center IS the fixture position.\n`;
+    prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
+  }
 
   // 2b. Color-to-type mapping
-  prompt += `## MARKER COLOR GUIDE (IMAGE 2)\n`;
-  prompt += `Each marker on IMAGE 2 has a specific color indicating its fixture type:\n`;
+  prompt += `## MARKER COLOR GUIDE (MARKED IMAGE)\n`;
+  prompt += `Each marker on the MARKED IMAGE has a specific color indicating its fixture type:\n`;
   for (const type of presentTypes) {
     const c = colorMap[type];
     if (c) {
@@ -3181,7 +3217,8 @@ export const generateManualScene = async (
   beamAngle: number,
   targetRatio: string,
   userPreferences?: UserPreferences | null,
-  onStageUpdate?: (stage: string) => void
+  onStageUpdate?: (stage: string) => void,
+  fixtures?: LightFixture[]
 ): Promise<string> => {
   console.log('[Manual Mode] Starting streamlined manual generation...');
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
@@ -3196,18 +3233,46 @@ export const generateManualScene = async (
   // Skip analysis entirely — go straight to prompt building
   onStageUpdate?.('generating');
 
+  // Generate gradient map if fixtures are provided (combined gradients + markers)
+  const hasGradients = !!(fixtures && fixtures.length > 0);
+  let gradientImage: string | undefined;
+  let markedImage: string | undefined;
+
+  if (hasGradients) {
+    console.log(`[Manual Mode] Painting directional light gradients for ${fixtures!.length} fixtures...`);
+    gradientImage = await paintLightGradients(imageBase64, fixtures!, imageMimeType);
+    console.log('[Manual Mode] Gradient map painted (includes numbered markers).');
+  } else {
+    // Fallback: markers-only (no gradient cones)
+    console.log('[Manual Mode] Drawing fixture markers...');
+    markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
+    console.log('[Manual Mode] Markers drawn.');
+  }
+
   const manualPrompt = buildManualPrompt(
     spatialMap,
     colorTemperaturePrompt,
     lightIntensity,
-    beamAngle
+    beamAngle,
+    hasGradients
   );
   console.log('[Manual Mode] Prompt built. Length:', manualPrompt.length, 'characters');
 
-  // Draw fixture markers on image copy for visual reference
-  console.log('[Manual Mode] Drawing fixture markers...');
-  const markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
-  console.log('[Manual Mode] Markers drawn. Sending to Gemini...');
+  // Load few-shot reference examples for the selected fixture types
+  const fixtureTypes = [...new Set(spatialMap.placements.map(p => p.type))];
+  let referenceParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
+  try {
+    referenceParts = await buildReferenceParts(fixtureTypes);
+    if (referenceParts.length > 0) {
+      console.log(`[Manual Mode] Injecting ${referenceParts.length} reference parts for types: ${fixtureTypes.join(', ')}`);
+    } else {
+      console.log('[Manual Mode] No reference images available — generating without examples');
+    }
+  } catch (err) {
+    console.warn('[Manual Mode] Reference loading failed (non-blocking):', err);
+  }
+
+  console.log('[Manual Mode] Sending to Gemini...');
 
   // Call generateNightScene with rawPromptMode=true to bypass auto-mode system prompt
   const result = await generateNightScene(
@@ -3220,7 +3285,9 @@ export const generateManualScene = async (
     colorTemperaturePrompt,
     userPreferences,
     markedImage,
-    true // rawPromptMode: send manual prompt directly, skip auto-mode wrapper
+    true, // rawPromptMode: send manual prompt directly, skip auto-mode wrapper
+    referenceParts.length > 0 ? referenceParts : undefined,
+    gradientImage
   );
 
   console.log('[Manual Mode] Generation complete!');
@@ -3250,7 +3317,8 @@ export const generateNightSceneEnhanced = async (
   targetRatio: string,
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
-  manualSpatialMap?: SpatialMap
+  manualSpatialMap?: SpatialMap,
+  manualFixtures?: LightFixture[]
 ): Promise<string> => {
 
   // ─── GEMINI PIPELINE ───────────────────────────────────────────────────────
@@ -3293,12 +3361,19 @@ export const generateNightSceneEnhanced = async (
   // Step 3: Generate image with Gemini 3 Pro Image using enhanced prompt
   onStageUpdate?.('generating');
 
-  // Manual mode: draw visible markers on a COPY, send BOTH clean + marked images
+  // Manual mode: generate gradient map (includes markers) or markers-only fallback
   let markedImageForGemini: string | undefined;
+  let gradientImageForGemini: string | undefined;
   if (manualSpatialMap && manualSpatialMap.placements.length > 0) {
-    console.log('[Enhanced Mode] Drawing fixture markers on image copy for Gemini...');
-    markedImageForGemini = await drawFixtureMarkers(imageBase64, manualSpatialMap, imageMimeType);
-    console.log('[Enhanced Mode] Markers drawn. Sending clean + marked images to Gemini.');
+    if (manualFixtures && manualFixtures.length > 0) {
+      console.log(`[Enhanced Mode] Painting directional light gradients for ${manualFixtures.length} fixtures...`);
+      gradientImageForGemini = await paintLightGradients(imageBase64, manualFixtures, imageMimeType);
+      console.log('[Enhanced Mode] Gradient map painted (includes numbered markers).');
+    } else {
+      console.log('[Enhanced Mode] Drawing fixture markers on image copy for Gemini...');
+      markedImageForGemini = await drawFixtureMarkers(imageBase64, manualSpatialMap, imageMimeType);
+      console.log('[Enhanced Mode] Markers drawn. Sending clean + marked images to Gemini.');
+    }
   }
 
   console.log('[Enhanced Mode] Step 3: Generating image with Gemini 3 Pro Image...');
@@ -3311,7 +3386,10 @@ export const generateNightSceneEnhanced = async (
     beamAngle,
     colorTemperaturePrompt,
     userPreferences,
-    markedImageForGemini      // Send marked image as second reference (if manual mode)
+    markedImageForGemini,     // Send marked image as second reference (fallback)
+    undefined,                // rawPromptMode
+    undefined,                // prefixParts
+    gradientImageForGemini    // Send gradient map (preferred, includes markers)
   );
 
   console.log('[Enhanced Mode] Generation complete!');

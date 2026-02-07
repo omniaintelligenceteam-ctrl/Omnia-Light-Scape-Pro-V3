@@ -1838,7 +1838,8 @@ const App: React.FC = () => {
             beamAngle,
             targetRatio,
             userPreferences,
-            (stage) => setGenerationStage(stage as typeof generationStage)
+            (stage) => setGenerationStage(stage as typeof generationStage),
+            manualFixtures
           );
         } else {
           // AUTO MODE: Full pipeline with analysis (unchanged)
@@ -1857,7 +1858,8 @@ const App: React.FC = () => {
             targetRatio,
             userPreferences,
             (stage) => setGenerationStage(stage as typeof generationStage),
-            manualSpatialMap
+            manualSpatialMap,
+            isManualMode ? manualFixtures : undefined
           );
         }
       }

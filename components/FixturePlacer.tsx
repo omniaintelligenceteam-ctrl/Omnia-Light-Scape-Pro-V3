@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import {
   Trash2, Lock, Unlock,
-  Grid, RotateCcw, Download, Crosshair, Layers, Copy, Clipboard, Undo2, Redo2
+  Grid, RotateCcw, Download, Crosshair, Layers, Copy, Clipboard, Undo2, Redo2, Eye, EyeOff
 } from 'lucide-react';
 import {
   LightFixture,
@@ -9,6 +9,7 @@ import {
   getFixturePreset,
   createFixture,
 } from '../types/fixtures';
+import { GradientPreview } from './GradientPreview';
 
 // Haptic feedback helper
 const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -70,6 +71,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [gridSize] = useState(5);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [showGradientPreview, setShowGradientPreview] = useState(false);
 
   // Undo/Redo history
   const [history, setHistory] = useState<LightFixture[][]>([fixtures]);
@@ -514,6 +516,15 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
             <Crosshair size={16} />
           </button>
 
+          {/* Gradient preview toggle */}
+          <button
+            onClick={() => setShowGradientPreview(prev => !prev)}
+            className={`p-1.5 rounded-lg transition-all ${showGradientPreview ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            title="Preview Light Gradients"
+          >
+            {showGradientPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+
           <div className="w-px h-5 bg-white/10 flex-shrink-0" />
 
           {/* Selected fixture actions (contextual) */}
@@ -624,6 +635,14 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
             }}
           />
         )}
+
+        {/* Gradient Preview Overlay */}
+        <GradientPreview
+          fixtures={fixtures}
+          containerWidth={imageBounds.width}
+          containerHeight={imageBounds.height}
+          visible={showGradientPreview}
+        />
 
         {/* Fixture Markers */}
         {fixtures.map(fixture => {
