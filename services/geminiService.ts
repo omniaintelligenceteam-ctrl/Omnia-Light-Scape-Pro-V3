@@ -2839,25 +2839,41 @@ function buildManualPrompt(
   if (hasGradientImage) {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
     prompt += `You are given TWO task images:\n`;
-    prompt += `- IMAGE 1 (CLEAN): The unmodified original photograph — use as BASE\n`;
-    prompt += `- IMAGE 2 (GRADIENT MAP): The same photo darkened, with:\n`;
-    prompt += `  - WARM DIRECTIONAL LIGHT CONES showing exactly where each light beam goes\n`;
-    prompt += `  - NUMBERED COLORED MARKERS at each fixture position with type labels\n\n`;
-    prompt += `IMAGE 2 is your PRIMARY VISUAL GUIDE:\n`;
-    prompt += `- Each warm cone shows the EXACT direction and spread of the light beam\n`;
-    prompt += `- Upward cones = light beams going UP the wall (uplights, gutter lights, core drills)\n`;
-    prompt += `- Downward cones = light beams going DOWN (soffit downlights, step lights)\n`;
-    prompt += `- Circular pools = omnidirectional ground-level light (path lights, bollards)\n`;
-    prompt += `- The SHAPE of each cone shows the beam angle (narrow = spot, wide = flood)\n`;
-    prompt += `- FOLLOW THESE GRADIENTS EXACTLY — do NOT reverse any light direction\n\n`;
-    prompt += `CRITICAL DIRECTION RULE: If a gradient cone points UPWARD, the light MUST go UP.\n`;
-    prompt += `If it points DOWNWARD, it MUST go DOWN. NEVER reverse the direction.\n\n`;
-    prompt += `The gradient map contains EXACTLY ${count} gradient regions.\n`;
-    prompt += `Your output MUST contain EXACTLY ${count} corresponding light effects.\n`;
-    prompt += `Any area WITHOUT a gradient cone MUST remain COMPLETELY DARK.\n\n`;
+    prompt += `- IMAGE 1 (CLEAN): The unmodified original photograph — use as your BASE\n`;
+    prompt += `- IMAGE 2 (ANNOTATED GUIDE): The same photo with semi-transparent directional hints and numbered markers\n\n`;
+
+    prompt += `## CRITICAL: CLEAN OUTPUT — NO ANNOTATIONS VISIBLE\n`;
+    prompt += `The colored markers, numbers, text labels, and gradient overlays in IMAGE 2 are INVISIBLE GUIDES ONLY.\n`;
+    prompt += `Your output MUST look like a clean, professional photograph with ZERO annotation artifacts:\n`;
+    prompt += `- NO numbered circles or colored dots\n`;
+    prompt += `- NO text labels or type names\n`;
+    prompt += `- NO colored triangular or conical shapes\n`;
+    prompt += `- NO gradient overlays or semi-transparent colored regions\n`;
+    prompt += `- The output should be INDISTINGUISHABLE from a real nighttime photograph\n\n`;
+
+    prompt += `## HOW TO USE THE ANNOTATED GUIDE\n`;
+    prompt += `The faint warm-colored shapes in IMAGE 2 indicate ONLY two things:\n`;
+    prompt += `- POSITION: Where each light fixture is located (center of the marker)\n`;
+    prompt += `- DIRECTION: Which way the light beam points (upward shape = uplight, downward shape = downlight, circular = omnidirectional)\n\n`;
+    prompt += `DO NOT reproduce the gradient shapes literally. Instead, render each light as:\n`;
+    prompt += `- Soft, PHOTOREALISTIC illumination with naturally feathered edges\n`;
+    prompt += `- Warm light that interacts realistically with the surface it hits (walls glow softly, ground pools have natural falloff)\n`;
+    prompt += `- Natural beam spread — NOT hard triangular or conical shapes\n`;
+    prompt += `- Light that looks like it comes from a real landscape lighting fixture\n\n`;
+
+    prompt += `## DIRECTION RULES\n`;
+    prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, gutter lights, core drills)\n`;
+    prompt += `- Downward-pointing hints = light beams going DOWN (soffit downlights, step lights)\n`;
+    prompt += `- Circular hints = omnidirectional ground-level pools (path lights, bollards)\n`;
+    prompt += `- NEVER reverse the indicated direction\n\n`;
+
+    prompt += `## COUNT RULES\n`;
+    prompt += `The guide contains EXACTLY ${count} fixture positions.\n`;
+    prompt += `Your output MUST contain EXACTLY ${count} light effects — no more, no fewer.\n`;
+    prompt += `Any area WITHOUT an annotated fixture MUST remain COMPLETELY DARK.\n\n`;
+
     prompt += `Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
-    prompt += `The crosshair lines through each marker indicate the precise center.\n`;
-    prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
+    prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
   } else {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
     prompt += `You are given TWO task images (the last two images in this message):\n`;

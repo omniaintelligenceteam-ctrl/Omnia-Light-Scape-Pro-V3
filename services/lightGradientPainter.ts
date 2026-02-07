@@ -72,70 +72,70 @@ const GRADIENT_CONFIGS: Record<FixtureCategory, GradientConfig> = {
     heightPercent: 25,
     widthPercent: 6,
     originOffsetYPercent: -1.5,
-    opacity: 0.55,
+    opacity: 0.35,
   },
   gutter_uplight: {
     direction: 'up',
     heightPercent: 20,
     widthPercent: 8,
     originOffsetYPercent: -1,
-    opacity: 0.5,
+    opacity: 0.30,
   },
   downlight: {
     direction: 'down',
     heightPercent: 30,
     widthPercent: 10,
     originOffsetYPercent: 1,
-    opacity: 0.5,
+    opacity: 0.30,
   },
   path_light: {
     direction: 'radial',
     heightPercent: 5,
     widthPercent: 8,
     originOffsetYPercent: 0,
-    opacity: 0.45,
+    opacity: 0.30,
   },
   coredrill: {
     direction: 'up',
     heightPercent: 28,
     widthPercent: 4,
     originOffsetYPercent: -0.5,
-    opacity: 0.5,
+    opacity: 0.35,
   },
   spot: {
     direction: 'up',
     heightPercent: 18,
     widthPercent: 3,
     originOffsetYPercent: -1,
-    opacity: 0.6,
+    opacity: 0.35,
   },
   wall_wash: {
     direction: 'up',
     heightPercent: 20,
     widthPercent: 14,
     originOffsetYPercent: -1,
-    opacity: 0.45,
+    opacity: 0.30,
   },
   well_light: {
     direction: 'up',
     heightPercent: 25,
     widthPercent: 5,
     originOffsetYPercent: -0.5,
-    opacity: 0.5,
+    opacity: 0.35,
   },
   bollard: {
     direction: 'radial',
     heightPercent: 5,
     widthPercent: 8,
     originOffsetYPercent: 0,
-    opacity: 0.45,
+    opacity: 0.30,
   },
   step_light: {
     direction: 'down',
     heightPercent: 8,
     widthPercent: 10,
     originOffsetYPercent: 1,
-    opacity: 0.5,
+    opacity: 0.30,
   },
 };
 
@@ -393,7 +393,7 @@ export function paintGradientsToCanvas(
   canvasHeight: number
 ): void {
   ctx.save();
-  ctx.globalCompositeOperation = 'screen';
+  ctx.globalCompositeOperation = 'lighter';
 
   for (const fixture of fixtures) {
     const config = GRADIENT_CONFIGS[fixture.type];
@@ -449,8 +449,8 @@ export async function paintLightGradients(
         // 1. Draw original image
         ctx.drawImage(img, 0, 0);
 
-        // 2. Darken to ~60% so gradients pop visually
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        // 2. Darken to ~40% so gradients are subtle hints, not bold shapes
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // 3. Paint directional gradients with screen blending

@@ -179,35 +179,14 @@ LIGHT GENERATION RULES (CRITICAL)
 GUTTER LIGHT MOUNTING LOCATION (CRITICAL - WHEN GUTTER LIGHTS SELECTED)
 ═══════════════════════════════════════════════════════════════════════════════
 
-*** GUTTER LIGHTS MUST BE INSIDE THE GUTTER TROUGH POKING OUT THE ROOF - NEVER ON THE ROOF ***
+GUTTER LIGHT: A compact brass fixture sitting INSIDE the rain 
+gutter channel, partially hidden by the gutter walls. Only the 
+top of the fixture peeks above the gutter edge. The light beam 
+shoots UPWARD from inside the gutter to illuminate the 2nd story 
+wall, roofline, dormers, and gables ABOVE the gutter. 
 
-GUTTER ANATOMY:
-- A gutter is a U-shaped metal channel running along the roofline
-- It collects rainwater and directs it to downspouts
-- The INSIDE of the gutter is where water flows
-- Gutter lights sit INSIDE this U-channel, against the inner wall
-
-CORRECT GUTTER LIGHT PLACEMENT:
-- INSIDE the metal gutter trough (the U-shaped channel)
-- Against the INNER GUTTER WALL (wall closest to house/fascia)
-- Fixture sits DOWN in the channel, partially hidden by gutter walls
-- Only the top of the fixture is visible from ground level
-
-FORBIDDEN GUTTER LIGHT PLACEMENTS:
-- ON THE ROOF SURFACE - Fixtures must NEVER be on shingles
-- ON THE GUTTER LIP/EDGE - Fixtures must NEVER be on the outer rim
-- ON THE FASCIA BOARD - Fixtures must be IN the gutter, not on fascia
-- PROMINENTLY VISIBLE ON ROOFLINE - Fixtures should be partially hidden
-
-WHY INSIDE THE GUTTER:
-- Professional installation - fixtures are protected from weather
-- Aesthetic - fixtures are discreet, not prominently visible
-- Function - allows upward beam angle toward target
-
-VISUAL VALIDATION:
-- If the entire fixture is prominently visible on the roofline = WRONG
-- If the fixture appears to be sitting on shingles = WRONG
-- If the fixture is described as low-profile, inside gutter channel = CORRECT
+NOT on the roof shingles. NOT on the fascia. NOT prominently 
+visible. The fixture is tucked inside the gutter channel.
 
 ═══════════════════════════════════════════════════════════════════════════════
 DRAMATIC LIGHTING STYLE (CRITICAL FOR PROFESSIONAL REALISM)
