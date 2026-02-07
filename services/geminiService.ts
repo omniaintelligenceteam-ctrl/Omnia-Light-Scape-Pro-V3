@@ -15,7 +15,7 @@ import {
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
-import { drawFixtureMarkers } from "./canvasNightService";
+import { drawFixtureMarkers, createPreLitNighttime } from "./canvasNightService";
 import { buildReferenceParts } from "./referenceLibrary";
 import { paintLightGradients } from "./lightGradientPainter";
 import type { LightFixture } from "../types/fixtures";
@@ -2470,13 +2470,13 @@ export function generateNarrativePlacement(
 
   // Per-fixture "render as" micro-descriptions for type reinforcement
   const renderAsMap: Record<string, string> = {
-    up: 'brass cylinder ground stake at wall base, beam UPWARD',
-    gutter: 'brass bullet fixture mounted at roof edge, beam UPWARD at 2nd story — NOT a soffit downlight',
-    path: 'brass dome-top bollard in landscaping, 360° ground pool',
-    well: 'flush in-ground well light, beam UPWARD at tree canopy',
-    hardscape: 'linear LED bar under step tread, beam DOWNWARD onto riser',
-    soffit: 'recessed canless LED flush in soffit, beam DOWNWARD',
-    coredrill: 'INVISIBLE flush light in concrete, beam UPWARD — NO visible hardware',
+    up: 'small bronze uplight at wall base, beam UPWARD',
+    gutter: 'small bronze uplight at roof edge, beam UPWARD — NOT a soffit downlight',
+    path: 'small bronze fixture in landscaping, 360° ground pool',
+    well: 'small bronze uplight at ground level, beam UPWARD at tree canopy',
+    hardscape: 'small bronze fixture under step tread, beam DOWNWARD onto riser',
+    soffit: 'small bronze recessed fixture flush in soffit, beam DOWNWARD',
+    coredrill: 'TINY flush bronze disc in concrete (~3" diameter), beam UPWARD — NO visible hardware',
   };
 
   const typeLabel = fixtureType.toUpperCase();
@@ -2687,7 +2687,7 @@ function buildEnhancedPrompt(
 
       if (presentTypes.has('gutter')) {
         prompt += `### "MOUNTED" MARKERS — Mounted Up Lights at 1st Story Roof Edge (⚠️ THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
-        prompt += `- FIXTURE: Compact brass bullet or mini flood up light with mounting bracket\n`;
+        prompt += `- FIXTURE: Small bronze up light, compact cylinder, nearly invisible at night\n`;
         prompt += `- MOUNTING: Mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high)\n`;
         prompt += `- The fixture is a small bronze up light secured at the 1st story roof edge, aiming upward\n`;
         prompt += `- BEAM DIRECTION: Aims straight UPWARD — the beam illuminates the wall/surface DIRECTLY ABOVE the fixture position\n`;
@@ -2701,7 +2701,7 @@ function buildEnhancedPrompt(
 
       if (presentTypes.has('path')) {
         prompt += `### "PATH" MARKERS — Path Lights\n`;
-        prompt += `- FIXTURE: Cast brass "china hat" or dome-top path light, ~22 inches tall, solid brass with aged bronze patina\n`;
+        prompt += `- FIXTURE: Small bronze up light fixture, low-profile, nearly invisible at night\n`;
         prompt += `- MOUNTING: Post-mounted, staked in landscaping beds alongside walkways (NOT on pavement)\n`;
         prompt += `- BEAM DIRECTION: 360-degree omnidirectional downward distribution from under the hat\n`;
         prompt += `- LIGHT POOL: 6-8 foot diameter warm pools on the ground around the fixture\n\n`;
@@ -2709,7 +2709,7 @@ function buildEnhancedPrompt(
 
       if (presentTypes.has('well')) {
         prompt += `### "WELL" MARKERS — In-Ground Well Lights\n`;
-        prompt += `- FIXTURE: Flush-mounted in-ground well light, brass housing, tempered glass lens, zero protrusion\n`;
+        prompt += `- FIXTURE: Small bronze up light, flush-mounted at ground level, nearly invisible at night\n`;
         prompt += `- MOUNTING: Completely flush with grade at ground level\n`;
         prompt += `- BEAM DIRECTION: Aims UPWARD — typically used to uplight trees and canopy\n`;
         prompt += `- LIGHT PHYSICS: Beam originates at ground level, projects upward; reveals bark texture, creates shadows in foliage\n\n`;
@@ -2717,7 +2717,7 @@ function buildEnhancedPrompt(
 
       if (presentTypes.has('hardscape')) {
         prompt += `### "STEP" MARKERS — Hardscape / Step Lights\n`;
-        prompt += `- FIXTURE: Linear LED light bar (7-19" length), low-profile brass housing, 12V\n`;
+        prompt += `- FIXTURE: Small bronze fixture, low-profile, nearly invisible at night\n`;
         prompt += `- MOUNTING: Under the tread nosing (front edge of step), facing downward\n`;
         prompt += `- BEAM DIRECTION: Projects DOWNWARD from under tread to illuminate the riser below\n`;
         prompt += `- Creates clear visual definition of each step edge; light spills onto the next tread below\n\n`;
@@ -2725,7 +2725,7 @@ function buildEnhancedPrompt(
 
       if (presentTypes.has('soffit')) {
         prompt += `### "DOWN" MARKERS — Soffit Downlights\n`;
-        prompt += `- FIXTURE: Recessed canless LED downlight, flush-mounted in soffit, IP65+ rated\n`;
+        prompt += `- FIXTURE: Small bronze recessed fixture, flush-mounted in soffit, nearly invisible at night\n`;
         prompt += `- MOUNTING: Flush inside the soffit/roof overhang, no protrusion below soffit plane\n`;
         prompt += `- BEAM DIRECTION: Projects DOWNWARD from soffit toward ground\n`;
         prompt += `- Grazes window frames, columns, or wall surfaces depending on position\n\n`;
@@ -2733,7 +2733,8 @@ function buildEnhancedPrompt(
 
       if (presentTypes.has('coredrill')) {
         prompt += `### "COREDRILL" MARKERS — Flush In-Ground Core Drill Lights\n`;
-        prompt += `- FIXTURE: Flush-mounted well light recessed into CONCRETE or PAVERS, brass/stainless housing, tempered glass lens, vehicle-rated\n`;
+        prompt += `- FIXTURE: Extremely small bronze disc about the size of a dip can (~3 inch diameter), completely flush with the concrete surface, INVISIBLE — no hardware visible above grade\n`;
+        prompt += `- SIZE: The fixture is TINY — roughly 3 inches in diameter, like a small puck embedded in concrete. It must NOT appear as a large well light or oversized housing.\n`;
         prompt += `- MOUNTING: Core-drilled into hardscape (concrete driveway, paver walkway), completely FLUSH with grade, ZERO protrusion above surface\n`;
         prompt += `- BEAM DIRECTION: Aims UPWARD to graze the wall/pier/column surface directly above the fixture\n`;
         prompt += `- TYPICAL USE: Garage door piers (flanking garage doors), concrete walkways, driveways\n`;
@@ -2795,13 +2796,13 @@ function buildEnhancedPrompt(
       // Explicit marker checklist
       prompt += `## MARKER CHECKLIST — Verify EVERY marker is converted:\n`;
       const labelMap: Record<string, string> = {
-        up: 'ground-mounted uplight (beam UP)',
-        soffit: 'soffit downlight (beam DOWN)',
-        path: 'brass path light bollard',
-        well: 'in-ground well light (beam UP)',
-        hardscape: 'under-tread step light',
-        gutter: 'mounted uplight at 1st story roof edge (beam UP)',
-        coredrill: 'flush in-ground core drill light (beam UP from concrete)'
+        up: 'small bronze uplight (beam UP)',
+        soffit: 'small bronze recessed downlight (beam DOWN)',
+        path: 'small bronze path light',
+        well: 'small bronze uplight (beam UP)',
+        hardscape: 'small bronze step light',
+        gutter: 'small bronze uplight at roof edge (beam UP)',
+        coredrill: 'tiny flush bronze disc in concrete (beam UP)'
       };
       analysis.spatialMap.placements.forEach((p, i) => {
         const label = labelMap[p.fixtureType] || 'light';
@@ -2849,7 +2850,8 @@ function buildManualPrompt(
   colorTemperaturePrompt: string,
   lightIntensity: number,
   beamAngle: number,
-  hasGradientImage?: boolean
+  hasGradientImage?: boolean,
+  isPreLitMode?: boolean
 ): string {
   const count = spatialMap.placements.length;
   const presentTypes = new Set(spatialMap.placements.map(p => p.fixtureType));
@@ -2867,24 +2869,46 @@ function buildManualPrompt(
     coredrill: { hex: '#FFA500', name: 'AMBER' },
   };
 
-  // 1. Executor preamble — two-pass: IMAGE 1 is nighttime base, IMAGE 2 is gradient guide
-  prompt += `YOU ARE A PRECISION LIGHTING SUBTRACTION TOOL.\n\n`;
-  prompt += `Your default output is a COMPLETELY DARK house with ZERO light sources.\n`;
-  prompt += `You then ADD ONLY the specific fixtures listed below — nothing more.\n`;
-  prompt += `If you are uncertain whether to add a light, DO NOT ADD IT.\n`;
-  prompt += `Err on the side of TOO DARK, never too bright.\n\n`;
-  prompt += `IMAGE 1 is a nighttime photograph of a house with NO lights on.\n`;
-  prompt += `IMAGE 2 is the SAME house with gradient overlays showing where lighting effects should appear.\n\n`;
-  prompt += `YOUR TASK: Add photorealistic warm landscape lighting effects to IMAGE 1 at the exact positions and directions shown by the gradients in IMAGE 2.\n\n`;
-  prompt += `ABSOLUTE RULES:\n`;
-  prompt += `1. Render EXACTLY the fixture types specified — no substitutions\n`;
-  prompt += `2. Place fixtures at EXACTLY the positions marked — no repositioning\n`;
-  prompt += `3. Render EXACTLY ${count} light sources — NO MORE, NO LESS\n`;
-  prompt += `4. Areas without markers MUST remain COMPLETELY DARK\n`;
-  prompt += `5. Do NOT add lights for ANY reason not marked in IMAGE 2\n`;
-  prompt += `6. Architecture and landscaping must be IDENTICAL to IMAGE 1\n`;
-  prompt += `7. Remove ALL gradient overlays, labels, and markers — output is a CLEAN photo\n`;
-  prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
+  // 1. Executor preamble — mode-dependent
+  if (isPreLitMode) {
+    prompt += `YOU ARE A PHOTOREALISTIC LIGHTING REFINEMENT TOOL.\n\n`;
+    prompt += `IMAGE 1 is a nighttime photograph with PRE-RENDERED warm lighting effects already in place.\n`;
+    prompt += `The lighting positions, directions, and types are ALREADY CORRECT in IMAGE 1.\n`;
+    prompt += `IMAGE 2 shows the same house with numbered markers confirming each fixture position.\n\n`;
+    prompt += `YOUR TASK: Refine IMAGE 1 to look like a professional nighttime photograph:\n`;
+    prompt += `- Smooth any harsh gradient edges into naturally feathered light\n`;
+    prompt += `- Ensure light interacts realistically with surfaces (walls glow, ground reflects)\n`;
+    prompt += `- Add subtle atmospheric scatter where beams pass through air\n`;
+    prompt += `- Maintain the EXACT positions and directions of the pre-rendered lights\n`;
+    prompt += `- The overall darkness level and unlit areas MUST remain as dark as shown in IMAGE 1\n\n`;
+    prompt += `CRITICAL RULES:\n`;
+    prompt += `1. Do NOT move any light source — positions are already correct\n`;
+    prompt += `2. Do NOT add any new lights — only ${count} exist in IMAGE 1\n`;
+    prompt += `3. Do NOT brighten any area that is dark in IMAGE 1 — darkness is intentional\n`;
+    prompt += `4. Do NOT change the beam direction of any light — directions are already correct\n`;
+    prompt += `5. Areas that are dark/black in IMAGE 1 MUST remain dark/black in your output\n`;
+    prompt += `6. Architecture must be IDENTICAL to IMAGE 1\n`;
+    prompt += `7. Remove ALL markers, numbers, and labels — output is a CLEAN photo\n`;
+    prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
+  } else {
+    prompt += `YOU ARE A PRECISION LIGHTING SUBTRACTION TOOL.\n\n`;
+    prompt += `Your default output is a COMPLETELY DARK house with ZERO light sources.\n`;
+    prompt += `You then ADD ONLY the specific fixtures listed below — nothing more.\n`;
+    prompt += `If you are uncertain whether to add a light, DO NOT ADD IT.\n`;
+    prompt += `Err on the side of TOO DARK, never too bright.\n\n`;
+    prompt += `IMAGE 1 is a nighttime photograph of a house with NO lights on.\n`;
+    prompt += `IMAGE 2 is the SAME house with gradient overlays showing where lighting effects should appear.\n\n`;
+    prompt += `YOUR TASK: Add photorealistic warm landscape lighting effects to IMAGE 1 at the exact positions and directions shown by the gradients in IMAGE 2.\n\n`;
+    prompt += `ABSOLUTE RULES:\n`;
+    prompt += `1. Render EXACTLY the fixture types specified — no substitutions\n`;
+    prompt += `2. Place fixtures at EXACTLY the positions marked — no repositioning\n`;
+    prompt += `3. Render EXACTLY ${count} light sources — NO MORE, NO LESS\n`;
+    prompt += `4. Areas without markers MUST remain COMPLETELY DARK\n`;
+    prompt += `5. Do NOT add lights for ANY reason not marked in IMAGE 2\n`;
+    prompt += `6. Architecture and landscaping must be IDENTICAL to IMAGE 1\n`;
+    prompt += `7. Remove ALL gradient overlays, labels, and markers — output is a CLEAN photo\n`;
+    prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
+  }
 
   // 1b. Exclusive fixture allowlist
   const allowlistLabelMap: Record<string, string> = {
@@ -2967,8 +2991,46 @@ function buildManualPrompt(
   prompt += `- Only the landscape lighting fixtures provide meaningful illumination\n`;
   prompt += `- Light pools on ground: soft feathered edges. Hard surfaces reflect slightly more than grass/mulch.\n\n`;
 
-  // 2. Image reference instruction (gradient map or marker-only)
-  if (hasGradientImage) {
+  // 2. Image reference instruction (pre-lit, gradient, or marker-only)
+  if (isPreLitMode) {
+    prompt += `## DUAL-IMAGE REFERENCE\n`;
+    prompt += `You are given TWO task images:\n`;
+    prompt += `- IMAGE 1 (PRE-LIT NIGHTTIME): A nighttime photograph with warm lighting effects ALREADY rendered at the correct positions and directions\n`;
+    prompt += `- IMAGE 2 (MARKER REFERENCE): The same house (daytime) with numbered markers confirming each fixture position\n\n`;
+
+    prompt += `## YOUR REFINEMENT TASK\n`;
+    prompt += `IMAGE 1 already shows the correct lighting — your job is to make it look PHOTOREALISTIC:\n`;
+    prompt += `- Smooth any artificial-looking gradient edges into naturally feathered warm light\n`;
+    prompt += `- Make light interact with wall textures (brick glows differently than siding)\n`;
+    prompt += `- Add subtle atmospheric scatter in the beams (visible light columns in air)\n`;
+    prompt += `- Ground pools should have soft, natural falloff on grass/concrete\n`;
+    prompt += `- Fixture hardware should look like real brass/metal landscape lighting fixtures\n\n`;
+
+    prompt += `## CRITICAL: PRESERVE THE PRE-LIT DARKNESS\n`;
+    prompt += `The dark areas in IMAGE 1 are INTENTIONALLY dark — they represent areas with NO fixtures.\n`;
+    prompt += `- Do NOT brighten any area that is dark/black in IMAGE 1\n`;
+    prompt += `- Do NOT add ambient fill light to "complete" the scene\n`;
+    prompt += `- Do NOT add light sources that don't exist in IMAGE 1\n`;
+    prompt += `- If soffits/eaves are dark in IMAGE 1, they MUST stay dark — NO soffit downlights unless one is visible in IMAGE 1\n`;
+    prompt += `- The overall darkness level of the output MUST match IMAGE 1\n\n`;
+
+    prompt += `## CRITICAL: CLEAN OUTPUT — NO ANNOTATIONS VISIBLE\n`;
+    prompt += `Your output MUST look like a clean, professional photograph with ZERO annotation artifacts:\n`;
+    prompt += `- NO numbered circles, colored dots, or markers from IMAGE 2\n`;
+    prompt += `- NO text labels or type names\n`;
+    prompt += `- The output should be INDISTINGUISHABLE from a real nighttime photograph\n\n`;
+
+    prompt += `## COUNT RULES\n`;
+    prompt += `IMAGE 1 contains EXACTLY ${count} pre-rendered light effects.\n`;
+    prompt += `Your output MUST contain EXACTLY ${count} light effects — no more, no fewer.\n`;
+    prompt += `Any area WITHOUT a pre-rendered light MUST remain COMPLETELY DARK.\n\n`;
+
+    prompt += `## POSITION MATCHING RULE\n`;
+    prompt += `The lights in IMAGE 1 are ALREADY at the correct positions. Do NOT move them.\n`;
+    prompt += `Use IMAGE 2 markers to VERIFY positions — if a light in IMAGE 1 appears to drift from the marker in IMAGE 2, keep the light at the IMAGE 2 marker position.\n`;
+    prompt += `- For MOUNTED markers specifically: the marker Y% position IS where the fixture is mounted\n`;
+    prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
+  } else if (hasGradientImage) {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
     prompt += `You are given TWO task images:\n`;
     prompt += `- IMAGE 1 (NIGHTTIME BASE): A nighttime photograph of the house with NO lights on — use as your BASE\n`;
@@ -3325,7 +3387,7 @@ async function verifyGeneratedImage(
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
     const expectedCount = expectedPlacements.length;
-    const expectedTypes = [...new Set(expectedPlacements.map(p => p.type))];
+    const expectedTypes = [...new Set(expectedPlacements.map(p => p.fixtureType))];
 
     const verificationPrompt = `You are analyzing a nighttime landscape lighting photograph.
 Count EVERY visible light source or illuminated fixture in this image.
@@ -3460,7 +3522,7 @@ export const generateManualScene = async (
   targetRatio: string,
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
-  fixtures?: LightFixture[],
+  _fixtures?: LightFixture[],
   nightBaseBase64?: string
 ): Promise<{ result: string; nightBase: string }> => {
   console.log('[Manual Mode] Starting two-pass manual generation...');
@@ -3484,34 +3546,31 @@ export const generateManualScene = async (
     nightBase = await generateNightBase(imageBase64, imageMimeType, targetRatio);
   }
 
-  // ── Gradient generation (painted on ORIGINAL daytime image for contrast) ───
+  // ── Pre-lit nighttime image (replaces gradient guide) ───────────────────────
   onStageUpdate?.('generating');
 
-  const hasGradients = !!(fixtures && fixtures.length > 0);
-  let gradientImage: string | undefined;
-  let markedImage: string | undefined;
+  // Paint realistic fixture glows on nighttime base + darken unlit areas
+  console.log(`[Manual Mode] Creating pre-lit nighttime image with ${spatialMap.placements.length} fixture glows...`);
+  const preLitImage = await createPreLitNighttime(nightBase, spatialMap, imageMimeType);
+  console.log('[Manual Mode] Pre-lit nighttime image created (glows + darkened unlit areas).');
 
-  if (hasGradients) {
-    console.log(`[Manual Mode] Painting directional light gradients for ${fixtures!.length} fixtures...`);
-    gradientImage = await paintLightGradients(imageBase64, fixtures!, imageMimeType);
-    console.log('[Manual Mode] Gradient map painted (includes numbered markers).');
-  } else {
-    console.log('[Manual Mode] Drawing fixture markers...');
-    markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
-    console.log('[Manual Mode] Markers drawn.');
-  }
+  // Draw markers on daytime image for position reference
+  console.log('[Manual Mode] Drawing fixture markers for position reference...');
+  const markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
+  console.log('[Manual Mode] Markers drawn.');
 
   const manualPrompt = buildManualPrompt(
     spatialMap,
     colorTemperaturePrompt,
     lightIntensity,
     beamAngle,
-    hasGradients
+    true,   // hasGradientImage (uses dual-image reference)
+    true    // isPreLitMode (refinement prompt)
   );
-  console.log('[Manual Mode] Prompt built. Length:', manualPrompt.length, 'characters');
+  console.log('[Manual Mode] Prompt built (refinement mode). Length:', manualPrompt.length, 'characters');
 
   // Load few-shot reference examples for the selected fixture types
-  const fixtureTypes = [...new Set(spatialMap.placements.map(p => p.type))];
+  const fixtureTypes = [...new Set(spatialMap.placements.map(p => p.fixtureType))];
   let referenceParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
   try {
     referenceParts = await buildReferenceParts(fixtureTypes);
@@ -3524,12 +3583,12 @@ export const generateManualScene = async (
     console.warn('[Manual Mode] Reference loading failed (non-blocking):', err);
   }
 
-  // ── PASS 2: Add lighting effects to nighttime base ─────────────────────────
+  // ── PASS 2: Refine pre-lit image to photorealism ───────────────────────────
   onStageUpdate?.('placing');
-  console.log('[Pass 2] Sending nighttime base + gradient to Gemini for lighting...');
+  console.log('[Pass 2] Sending pre-lit nighttime + markers to Gemini for refinement...');
 
   const result = await generateNightScene(
-    nightBase,        // Pass the nighttime base as primary image (not daytime)
+    preLitImage,      // Pre-lit nighttime with realistic glows + darkened soffits
     manualPrompt,
     imageMimeType,
     targetRatio,
@@ -3537,10 +3596,10 @@ export const generateManualScene = async (
     beamAngle,
     colorTemperaturePrompt,
     userPreferences,
-    markedImage,
+    markedImage,      // Position reference with numbered markers
     true,
     referenceParts.length > 0 ? referenceParts : undefined,
-    gradientImage
+    undefined         // No separate gradient image needed
   );
 
   console.log('[Pass 2] Lighting generation complete!');

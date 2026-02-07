@@ -255,6 +255,22 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     intensity: 0.70,
     pool: true,
   },
+  gutter: {
+    color: [255, 220, 150],   // warm white (same as uplight)
+    radiusX: 0.07,
+    radiusY: 0.20,            // tall vertical cone going UPWARD
+    offsetY: -0.12,           // strongly shifted UP (above fixture)
+    intensity: 0.85,
+    pool: false,              // no ground pool — light goes UP
+  },
+  coredrill: {
+    color: [255, 215, 140],   // warm wall-graze
+    radiusX: 0.04,
+    radiusY: 0.16,            // narrow upward cone
+    offsetY: -0.10,
+    intensity: 0.80,
+    pool: false,
+  },
 };
 
 const DEFAULT_GLOW: GlowConfig = {
@@ -408,4 +424,168 @@ function drawFixtureGlow(
   }
 
   ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRE-LIT NIGHTTIME IMAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Aggressively darken areas of the image that are far from any fixture marker.
+ * Special emphasis on the eave/soffit zone (top ~25% of image) when no gutter/soffit
+ * fixture is nearby — makes those areas near-black so the AI can't add phantom lights.
+ *
+ * Uses 8x8 pixel blocks for performance instead of per-pixel processing.
+ */
+async function aggressivelyDarkenUnlitAreas(
+  imageBase64: string,
+  spatialMap: SpatialMap,
+  mimeType: string
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          reject(new Error('[CanvasNight] Failed to create canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Pre-compute fixture positions in pixel coordinates
+        const fixturePixels = spatialMap.placements.map(p => ({
+          x: (p.horizontalPosition / 100) * w,
+          y: (p.verticalPosition / 100) * h,
+          type: p.fixtureType,
+        }));
+
+        // Beam protection radius per fixture type (in pixels, based on image width)
+        const beamRadius: Record<string, number> = {
+          up: w * 0.08,
+          gutter: w * 0.10,
+          path: w * 0.07,
+          well: w * 0.08,
+          hardscape: w * 0.08,
+          soffit: w * 0.08,
+          coredrill: w * 0.06,
+        };
+        const defaultRadius = w * 0.08;
+
+        // Soffit zone: top 25% of image
+        const soffitZoneY = h * 0.25;
+
+        // Process in 8x8 blocks for performance
+        const blockSize = 8;
+        for (let by = 0; by < h; by += blockSize) {
+          for (let bx = 0; bx < w; bx += blockSize) {
+            const blockCenterX = bx + blockSize / 2;
+            const blockCenterY = by + blockSize / 2;
+
+            // Find minimum distance to any fixture
+            let minDist = Infinity;
+            let nearestRadius = defaultRadius;
+            for (const fp of fixturePixels) {
+              const dx = blockCenterX - fp.x;
+              const dy = blockCenterY - fp.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < minDist) {
+                minDist = dist;
+                nearestRadius = beamRadius[fp.type] || defaultRadius;
+              }
+            }
+
+            // Calculate darkening factor
+            let darkenFactor = 1.0; // 1.0 = no change
+
+            if (minDist > nearestRadius * 3) {
+              // Very far from any fixture — heavy darkening
+              darkenFactor = 0.35;
+            } else if (minDist > nearestRadius * 2) {
+              // Moderate distance — some darkening
+              darkenFactor = 0.55;
+            } else if (minDist > nearestRadius) {
+              // Transition zone — light darkening with smooth falloff
+              const t = (minDist - nearestRadius) / nearestRadius;
+              darkenFactor = 1.0 - (t * 0.45);
+            }
+            // Within beam radius: darkenFactor stays 1.0 (no change)
+
+            // Extra aggressive darkening for soffit zone without nearby gutter/soffit fixtures
+            if (blockCenterY < soffitZoneY) {
+              const hasNearbySoffitOrGutter = fixturePixels.some(fp => {
+                if (fp.type !== 'gutter' && fp.type !== 'soffit') return false;
+                const dx = blockCenterX - fp.x;
+                const dy = blockCenterY - fp.y;
+                return Math.sqrt(dx * dx + dy * dy) < w * 0.12;
+              });
+
+              if (!hasNearbySoffitOrGutter) {
+                // No gutter/soffit fixture near this soffit area — darken to near-black
+                darkenFactor = Math.min(darkenFactor, 0.15);
+              }
+            }
+
+            // Apply darkening to all pixels in this block
+            if (darkenFactor < 1.0) {
+              const maxY = Math.min(by + blockSize, h);
+              const maxX = Math.min(bx + blockSize, w);
+              for (let py = by; py < maxY; py++) {
+                for (let px = bx; px < maxX; px++) {
+                  const idx = (py * w + px) * 4;
+                  data[idx]     = Math.round(data[idx] * darkenFactor);     // R
+                  data[idx + 1] = Math.round(data[idx + 1] * darkenFactor); // G
+                  data[idx + 2] = Math.round(data[idx + 2] * darkenFactor); // B
+                  // Alpha unchanged
+                }
+              }
+            }
+          }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        const dataUrl = canvas.toDataURL(mimeType, 0.92);
+        const base64 = dataUrl.split(',')[1];
+        resolve(base64);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    img.onerror = () => reject(new Error('[CanvasNight] Failed to load image for aggressive darkening'));
+    img.src = `data:${mimeType};base64,${imageBase64}`;
+  });
+}
+
+/**
+ * Create a pre-lit nighttime image with realistic fixture glows and aggressively
+ * darkened unlit areas. This gives the AI a nearly-finished image to refine to
+ * photorealism, rather than asking it to create lights from scratch.
+ *
+ * @param nightBase64 - Pre-darkened nighttime base image (from preDarkenImage)
+ * @param spatialMap - Fixture placements with positions and types
+ * @param mimeType - Image mime type
+ * @returns Pre-lit nighttime image with realistic glows + darkened unlit areas
+ */
+export async function createPreLitNighttime(
+  nightBase64: string,
+  spatialMap: SpatialMap,
+  mimeType: string = 'image/jpeg'
+): Promise<string> {
+  // 1. Paint realistic fixture glows on the darkened nighttime base
+  const preLitImage = await renderFixtureGlows(nightBase64, spatialMap, mimeType);
+
+  // 2. Aggressively darken areas without fixtures (especially soffits/eaves)
+  const finalImage = await aggressivelyDarkenUnlitAreas(preLitImage, spatialMap, mimeType);
+
+  return finalImage;
 }
