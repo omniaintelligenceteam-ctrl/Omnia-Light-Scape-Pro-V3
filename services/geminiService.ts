@@ -3083,18 +3083,6 @@ function buildManualPrompt(
     prompt += `- THIS IS A GROUND-LEVEL FIXTURE — the brass cylinder sits at ground level, NOT mounted on the wall\n\n`;
   }
 
-  if (presentTypes.has('gutter')) {
-    prompt += `### "MOUNTED" MARKERS — Mounted UP Lights (THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
-    prompt += `- FIXTURE: Compact brass bullet or mini flood UP light with mounting bracket\n`;
-    prompt += `- MOUNTING: Mounted at the 1st-story roof edge, at the marker's exact Y% position\n`;
-    prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features, roofline fascia, dormers, and gables ABOVE the mounting point\n`;
-    prompt += `- BEAM REACH: 10-25 ft upward from the mounting point to illuminate features above\n`;
-    prompt += `- THIS IS AN UP LIGHT — light goes UP toward the 2nd story, NEVER down toward the ground.\n`;
-    prompt += `- NEVER render this as a soffit downlight, recessed downlight, or any downward-facing fixture\n`;
-    prompt += `- The marker position tells you EXACTLY where this fixture is mounted. Mount the fixture at the marker's Y% coordinate.\n`;
-    prompt += `- CRITICAL FOR GROUND-LEVEL PHOTOS: You may not be able to clearly see the roof edge. TRUST THE MARKER POSITION — it shows exactly where to mount the fixture.\n\n`;
-  }
-
   if (presentTypes.has('path')) {
     prompt += `### "PATH" MARKERS — Path Lights\n`;
     prompt += `- FIXTURE: Cast brass "china hat" or dome-top path light, ~22 inches tall, solid brass with aged bronze patina\n`;
@@ -3137,6 +3125,19 @@ function buildManualPrompt(
     prompt += `- Distance from wall: 4-6 inches for proper grazing angle\n`;
     prompt += `- THIS IS NOT A TREE UPLIGHT — these are embedded in CONCRETE near walls/piers, NOT in landscape beds\n`;
     prompt += `- THIS IS NOT A PROTRUDING UPLIGHT — there is NO brass cylinder sticking up. The fixture is INVISIBLE, flush with the concrete surface\n\n`;
+  }
+
+  // MOUNTED last — recency bias ensures the AI remembers this most-confused fixture type
+  if (presentTypes.has('gutter')) {
+    prompt += `### "MOUNTED" MARKERS — Mounted UP Lights (THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
+    prompt += `- FIXTURE: Compact brass bullet or mini flood UP light with mounting bracket\n`;
+    prompt += `- MOUNTING: Mounted at the 1st-story roof edge, at the marker's exact Y% position\n`;
+    prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features, roofline fascia, dormers, and gables ABOVE the mounting point\n`;
+    prompt += `- BEAM REACH: 10-25 ft upward from the mounting point to illuminate features above\n`;
+    prompt += `- THIS IS AN UP LIGHT — light goes UP toward the 2nd story, NEVER down toward the ground.\n`;
+    prompt += `- NEVER render this as a soffit downlight, recessed downlight, or any downward-facing fixture\n`;
+    prompt += `- The marker position tells you EXACTLY where this fixture is mounted. Mount the fixture at the marker's Y% coordinate.\n`;
+    prompt += `- CRITICAL FOR GROUND-LEVEL PHOTOS: You may not be able to clearly see the roof edge. TRUST THE MARKER POSITION — it shows exactly where to mount the fixture.\n\n`;
   }
 
   // 6. Confusion prevention (UNCONDITIONAL — always include all distinctions)
