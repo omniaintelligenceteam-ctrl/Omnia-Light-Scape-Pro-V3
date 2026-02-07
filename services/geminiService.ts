@@ -2468,6 +2468,20 @@ export function generateNarrativePlacement(
 
   if (placements.length === 0) return '';
 
+  // Per-fixture "render as" micro-descriptions for type reinforcement
+  const renderAsMap: Record<string, string> = {
+    up: 'brass cylinder ground stake at wall base, beam UPWARD',
+    gutter: 'brass bullet fixture IN gutter channel, beam UPWARD — NOT a soffit downlight',
+    path: 'brass dome-top bollard in landscaping, 360° ground pool',
+    well: 'flush in-ground well light, beam UPWARD at tree canopy',
+    hardscape: 'linear LED bar under step tread, beam DOWNWARD onto riser',
+    soffit: 'recessed canless LED flush in soffit, beam DOWNWARD',
+    coredrill: 'INVISIBLE flush light in concrete, beam UPWARD — NO visible hardware',
+  };
+
+  const typeLabel = fixtureType.toUpperCase();
+  const renderAs = renderAsMap[fixtureType] || fixtureType;
+
   // Sort left to right
   const sorted = [...placements].sort((a, b) => a.horizontalPosition - b.horizontalPosition);
 
@@ -2481,8 +2495,21 @@ export function generateNarrativePlacement(
     const yCoord = p.verticalPosition !== undefined ? p.verticalPosition.toFixed(1) : '?';
     const coords = `Place at [${xCoord}%, ${yCoord}%]`;
 
-    narrative += `FIXTURE ${i + 1}: ${coords}\n`;
+    narrative += `FIXTURE ${i + 1} (${typeLabel}): ${coords}`;
+    if (p.description) {
+      narrative += ` — ${p.description}`;
+    }
+    narrative += ` — Render as: ${renderAs}\n`;
   });
+
+  // Add inter-fixture spacing when 2+ fixtures
+  if (sorted.length >= 2) {
+    narrative += `\nSPACING: These ${sorted.length} fixtures are arranged LEFT to RIGHT.\n`;
+    for (let i = 1; i < sorted.length; i++) {
+      const gap = sorted[i].horizontalPosition - sorted[i - 1].horizontalPosition;
+      narrative += `- Gap between FIXTURE ${i} and FIXTURE ${i + 1}: ${gap.toFixed(1)}% of image width\n`;
+    }
+  }
 
   narrative += `\nCOUNT CHECK: There are EXACTLY ${sorted.length} fixtures. No more, no less.\n`;
 
@@ -2841,7 +2868,11 @@ function buildManualPrompt(
   };
 
   // 1. Executor preamble — two-pass: IMAGE 1 is nighttime base, IMAGE 2 is gradient guide
-  prompt += `YOU ARE A PRECISION LIGHTING PLACEMENT TOOL.\n\n`;
+  prompt += `YOU ARE A PRECISION LIGHTING SUBTRACTION TOOL.\n\n`;
+  prompt += `Your default output is a COMPLETELY DARK house with ZERO light sources.\n`;
+  prompt += `You then ADD ONLY the specific fixtures listed below — nothing more.\n`;
+  prompt += `If you are uncertain whether to add a light, DO NOT ADD IT.\n`;
+  prompt += `Err on the side of TOO DARK, never too bright.\n\n`;
   prompt += `IMAGE 1 is a nighttime photograph of a house with NO lights on.\n`;
   prompt += `IMAGE 2 is the SAME house with gradient overlays showing where lighting effects should appear.\n\n`;
   prompt += `YOUR TASK: Add photorealistic warm landscape lighting effects to IMAGE 1 at the exact positions and directions shown by the gradients in IMAGE 2.\n\n`;
@@ -2855,7 +2886,64 @@ function buildManualPrompt(
   prompt += `7. Remove ALL gradient overlays, labels, and markers — output is a CLEAN photo\n`;
   prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
 
-  // 1b. Essential preservation rules
+  // 1b. Exclusive fixture allowlist
+  const allowlistLabelMap: Record<string, string> = {
+    up: 'Ground-mounted uplight (brass cylinder, beam UP)',
+    gutter: 'Gutter-mounted uplight (brass bullet IN gutter, beam UP)',
+    path: 'Path light bollard (brass dome-top, 360° ground pool)',
+    well: 'In-ground well light (flush, beam UP at trees)',
+    hardscape: 'Step/hardscape light (LED bar under tread, beam DOWN)',
+    soffit: 'Soffit downlight (recessed in overhang, beam DOWN)',
+    coredrill: 'Core drill light (flush in concrete, beam UP, NO visible hardware)',
+  };
+
+  const allFixtureTypes = ['up', 'gutter', 'path', 'well', 'hardscape', 'soffit', 'coredrill'];
+  const nonSelectedTypes = allFixtureTypes.filter(t => !presentTypes.has(t));
+
+  prompt += `## EXCLUSIVE FIXTURE ALLOWLIST — ONLY THESE TYPES MAY EXIST\n`;
+  prompt += `The ONLY lighting fixtures permitted in the output image are:\n`;
+  for (const type of presentTypes) {
+    if (allowlistLabelMap[type]) {
+      prompt += `- ${allowlistLabelMap[type]}\n`;
+    }
+  }
+  prompt += `\nNO OTHER light source of ANY kind may appear. This includes:\n`;
+  prompt += `- NO ambient glow on surfaces without a marker\n`;
+  prompt += `- NO fill light that softens dark areas\n`;
+  prompt += `- NO bounce light, reflected light, or secondary illumination\n`;
+  prompt += `- NO light that "completes" the scene aesthetically\n`;
+  prompt += `VALIDATION: If ANY light source appears that is not in this allowlist = INVALID IMAGE\n\n`;
+
+  // 1c. Prohibition-by-type for non-selected fixtures
+  if (nonSelectedTypes.length > 0) {
+    const darkDescriptions: Record<string, string> = {
+      up: 'Wall bases remain in shadow, NO upward beam columns on walls from ground level',
+      gutter: 'Gutters are dark, NO upward illumination from gutter channels onto 2nd story',
+      path: 'No bollard fixtures, no circular ground pools along walkways',
+      well: 'No flush in-ground lights in landscape beds, no tree uplighting from ground',
+      hardscape: 'Step risers remain dark, no light bars under treads',
+      soffit: 'Eave undersides are dark shadows with NO downward illumination cones',
+      coredrill: 'Concrete/paver surfaces have no flush lights, no wall-grazing from driveways',
+    };
+
+    prompt += `## THESE FIXTURE TYPES WERE NOT SELECTED — THEY MUST NOT APPEAR\n`;
+    for (const type of nonSelectedTypes) {
+      if (darkDescriptions[type]) {
+        prompt += `- ${type.toUpperCase()}: ${darkDescriptions[type]}\n`;
+      }
+    }
+    prompt += `\n`;
+  }
+
+  // 1d. Type authority rule
+  prompt += `## TYPE AUTHORITY RULE\n`;
+  prompt += `The fixture TYPE is determined EXCLUSIVELY by the marker label — NEVER by location.\n`;
+  prompt += `- A marker labeled "GUTTER" at ANY position = gutter uplight, regardless of surroundings\n`;
+  prompt += `- A marker labeled "UP" at ANY position = ground-mounted uplight, regardless of surroundings\n`;
+  prompt += `- You MUST NOT substitute one fixture type for another based on where the marker is placed\n`;
+  prompt += `- The user placed each marker deliberately — the marker label IS the user's intent\n\n`;
+
+  // 1e. Essential preservation rules
   prompt += `## FRAMING & COMPOSITION PRESERVATION (CRITICAL)\n`;
   prompt += `- Output MUST have the EXACT SAME framing and composition as IMAGE 1\n`;
   prompt += `- Keep the ENTIRE house in frame — do NOT crop, zoom in, or cut off any part\n`;
@@ -2924,7 +3012,12 @@ function buildManualPrompt(
     prompt += `- The ONLY light sources in the scene are the ${count} fixtures marked in the guide\n`;
     prompt += `- If a wall, door, or garage has no marker near it, it must have NO fixture on it\n\n`;
 
-    prompt += `Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
+    prompt += `## POSITION MATCHING RULE\n`;
+    prompt += `Each marker's crosshair intersection is the PRECISE fixture location.\n`;
+    prompt += `- Match horizontal position EXACTLY — if marker is at 35% from left, light must be at 35% from left\n`;
+    prompt += `- Match vertical position EXACTLY — if marker is at 80% from top, light must be at 80% from top\n`;
+    prompt += `- DO NOT "snap" fixtures to architectural features — marker position overrides any perceived "correct" location\n`;
+    prompt += `- If a marker appears in an unusual position, TRUST THE MARKER — the user placed it deliberately\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
   } else {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
@@ -2932,9 +3025,12 @@ function buildManualPrompt(
     prompt += `- IMAGE 1 (NIGHTTIME BASE): A nighttime photograph of the house with NO lights on — use this as your BASE\n`;
     prompt += `- MARKED IMAGE: The same house (daytime) with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
     prompt += `Your task: Add professional landscape lighting effects to IMAGE 1 at the EXACT positions shown by the markers in the MARKED IMAGE. The output should look like IMAGE 1 with realistic lighting added — NO colored markers visible.\n\n`;
-    prompt += `CRITICAL: Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
-    prompt += `The crosshair lines through each marker indicate the precise center.\n`;
-    prompt += `Do NOT offset the fixture from the marker — the marker center IS the fixture position.\n`;
+    prompt += `## POSITION MATCHING RULE\n`;
+    prompt += `Each marker's crosshair intersection is the PRECISE fixture location.\n`;
+    prompt += `- Match horizontal position EXACTLY — if marker is at 35% from left, light must be at 35% from left\n`;
+    prompt += `- Match vertical position EXACTLY — if marker is at 80% from top, light must be at 80% from top\n`;
+    prompt += `- DO NOT "snap" fixtures to architectural features — marker position overrides any perceived "correct" location\n`;
+    prompt += `- If a marker appears in an unusual position, TRUST THE MARKER — the user placed it deliberately\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
   }
 
@@ -3038,30 +3134,33 @@ function buildManualPrompt(
     prompt += `- THIS IS NOT A PROTRUDING UPLIGHT — there is NO brass cylinder sticking up. The fixture is INVISIBLE, flush with the concrete surface\n\n`;
   }
 
-  // 6. Confusion prevention
+  // 6. Confusion prevention (UNCONDITIONAL — always include all distinctions)
   prompt += `## CRITICAL CONFUSION PREVENTION\n`;
-  if (presentTypes.has('gutter')) {
-    prompt += `### GUTTER ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
-    prompt += `- GUTTER UP LIGHT: Brass fixture sitting IN the rain gutter channel → beam shoots UPWARD at 2nd story/roofline\n`;
-    prompt += `- SOFFIT DOWNLIGHT: Recessed in the overhang ceiling → beam shoots DOWNWARD at ground\n`;
-    prompt += `- These are OPPOSITE directions. If a marker says "GUTTER", the light MUST go UP.\n`;
-    prompt += `- If you render a downward-facing light for a "GUTTER" marker, you have made an error — fix it.\n`;
-  }
-  if (presentTypes.has('coredrill') && presentTypes.has('up')) {
-    prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
-    prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
-    prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
-    prompt += `- If a marker says "COREDRILL", there must be NO visible fixture — only the light beam on the wall above.\n`;
-  }
-  if (presentTypes.has('coredrill') && presentTypes.has('well')) {
-    prompt += `### COREDRILL ≠ WELL (Different locations)\n`;
-    prompt += `- COREDRILL: Flush in CONCRETE/PAVERS near walls and garage piers\n`;
-    prompt += `- WELL: Flush in LANDSCAPE BEDS near trees\n`;
-  }
-  if (presentTypes.has('up')) {
-    prompt += `- "UP" fixtures are at GROUND LEVEL aiming upward — NOT sconces, NOT wall-mounted, NOT high-mounted\n`;
-  }
+  prompt += `### GUTTER ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
+  prompt += `- GUTTER UP LIGHT: Brass fixture sitting IN the rain gutter channel → beam shoots UPWARD at 2nd story/roofline\n`;
+  prompt += `- SOFFIT DOWNLIGHT: Recessed in the overhang ceiling → beam shoots DOWNWARD at ground\n`;
+  prompt += `- These are OPPOSITE directions. If a marker says "GUTTER", the light MUST go UP.\n`;
+  prompt += `- If you render a downward-facing light for a "GUTTER" marker, you have made an error — fix it.\n`;
+  prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
+  prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
+  prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
+  prompt += `- If a marker says "COREDRILL", there must be NO visible fixture — only the light beam on the wall above.\n`;
+  prompt += `### COREDRILL ≠ WELL (Different locations)\n`;
+  prompt += `- COREDRILL: Flush in CONCRETE/PAVERS near walls and garage piers\n`;
+  prompt += `- WELL: Flush in LANDSCAPE BEDS near trees\n`;
+  prompt += `- "UP" fixtures are at GROUND LEVEL aiming upward — NOT sconces, NOT wall-mounted, NOT high-mounted\n`;
   prompt += `- Every marker label tells you the EXACT fixture type. NEVER substitute one type for another.\n\n`;
+
+  // 6b. Common mistakes section
+  prompt += `## COMMON MISTAKES TO AVOID\n`;
+  prompt += `- WRONG: Rendering a soffit downlight when marker says "GUTTER" (because it's near the roofline)\n`;
+  prompt += `  RIGHT: Gutter markers = light goes UP from gutter channel, regardless of position\n`;
+  prompt += `- WRONG: Rendering a visible brass cylinder for a "COREDRILL" marker\n`;
+  prompt += `  RIGHT: Coredrill = invisible flush fixture in concrete, only the light beam is visible\n`;
+  prompt += `- WRONG: Rendering a path light as a ground-level uplight (or vice versa)\n`;
+  prompt += `  RIGHT: Path lights = tall bollards with 360° ground pools; uplights = short cylinders with narrow upward beams\n`;
+  prompt += `- WRONG: Moving a light to a "nicer" position instead of the exact marker location\n`;
+  prompt += `  RIGHT: Trust the marker position — the user placed it deliberately\n\n`;
 
   // 7. Dramatic lighting style
   prompt += `## DRAMATIC LIGHTING STYLE (MANDATORY)\n`;
@@ -3085,7 +3184,12 @@ function buildManualPrompt(
   prompt += `- Ambient illumination or sky glow beyond what the ${count} placed fixtures produce\n`;
   prompt += `- Decorative lights on walls, doors, columns, or any surface without a marker\n`;
   prompt += `- Areas of the house WITHOUT a marker MUST remain COMPLETELY DARK — no exceptions\n`;
-  prompt += `- If you find yourself adding a light that doesn't correspond to a marker, STOP and REMOVE it\n\n`;
+  prompt += `- If you find yourself adding a light that doesn't correspond to a marker, STOP and REMOVE it\n`;
+  prompt += `- Ambient glow on walls, ground, or surfaces without a corresponding marker\n`;
+  prompt += `- Fill light that softens dark shadows between fixtures\n`;
+  prompt += `- Bounce light, reflected illumination, or secondary light sources\n`;
+  prompt += `- General illumination that "completes" the scene — darkness IS the design intent\n`;
+  prompt += `- Light on walls, columns, garage doors, or any surface that has NO marker near it\n\n`;
 
   // 9. Marker checklist
   prompt += `## MARKER CHECKLIST — Verify EVERY marker is converted:\n`;
@@ -3111,9 +3215,13 @@ function buildManualPrompt(
   prompt += `3. If you count FEWER than ${count}: you MISSED a marker — go back and add the missing light\n`;
   prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light — REMOVE it immediately\n`;
   prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, GUTTER=upward beam from gutter, PATH=bollard, etc.)\n`;
+  let verifyNum = 6;
   if (presentTypes.has('gutter') && !presentTypes.has('soffit')) {
-    prompt += `6. Verify ZERO soffit/downlights exist — the user placed GUTTER up lights, NOT soffit downlights\n`;
+    prompt += `${verifyNum}. Verify ZERO soffit/downlights exist — the user placed GUTTER up lights, NOT soffit downlights\n`;
+    verifyNum++;
   }
+  prompt += `${verifyNum}. For each light, verify it is within 3% of the marker's x,y coordinates\n`;
+  prompt += `${verifyNum + 1}. If a light drifted to a "nicer" position, MOVE IT BACK to the marker position — user intent overrides aesthetics\n`;
   prompt += `\n`;
 
   // 11. Lighting parameters

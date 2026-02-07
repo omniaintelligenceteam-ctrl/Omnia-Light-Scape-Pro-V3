@@ -79,15 +79,47 @@ function inferSubOption(fixture: LightFixture): string {
 }
 
 function generateAnchor(fixture: LightFixture): string {
-  const h = fixture.x < 33 ? 'left' : fixture.x > 66 ? 'right' : 'center';
-  const v = fixture.y < 33 ? 'upper' : fixture.y > 66 ? 'lower' : 'mid';
+  let h: string;
+  if (fixture.x < 15) h = 'far_left';
+  else if (fixture.x < 30) h = 'left';
+  else if (fixture.x < 45) h = 'left_center';
+  else if (fixture.x < 55) h = 'center';
+  else if (fixture.x < 70) h = 'right_center';
+  else if (fixture.x < 85) h = 'right';
+  else h = 'far_right';
+
+  let v: string;
+  if (fixture.y < 15) v = 'roofline';
+  else if (fixture.y < 30) v = 'upper';
+  else if (fixture.y < 45) v = 'mid_upper';
+  else if (fixture.y < 55) v = 'mid';
+  else if (fixture.y < 70) v = 'lower';
+  else if (fixture.y < 85) v = 'near_ground';
+  else v = 'ground';
+
   return `${v}_${h}`;
 }
 
 function generateDescription(fixture: LightFixture): string {
-  const h = fixture.x < 33 ? 'left side' : fixture.x > 66 ? 'right side' : 'center';
-  const v = fixture.y < 33 ? 'upper area' : fixture.y > 66 ? 'ground level' : 'mid-height';
-  return `Manual placement at ${v}, ${h} of facade`;
+  let h: string;
+  if (fixture.x < 15) h = 'far left edge';
+  else if (fixture.x < 30) h = 'left third';
+  else if (fixture.x < 45) h = 'left of center';
+  else if (fixture.x < 55) h = 'center';
+  else if (fixture.x < 70) h = 'right of center';
+  else if (fixture.x < 85) h = 'right third';
+  else h = 'far right edge';
+
+  let v: string;
+  if (fixture.y < 15) v = 'roofline/top';
+  else if (fixture.y < 30) v = 'upper wall';
+  else if (fixture.y < 45) v = 'mid-upper wall';
+  else if (fixture.y < 55) v = 'mid-height';
+  else if (fixture.y < 70) v = 'lower wall';
+  else if (fixture.y < 85) v = 'near ground level';
+  else v = 'ground level at foundation';
+
+  return `${v}, ${h} of facade`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
