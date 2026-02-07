@@ -963,21 +963,20 @@ export const craftPromptWithAI = async (
     // Add visual description for gutter fixtures to help AI distinguish from soffit lights AND prevent roof placement
     const gutterVisualDescription = placement.fixtureType === 'gutter' ? `
 
-GUTTER FIXTURE VISUAL APPEARANCE (CRITICAL):
-- Small bronze bullet fixture sitting IN the rain gutter channel at the 1st story roofline
-- The gutter is the horizontal metal channel at the BOTTOM EDGE of the 1st story roof (Y=85-95%)
-- The fixture sits INSIDE this channel — you see a small bronze dot peeking out of the gutter
+MOUNTED UP LIGHT VISUAL APPEARANCE (CRITICAL):
+- Small bronze bullet fixture mounted at the EDGE of the 1st story roof line (~8-10 ft high)
+- The fixture is secured where the roof meets the fascia, at the bottom edge of the 1st story roof (Y=85-95%)
 - Light beam projects UPWARD from this fixture toward 2nd story features above
 
 WHERE THE FIXTURE IS:
-- IN the horizontal rain gutter at the 1st story roof edge
-- NOT on the roof shingles, NOT on the fascia board, NOT on the wall
-- The fixture is SMALL and partially hidden by the gutter walls
+- At the EDGE of the 1st story roof line (where roof meets fascia)
+- NOT on the roof shingles, NOT on the wall, NOT in the soffit
+- The fixture is SMALL, mounted at roof edge height
 
 VISUAL TEST:
-- CORRECT: Small bronze dot visible inside the gutter channel, beam going UP
+- CORRECT: Small bronze up light at the 1st story roof edge, beam going UP
 - WRONG: Fixture sitting ON TOP of roof shingles
-- WRONG: Fixture mounted on the wall or fascia
+- WRONG: Fixture mounted on the wall or fascia board
 - WRONG: Fixture that looks like a soffit downlight (beam going DOWN)` : '';
 
     return {
@@ -1044,18 +1043,18 @@ SOFFIT LIGHTS ARE NOT SELECTED. The following is MANDATORY:
   const gutterSelected = selectedFixtureIds.includes('gutter');
   const gutterSoffitClarification = SOFFIT_HIDDEN ? '' : (gutterSelected ? `
 
-## GUTTER LIGHTS vs SOFFIT LIGHTS - CRITICAL DISTINCTION
-YOU HAVE SELECTED: GUTTER-MOUNTED UP LIGHTS (fixtures IN the gutter, shining UP)
+## MOUNTED UP LIGHTS vs SOFFIT LIGHTS - CRITICAL DISTINCTION
+YOU HAVE SELECTED: MOUNTED UP LIGHTS (fixtures at the 1st story roof edge, shining UP)
 YOU HAVE NOT SELECTED: SOFFIT LIGHTS (fixtures IN the eave, shining DOWN)
 
 *** DO NOT CONFUSE THESE - THEY ARE OPPOSITES ***
 
-GUTTER UP LIGHTS (SELECTED - GENERATE THESE):
-- Fixture Location: INSIDE the metal gutter trough/channel
-- Fixture Appearance: Small brass/bronze bullet visible sitting IN the gutter
+MOUNTED UP LIGHTS (SELECTED - GENERATE THESE):
+- Fixture Location: At the EDGE of the 1st story roof line (where roof meets fascia, ~8-10 ft high)
+- Fixture Appearance: Small brass/bronze bullet up light at the roof edge
 - Beam Direction: UPWARD toward dormers, gables, or 2nd story facade
-- Light travels: FROM gutter UP TO higher features
-- You can SEE the fixture sitting in the gutter
+- Light travels: FROM 1st story roof edge UP TO higher features
+- You can SEE the fixture at the roof edge
 
 SOFFIT LIGHTS (NOT SELECTED - DO NOT GENERATE):
 - Fixture Location: Recessed IN the soffit/eave underside
@@ -1065,30 +1064,28 @@ SOFFIT LIGHTS (NOT SELECTED - DO NOT GENERATE):
 - Fixture is recessed/hidden in the eave
 
 VISUAL TEST:
-- If fixture is INSIDE the gutter trough and light goes UP = CORRECT (gutter light)
+- If fixture is at the 1st story roof edge and light goes UP = CORRECT (mounted up light)
 - If fixture is IN the eave and light goes DOWN = WRONG (soffit light - forbidden)
 
 SOFFIT MUST REMAIN DARK:
 - Eave undersides remain pitch black
 - NO downlights, NO can lights, NO recessed fixtures in eaves
-- Any glow on soffit is ONLY reflected ambient light from gutter lights hitting walls below
+- Any glow on soffit is ONLY reflected ambient light from mounted up lights hitting walls above
 
-GUTTER MOUNTING LOCATION - ABSOLUTE REQUIREMENTS:
-*** FIXTURES MUST BE INSIDE THE GUTTER TROUGH - NOT ON THE ROOF ***
+MOUNTED UP LIGHT PLACEMENT - ABSOLUTE REQUIREMENTS:
+*** FIXTURES MUST BE AT THE 1ST STORY ROOF EDGE - NOT ON THE ROOF SURFACE ***
 
-WHAT "INSIDE THE GUTTER" MEANS:
-- Gutters are U-shaped metal channels attached below the roofline
-- The fixture sits DOWN INSIDE this U-channel, against the inner wall
-- Water flows around the fixture (it's weather-sealed)
-- Only the top portion of the fixture is visible from below
+WHAT "AT THE ROOF EDGE" MEANS:
+- The fixture is mounted where the 1st story roof meets the fascia board (~8-10 ft high)
+- The fixture aims UPWARD to illuminate 2nd story features above
+- It is a small, low-profile brass up light
 
 WHAT "ON THE ROOF" MEANS (FORBIDDEN):
 - Fixture sitting ON shingles or roofing material - FORBIDDEN
 - Fixture mounted to visible roof surface - FORBIDDEN
 - Fixture prominently visible on the roofline - FORBIDDEN
-- Fixture on the outer edge/lip of the gutter - FORBIDDEN
 
-ROOF PLACEMENT = WRONG. INSIDE GUTTER TROUGH = CORRECT.
+ROOF SURFACE PLACEMENT = WRONG. AT THE ROOF EDGE = CORRECT.
 If you place fixtures ON the roof surface, the image is INVALID.
 ` : '');
 
@@ -1678,9 +1675,10 @@ export const generateNightScene = async (
   beamAngle: number = 30,
   colorTemperaturePrompt: string = "Use Soft White (3000K) for all lights.",
   userPreferences?: UserPreferences | null,
-  markedImageBase64?: string
+  markedImageBase64?: string,
+  rawPromptMode?: boolean
 ): Promise<string> => {
-  
+
   // Initialization: The API key is obtained from environment variable
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
@@ -2127,7 +2125,8 @@ ${preferenceContext}
     if (markedImageBase64) {
       imageParts.push({ inlineData: { data: markedImageBase64, mimeType: imageMimeType } });
     }
-    imageParts.push({ text: systemPrompt });
+    // rawPromptMode: send userInstructions directly, skip auto-mode system prompt wrapper
+    imageParts.push({ text: rawPromptMode ? userInstructions : systemPrompt });
 
     const generatePromise = ai.models.generateContent({
       model: MODEL_NAME,
@@ -2606,14 +2605,14 @@ function buildEnhancedPrompt(
       }
 
       if (presentTypes.has('gutter')) {
-        prompt += `### "GUTTER" MARKERS — Gutter-Mounted UP Lights (⚠️ THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
-        prompt += `- FIXTURE: Compact brass bullet or mini flood up light with gutter-mount bracket\n`;
-        prompt += `- MOUNTING: INSIDE the 1st story rain gutter trough, braced against inner wall closest to fascia\n`;
-        prompt += `- The fixture sits IN the gutter channel — you can see the bronze housing sitting in the gutter\n`;
-        prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features, roofline fascia, dormers, and gables ABOVE the gutter\n`;
-        prompt += `- BEAM REACH: 10-25 ft upward from the gutter to illuminate features above\n`;
-        prompt += `- THIS IS AN UP LIGHT that happens to be mounted in the gutter. Light goes UP, never down.\n`;
-        prompt += `- NEVER mount on roof shingles, gutter lip, fascia board, or soffit\n`;
+        prompt += `### "MOUNTED" MARKERS — Mounted Up Lights at 1st Story Roof Edge (⚠️ THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
+        prompt += `- FIXTURE: Compact brass bullet or mini flood up light with mounting bracket\n`;
+        prompt += `- MOUNTING: Mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high)\n`;
+        prompt += `- The fixture is a small bronze up light secured at the 1st story roof edge, aiming upward\n`;
+        prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features — dormers, gables, upper facade, and roofline above\n`;
+        prompt += `- BEAM REACH: 10-25 ft upward from the 1st story roof edge to illuminate features above\n`;
+        prompt += `- THIS IS AN UP LIGHT mounted at roof edge height. Light goes UP, never down.\n`;
+        prompt += `- NEVER mount on roof shingles or visible roof surface\n`;
         prompt += `- NEVER render this as a soffit downlight or any downward-facing fixture\n\n`;
       }
 
@@ -2664,11 +2663,11 @@ function buildEnhancedPrompt(
       // Critical confusion prevention
       prompt += `## CRITICAL CONFUSION PREVENTION\n`;
       if (presentTypes.has('gutter')) {
-        prompt += `### GUTTER ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
-        prompt += `- GUTTER UP LIGHT: Brass fixture sitting IN the rain gutter channel → beam shoots UPWARD at 2nd story/roofline\n`;
+        prompt += `### MOUNTED ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
+        prompt += `- MOUNTED UP LIGHT: Brass fixture at the 1st story roof edge → beam shoots UPWARD at 2nd story/roofline\n`;
         prompt += `- SOFFIT DOWNLIGHT: Recessed in the overhang ceiling → beam shoots DOWNWARD at ground\n`;
-        prompt += `- These are OPPOSITE directions. If a marker says "GUTTER", the light MUST go UP.\n`;
-        prompt += `- If you render a downward-facing light for a "GUTTER" marker, you have made an error — fix it.\n`;
+        prompt += `- These are OPPOSITE directions. If a marker says "MOUNTED", the light MUST go UP.\n`;
+        prompt += `- If you render a downward-facing light for a "MOUNTED" marker, you have made an error — fix it.\n`;
       }
       if (presentTypes.has('coredrill') && presentTypes.has('up')) {
         prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
@@ -2718,7 +2717,7 @@ function buildEnhancedPrompt(
         path: 'brass path light bollard',
         well: 'in-ground well light (beam UP)',
         hardscape: 'under-tread step light',
-        gutter: 'gutter-mounted uplight (beam UP from gutter)',
+        gutter: 'mounted uplight at 1st story roof edge (beam UP)',
         coredrill: 'flush in-ground core drill light (beam UP from concrete)'
       };
       analysis.spatialMap.placements.forEach((p, i) => {
@@ -2735,9 +2734,9 @@ function buildEnhancedPrompt(
       prompt += `2. You MUST have EXACTLY ${count} light sources — one for each marker\n`;
       prompt += `3. If you count FEWER than ${count}: you MISSED a marker — go back and add the missing light\n`;
       prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light — REMOVE it immediately\n`;
-      prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, GUTTER=upward beam from gutter, PATH=bollard, etc.)\n`;
+      prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, MOUNTED=upward beam from 1st story roof edge, PATH=bollard, etc.)\n`;
       if (presentTypes.has('gutter') && !presentTypes.has('soffit')) {
-        prompt += `6. Verify ZERO soffit/downlights exist — the user placed GUTTER up lights, NOT soffit downlights\n`;
+        prompt += `6. Verify ZERO soffit/downlights exist — the user placed MOUNTED up lights, NOT soffit downlights\n`;
       }
       prompt += `\n`;
     }
@@ -2773,6 +2772,17 @@ function buildManualPrompt(
 
   let prompt = '';
 
+  // Color mapping for marker guide (must match canvasNightService.ts MARKER_COLORS)
+  const colorMap: Record<string, { hex: string; name: string }> = {
+    up:        { hex: '#FF0000', name: 'RED' },
+    soffit:    { hex: '#FF6600', name: 'ORANGE' },
+    path:      { hex: '#00FF00', name: 'GREEN' },
+    well:      { hex: '#FFFF00', name: 'YELLOW' },
+    hardscape: { hex: '#FF00FF', name: 'MAGENTA' },
+    gutter:    { hex: '#00CCFF', name: 'CYAN' },
+    coredrill: { hex: '#FFA500', name: 'AMBER' },
+  };
+
   // 1. Executor preamble — strict, no creative vision
   prompt += `YOU ARE A PRECISION LIGHTING PLACEMENT TOOL.\n\n`;
   prompt += `ABSOLUTE RULES:\n`;
@@ -2783,15 +2793,60 @@ function buildManualPrompt(
   prompt += `5. Do NOT add lights "for realism," "rhythm," "to complete the design," or for ANY other reason\n`;
   prompt += `6. The home's architecture, landscaping, and hardscape must be PIXEL-PERFECT identical to the source\n`;
   prompt += `7. ANY light source not corresponding to a numbered marker is a FAILURE\n\n`;
-  prompt += `FRAMING: Output MUST have the EXACT same framing and composition as the source image. Do NOT crop, zoom, or reframe.\n`;
-  prompt += `SKY: Pure black sky with full moon. No stars, gradients, blue tones, or atmospheric glow.\n\n`;
 
-  // 2. Dual-image reference
+  // 1b. Essential preservation rules (moved from auto-mode system prompt)
+  prompt += `## FRAMING & COMPOSITION PRESERVATION (CRITICAL)\n`;
+  prompt += `- Output MUST have the EXACT SAME framing and composition as the source image\n`;
+  prompt += `- Keep the ENTIRE house in frame — do NOT crop, zoom in, or cut off any part\n`;
+  prompt += `- Do NOT change the camera angle, perspective, or viewpoint\n`;
+  prompt += `- The aspect ratio and boundaries must match the source image exactly\n\n`;
+
+  prompt += `## PIXEL-PERFECT PRESERVATION\n`;
+  prompt += `- The generated image must be a 1:1 edit of the source photo\n`;
+  prompt += `- Every building, tree, bush, object MUST appear EXACTLY as shown in source\n`;
+  prompt += `- You are ONLY permitted to: darken the scene to night, add the specific requested light fixtures\n`;
+  prompt += `- FORBIDDEN: Adding new trees, bushes, walkways, driveways, patios, steps, railings, windows, doors, or any matter not in the source\n`;
+  prompt += `- If source has NO sidewalk, output has NO sidewalk. If source has NO driveway, output has NO driveway.\n\n`;
+
+  prompt += `## SKY & DARKNESS\n`;
+  prompt += `- Transform to DEEP 1AM NIGHTTIME — NOT twilight, NOT dusk, but TRUE NIGHT\n`;
+  prompt += `- Sky must be PITCH BLACK with no gradients, no blue tones, no ambient glow\n`;
+  prompt += `- Unlit areas should be so dark you can BARELY make out shapes and forms\n`;
+  prompt += `- Only the landscape lighting fixtures provide meaningful illumination\n`;
+  prompt += `- Include a realistic full moon providing EXTREMELY SUBTLE edge lighting only on rooflines\n`;
+  prompt += `- Light pools on ground: soft feathered edges. Hard surfaces reflect slightly more than grass/mulch.\n\n`;
+
+  // 2. Dual-image reference + marker center instruction
   prompt += `## DUAL-IMAGE REFERENCE\n`;
   prompt += `You are given TWO images:\n`;
   prompt += `- IMAGE 1: The clean, unmodified original photograph — use this as your BASE for the output\n`;
   prompt += `- IMAGE 2: The same photograph with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
   prompt += `Your task: Generate a night scene based on IMAGE 1, placing professional landscape lighting fixtures at the EXACT positions shown by the markers in IMAGE 2. The output should look like IMAGE 1 transformed into a professional night scene with NO colored markers visible.\n\n`;
+  prompt += `CRITICAL: Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
+  prompt += `The crosshair lines through each marker indicate the precise center.\n`;
+  prompt += `Do NOT offset the fixture from the marker — the marker center IS the fixture position.\n`;
+  prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
+
+  // 2b. Color-to-type mapping
+  prompt += `## MARKER COLOR GUIDE (IMAGE 2)\n`;
+  prompt += `Each marker on IMAGE 2 has a specific color indicating its fixture type:\n`;
+  for (const type of presentTypes) {
+    const c = colorMap[type];
+    if (c) {
+      const labelMap2: Record<string, string> = {
+        up: 'UP light (ground-mounted, beam UP)',
+        gutter: 'GUTTER light (in gutter, beam UP)',
+        path: 'PATH light (bollard on ground)',
+        well: 'WELL light (in-ground, beam UP at trees)',
+        hardscape: 'STEP/HARDSCAPE light (under tread)',
+        soffit: 'SOFFIT downlight (recessed, beam DOWN)',
+        coredrill: 'COREDRILL light (flush in concrete, beam UP)',
+      };
+      prompt += `- ${c.name} circle (${c.hex}) = ${labelMap2[type] || type}\n`;
+    }
+  }
+  prompt += `\nEach marker also has a TEXT LABEL below it (UP, GUTTER, PATH, etc.) confirming the type.\n`;
+  prompt += `The NUMBER inside each circle is the fixture sequence number.\n\n`;
 
   // 3. Manual placement header
   prompt += `## CRITICAL: MANUAL PLACEMENT MODE — EXACTLY ${count} LIGHTS, ZERO EXTRAS\n`;
@@ -2934,9 +2989,7 @@ function buildManualPrompt(
   };
   spatialMap.placements.forEach((p, i) => {
     const label = labelMap[p.fixtureType] || 'light';
-    const hDir = p.horizontalPosition < 33 ? 'left side' : p.horizontalPosition > 66 ? 'right side' : 'center';
-    const vDir = p.verticalPosition < 33 ? 'upper area' : p.verticalPosition > 66 ? 'lower area' : 'mid-height';
-    prompt += `  ${i + 1}. Marker #${i + 1} → ${label} at ${hDir}, ${vDir}\n`;
+    prompt += `  ${i + 1}. Marker #${i + 1} → ${label} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%]\n`;
   });
   prompt += `\nTOTAL: ${count} markers = EXACTLY ${count} lights in the output. No more, no less.\n\n`;
 
@@ -3032,6 +3085,82 @@ function validateManualPlacements(spatialMap: SpatialMap): {
 }
 
 /**
+ * Post-generation verification: sends the generated image back to Gemini
+ * for text-only analysis to count fixtures and compare against expected.
+ * Returns a verification result (does NOT retry — just informs).
+ */
+async function verifyGeneratedImage(
+  generatedImageBase64: string,
+  imageMimeType: string,
+  expectedPlacements: SpatialFixturePlacement[]
+): Promise<{ verified: boolean; confidence: number; details: string }> {
+  try {
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+    const expectedCount = expectedPlacements.length;
+    const expectedTypes = [...new Set(expectedPlacements.map(p => p.type))];
+
+    const verificationPrompt = `You are analyzing a nighttime landscape lighting photograph.
+Count EVERY visible light source or illuminated fixture in this image.
+
+For each light source found, report:
+- Type (uplight, gutter light, path light, well light, hardscape/step light, soffit downlight, core-drill light)
+- Approximate position as [X%, Y%] where 0%,0% is top-left
+
+EXPECTED: ${expectedCount} fixtures of types: ${expectedTypes.join(', ')}
+
+Respond in this EXACT JSON format (no markdown, no code blocks):
+{"count": <number>, "fixtures": [{"type": "<type>", "x": <number>, "y": <number>}], "confidence": <0-100>}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: {
+        parts: [
+          { inlineData: { data: generatedImageBase64, mimeType: imageMimeType } },
+          { text: verificationPrompt }
+        ],
+      },
+      config: {
+        temperature: 0.1,
+      },
+    });
+
+    const text = response.text?.trim() || '';
+    console.log('[Manual Mode] Verification raw response:', text);
+
+    // Parse JSON response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn('[Manual Mode] Verification: Could not parse response as JSON');
+      return { verified: false, confidence: 0, details: 'Could not parse verification response' };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as { count: number; fixtures: Array<{ type: string; x: number; y: number }>; confidence: number };
+    const actualCount = parsed.count;
+    const confidence = parsed.confidence || 0;
+    const countMatch = actualCount === expectedCount;
+
+    const details = `Expected ${expectedCount} fixtures, found ${actualCount}. Confidence: ${confidence}%. Types expected: [${expectedTypes.join(', ')}]`;
+
+    if (countMatch) {
+      console.log(`[Manual Mode] Verification PASSED: ${actualCount}/${expectedCount} fixtures confirmed (${confidence}% confidence)`);
+    } else {
+      console.warn(`[Manual Mode] Verification WARNING: Expected ${expectedCount} fixtures but found ${actualCount} (${confidence}% confidence)`);
+      if (parsed.fixtures) {
+        parsed.fixtures.forEach((f, i) => {
+          console.warn(`  Found fixture ${i + 1}: ${f.type} at [${f.x}%, ${f.y}%]`);
+        });
+      }
+    }
+
+    return { verified: countMatch, confidence, details };
+  } catch (error) {
+    console.warn('[Manual Mode] Verification failed (non-blocking):', error);
+    return { verified: false, confidence: 0, details: `Verification error: ${error}` };
+  }
+}
+
+/**
  * Streamlined manual-mode generation.
  * Skips analyzePropertyArchitecture() entirely — no AI analysis, no competing suggestions.
  * Builds a strict executor prompt and sends clean + marked images to Gemini.
@@ -3073,7 +3202,7 @@ export const generateManualScene = async (
   const markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
   console.log('[Manual Mode] Markers drawn. Sending to Gemini...');
 
-  // Call existing generateNightScene with clean + marked images
+  // Call generateNightScene with rawPromptMode=true to bypass auto-mode system prompt
   const result = await generateNightScene(
     imageBase64,
     manualPrompt,
@@ -3083,10 +3212,17 @@ export const generateManualScene = async (
     beamAngle,
     colorTemperaturePrompt,
     userPreferences,
-    markedImage
+    markedImage,
+    true // rawPromptMode: send manual prompt directly, skip auto-mode wrapper
   );
 
   console.log('[Manual Mode] Generation complete!');
+
+  // Post-generation verification (non-blocking — logs results, does not retry)
+  onStageUpdate?.('verifying');
+  const verification = await verifyGeneratedImage(result, imageMimeType, spatialMap.placements);
+  console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} — ${verification.details}`);
+
   return result;
 };
 

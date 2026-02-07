@@ -96,7 +96,7 @@ const MARKER_LABELS: Record<string, string> = {
   path:      'PATH',
   well:      'WELL',
   hardscape: 'STEP',
-  gutter:    'GUTTER',
+  gutter:    'MOUNTED',
   coredrill: 'COREDRILL',
 };
 

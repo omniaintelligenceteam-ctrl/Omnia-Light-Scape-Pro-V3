@@ -1090,10 +1090,9 @@ EXCLUSIONS:
     id: 'gutter',
     label: 'Gutter Mounted Up Lights',
     description: 'Up lights mounted in gutter illuminating up',
-    positivePrompt: `CATEGORY ENABLED: 1ST STORY GUTTER-MOUNTED Up Lights (GROUND LEVEL - Y=85-95%).
+    positivePrompt: `CATEGORY ENABLED: MOUNTED UP LIGHTS at 1st Story Roof Edge (Y=85-95%).
 
-ASSUMPTION: A 1st story gutter ALWAYS exists at GROUND LEVEL (8-10 ft high, Y=85-95%).
-PLACEMENT: Fixtures MUST be placed IN the 1st story gutter. GROUND LEVEL. NOT roof level.
+PLACEMENT: Fixtures MUST be mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high).
 TARGET: Beams shine UPWARD to illuminate 2nd story sections - AI decides what to light based on the home's architecture.
 
 WHAT TO LIGHT (AI decides based on what's present):
@@ -1106,31 +1105,31 @@ WHAT TO LIGHT (AI decides based on what's present):
 FIXTURE COUNT: Use the EXACT count specified in the design request. Do NOT add extra fixtures. Do NOT decide your own count. Space fixtures 4-6 feet apart for even coverage.
 
 MOUNTING (CRITICAL):
-- INSIDE the 1st story rain gutter channel (the horizontal metal trough at the roof edge)
-- Fixture is a small bronze dot visible inside the gutter, partially hidden by gutter walls
-- NEVER on roof shingles, wall surface, fascia board, or any non-gutter surface
-- NEVER in 2nd story or top-of-house gutters — 1st story gutter ONLY
+- At the EDGE of the 1st story roof line (where roof meets fascia, ~8-10 ft high)
+- Fixture is a small bronze up light secured at the roof edge
+- NEVER on roof shingles, wall surface, or any roof surface
+- NEVER at 2nd story or top-of-house level — 1st story roof edge ONLY
 
-FIXTURE STYLE: Compact brass bullet or mini flood up light with gutter-mount bracket, low-profile.
+FIXTURE STYLE: Compact brass bullet or mini flood up light with mounting bracket, low-profile.
 
 BEAM REACH:
 - Beams MUST reach the 2nd story features (10-25 ft distance)
-- Light travels from gutter UP to illuminate features above
+- Light travels from 1st story roof edge UP to illuminate features above
 - Beam should reach peaks/gables when present
 - For distant targets: higher wattage, narrower beam angles
 - The light ALWAYS reaches and illuminates the intended target fully`,
-    negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted lights. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting from gutter level.`,
+    negativePrompt: `HARD RULE: Do NOT generate any mounted up lights at the roof edge. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting from roof edge level.`,
     subOptions: [
       {
         id: 'gutterUpLights',
         label: 'Gutter Up Lights',
         description: '1st story gutter up lights illuminating 2nd story',
-        prompt: `TARGET: 2nd story features from 1ST STORY GUTTER ONLY.
+        prompt: `TARGET: 2nd story features from 1ST STORY ROOF EDGE ONLY.
 
-CRITICAL RULE: ONLY 1ST STORY GUTTERS receive up lights.
-- 1st story gutter = 8-10 ft off ground
-- NEVER place lights in 2nd story gutters or roofline gutters
-- 2nd story gutters MUST remain empty - NO fixtures
+CRITICAL RULE: ONLY 1ST STORY ROOF EDGE receives mounted up lights.
+- 1st story roof edge = ~8-10 ft off ground (where roof meets fascia)
+- NEVER place lights at 2nd story or top-of-house level
+- 2nd story roof edges MUST remain empty - NO fixtures
 
 WHAT TO LIGHT (AI decides based on what's present):
 - Dormers: one fixture centered below each
@@ -1139,8 +1138,8 @@ WHAT TO LIGHT (AI decides based on what's present):
 - Any 2nd story section above the 1st story roofline
 
 FIXTURE COUNT: Use the EXACT count from the design request. Do NOT add or remove fixtures beyond what is specified. Space 4-6 feet apart.`,
-        negativePrompt: `Do NOT place any up lights in 1st story gutters. 2nd story features must remain dark from gutter-level lighting.`,
-        darkDescription: `1st story gutters remain EMPTY - no gutter-mounted up lights, 2nd story features unlit from gutter level.`
+        negativePrompt: `Do NOT place any mounted up lights at the 1st story roof edge. 2nd story features must remain dark from roof-edge-level lighting.`,
+        darkDescription: `1st story roof edge remains EMPTY - no mounted up lights, 2nd story features unlit from roof edge level.`
       }
     ]
   },
