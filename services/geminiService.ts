@@ -966,7 +966,11 @@ export const craftPromptWithAI = async (
 MOUNTED UP LIGHT VISUAL APPEARANCE (CRITICAL):
 - Small bronze bullet fixture mounted at the EDGE of the 1st story roof line (~8-10 ft high)
 - The fixture is secured where the roof meets the fascia, at the bottom edge of the 1st story roof (Y=85-95%)
-- Light beam projects UPWARD from this fixture toward 2nd story features above
+- Light beam projects straight UPWARD — illuminating the wall/surface DIRECTLY ABOVE the fixture
+
+BEAM BEHAVIOR:
+- SINGLE FIXTURE: Beam goes straight up, lighting the wall/facade directly above it
+- CROSSED PAIR (for large peaks/gables): Two fixtures flanking a peak, beams angled inward to CROSS and illuminate the full peak section
 
 WHERE THE FIXTURE IS:
 - At the EDGE of the 1st story roof line (where roof meets fascia)
@@ -974,7 +978,8 @@ WHERE THE FIXTURE IS:
 - The fixture is SMALL, mounted at roof edge height
 
 VISUAL TEST:
-- CORRECT: Small bronze up light at the 1st story roof edge, beam going UP
+- CORRECT: Small bronze up light at the 1st story roof edge, beam going straight UP above it
+- CORRECT: Two fixtures flanking a large peak, beams crossing to cover the full peak
 - WRONG: Fixture sitting ON TOP of roof shingles
 - WRONG: Fixture mounted on the wall or fascia board
 - WRONG: Fixture that looks like a soffit downlight (beam going DOWN)` : '';
@@ -2609,8 +2614,10 @@ function buildEnhancedPrompt(
         prompt += `- FIXTURE: Compact brass bullet or mini flood up light with mounting bracket\n`;
         prompt += `- MOUNTING: Mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high)\n`;
         prompt += `- The fixture is a small bronze up light secured at the 1st story roof edge, aiming upward\n`;
-        prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features — dormers, gables, upper facade, and roofline above\n`;
-        prompt += `- BEAM REACH: 10-25 ft upward from the 1st story roof edge to illuminate features above\n`;
+        prompt += `- BEAM DIRECTION: Aims straight UPWARD — the beam illuminates the wall/surface DIRECTLY ABOVE the fixture position\n`;
+        prompt += `- SINGLE FIXTURE: Beam goes straight up, lighting the wall/facade directly above it\n`;
+        prompt += `- CROSSED PAIR (large peaks/gables): Two fixtures flanking a peak, beams angled inward to CROSS and illuminate the full peak section\n`;
+        prompt += `- BEAM REACH: 10-25 ft upward from the 1st story roof edge to the peak/roofline above\n`;
         prompt += `- THIS IS AN UP LIGHT mounted at roof edge height. Light goes UP, never down.\n`;
         prompt += `- NEVER mount on roof shingles or visible roof surface\n`;
         prompt += `- NEVER render this as a soffit downlight or any downward-facing fixture\n\n`;
