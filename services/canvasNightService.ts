@@ -130,20 +130,37 @@ export async function drawFixtureMarkers(
 
         ctx.drawImage(img, 0, 0);
 
-        const markerRadius = Math.max(Math.round(img.width * 0.015), 12);
+        const markerRadius = Math.max(Math.round(img.width * 0.025), 16);
 
         spatialMap.placements.forEach((placement, index) => {
           const cx = (placement.horizontalPosition / 100) * img.width;
           const cy = (placement.verticalPosition / 100) * img.height;
           const color = MARKER_COLORS[placement.fixtureType] || DEFAULT_MARKER_COLOR;
           const label = MARKER_LABELS[placement.fixtureType] || 'LIGHT';
+          const crossLen = markerRadius * 2;
 
-          // Bright filled circle
+          // Crosshair lines (drawn first, behind the circle)
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx - crossLen, cy);
+          ctx.lineTo(cx + crossLen, cy);
+          ctx.moveTo(cx, cy - crossLen);
+          ctx.lineTo(cx, cy + crossLen);
+          ctx.stroke();
+
+          // Dark backing circle for contrast on any background
+          ctx.beginPath();
+          ctx.arc(cx, cy, markerRadius * 1.4, 0, Math.PI * 2);
+          ctx.fillStyle = '#000000';
+          ctx.fill();
+
+          // Bright colored circle
           ctx.beginPath();
           ctx.arc(cx, cy, markerRadius, 0, Math.PI * 2);
           ctx.fillStyle = color;
           ctx.fill();
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 3;
           ctx.strokeStyle = '#FFFFFF';
           ctx.stroke();
 
@@ -154,10 +171,16 @@ export async function drawFixtureMarkers(
           ctx.textBaseline = 'middle';
           ctx.fillText(String(index + 1), cx, cy);
 
-          // Label below the circle
+          // Label below the circle with dark shadow for readability
+          const labelY = cy + markerRadius + Math.round(markerRadius * 0.8);
+          ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+          // Shadow
+          ctx.fillStyle = '#000000';
+          ctx.fillText(label, cx + 1, labelY + 1);
+          ctx.fillText(label, cx - 1, labelY - 1);
+          // Colored label on top
           ctx.fillStyle = color;
-          ctx.font = `bold ${Math.round(markerRadius * 0.8)}px Arial`;
-          ctx.fillText(label, cx, cy + markerRadius + Math.round(markerRadius * 0.7));
+          ctx.fillText(label, cx, labelY);
         });
 
         const dataUrl = canvas.toDataURL(mimeType, 0.92);
