@@ -76,10 +76,10 @@ const GRADIENT_CONFIGS: Record<FixtureCategory, GradientConfig> = {
   },
   gutter_uplight: {
     direction: 'up',
-    heightPercent: 20,
-    widthPercent: 8,
+    heightPercent: 30,
+    widthPercent: 10,
     originOffsetYPercent: -1,
-    opacity: 0.30,
+    opacity: 0.50,
   },
   downlight: {
     direction: 'down',

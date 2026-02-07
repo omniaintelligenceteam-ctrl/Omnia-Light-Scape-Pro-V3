@@ -2865,12 +2865,22 @@ function buildManualPrompt(
     prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, gutter lights, core drills)\n`;
     prompt += `- Downward-pointing hints = light beams going DOWN (soffit downlights, step lights)\n`;
     prompt += `- Circular hints = omnidirectional ground-level pools (path lights, bollards)\n`;
-    prompt += `- NEVER reverse the indicated direction\n\n`;
+    prompt += `- NEVER reverse the indicated direction\n`;
+    prompt += `- GUTTER LIGHTS are mounted INSIDE the gutter channel and beam UPWARD onto the roof/fascia — they are NOT soffit downlights\n`;
+    prompt += `- If a marker is at the gutter/roofline with an upward hint, render light going UP — NEVER render it as a downlight\n\n`;
 
     prompt += `## COUNT RULES\n`;
     prompt += `The guide contains EXACTLY ${count} fixture positions.\n`;
     prompt += `Your output MUST contain EXACTLY ${count} light effects — no more, no fewer.\n`;
     prompt += `Any area WITHOUT an annotated fixture MUST remain COMPLETELY DARK.\n\n`;
+
+    prompt += `## PROHIBITED FIXTURES\n`;
+    prompt += `Do NOT add any light sources that are not indicated by the annotated guide:\n`;
+    prompt += `- NO wall-mounted sconces, lanterns, or decorative wall fixtures\n`;
+    prompt += `- NO porch lights, coach lights, or entrance fixtures\n`;
+    prompt += `- NO string lights, recessed ceiling lights, or window glow\n`;
+    prompt += `- The ONLY light sources in the scene are the ${count} fixtures marked in the guide\n`;
+    prompt += `- If a wall, door, or garage has no marker near it, it must have NO fixture on it\n\n`;
 
     prompt += `Place each fixture at the EXACT CENTER POINT of its marker circle.\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
