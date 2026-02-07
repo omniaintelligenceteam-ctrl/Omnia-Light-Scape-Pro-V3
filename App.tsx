@@ -1824,7 +1824,10 @@ const App: React.FC = () => {
         if (isManualMode && manualSpatialMap) {
           // MANUAL MODE: Streamlined path — skip analysis, direct to generation
           console.log('Using MANUAL MODE (streamlined, no analysis)...');
-          console.log(`Manual placement mode: ${manualFixtures.length} fixtures`);
+          console.log(`[Manual Mode] Pre-flight check:`);
+          console.log(`  Fixtures: ${manualFixtures.length}`);
+          console.log(`  Types: ${[...new Set(manualFixtures.map(f => f.type))].join(', ')}`);
+          console.log(`  Spatial map placements: ${manualSpatialMap.placements.length}`);
 
           result = await generateManualScene(
             base64,

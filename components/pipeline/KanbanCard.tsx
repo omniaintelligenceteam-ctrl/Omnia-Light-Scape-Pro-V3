@@ -362,20 +362,20 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         role="article"
         aria-label={`Project: ${clientName || 'Unnamed'}, Status: ${config.label}${quoteValue ? `, Value: $${quoteValue.toLocaleString()}` : ''}`}
         className={`
-          group relative bg-[#1a1a1a] border rounded-xl p-3
+          group relative bg-[#1a1a1a] border rounded-xl overflow-hidden
           ${isTouchDevice ? 'touch-manipulation' : selectionMode ? 'cursor-pointer' : 'cursor-grab'}
           hover:border-[#F6B45A]/40 hover:bg-[#1f1f1f] transition-all duration-200
           ${isDragging ? 'border-[#F6B45A]/60 z-50' : ''}
           ${swipeDirection === 'right' ? 'border-emerald-500/40' : ''}
           ${swipeDirection === 'left' ? 'border-amber-500/40' : ''}
           ${isSelected ? 'border-[#F6B45A] bg-[#F6B45A]/5 ring-1 ring-[#F6B45A]/30' : 'border-white/10'}
-          ${selectionMode ? 'pl-10' : ''}
+          ${selectionMode ? '' : ''}
         `}
       >
       {/* Selection Checkbox */}
       {selectionMode && (
         <div
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10"
+          className="absolute left-2 top-2 z-10"
           onClick={handleCheckboxClick}
         >
           <motion.button
@@ -504,40 +504,34 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         />
       )}
 
-      <div className="flex gap-3">
-        {/* Thumbnail */}
-        <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-black">
-          {project.image ? (
-            <img
-              src={project.image}
-              className="w-full h-full object-cover"
-              alt={project.name}
-              draggable={false}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]">
-              <Wand2 className="w-4 h-4 text-gray-600" />
-            </div>
-          )}
-          {/* Status dot */}
-          <div
-            className={`absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full border border-black ${config.bgColor.replace('/10', '')}`}
+      {/* Large Photo */}
+      <div className="relative w-full aspect-[4/3] bg-black">
+        {project.image ? (
+          <img
+            src={project.image}
+            className="w-full h-full object-cover"
+            alt={project.name}
+            draggable={false}
           />
-        </div>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]">
+            <Wand2 className="w-8 h-8 text-gray-600" />
+          </div>
+        )}
+        {/* Status dot */}
+        <div
+          className={`absolute bottom-2 right-2 w-3.5 h-3.5 rounded-full border-2 border-black ${config.bgColor.replace('/10', '')}`}
+        />
+      </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 pr-16">
-          <h4 className="text-sm font-semibold text-white truncate">
-            {project.name}
-          </h4>
+      {/* Content */}
+      <div className="p-3">
+        <h4 className="text-sm font-semibold text-white truncate">
+          {clientName || project.name}
+        </h4>
 
-          {clientName && (
-            <p className="text-xs text-gray-500 truncate mt-0.5">
-              {clientName}
-            </p>
-          )}
-
-          <div className="flex items-center gap-2 mt-1.5">
+        <div className="flex items-center justify-between mt-1.5">
+          <div className="flex items-center gap-2">
             {/* Only show price when quote exists with value > 0 */}
             {quoteValue && quoteValue > 0 ? (
               <span className="text-xs font-bold text-[#F6B45A]">
@@ -549,7 +543,9 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
                 <span className="text-xs text-gray-500">—</span>
               )
             )}
+          </div>
 
+          <div className="flex items-center gap-1.5">
             {daysSinceCreated > 0 && (
               <span className={`text-[10px] px-1.5 py-0.5 rounded ${
                 daysSinceCreated > 30

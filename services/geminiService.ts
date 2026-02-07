@@ -2962,6 +2962,76 @@ function buildManualPrompt(
 }
 
 /**
+ * Validates manual placements before generation.
+ * Checks fixture types, coordinate ranges, and counts.
+ * Returns validation result — if invalid, generation should NOT proceed.
+ */
+const VALID_FIXTURE_TYPES = new Set(['up', 'gutter', 'path', 'well', 'hardscape', 'soffit', 'coredrill']);
+
+function validateManualPlacements(spatialMap: SpatialMap): {
+  valid: boolean;
+  errors: string[];
+  summary: { type: string; count: number; positions: string[] }[];
+} {
+  const errors: string[] = [];
+  const countByType = new Map<string, { count: number; positions: string[] }>();
+
+  // Check: must have at least one placement
+  if (!spatialMap.placements || spatialMap.placements.length === 0) {
+    errors.push('No fixture placements found — nothing to generate');
+    return { valid: false, errors, summary: [] };
+  }
+
+  spatialMap.placements.forEach((p, i) => {
+    const idx = i + 1;
+
+    // A. Validate fixture type
+    if (!p.fixtureType || !VALID_FIXTURE_TYPES.has(p.fixtureType)) {
+      errors.push(`Fixture #${idx}: unknown type "${p.fixtureType}" (valid: ${[...VALID_FIXTURE_TYPES].join(', ')})`);
+    }
+
+    // B. Validate coordinates exist and are numbers
+    if (typeof p.horizontalPosition !== 'number' || isNaN(p.horizontalPosition)) {
+      errors.push(`Fixture #${idx} (${p.fixtureType}): invalid X coordinate (${p.horizontalPosition})`);
+    } else if (p.horizontalPosition < 0 || p.horizontalPosition > 100) {
+      errors.push(`Fixture #${idx} (${p.fixtureType}): X coordinate out of range: ${p.horizontalPosition.toFixed(1)}% (must be 0-100)`);
+    }
+
+    if (typeof p.verticalPosition !== 'number' || isNaN(p.verticalPosition)) {
+      errors.push(`Fixture #${idx} (${p.fixtureType}): invalid Y coordinate (${p.verticalPosition})`);
+    } else if (p.verticalPosition < 0 || p.verticalPosition > 100) {
+      errors.push(`Fixture #${idx} (${p.fixtureType}): Y coordinate out of range: ${p.verticalPosition.toFixed(1)}% (must be 0-100)`);
+    }
+
+    // C. Accumulate counts by type
+    if (p.fixtureType) {
+      const entry = countByType.get(p.fixtureType) || { count: 0, positions: [] };
+      entry.count++;
+      if (typeof p.horizontalPosition === 'number' && typeof p.verticalPosition === 'number') {
+        entry.positions.push(`[${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%]`);
+      }
+      countByType.set(p.fixtureType, entry);
+    }
+  });
+
+  // Build summary
+  const summary = [...countByType.entries()].map(([type, data]) => ({
+    type,
+    count: data.count,
+    positions: data.positions,
+  }));
+
+  const totalCount = spatialMap.placements.length;
+  const summaryStr = summary.map(s => `${s.count}x ${s.type.toUpperCase()}`).join(', ');
+  console.log(`[Manual Mode] Validation: ${summaryStr} = ${totalCount} total`);
+  summary.forEach(s => {
+    console.log(`  ${s.type.toUpperCase()}: ${s.count} fixtures at ${s.positions.join(', ')}`);
+  });
+
+  return { valid: errors.length === 0, errors, summary };
+}
+
+/**
  * Streamlined manual-mode generation.
  * Skips analyzePropertyArchitecture() entirely — no AI analysis, no competing suggestions.
  * Builds a strict executor prompt and sends clean + marked images to Gemini.
@@ -2979,6 +3049,13 @@ export const generateManualScene = async (
 ): Promise<string> => {
   console.log('[Manual Mode] Starting streamlined manual generation...');
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
+
+  // Validate placements before spending an API call
+  const validation = validateManualPlacements(spatialMap);
+  if (!validation.valid) {
+    console.error('[Manual Mode] Validation FAILED:', validation.errors);
+    throw new Error(`Manual placement validation failed:\n${validation.errors.join('\n')}`);
+  }
 
   // Skip analysis entirely — go straight to prompt building
   onStageUpdate?.('generating');
