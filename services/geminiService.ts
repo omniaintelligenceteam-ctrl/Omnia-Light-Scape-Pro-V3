@@ -3485,8 +3485,8 @@ export const generateManualScene = async (
     nightBase = await generateNightBase(imageBase64, imageMimeType, targetRatio);
   }
 
-  // ── Soffit zone cropping (prevents AI from hallucinating 2nd-story soffits) ─
-  const SOFFIT_CROP_PERCENT = 15;
+  // ── Crop 2nd-story roof, gutter & soffit (prevents AI hallucinated downlights)
+  const SOFFIT_CROP_PERCENT = 25;
   const hasFixtureNearTop = spatialMap.placements.some(
     p => p.verticalPosition < SOFFIT_CROP_PERCENT + 3
   );
@@ -3496,7 +3496,7 @@ export const generateManualScene = async (
   let workingAspectRatio = targetRatio;
 
   if (doCrop) {
-    console.log(`[Manual Mode] Cropping top ${SOFFIT_CROP_PERCENT}% (2nd-story soffit zone)`);
+    console.log(`[Manual Mode] Cropping top ${SOFFIT_CROP_PERCENT}% (2nd-story roof, gutter & soffit)`);
     const cropped = await cropTopPercent(nightBase, imageMimeType, SOFFIT_CROP_PERCENT);
     workingNightBase = cropped.croppedBase64;
     const croppedHeight = cropped.fullHeight - Math.round(cropped.fullHeight * SOFFIT_CROP_PERCENT / 100);
