@@ -330,7 +330,7 @@ function drawMarkers(
   fixtures.forEach((fixture, index) => {
     const cx = (fixture.x / 100) * imgW;
     const cy = (fixture.y / 100) * imgH;
-    const pipelineType = CATEGORY_TO_PIPELINE[fixture.type];
+    const pipelineType = CATEGORY_TO_PIPELINE[fixture.type] || 'up';
     const color = MARKER_COLORS[pipelineType] || DEFAULT_MARKER_COLOR;
     const label = MARKER_LABELS[pipelineType] || 'LIGHT';
     const crossLen = markerRadius * 2;
@@ -397,6 +397,10 @@ export function paintGradientsToCanvas(
 
   for (const fixture of fixtures) {
     const config = GRADIENT_CONFIGS[fixture.type];
+    if (!config) {
+      console.warn(`[GradientPainter] Skipping fixture with unknown type: ${fixture.type}`);
+      continue;
+    }
     const rgb = kelvinToRGB(fixture.colorTemp || 3000);
     const intensity = fixture.intensity ?? 0.8;
     const cx = (fixture.x / 100) * canvasWidth;
@@ -437,8 +441,17 @@ export async function paintLightGradients(
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        const MAX_DIM = 2048;
+        let w = img.width;
+        let h = img.height;
+        if (w > MAX_DIM || h > MAX_DIM) {
+          const scale = MAX_DIM / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+          console.log(`[GradientPainter] Resizing from ${img.width}x${img.height} to ${w}x${h}`);
+        }
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
@@ -446,8 +459,8 @@ export async function paintLightGradients(
           return;
         }
 
-        // 1. Draw original image
-        ctx.drawImage(img, 0, 0);
+        // 1. Draw original image (scaled to fit canvas)
+        ctx.drawImage(img, 0, 0, w, h);
 
         // 2. Darken to ~40% so gradients are subtle hints, not bold shapes
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';

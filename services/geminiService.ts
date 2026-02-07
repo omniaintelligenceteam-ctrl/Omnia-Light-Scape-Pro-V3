@@ -1508,7 +1508,7 @@ export const buildFinalPrompt = (
       : p.positions.join('; ');
 
     return `
-## ${p.fixtureType.toUpperCase()} LIGHTS - ${p.subOption.toUpperCase()}
+## ${(p.fixtureType || 'UNKNOWN').toUpperCase()} LIGHTS - ${(p.subOption || 'general').toUpperCase()}
 - Quantity: Place EXACTLY ${p.count} fixtures
 - Positions:
   ${positions}
@@ -1655,7 +1655,7 @@ export const verifyFixturesBeforeGeneration = (
 
   // Build summary string for final prompt
   const summaryLines = verifiedFixtures.map(f =>
-    `- ${f.fixtureType.toUpperCase()} LIGHTS - ${f.subOption}: ${f.count} fixtures`
+    `- ${(f.fixtureType || 'UNKNOWN').toUpperCase()} LIGHTS - ${f.subOption || 'general'}: ${f.count} fixtures`
   );
 
   const summary = `
@@ -1673,6 +1673,35 @@ TOTAL FIXTURES: ${totalFixtures}
     summary,
   };
 };
+
+/**
+ * Resize a base64 image to fit within maxDim on the longest side.
+ * Returns the original if already within bounds or on error.
+ */
+async function resizeImageBase64(
+  base64: string,
+  mimeType: string,
+  maxDim: number = 2048
+): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w <= maxDim && h <= maxDim) { resolve(base64); return; }
+      const scale = maxDim / Math.max(w, h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+      console.log(`[ImageResize] Resizing from ${img.width}x${img.height} to ${w}x${h}`);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL(mimeType, 0.90).split(',')[1]);
+    };
+    img.onerror = () => resolve(base64);
+    img.src = `data:${mimeType};base64,${base64}`;
+  });
+}
 
 export const generateNightScene = async (
   imageBase64: string,
@@ -2128,18 +2157,27 @@ ${preferenceContext}
   `;
 
   try {
+    // Resize images to max 2048px before sending to Gemini to avoid timeouts
+    const resizedImage = await resizeImageBase64(imageBase64, imageMimeType);
+    const resizedGradient = gradientImageBase64
+      ? await resizeImageBase64(gradientImageBase64, imageMimeType)
+      : undefined;
+    const resizedMarked = markedImageBase64
+      ? await resizeImageBase64(markedImageBase64, imageMimeType)
+      : undefined;
+
     // Build parts array — send both clean + marked images for manual placement mode
     const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
     // Inject reference examples (few-shot) before user images if provided
     if (prefixParts && prefixParts.length > 0) {
       imageParts.push(...prefixParts);
     }
-    imageParts.push({ inlineData: { data: imageBase64, mimeType: imageMimeType } });
+    imageParts.push({ inlineData: { data: resizedImage, mimeType: imageMimeType } });
     // Prefer gradient image (includes markers) over markers-only
-    if (gradientImageBase64) {
-      imageParts.push({ inlineData: { data: gradientImageBase64, mimeType: imageMimeType } });
-    } else if (markedImageBase64) {
-      imageParts.push({ inlineData: { data: markedImageBase64, mimeType: imageMimeType } });
+    if (resizedGradient) {
+      imageParts.push({ inlineData: { data: resizedGradient, mimeType: imageMimeType } });
+    } else if (resizedMarked) {
+      imageParts.push({ inlineData: { data: resizedMarked, mimeType: imageMimeType } });
     }
     // rawPromptMode: send userInstructions directly, skip auto-mode system prompt wrapper
     imageParts.push({ text: rawPromptMode ? userInstructions : systemPrompt });
