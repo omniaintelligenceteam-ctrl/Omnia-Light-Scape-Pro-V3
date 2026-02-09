@@ -58,6 +58,7 @@ import { AssignmentDropdown } from './components/AssignmentDropdown';
 import { SaveImageModal } from './components/SaveImageModal';
 import { AcceptInvite } from './components/AcceptInvite';
 import { KanbanBoard } from './components/pipeline';
+import { BeforeAfterSlider } from './components/BeforeAfterSlider';
 import { useToast } from './components/Toast';
 import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
@@ -2207,7 +2208,95 @@ const App: React.FC = () => {
       document.body.removeChild(link);
     }
   };
-  
+
+  // Download combined before/after image for proposals
+  const handleDownloadCombined = async () => {
+    if (!generatedImage || !previewUrl) return;
+
+    try {
+      // Create canvas to combine images side by side
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Load both images
+      const [beforeImg, afterImg] = await Promise.all([
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = previewUrl;
+        }),
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = generatedImage;
+        })
+      ]);
+
+      // Set canvas size for side-by-side layout with padding
+      const padding = 20;
+      const labelHeight = 40;
+      const maxHeight = Math.max(beforeImg.height, afterImg.height);
+      const scale = Math.min(800 / beforeImg.width, 800 / afterImg.width);
+
+      const imgWidth = beforeImg.width * scale;
+      const imgHeight = maxHeight * scale;
+
+      canvas.width = imgWidth * 2 + padding * 3;
+      canvas.height = imgHeight + labelHeight + padding * 2;
+
+      // Fill background
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Before image
+      ctx.drawImage(beforeImg, 0, 0, beforeImg.width, beforeImg.height, padding, padding, imgWidth, imgHeight);
+
+      // Draw After image
+      ctx.drawImage(afterImg, 0, 0, afterImg.width, afterImg.height, imgWidth + padding * 2, padding, imgWidth, imgHeight);
+
+      // Draw labels
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+
+      // Before label
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(padding, imgHeight + padding, imgWidth, labelHeight);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('BEFORE - Daytime Original', padding + imgWidth / 2, imgHeight + padding + 25);
+
+      // After label
+      ctx.fillStyle = 'rgba(246,180,90,0.9)';
+      ctx.fillRect(imgWidth + padding * 2, imgHeight + padding, imgWidth, labelHeight);
+      ctx.fillStyle = '#000';
+      ctx.fillText('AFTER - AI Lighting Design', imgWidth + padding * 2 + imgWidth / 2, imgHeight + padding + 25);
+
+      // Draw divider
+      ctx.strokeStyle = '#F6B45A';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, padding);
+      ctx.lineTo(canvas.width / 2, imgHeight + padding);
+      ctx.stroke();
+
+      // Download
+      const link = document.createElement('a');
+      link.download = 'omnia-before-after-comparison.png';
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to create combined image:', error);
+      // Fallback: download just the generated image
+      handleDownload();
+    }
+  };
+
   const handleDownloadImage = (project: SavedProject) => {
     if (!project.image) return;
     const link = document.createElement('a');
@@ -3709,6 +3798,19 @@ Notes: ${invoice.notes || 'N/A'}
                             <FolderPlus className="w-4 h-4" />
                             Save
                         </motion.button>
+
+                        {showComparison && previewUrl && (
+                            <motion.button
+                                onClick={handleDownloadCombined}
+                                className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-6 py-3 rounded-xl font-semibold text-xs hover:bg-white/20 transition-all flex items-center gap-2"
+                                whileHover={{ scale: 1.05, y: -2 }}
+                                whileTap={{ scale: 0.98 }}
+                                title="Download side-by-side comparison for proposals"
+                            >
+                                <Download className="w-4 h-4" />
+                                Download Combined
+                            </motion.button>
+                        )}
                     </div>
 
                     {/* Main Image - with swipe gesture support */}
@@ -3719,30 +3821,14 @@ Notes: ${invoice.notes || 'N/A'}
                     >
                         {/* Before/After Comparison Mode */}
                         {showComparison && previewUrl ? (
-                            <div className="w-full h-full flex">
-                                {/* Before (Original) */}
-                                <div className="w-1/2 h-full relative border-r border-white/20">
-                                    <img
-                                        src={previewUrl}
-                                        alt="Before - Original"
-                                        className="w-full h-full object-contain"
-                                    />
-                                    <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg">
-                                        <span className="text-xs font-bold text-white/80 uppercase tracking-wider">Before</span>
-                                    </div>
-                                </div>
-                                {/* After (Generated) */}
-                                <div className="w-1/2 h-full relative">
-                                    <img
-                                        src={generatedImage}
-                                        alt="After - With Lighting"
-                                        className="w-full h-full object-contain cursor-zoom-in"
-                                        onClick={() => setIsFullScreen(true)}
-                                    />
-                                    <div className="absolute bottom-4 right-4 px-3 py-1.5 bg-[#F6B45A]/90 backdrop-blur-sm rounded-lg">
-                                        <span className="text-xs font-bold text-black uppercase tracking-wider">After</span>
-                                    </div>
-                                </div>
+                            <div className="w-full h-full flex items-center justify-center p-4">
+                                <BeforeAfterSlider
+                                    beforeImage={previewUrl}
+                                    afterImage={generatedImage!}
+                                    beforeLabel="Daytime Original"
+                                    afterLabel="AI Lighting Design"
+                                    className="w-full max-w-5xl shadow-2xl"
+                                />
                             </div>
                         ) : (
                             /* Single Image Mode */
