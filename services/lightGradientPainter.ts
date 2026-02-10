@@ -50,7 +50,7 @@ const MARKER_LABELS: Record<string, string> = {
   path:      'PATH',
   well:      'WELL',
   hardscape: 'STEP',
-  gutter:    'MOUNTED',
+  gutter:    'WASH-UP▲',
   coredrill: 'COREDRILL',
 };
 
@@ -76,10 +76,10 @@ const GRADIENT_CONFIGS: Record<FixtureCategory, GradientConfig> = {
   },
   gutter_uplight: {
     direction: 'up',
-    heightPercent: 30,
-    widthPercent: 10,
-    originOffsetYPercent: -1,
-    opacity: 0.50,
+    heightPercent: 35,
+    widthPercent: 8,
+    originOffsetYPercent: 0,
+    opacity: 0.55,
   },
   downlight: {
     direction: 'down',
@@ -375,6 +375,35 @@ function drawMarkers(
     ctx.fillText(label, cx - 1, labelY - 1);
     ctx.fillStyle = color;
     ctx.fillText(label, cx, labelY);
+
+    // Directional arrow above/below marker to indicate beam direction
+    const arrowSize = Math.round(markerRadius * 1.2);
+    const upTypes = new Set(['up', 'gutter', 'well', 'coredrill']);
+    const downTypes = new Set(['soffit', 'hardscape']);
+
+    if (upTypes.has(pipelineType)) {
+      // Draw upward arrow above marker
+      const arrowY = cy - markerRadius - Math.round(markerRadius * 0.6);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `bold ${arrowSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeText('\u25B2', cx, arrowY);
+      ctx.fillText('\u25B2', cx, arrowY);
+    } else if (downTypes.has(pipelineType)) {
+      // Draw downward arrow below label
+      const arrowY = labelY + Math.round(markerRadius * 0.8);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `bold ${arrowSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeText('\u25BC', cx, arrowY);
+      ctx.fillText('\u25BC', cx, arrowY);
+    }
   });
 }
 

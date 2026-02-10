@@ -179,14 +179,14 @@ LIGHT GENERATION RULES (CRITICAL)
 GUTTER LIGHT MOUNTING LOCATION (CRITICAL - WHEN GUTTER LIGHTS SELECTED)
 ═══════════════════════════════════════════════════════════════════════════════
 
-GUTTER LIGHT: A compact brass fixture sitting INSIDE the rain 
-gutter channel, partially hidden by the gutter walls. Only the 
-top of the fixture peeks above the gutter edge. The light beam 
-shoots UPWARD from inside the gutter to illuminate the 2nd story 
-wall, roofline, dormers, and gables ABOVE the gutter. 
+GUTTER LIGHT: The fixture is COMPLETELY HIDDEN inside the gutter
+channel — INVISIBLE at night. You must NOT draw any visible fixture.
+The light beam shoots UPWARD from the gutter position to create a
+soft warm WASH on the 2nd story wall ABOVE. Only the light effect
+on the wall is visible — the fixture itself cannot be seen.
 
-NOT on the roof shingles. NOT on the fascia. NOT prominently 
-visible. The fixture is tucked inside the gutter channel.
+NOT on the roof shingles. NOT on the fascia. NOT visible at all.
+The fixture is hidden inside the gutter channel — draw ONLY the light effect.
 
 ═══════════════════════════════════════════════════════════════════════════════
 DRAMATIC LIGHTING STYLE (CRITICAL FOR PROFESSIONAL REALISM)
@@ -289,10 +289,10 @@ CORE DRILL SPECIFICATIONS (APPLIES TO ALL IN-GRADE SUB-OPTIONS)
 GUTTER LIGHT SPECIFICATIONS (APPLIES TO ALL GUTTER SUB-OPTIONS)
 ═══════════════════════════════════════════════════════════════════════════════
 
-- Type: SMALL compact mini bullet up light - TINY fixture
-- Housing: DARK BRONZE finish (required)
-- Mounting: INSIDE the gutter trough ONLY, against inner gutter wall poking out over the roof
-- FORBIDDEN: On roof shingles, on gutter lip, on fascia board
+- Type: Hidden uplight — INVISIBLE at night, only light effect visible
+- Housing: Not visible at night — do not render fixture hardware
+- Mounting: INSIDE the gutter trough — completely hidden from view
+- FORBIDDEN: On roof shingles, on gutter lip, on fascia board, any visible fixture
 - Beam MUST reach target (dormer/gable) regardless of distance
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -1069,7 +1069,7 @@ EXCLUSIONS:
     id: 'gutter',
     label: 'Gutter Mounted Up Lights',
     description: 'Up lights mounted in gutter illuminating up',
-    positivePrompt: `CATEGORY ENABLED: MOUNTED UP LIGHTS at 1st Story Roof Edge (Y=85-95%).
+    positivePrompt: `CATEGORY ENABLED: WASH-UP▲ UPLIGHTS (INVISIBLE fixtures) at 1st Story Roof Edge.
 
 PLACEMENT: Fixtures MUST be mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high).
 TARGET: Beams shine UPWARD to illuminate 2nd story sections - AI decides what to light based on the home's architecture.
@@ -1085,11 +1085,11 @@ FIXTURE COUNT: Use the EXACT count specified in the design request. Do NOT add e
 
 MOUNTING (CRITICAL):
 - At the EDGE of the 1st story roof line (where roof meets fascia, ~8-10 ft high)
-- Fixture is a small bronze up light secured at the roof edge
+- Fixture is INVISIBLE — hidden in the gutter, not visible at night
 - NEVER on roof shingles, wall surface, or any roof surface
 - NEVER at 2nd story or top-of-house level — 1st story roof edge ONLY
 
-FIXTURE STYLE: Compact brass bullet or mini flood up light with mounting bracket, low-profile.
+FIXTURE VISIBILITY: INVISIBLE at night. Do NOT render any visible fixture hardware. Only the light effect on the wall above is visible.
 
 BEAM DIRECTION:
 - Each fixture aims straight UPWARD — the beam illuminates the surface DIRECTLY ABOVE the fixture
@@ -2453,47 +2453,3 @@ export const QUICK_ANALYSIS_PROMPT = `Analyze this property photo and provide:
 
 Return a brief JSON summary for initial fixture suggestions.`;
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FLUX FILL INPAINTING PROMPT TEMPLATES
-// Used by the multi-model pipeline for mask-based fixture placement
-// Each prompt describes what a specific fixture type should look like
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export const FLUX_FILL_PROMPTS: Record<string, string> = {
-  // ── Uplights ──────────────────────────────────────────────────────────────
-  up_siding: "BRIGHT GLOWING warm 2700K brass ground-mounted landscape uplight, VISIBLE bright light source at ground, strong luminous beam grazing upward on wall siding, BRIGHT dramatic vertical light pool revealing texture, visible warm glow on wall surface, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  up_windows: "BRIGHT GLOWING warm 2700K brass ground-mounted uplight below window, VISIBLE bright light source at ground, strong luminous beam washing upward, BRIGHT light pool illuminating wall beneath window frame, visible warm glow, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  up_columns: "BRIGHT GLOWING warm 2700K brass ground-mounted uplight at column base, VISIBLE bright light source, strong luminous beam grazing upward on column surface, BRIGHT dramatic vertical light accent, visible warm glow on column, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  up_entryway: "BRIGHT GLOWING warm 2700K brass ground-mounted uplight flanking entry door, VISIBLE bright light source, strong luminous beam washing upward on wall beside doorway, BRIGHT welcoming entry lighting, visible warm glow, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  up_trees: "BRIGHT GLOWING warm 2700K brass ground-mounted uplight at tree base, VISIBLE bright light source at base, strong luminous light washing up trunk and into canopy from below, BRIGHT dramatic tree uplighting with visible shadows in branches, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  up: "BRIGHT GLOWING warm 2700K brass ground-mounted landscape uplight, VISIBLE bright light source at ground, strong luminous beam grazing upward on surface, BRIGHT dramatic light pool, visible warm glow, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-
-  // ── Path Lights ───────────────────────────────────────────────────────────
-  path_walkway: "BRIGHT GLOWING 22-inch tall brass dome path light on walkway edge, VISIBLE bright warm 2700K light source under dome, strong luminous omnidirectional glow illuminating walkway surface, BRIGHT visible circular light pool on ground, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  path_driveway: "BRIGHT GLOWING 22-inch tall brass dome path light along driveway edge, VISIBLE bright warm 2700K light source under dome, strong luminous omnidirectional glow on driveway surface, BRIGHT visible circular light pool, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  path: "BRIGHT GLOWING 22-inch tall brass dome path light, VISIBLE bright warm 2700K light source under dome, strong luminous omnidirectional glow on ground surface, BRIGHT visible circular light pool, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-
-  // ── Gutter Lights ─────────────────────────────────────────────────────────
-  gutter_peaks: "BRIGHT GLOWING small bronze uplight fixture inside metal gutter trough, VISIBLE bright beam shining upward illuminating gable peak above, BRIGHT luminous accent light on roofline, strong warm glow visible on surface, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  gutter_dormers: "BRIGHT GLOWING small bronze uplight fixture inside metal gutter trough near dormer, VISIBLE bright beam shining upward illuminating dormer face, BRIGHT luminous accent light, strong warm glow visible on surface, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  gutter_secondStoryFacade: "BRIGHT GLOWING small bronze uplight fixture inside metal gutter trough, VISIBLE bright beam shining upward illuminating second story facade above, BRIGHT luminous wash of light on upper wall, strong warm glow, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  gutter: "BRIGHT GLOWING small bronze uplight fixture inside metal gutter trough, VISIBLE bright beam shining upward toward roofline, BRIGHT luminous accent light, strong warm glow visible on surface, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-
-  // ── Hardscape Lights ──────────────────────────────────────────────────────
-  hardscape_steps: "BRIGHT GLOWING recessed LED step light in concrete or stone step riser, VISIBLE bright warm 2700K light source, strong luminous glow illuminating step tread below, BRIGHT visible safety lighting, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  hardscape_patio: "BRIGHT GLOWING flush-mounted in-ground well light in patio surface, VISIBLE bright warm 2700K upward glow, BRIGHT luminous accent in hardscape, strong warm light visible on surface, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  hardscape_retaining_walls: "BRIGHT GLOWING recessed LED light in retaining wall cap, VISIBLE bright warm 2700K light source, strong luminous glow illuminating wall face below, BRIGHT visible accent lighting, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  hardscape: "BRIGHT GLOWING flush-mounted hardscape light, VISIBLE bright warm 2700K light source, strong luminous glow on stone or concrete surface, BRIGHT visible accent, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-
-  // ── Core Drill Lights ─────────────────────────────────────────────────────
-  coredrill: "BRIGHT GLOWING flush-mounted in-grade core drill light, VISIBLE bright warm 2700K light source at ground, strong luminous narrow beam shining upward from ground surface, BRIGHT dramatic accent light, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-
-  // ── Well Lights ───────────────────────────────────────────────────────────
-  well: "BRIGHT GLOWING in-ground well light flush with ground surface, VISIBLE bright warm 2700K light source, strong luminous narrow beam projecting upward, BRIGHT dramatic accent lighting, brass fixture ring visible at ground level, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-
-  // ── Soffit / Downlights ───────────────────────────────────────────────────
-  soffit: "BRIGHT GLOWING small recessed LED downlight in soffit or eave, VISIBLE bright warm 3000K light source, strong luminous beam shining downward creating BRIGHT pool of light on ground below, visible overhead accent, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-
-  // ── Holiday Lights ────────────────────────────────────────────────────────
-  holiday: "BRIGHT GLOWING warm white string lights along roofline, VISIBLE bright bulbs evenly spaced creating luminous festive outline of roofline, BRIGHT glowing bulbs clearly visible, professional holiday lighting installation, photorealistic night photograph, high contrast bright lights against dark background",
-};

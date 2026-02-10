@@ -15,7 +15,7 @@ import {
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
-import { drawFixtureMarkers, createPreLitNighttime } from "./canvasNightService";
+import { drawFixtureMarkers } from "./canvasNightService";
 import { buildReferenceParts } from "./referenceLibrary";
 import { paintLightGradients } from "./lightGradientPainter";
 import type { LightFixture } from "../types/fixtures";
@@ -142,68 +142,7 @@ function buildPreferenceContext(preferences: UserPreferences | null | undefined)
 
 // Analysis model - Gemini 3 Pro for other analysis functions
 const ANALYSIS_MODEL_NAME = 'gemini-3-pro-preview';
-// Kimi K2 for property analysis (3-4x cheaper than Gemini)
-const KIMI_API_ENDPOINT = 'https://api.moonshot.ai/v1/chat/completions';
-const KIMI_MODEL_NAME = 'kimi-k2.5';
 const ANALYSIS_TIMEOUT_MS = 90000; // 90 seconds for analysis
-
-/**
- * Makes a vision request to Kimi K2 API (OpenAI-compatible format)
- */
-async function callKimiVisionAPI(
-  imageBase64: string,
-  imageMimeType: string,
-  prompt: string
-): Promise<string> {
-  const kimiApiKey = (import.meta.env.VITE_KIMI_API_KEY as string) || (process.env.KIMI_API_KEY as string);
-
-  if (!kimiApiKey) {
-    throw new Error('Kimi API key not configured. Please set VITE_KIMI_API_KEY in your environment.');
-  }
-
-  const response = await fetch(KIMI_API_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${kimiApiKey}`,
-    },
-    body: JSON.stringify({
-      model: KIMI_MODEL_NAME,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${imageMimeType};base64,${imageBase64}`,
-              },
-            },
-            {
-              type: 'text',
-              text: prompt,
-            },
-          ],
-        },
-      ],
-      max_tokens: 4096,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Kimi API error:', errorText);
-    throw new Error(`Kimi API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-
-  if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-    return data.choices[0].message.content;
-  }
-
-  throw new Error('No response from Kimi API');
-}
 
 /**
  * Stage 1: ANALYZING
@@ -963,29 +902,22 @@ export const craftPromptWithAI = async (
     const subOption = fixtureType?.subOptions.find(so => so.id === placement.subOption);
     const userNote = placementNotes?.[placement.subOption] || '';
 
-    // Add visual description for gutter fixtures to help AI distinguish from soffit lights AND prevent roof placement
+    // Add visual description for gutter fixtures — effect-only, no hardware descriptions
     const gutterVisualDescription = placement.fixtureType === 'gutter' ? `
 
-MOUNTED UP LIGHT VISUAL APPEARANCE (CRITICAL):
-- Small bronze bullet fixture mounted at the EDGE of the 1st story roof line (~8-10 ft high)
-- The fixture is secured where the roof meets the fascia, at the bottom edge of the 1st story roof (Y=85-95%)
-- Light beam projects straight UPWARD — illuminating the wall/surface DIRECTLY ABOVE the fixture
-
-BEAM BEHAVIOR:
-- SINGLE FIXTURE: Beam goes straight up, lighting the wall/facade directly above it
-- CROSSED PAIR (for large peaks/gables): Two fixtures flanking a peak, beams angled inward to CROSS and illuminate the full peak section
-
-WHERE THE FIXTURE IS:
-- At the EDGE of the 1st story roof line (where roof meets fascia)
-- NOT on the roof shingles, NOT on the wall, NOT in the soffit
-- The fixture is SMALL, mounted at roof edge height
+WASH-UP▲ LIGHT — INVISIBLE FIXTURE, EFFECT ONLY (CRITICAL):
+- FIXTURE: COMPLETELY INVISIBLE — hidden inside the gutter trough. Do NOT draw ANY fixture, bracket, sconce, or hardware.
+- LIGHT EFFECT: A soft, wide WASH of warm light appears on the 2nd story wall DIRECTLY ABOVE the fixture position. The wall glows warmly, revealing texture.
+- BEAM DIRECTION: UPWARD ONLY — light illuminates ONLY the wall ABOVE the fixture. ABSOLUTELY ZERO light below the mounting point — surface below must remain DARK.
+- BEAM REACH: Light washes ALL THE WAY UP from the mounting point to the peak/gable above.
 
 VISUAL TEST:
-- CORRECT: Small bronze up light at the 1st story roof edge, beam going straight UP above it
-- CORRECT: Two fixtures flanking a large peak, beams crossing to cover the full peak
-- WRONG: Fixture sitting ON TOP of roof shingles
-- WRONG: Fixture mounted on the wall or fascia board
-- WRONG: Fixture that looks like a soffit downlight (beam going DOWN)` : '';
+- CORRECT: Wall ABOVE the marker glows warmly with a soft wash — NO fixture visible
+- CORRECT: Two warm washes flanking a peak, illuminating the full gable
+- WRONG: Visible sconce or wall-mounted fixture (WASH-UP▲ = INVISIBLE fixture)
+- WRONG: Light going both up AND down (sconce behavior — WASH-UP▲ = UP ONLY)
+- WRONG: Soffit downlight or recessed ceiling light (WASH-UP▲ = UPWARD, never down)
+- WRONG: Fixture sitting on roof shingles or mounted on wall face` : '';
 
     return {
       fixture: placement.fixtureType,
@@ -1051,50 +983,36 @@ SOFFIT LIGHTS ARE NOT SELECTED. The following is MANDATORY:
   const gutterSelected = selectedFixtureIds.includes('gutter');
   const gutterSoffitClarification = SOFFIT_HIDDEN ? '' : (gutterSelected ? `
 
-## MOUNTED UP LIGHTS vs SOFFIT LIGHTS - CRITICAL DISTINCTION
-YOU HAVE SELECTED: MOUNTED UP LIGHTS (fixtures at the 1st story roof edge, shining UP)
-YOU HAVE NOT SELECTED: SOFFIT LIGHTS (fixtures IN the eave, shining DOWN)
+## WASH-UP▲ UPLIGHTS vs SCONCES vs SOFFIT LIGHTS - CRITICAL DISTINCTION
+YOU HAVE SELECTED: WASH-UP▲ UPLIGHTS (INVISIBLE fixtures, warm wash on wall ABOVE only)
+YOU HAVE NOT SELECTED: SCONCES or SOFFIT LIGHTS
 
-*** DO NOT CONFUSE THESE - THEY ARE OPPOSITES ***
+*** THESE ARE THREE DIFFERENT THINGS — DO NOT CONFUSE THEM ***
 
-MOUNTED UP LIGHTS (SELECTED - GENERATE THESE):
-- Fixture Location: At the EDGE of the 1st story roof line (where roof meets fascia, ~8-10 ft high)
-- Fixture Appearance: Small brass/bronze bullet up light at the roof edge
-- Beam Direction: UPWARD toward dormers, gables, or 2nd story facade
-- Light travels: FROM 1st story roof edge UP TO higher features
-- You can SEE the fixture at the roof edge
+WASH-UP▲ UPLIGHTS (SELECTED - GENERATE THESE):
+- Fixture Visibility: COMPLETELY INVISIBLE — do NOT draw any fixture hardware
+- Light Effect: Soft warm WASH on the 2nd story wall ABOVE the marker position
+- Beam Direction: UPWARD ONLY — ZERO light below the marker
+- The wall above GLOWS warmly, revealing texture. No visible fixture at all.
 
-SOFFIT LIGHTS (NOT SELECTED - DO NOT GENERATE):
-- Fixture Location: Recessed IN the soffit/eave underside
-- Fixture Appearance: Flush-mounted can light in eave
-- Beam Direction: DOWNWARD onto porch, ground, or windows
-- Light travels: FROM eave DOWN TO ground
-- Fixture is recessed/hidden in the eave
+SCONCES (NOT SELECTED - FORBIDDEN):
+- Visible wall-mounted fixture with light going BOTH up AND down
+- If your render shows a visible fixture with bidirectional light = WRONG (sconce)
+
+SOFFIT LIGHTS (NOT SELECTED - FORBIDDEN):
+- Recessed IN the soffit/eave underside, beam DOWNWARD
+- If your render shows downward light from eaves = WRONG (soffit)
 
 VISUAL TEST:
-- If fixture is at the 1st story roof edge and light goes UP = CORRECT (mounted up light)
-- If fixture is IN the eave and light goes DOWN = WRONG (soffit light - forbidden)
+- CORRECT: Wall ABOVE the marker glows warmly — NO visible fixture
+- WRONG: Visible fixture at the marker position (you made a sconce)
+- WRONG: Light going both up AND down (you made a sconce)
+- WRONG: Light going DOWN from the eaves (you made a soffit light)
 
 SOFFIT MUST REMAIN DARK:
 - Eave undersides remain pitch black
 - NO downlights, NO can lights, NO recessed fixtures in eaves
-- Any glow on soffit is ONLY reflected ambient light from mounted up lights hitting walls above
-
-MOUNTED UP LIGHT PLACEMENT - ABSOLUTE REQUIREMENTS:
-*** FIXTURES MUST BE AT THE 1ST STORY ROOF EDGE - NOT ON THE ROOF SURFACE ***
-
-WHAT "AT THE ROOF EDGE" MEANS:
-- The fixture is mounted where the 1st story roof meets the fascia board (~8-10 ft high)
-- The fixture aims UPWARD to illuminate 2nd story features above
-- It is a small, low-profile brass up light
-
-WHAT "ON THE ROOF" MEANS (FORBIDDEN):
-- Fixture sitting ON shingles or roofing material - FORBIDDEN
-- Fixture mounted to visible roof surface - FORBIDDEN
-- Fixture prominently visible on the roofline - FORBIDDEN
-
-ROOF SURFACE PLACEMENT = WRONG. AT THE ROOF EDGE = CORRECT.
-If you place fixtures ON the roof surface, the image is INVALID.
+- Any soffit glow is ONLY reflected ambient light from upward washes hitting walls above
 ` : '');
 
   // Build preference context
@@ -1744,12 +1662,7 @@ HOT SPOT AVOIDANCE:
 - Light appears to "float" on surface
 - Even distribution within small pool
 
-SOFFIT INTERACTION (CRITICAL - NO SOFFIT FIXTURES):
-- Up light beams travel UP and may reach soffit level
-- Soffit receives REFLECTED ambient glow from light hitting wall below
-- This is NOT the same as soffit fixtures - there are NO fixtures IN the soffit
-- The soffit glow is dim, ambient, and clearly comes from BELOW
-- Do NOT add any downlights or fixtures in the eave to "enhance" this effect
+ROOFLINE REACH: Light washes all the way up to where the wall meets the roof. The eave area may receive faint ambient glow from the wall wash — this is natural reflection, NOT a separate light source.
 
 BEST FOR: Ambient mood, pathway marking, subtle accent, intimate settings`;
 
@@ -1767,19 +1680,14 @@ INVERSE SQUARE LAW APPLICATION:
 - Brightness at 2ft: 100% (reference)
 - Brightness at 4ft: 25%
 - Brightness at 8ft: 6%
-- Brightness at 12ft (soffit): 3% - still visible
+- Brightness at 12ft (roofline): 3% - still visible
 
 TEXTURE REVELATION:
 - Sufficient intensity to show brick mortar joints
 - Siding shadow lines visible but not harsh
 - Stone texture defined but not over-emphasized
 
-SOFFIT INTERACTION (CRITICAL - NO SOFFIT FIXTURES):
-- Up light beams travel UP and reach soffit level
-- Soffit receives REFLECTED ambient glow from light hitting wall below
-- This is NOT the same as soffit fixtures - there are NO fixtures IN the soffit
-- The soffit glow is dim, ambient, and clearly comes from BELOW
-- Do NOT add any downlights or fixtures in the eave to "enhance" this effect
+ROOFLINE REACH: Light washes all the way up to where the wall meets the roof. The eave area may receive faint ambient glow from the wall wash — this is natural reflection, NOT a separate light source.
 
 BEST FOR: Single-story homes, accent features, balanced residential lighting`;
 
@@ -1787,7 +1695,7 @@ BEST FOR: Single-story homes, accent features, balanced residential lighting`;
 
 LIGHT OUTPUT CHARACTERISTICS:
 - 2nd story reach (18-25 ft walls)
-- Strong wall grazing traveling to higher soffits
+- Strong wall grazing reaching full wall height
 - More pronounced beam visibility and definition
 - Visible light cone in air near fixture (subtle atmospheric effect)
 - Noticeable bloom around fixture lens (2-3 inch radius)
@@ -1805,12 +1713,7 @@ TEXTURE REVELATION:
 - Dramatic siding shadow lines
 - Surface irregularities clearly defined
 
-SOFFIT INTERACTION (CRITICAL - NO SOFFIT FIXTURES):
-- Up light beams travel UP and reach soffit level on taller walls
-- Soffit receives REFLECTED ambient glow from light hitting wall below
-- This is NOT the same as soffit fixtures - there are NO fixtures IN the soffit
-- The soffit glow is moderate, ambient, and clearly comes from BELOW
-- Do NOT add any downlights or fixtures in the eave to "enhance" this effect
+ROOFLINE REACH: Light washes all the way up to where the wall meets the roof. The eave area may receive faint ambient glow from the wall wash — this is natural reflection, NOT a separate light source.
 
 BEST FOR: Two-story facades, tall trees, dramatic accent lighting`;
 
@@ -1818,7 +1721,7 @@ BEST FOR: Two-story facades, tall trees, dramatic accent lighting`;
 
 LIGHT OUTPUT CHARACTERISTICS:
 - Full 2-3 story reach (25+ ft walls)
-- Intense beams traveling to tall soffits and gable peaks
+- Intense beams reaching tall walls and gable peaks
 - Maximum wall coverage with strong definition
 - Pronounced atmospheric scatter near fixture (visible light cone)
 - Strong lens bloom and halo effect (3-4 inch radius)
@@ -1841,12 +1744,7 @@ HOT SPOT MANAGEMENT:
 - Fixture angled to start beam 18-24 inches above ground
 - Light brightest at mid-wall, not at base
 
-SOFFIT INTERACTION (CRITICAL - NO SOFFIT FIXTURES):
-- Up light beams travel UP and reach soffit/gable level on tall walls
-- Soffit receives REFLECTED ambient glow from light hitting wall below
-- This is NOT the same as soffit fixtures - there are NO fixtures IN the soffit
-- The soffit glow is visible, ambient, and clearly comes from BELOW
-- Do NOT add any downlights or fixtures in the eave to "enhance" this effect
+ROOFLINE REACH: Light washes all the way up to where the wall meets the roof. The eave area may receive faint ambient glow from the wall wash — this is natural reflection, NOT a separate light source.
 
 BEST FOR: Tall facades, commercial properties, dramatic architectural statements`;
   };
@@ -2014,19 +1912,18 @@ ${preferenceContext}
     # STEP 3: EXCLUSIVE LIGHTING RULES
     - **PLACEMENT PRIORITY**: The "DESIGN REQUEST" below contains a strict ALLOW-LIST.
     - **Zero Hallucination**: If user selects "Trees" only, House MUST remain DARK. If user selects "Path" only, House and Trees MUST remain DARK.
-    - **Soffit/Eave Defaults**: DEFAULT OFF unless explicitly requested.
+    - **Eave/Overhang Areas**: Remain DARK — no fixtures in eaves unless explicitly requested.
     - **Beam Hygiene**: Light sources must be realistic (cone shape, natural falloff).
     - **Color Temperature (MANDATORY)**: ${colorTemperaturePrompt} This is a HARD RULE - ALL lights MUST use this exact color temperature unless the user explicitly specifies a different temperature in the DESIGN REQUEST notes below.
     - **Intensity**: ${getIntensityPrompt(lightIntensity)}
     - **Beam**: ${getBeamAnglePrompt(beamAngle)}
     - **FIXTURE QUANTITIES (ABSOLUTE - NON-NEGOTIABLE)**: When the DESIGN REQUEST specifies "EXACTLY X fixtures", you MUST place EXACTLY X fixtures. Not X-1, not X+1, EXACTLY X. Count them. Recount them. This is non-negotiable. Never add "extra" fixtures to balance or complete the design.
-    - **GUTTER LINE REACH RULE**: Up lights MUST reach the gutter/soffit line directly above them:
-      * For 1-story sections: beam reaches 1st floor gutter (8-12 ft)
-      * For 2-story sections: beam MUST reach 2nd story soffit (18-25 ft)
+    - **FULL WALL REACH RULE**: Up lights MUST illuminate the wall ALL THE WAY UP to the roofline:
+      * For 1-story sections: beam reaches the eave line (8-12 ft)
+      * For 2-story sections: beam MUST reach the top of the 2nd story wall (18-25 ft)
       * NEVER stop the beam at mid-wall - it must travel to the roofline above
       * Start bright at fixture, travel UP the wall surface (wall grazing effect)
-      * Fade gradually as it approaches the gutter/soffit
-      * The gutter underside receives subtle illumination ("kiss" the roofline)
+      * Fade gradually as it approaches the roofline
       * Taller facades require higher intensity to reach the roofline
 
     # ABSOLUTE FIXTURE ENFORCEMENT (MOST CRITICAL RULE)
@@ -2471,7 +2368,7 @@ export function generateNarrativePlacement(
   // Per-fixture "render as" micro-descriptions for type reinforcement
   const renderAsMap: Record<string, string> = {
     up: 'small bronze uplight at wall base, beam UPWARD',
-    gutter: 'small bronze uplight at roof edge, beam UPWARD — NOT a soffit downlight',
+    gutter: 'invisible fixture, warm wall wash ABOVE only — NO visible hardware',
     path: 'small bronze fixture in landscaping, 360° ground pool',
     well: 'small bronze uplight at ground level, beam UPWARD at tree canopy',
     hardscape: 'small bronze fixture under step tread, beam DOWNWARD onto riser',
@@ -2686,17 +2583,13 @@ function buildEnhancedPrompt(
       }
 
       if (presentTypes.has('gutter')) {
-        prompt += `### "MOUNTED" MARKERS — Mounted Up Lights at 1st Story Roof Edge (⚠️ THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
-        prompt += `- FIXTURE: Small bronze up light, compact cylinder, nearly invisible at night\n`;
-        prompt += `- MOUNTING: Mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high)\n`;
-        prompt += `- The fixture is a small bronze up light secured at the 1st story roof edge, aiming upward\n`;
-        prompt += `- BEAM DIRECTION: Aims straight UPWARD — the beam illuminates the wall/surface DIRECTLY ABOVE the fixture position\n`;
-        prompt += `- SINGLE FIXTURE: Beam goes straight up, lighting the wall/facade directly above it\n`;
-        prompt += `- CROSSED PAIR (large peaks/gables): Two fixtures flanking a peak, beams angled inward to CROSS and illuminate the full peak section\n`;
-        prompt += `- BEAM REACH: 10-25 ft upward from the 1st story roof edge to the peak/roofline above\n`;
-        prompt += `- THIS IS AN UP LIGHT mounted at roof edge height. Light goes UP, never down.\n`;
-        prompt += `- NEVER mount on roof shingles or visible roof surface\n`;
-        prompt += `- NEVER render this as a soffit downlight or any downward-facing fixture\n\n`;
+        prompt += `### "WASH-UP▲" MARKERS — Invisible Roof-Edge Uplights\n`;
+        prompt += `- FIXTURE VISIBILITY: COMPLETELY INVISIBLE. Do NOT draw ANY fixture, bracket, sconce, or hardware. The fixture is hidden and cannot be seen at night.\n`;
+        prompt += `- LIGHT EFFECT: Soft, wide WASH of warm light on the 2nd story wall DIRECTLY ABOVE the marker. Wall glows warmly revealing texture.\n`;
+        prompt += `- BEAM DIRECTION: UPWARD ONLY. ZERO light below the marker — wall/surface below must remain DARK.\n`;
+        prompt += `- BEAM REACH: Full height of 2nd story wall above, from marker position up to the peak/gable.\n`;
+        prompt += `- NOT A SCONCE: No visible fixture. No bidirectional light. No light going downward.\n`;
+        prompt += `- NOT A SOFFIT DOWNLIGHT: Light goes UP from this position, NEVER down. No recessed downlights.\n\n`;
       }
 
       if (presentTypes.has('path')) {
@@ -2747,11 +2640,12 @@ function buildEnhancedPrompt(
       // Critical confusion prevention
       prompt += `## CRITICAL CONFUSION PREVENTION\n`;
       if (presentTypes.has('gutter')) {
-        prompt += `### MOUNTED ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
-        prompt += `- MOUNTED UP LIGHT: Brass fixture at the 1st story roof edge → beam shoots UPWARD at 2nd story/roofline\n`;
-        prompt += `- SOFFIT DOWNLIGHT: Recessed in the overhang ceiling → beam shoots DOWNWARD at ground\n`;
-        prompt += `- These are OPPOSITE directions. If a marker says "MOUNTED", the light MUST go UP.\n`;
-        prompt += `- If you render a downward-facing light for a "MOUNTED" marker, you have made an error — fix it.\n`;
+        prompt += `### WASH-UP▲ ≠ SCONCE ≠ SOFFIT (Critical — these are THREE DIFFERENT things)\n`;
+        prompt += `- WASH-UP▲ (WHAT USER SELECTED): INVISIBLE fixture — warm wash on wall ABOVE only, ZERO light below, NO visible hardware\n`;
+        prompt += `- SCONCE (FORBIDDEN): Visible wall-mounted fixture with light both up AND down — NEVER render for WASH-UP▲ markers\n`;
+        prompt += `- SOFFIT DOWNLIGHT (FORBIDDEN): Recessed in overhang ceiling, beam DOWN — NEVER render for WASH-UP▲ markers\n`;
+        prompt += `- If your render shows a visible fixture at a WASH-UP▲ position = you rendered a SCONCE = WRONG\n`;
+        prompt += `- If your render shows downward light from the eaves = you rendered a SOFFIT DOWNLIGHT = WRONG\n`;
       }
       if (presentTypes.has('coredrill') && presentTypes.has('up')) {
         prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
@@ -2769,15 +2663,14 @@ function buildEnhancedPrompt(
       }
       prompt += `- Every marker label tells you the EXACT fixture type. NEVER substitute one type for another.\n\n`;
 
-      // Dramatic lighting style rules
-      prompt += `## DRAMATIC LIGHTING STYLE (MANDATORY)\n`;
-      prompt += `- Each fixture creates a DISTINCT, ISOLATED pool of light\n`;
-      prompt += `- DARK GAPS between fixtures are MANDATORY — light pools do NOT blend into continuous wash\n`;
-      prompt += `- Beam angle: 15-25° narrow spot for dramatic contrast\n`;
-      prompt += `- INVERSE SQUARE LAW: Brightest at mid-point, rapid dimming with distance from fixture\n`;
-      prompt += `- Soft beam edges: 6-12 inch feathered transitions, never crisp circles or hard edges\n`;
-      prompt += `- Color temperature: warm amber (2700K-3000K)\n`;
-      prompt += `- Shadows are as important as light — professional lighting REQUIRES intentional dark areas between fixtures\n\n`;
+      // Lighting style rules — photorealism
+      prompt += `## LIGHTING STYLE — MUST LOOK LIKE A REAL PHOTOGRAPH (MANDATORY)\n`;
+      prompt += `- Color temperature: warm (2700K-3000K)\n`;
+      prompt += `- SOFT WALL WASHES: Light appears as a gentle, wide glow on the wall — the wall GLOWS warmly. NEVER hard triangles, cones, or geometric beam shapes.\n`;
+      prompt += `- FULL WALL COVERAGE: Each uplight washes the wall from near-ground ALL THE WAY UP to the roofline. Brightest in lower half, gently fading but still visible at the top.\n`;
+      prompt += `- TEXTURE REVELATION: Warm light grazes across wall surfaces, revealing stone, brick, or siding texture beautifully.\n`;
+      prompt += `- INVISIBLE FIXTURES: Do NOT draw fixture hardware. Only the light effect on walls is visible.\n`;
+      prompt += `- NO GEOMETRIC SHAPES: Real lighting NEVER creates triangles or cones. It creates soft, diffused wall washes.\n\n`;
 
       // Absolute prohibition - zero tolerance
       prompt += `## ABSOLUTELY FORBIDDEN — ZERO TOLERANCE\n`;
@@ -2801,7 +2694,7 @@ function buildEnhancedPrompt(
         path: 'small bronze path light',
         well: 'small bronze uplight (beam UP)',
         hardscape: 'small bronze step light',
-        gutter: 'small bronze uplight at roof edge (beam UP)',
+        gutter: 'invisible roof-edge uplight — warm wash on wall ABOVE only, no visible fixture',
         coredrill: 'tiny flush bronze disc in concrete (beam UP)'
       };
       analysis.spatialMap.placements.forEach((p, i) => {
@@ -2818,9 +2711,9 @@ function buildEnhancedPrompt(
       prompt += `2. You MUST have EXACTLY ${count} light sources — one for each marker\n`;
       prompt += `3. If you count FEWER than ${count}: you MISSED a marker — go back and add the missing light\n`;
       prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light — REMOVE it immediately\n`;
-      prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, MOUNTED=upward beam from 1st story roof edge, PATH=bollard, etc.)\n`;
+      prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, WASH-UP▲=invisible uplight warm wall wash ABOVE only, PATH=bollard, etc.)\n`;
       if (presentTypes.has('gutter') && !presentTypes.has('soffit')) {
-        prompt += `6. Verify ZERO soffit/downlights exist — the user placed MOUNTED up lights, NOT soffit downlights\n`;
+        prompt += `6. Verify ZERO soffit/downlights exist AND ZERO visible sconces — the user placed WASH-UP▲ lights (invisible fixtures, upward wash only)\n`;
       }
       prompt += `\n`;
     }
@@ -2850,8 +2743,7 @@ function buildManualPrompt(
   colorTemperaturePrompt: string,
   lightIntensity: number,
   beamAngle: number,
-  hasGradientImage?: boolean,
-  isPreLitMode?: boolean
+  hasGradientImage?: boolean
 ): string {
   const count = spatialMap.placements.length;
   const presentTypes = new Set(spatialMap.placements.map(p => p.fixtureType));
@@ -2869,51 +2761,28 @@ function buildManualPrompt(
     coredrill: { hex: '#FFA500', name: 'AMBER' },
   };
 
-  // 1. Executor preamble — mode-dependent
-  if (isPreLitMode) {
-    prompt += `YOU ARE A PHOTOREALISTIC LIGHTING REFINEMENT TOOL.\n\n`;
-    prompt += `IMAGE 1 is a nighttime photograph with PRE-RENDERED warm lighting effects already in place.\n`;
-    prompt += `The lighting positions, directions, and types are ALREADY CORRECT in IMAGE 1.\n`;
-    prompt += `IMAGE 2 shows the same house with numbered markers confirming each fixture position.\n\n`;
-    prompt += `YOUR TASK: Refine IMAGE 1 to look like a professional nighttime photograph:\n`;
-    prompt += `- Smooth any harsh gradient edges into naturally feathered light\n`;
-    prompt += `- Ensure light interacts realistically with surfaces (walls glow, ground reflects)\n`;
-    prompt += `- Add subtle atmospheric scatter where beams pass through air\n`;
-    prompt += `- Maintain the EXACT positions and directions of the pre-rendered lights\n`;
-    prompt += `- The overall darkness level and unlit areas MUST remain as dark as shown in IMAGE 1\n\n`;
-    prompt += `CRITICAL RULES:\n`;
-    prompt += `1. Do NOT move any light source — positions are already correct\n`;
-    prompt += `2. Do NOT add any new lights — only ${count} exist in IMAGE 1\n`;
-    prompt += `3. Do NOT brighten any area that is dark in IMAGE 1 — darkness is intentional\n`;
-    prompt += `4. Do NOT change the beam direction of any light — directions are already correct\n`;
-    prompt += `5. Areas that are dark/black in IMAGE 1 MUST remain dark/black in your output\n`;
-    prompt += `6. Architecture must be IDENTICAL to IMAGE 1\n`;
-    prompt += `7. Remove ALL markers, numbers, and labels — output is a CLEAN photo\n`;
-    prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
-  } else {
-    prompt += `YOU ARE A PRECISION LIGHTING SUBTRACTION TOOL.\n\n`;
-    prompt += `Your default output is a COMPLETELY DARK house with ZERO light sources.\n`;
-    prompt += `You then ADD ONLY the specific fixtures listed below — nothing more.\n`;
-    prompt += `If you are uncertain whether to add a light, DO NOT ADD IT.\n`;
-    prompt += `Err on the side of TOO DARK, never too bright.\n\n`;
-    prompt += `IMAGE 1 is a nighttime photograph of a house with NO lights on.\n`;
-    prompt += `IMAGE 2 is the SAME house with gradient overlays showing where lighting effects should appear.\n\n`;
-    prompt += `YOUR TASK: Add photorealistic warm landscape lighting effects to IMAGE 1 at the exact positions and directions shown by the gradients in IMAGE 2.\n\n`;
-    prompt += `ABSOLUTE RULES:\n`;
-    prompt += `1. Render EXACTLY the fixture types specified — no substitutions\n`;
-    prompt += `2. Place fixtures at EXACTLY the positions marked — no repositioning\n`;
-    prompt += `3. Render EXACTLY ${count} light sources — NO MORE, NO LESS\n`;
-    prompt += `4. Areas without markers MUST remain COMPLETELY DARK\n`;
-    prompt += `5. Do NOT add lights for ANY reason not marked in IMAGE 2\n`;
-    prompt += `6. Architecture and landscaping must be IDENTICAL to IMAGE 1\n`;
-    prompt += `7. Remove ALL gradient overlays, labels, and markers — output is a CLEAN photo\n`;
-    prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
-  }
+  // 1. Executor preamble — two-pass: IMAGE 1 is nighttime base, IMAGE 2 is gradient guide
+  prompt += `YOU ARE A PROFESSIONAL LANDSCAPE LIGHTING RENDERER.\n\n`;
+  prompt += `Your task is to add PHOTOREALISTIC landscape lighting to a nighttime house photo.\n`;
+  prompt += `The lighting must look like a REAL photograph of a professionally lit home — not CGI, not illustrated, not cartoonish.\n`;
+  prompt += `Add ONLY the specific fixtures listed below — nothing more.\n\n`;
+  prompt += `IMAGE 1 is a nighttime photograph of a house with NO lights on.\n`;
+  prompt += `IMAGE 2 is the SAME house with gradient overlays showing where lighting effects should appear.\n\n`;
+  prompt += `YOUR TASK: Add photorealistic warm landscape lighting effects to IMAGE 1 at the exact positions and directions shown by the gradients in IMAGE 2.\n\n`;
+  prompt += `ABSOLUTE RULES:\n`;
+  prompt += `1. Render EXACTLY the fixture types specified — no substitutions\n`;
+  prompt += `2. Place fixtures at EXACTLY the positions marked — no repositioning\n`;
+  prompt += `3. Render EXACTLY ${count} light sources — NO MORE, NO LESS\n`;
+  prompt += `4. Areas without markers MUST remain COMPLETELY DARK\n`;
+  prompt += `5. Do NOT add lights for ANY reason not marked in IMAGE 2\n`;
+  prompt += `6. Architecture and landscaping must be IDENTICAL to IMAGE 1\n`;
+  prompt += `7. Remove ALL gradient overlays, labels, and markers — output is a CLEAN photo\n`;
+  prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
 
   // 1b. Exclusive fixture allowlist
   const allowlistLabelMap: Record<string, string> = {
     up: 'Ground-mounted uplight (brass cylinder, beam UP)',
-    gutter: 'Mounted uplight at 1st-story roof edge (brass bullet, beam UP at 2nd story)',
+    gutter: 'Invisible roof-edge light — soft warm wash ONLY on wall ABOVE, ZERO light below, NO visible fixture, NOT a sconce, NOT a soffit',
     path: 'Path light bollard (brass dome-top, 360° ground pool)',
     well: 'In-ground well light (flush, beam UP at trees)',
     hardscape: 'Step/hardscape light (LED bar under tread, beam DOWN)',
@@ -2950,7 +2819,7 @@ function buildManualPrompt(
       coredrill: 'Concrete/paver surfaces have no flush lights, no wall-grazing from driveways',
     };
 
-    const promptLabelMap: Record<string, string> = { gutter: 'MOUNTED UPLIGHT' };
+    const promptLabelMap: Record<string, string> = { gutter: 'WASH-UP▲' };
     prompt += `## THESE FIXTURE TYPES WERE NOT SELECTED — THEY MUST NOT APPEAR\n`;
     for (const type of nonSelectedTypes) {
       if (darkDescriptions[type]) {
@@ -2964,7 +2833,7 @@ function buildManualPrompt(
   // 1d. Type authority rule
   prompt += `## TYPE AUTHORITY RULE\n`;
   prompt += `The fixture TYPE is determined EXCLUSIVELY by the marker label — NEVER by location.\n`;
-  prompt += `- A marker labeled "MOUNTED" at ANY position = mounted uplight at the roof edge, beam UP — regardless of surroundings\n`;
+  prompt += `- A marker labeled "WASH-UP▲" at ANY position = invisible roof-edge light, warm wash on wall ABOVE only, NO visible fixture — regardless of surroundings\n`;
   prompt += `- A marker labeled "UP" at ANY position = ground-mounted uplight, regardless of surroundings\n`;
   prompt += `- You MUST NOT substitute one fixture type for another based on where the marker is placed\n`;
   prompt += `- The user placed each marker deliberately — the marker label IS the user's intent\n\n`;
@@ -2991,46 +2860,8 @@ function buildManualPrompt(
   prompt += `- Only the landscape lighting fixtures provide meaningful illumination\n`;
   prompt += `- Light pools on ground: soft feathered edges. Hard surfaces reflect slightly more than grass/mulch.\n\n`;
 
-  // 2. Image reference instruction (pre-lit, gradient, or marker-only)
-  if (isPreLitMode) {
-    prompt += `## DUAL-IMAGE REFERENCE\n`;
-    prompt += `You are given TWO task images:\n`;
-    prompt += `- IMAGE 1 (PRE-LIT NIGHTTIME): A nighttime photograph with warm lighting effects ALREADY rendered at the correct positions and directions\n`;
-    prompt += `- IMAGE 2 (MARKER REFERENCE): The same house (daytime) with numbered markers confirming each fixture position\n\n`;
-
-    prompt += `## YOUR REFINEMENT TASK\n`;
-    prompt += `IMAGE 1 already shows the correct lighting — your job is to make it look PHOTOREALISTIC:\n`;
-    prompt += `- Smooth any artificial-looking gradient edges into naturally feathered warm light\n`;
-    prompt += `- Make light interact with wall textures (brick glows differently than siding)\n`;
-    prompt += `- Add subtle atmospheric scatter in the beams (visible light columns in air)\n`;
-    prompt += `- Ground pools should have soft, natural falloff on grass/concrete\n`;
-    prompt += `- Fixture hardware should look like real brass/metal landscape lighting fixtures\n\n`;
-
-    prompt += `## CRITICAL: PRESERVE THE PRE-LIT DARKNESS\n`;
-    prompt += `The dark areas in IMAGE 1 are INTENTIONALLY dark — they represent areas with NO fixtures.\n`;
-    prompt += `- Do NOT brighten any area that is dark/black in IMAGE 1\n`;
-    prompt += `- Do NOT add ambient fill light to "complete" the scene\n`;
-    prompt += `- Do NOT add light sources that don't exist in IMAGE 1\n`;
-    prompt += `- If soffits/eaves are dark in IMAGE 1, they MUST stay dark — NO soffit downlights unless one is visible in IMAGE 1\n`;
-    prompt += `- The overall darkness level of the output MUST match IMAGE 1\n\n`;
-
-    prompt += `## CRITICAL: CLEAN OUTPUT — NO ANNOTATIONS VISIBLE\n`;
-    prompt += `Your output MUST look like a clean, professional photograph with ZERO annotation artifacts:\n`;
-    prompt += `- NO numbered circles, colored dots, or markers from IMAGE 2\n`;
-    prompt += `- NO text labels or type names\n`;
-    prompt += `- The output should be INDISTINGUISHABLE from a real nighttime photograph\n\n`;
-
-    prompt += `## COUNT RULES\n`;
-    prompt += `IMAGE 1 contains EXACTLY ${count} pre-rendered light effects.\n`;
-    prompt += `Your output MUST contain EXACTLY ${count} light effects — no more, no fewer.\n`;
-    prompt += `Any area WITHOUT a pre-rendered light MUST remain COMPLETELY DARK.\n\n`;
-
-    prompt += `## POSITION MATCHING RULE\n`;
-    prompt += `The lights in IMAGE 1 are ALREADY at the correct positions. Do NOT move them.\n`;
-    prompt += `Use IMAGE 2 markers to VERIFY positions — if a light in IMAGE 1 appears to drift from the marker in IMAGE 2, keep the light at the IMAGE 2 marker position.\n`;
-    prompt += `- For MOUNTED markers specifically: the marker Y% position IS where the fixture is mounted\n`;
-    prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
-  } else if (hasGradientImage) {
+  // 2. Image reference instruction (gradient map or marker-only)
+  if (hasGradientImage) {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
     prompt += `You are given TWO task images:\n`;
     prompt += `- IMAGE 1 (NIGHTTIME BASE): A nighttime photograph of the house with NO lights on — use as your BASE\n`;
@@ -3049,19 +2880,20 @@ function buildManualPrompt(
     prompt += `The faint warm-colored shapes in IMAGE 2 indicate ONLY two things:\n`;
     prompt += `- POSITION: Where each light fixture is located (center of the marker)\n`;
     prompt += `- DIRECTION: Which way the light beam points (upward shape = uplight, downward shape = downlight, circular = omnidirectional)\n\n`;
-    prompt += `DO NOT reproduce the gradient shapes literally. Instead, render each light as:\n`;
-    prompt += `- Soft, PHOTOREALISTIC illumination with naturally feathered edges\n`;
-    prompt += `- Warm light that interacts realistically with the surface it hits (walls glow softly, ground pools have natural falloff)\n`;
-    prompt += `- Natural beam spread — NOT hard triangular or conical shapes\n`;
-    prompt += `- Light that looks like it comes from a real landscape lighting fixture\n\n`;
+    prompt += `DO NOT reproduce the gradient shapes literally. The gradients are just POSITION and DIRECTION guides. Instead, render each light as:\n`;
+    prompt += `- A soft, wide WALL WASH — the wall surface itself glows warmly, revealing its texture\n`;
+    prompt += `- ABSOLUTELY NO hard triangles, cones, V-shapes, or geometric beam patterns\n`;
+    prompt += `- Light that looks IDENTICAL to real professional landscape lighting photography\n`;
+    prompt += `- The wall's material (stone, brick, siding) should be beautifully revealed by the warm light grazing across its surface\n`;
+    prompt += `- Think: "the wall is glowing" NOT "a beam is hitting the wall"\n\n`;
 
     prompt += `## DIRECTION RULES\n`;
-    prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, mounted uplights, core drills)\n`;
+    prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, WASH-UP▲ uplights, core drills)\n`;
     prompt += `- Downward-pointing hints = light beams going DOWN (soffit downlights, step lights)\n`;
     prompt += `- Circular hints = omnidirectional ground-level pools (path lights, bollards)\n`;
     prompt += `- NEVER reverse the indicated direction\n`;
-    prompt += `- MOUNTED UPLIGHTS beam UPWARD from the roof edge toward the 2nd story — they are NOT soffit downlights\n`;
-    prompt += `- If a marker is at the roofline with an upward hint, render light going UP — NEVER render it as a downlight\n\n`;
+    prompt += `- WASH-UP▲ markers beam UPWARD from the roof edge — INVISIBLE fixture, warm wash on wall ABOVE only, NO visible hardware, ZERO light below, NOT a sconce, NOT a soffit\n`;
+    prompt += `- If a marker is at the roofline with an upward hint, render light going UP — NEVER render it as a downlight or sconce\n\n`;
 
     prompt += `## COUNT RULES\n`;
     prompt += `The guide contains EXACTLY ${count} fixture positions.\n`;
@@ -3071,6 +2903,7 @@ function buildManualPrompt(
     prompt += `## PROHIBITED FIXTURES\n`;
     prompt += `Do NOT add any light sources that are not indicated by the annotated guide:\n`;
     prompt += `- NO wall-mounted sconces, lanterns, or decorative wall fixtures\n`;
+    prompt += `- NO visible fixtures at WASH-UP▲ marker positions — the fixture is hidden and INVISIBLE\n`;
     prompt += `- NO porch lights, coach lights, or entrance fixtures\n`;
     prompt += `- NO string lights, recessed ceiling lights, or window glow\n`;
     prompt += `- The ONLY light sources in the scene are the ${count} fixtures marked in the guide\n`;
@@ -3082,7 +2915,7 @@ function buildManualPrompt(
     prompt += `- Match vertical position EXACTLY — if marker is at 80% from top, light must be at 80% from top\n`;
     prompt += `- DO NOT "snap" fixtures to architectural features — marker position overrides any perceived "correct" location\n`;
     prompt += `- If a marker appears in an unusual position, TRUST THE MARKER — the user placed it deliberately\n`;
-    prompt += `- For MOUNTED markers specifically: the marker Y% position IS where the fixture is mounted — even if you cannot clearly see the roof edge at that location in the photo\n`;
+    prompt += `- For WASH-UP▲ markers specifically: the marker Y% position IS where the light originates — warm wash goes ABOVE this point only\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
   } else {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
@@ -3096,7 +2929,7 @@ function buildManualPrompt(
     prompt += `- Match vertical position EXACTLY — if marker is at 80% from top, light must be at 80% from top\n`;
     prompt += `- DO NOT "snap" fixtures to architectural features — marker position overrides any perceived "correct" location\n`;
     prompt += `- If a marker appears in an unusual position, TRUST THE MARKER — the user placed it deliberately\n`;
-    prompt += `- For MOUNTED markers specifically: the marker Y% position IS where the fixture is mounted — even if you cannot clearly see the roof edge at that location in the photo\n`;
+    prompt += `- For WASH-UP▲ markers specifically: the marker Y% position IS where the light originates — warm wash goes ABOVE this point only\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
   }
 
@@ -3108,7 +2941,7 @@ function buildManualPrompt(
     if (c) {
       const labelMap2: Record<string, string> = {
         up: 'UP light (ground-mounted, beam UP)',
-        gutter: 'MOUNTED uplight (mounted at roof edge, beam UP at 2nd story — NOT a soffit downlight)',
+        gutter: 'WASH-UP▲ (invisible roof-edge light — warm wash on wall ABOVE only, NO visible fixture, NOT a sconce, NOT a soffit)',
         path: 'PATH light (bollard on ground)',
         well: 'WELL light (in-ground, beam UP at trees)',
         hardscape: 'STEP/HARDSCAPE light (under tread)',
@@ -3118,7 +2951,7 @@ function buildManualPrompt(
       prompt += `- ${c.name} circle (${c.hex}) = ${labelMap2[type] || type}\n`;
     }
   }
-  prompt += `\nEach marker also has a TEXT LABEL below it (UP, MOUNTED, PATH, etc.) confirming the type.\n`;
+  prompt += `\nEach marker also has a TEXT LABEL below it (UP, WASH-UP▲, PATH, etc.) confirming the type.\n`;
   prompt += `The NUMBER inside each circle is the fixture sequence number.\n\n`;
 
   // 3. Manual placement header
@@ -3136,13 +2969,13 @@ function buildManualPrompt(
 
   if (presentTypes.has('up')) {
     prompt += `### "UP" MARKERS — Ground-Mounted Up Lights\n`;
-    prompt += `- FIXTURE: Small brass/bronze cylinder ground stake, low-profile, nearly invisible at night\n`;
-    prompt += `- MOUNTING: Staked into the ground AT THE BASE of the house foundation, within 6 inches of the wall\n`;
-    prompt += `- BEAM DIRECTION: Aimed straight UP but LEANED BACK 15° from vertical (tilted slightly away from the wall). This prevents a harsh hot spot at the base and creates a NARROW COLUMN of light up the wall — NOT a wide wash.\n`;
-    prompt += `- BEAM REACH: The light column MUST illuminate the wall from bottom to top, reaching the gutter line / roofline directly above (8-25 ft). The beam does NOT stop at mid-wall — it lights the FULL HEIGHT.\n`;
-    prompt += `- LIGHT PHYSICS: Because of the 15° lean-back, light starts on the wall 12-18 inches above ground (not at the fixture). Brightest at mid-wall, narrow column of light continuing up to the roofline with natural falloff at the edges, NO hot spots at the fixture base.\n`;
-    prompt += `- BEAM WIDTH: Each uplight creates a NARROW column (15-25° beam angle). Adjacent uplights MUST have VISIBLE DARK GAPS between their beams — the columns do NOT merge into a continuous wash.\n`;
-    prompt += `- THIS IS A GROUND-LEVEL FIXTURE — the brass cylinder sits at ground level, NOT mounted on the wall\n\n`;
+    prompt += `- FIXTURE: The fixture itself is INVISIBLE at night — you should NOT see a brass cylinder or any hardware. The only visible element is the LIGHT it produces on the wall.\n`;
+    prompt += `- MOUNTING: At ground level at the base of the wall.\n`;
+    prompt += `- WHAT THE LIGHT LOOKS LIKE: A soft, wide WASH of warm light on the wall surface. NOT a hard triangle or cone shape. The light looks like a gentle glow that reveals the wall's texture (stone, brick, siding). Think of it as the wall itself glowing warmly — not a spotlight beam projected onto it.\n`;
+    prompt += `- BEAM REACH: The warm wash covers the wall from near-ground ALL THE WAY UP to the roofline/eaves. The FULL wall height is illuminated. Brightest in the lower half, gently dimming toward the top — but light is still clearly visible at the roofline.\n`;
+    prompt += `- BEAM WIDTH: Wide enough to softly illuminate 4-6 feet of wall width. The edges feather out gradually — NO hard edges, NO geometric shapes, NO triangles.\n`;
+    prompt += `- TEXTURE INTERACTION: The light reveals the wall's material texture — stone mortar joints, brick patterns, siding lines. This is what makes it look REAL. The light grazes across the surface, creating subtle shadows in the texture.\n`;
+    prompt += `- DO NOT DRAW THE FIXTURE — only draw the light effect on the wall. The fixture is hidden in landscaping and invisible at night.\n\n`;
   }
 
   if (presentTypes.has('path')) {
@@ -3189,26 +3022,44 @@ function buildManualPrompt(
     prompt += `- THIS IS NOT A PROTRUDING UPLIGHT — there is NO brass cylinder sticking up. The fixture is INVISIBLE, flush with the concrete surface\n\n`;
   }
 
-  // MOUNTED last — recency bias ensures the AI remembers this most-confused fixture type
+  // WASH-UP▲ last — recency bias ensures the AI remembers this most-confused fixture type
   if (presentTypes.has('gutter')) {
-    prompt += `### "MOUNTED" MARKERS — Mounted UP Lights (THIS IS NOT A SOFFIT DOWNLIGHT)\n`;
-    prompt += `- FIXTURE: Compact brass bullet or mini flood UP light with mounting bracket\n`;
-    prompt += `- MOUNTING: Mounted at the 1st-story roof edge, at the marker's exact Y% position\n`;
-    prompt += `- BEAM DIRECTION: Aims UPWARD to illuminate 2nd story features, roofline fascia, dormers, and gables ABOVE the mounting point\n`;
-    prompt += `- BEAM REACH: 10-25 ft upward from the mounting point to illuminate features above\n`;
-    prompt += `- THIS IS AN UP LIGHT — light goes UP toward the 2nd story, NEVER down toward the ground.\n`;
-    prompt += `- NEVER render this as a soffit downlight, recessed downlight, or any downward-facing fixture\n`;
-    prompt += `- The marker position tells you EXACTLY where this fixture is mounted. Mount the fixture at the marker's Y% coordinate.\n`;
-    prompt += `- CRITICAL FOR GROUND-LEVEL PHOTOS: You may not be able to clearly see the roof edge. TRUST THE MARKER POSITION — it shows exactly where to mount the fixture.\n\n`;
+    prompt += `### "WASH-UP▲" MARKERS — Invisible Roof-Edge Uplights (NOT a sconce, NOT a soffit downlight)\n`;
+    prompt += `- FIXTURE: COMPLETELY INVISIBLE — you must NOT draw ANY visible fixture, sconce, bracket, or hardware at this position. NOTHING visible at the mounting point.\n`;
+    prompt += `- LIGHT EFFECT: A soft, wide WASH of warm light on the wall ABOVE the marker. The 2nd story wall glows warmly, revealing texture (stone, siding, stucco). NOT a hard beam — a natural, diffused wash.\n`;
+    prompt += `- DIRECTION: UPWARD ONLY. ABSOLUTELY ZERO light below the marker. The surface below must remain completely DARK.\n`;
+    prompt += `- REACH: Light washes ALL THE WAY UP from the marker to the peak/gable above — the FULL 2nd story wall height.\n`;
+    prompt += `- NOT A WALL SCONCE — no visible fixture, no bidirectional light, no hardware. Only the warm glow on the wall above.\n`;
+    prompt += `- NOT A SOFFIT DOWNLIGHT — light goes UP, never down from the eaves. No recessed ceiling lights.\n`;
+    prompt += `- The marker position tells you EXACTLY where the light originates.\n`;
+
+    // Per-fixture coordinate reinforcement for gutter placements
+    const gutterPlacements = spatialMap.placements.filter(p => p.fixtureType === 'gutter');
+    const gutterStartIdx = spatialMap.placements.findIndex(p => p.fixtureType === 'gutter');
+    gutterPlacements.forEach((p, i) => {
+      const fixtureNum = gutterStartIdx + i + 1;
+      prompt += `- WASH-UP▲ #${fixtureNum} at EXACTLY [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] — warm wall wash ABOVE this point ONLY. ZERO light below. NO visible fixture.\n`;
+    });
+    prompt += `\n`;
+
+    // Dedicated soffit prohibition when gutter is present
+    prompt += `## SOFFIT DOWNLIGHTS — ABSOLUTE PROHIBITION\n`;
+    prompt += `ZERO soffit downlights may appear in the output image.\n`;
+    prompt += `- Eave/soffit undersides MUST be PITCH BLACK — no recessed lights, no downward cones\n`;
+    prompt += `- If you see a WASH-UP▲/CYAN marker near the roofline: that is an UPWARD WASH, light goes UP\n`;
+    prompt += `- NEVER interpret a roofline marker as a soffit downlight\n`;
+    prompt += `- VISUAL TEST: All light near the roofline must travel UPWARD. Any downward light from the eaves = ERROR.\n`;
+    prompt += `- The upward arrow (▲) on each WASH-UP▲ marker confirms the light direction is UP.\n\n`;
   }
 
   // 6. Confusion prevention (UNCONDITIONAL — always include all distinctions)
   prompt += `## CRITICAL CONFUSION PREVENTION\n`;
-  prompt += `### MOUNTED ≠ SOFFIT (Most common mistake — DO NOT confuse these)\n`;
-  prompt += `- MOUNTED UP LIGHT: Brass fixture at the roof edge → beam shoots UPWARD at 2nd story/roofline\n`;
-  prompt += `- SOFFIT DOWNLIGHT: Recessed in the overhang ceiling → beam shoots DOWNWARD at ground\n`;
-  prompt += `- These are OPPOSITE directions. If a marker says "MOUNTED", the light MUST go UP.\n`;
-  prompt += `- If you render a downward-facing light for a "MOUNTED" marker, you have made an error — fix it.\n`;
+  prompt += `### WASH-UP▲ ≠ SCONCE ≠ SOFFIT (Critical — these are THREE DIFFERENT things)\n`;
+  prompt += `- WASH-UP▲ (WHAT USER SELECTED): INVISIBLE fixture — warm wash on wall ABOVE only, ZERO light below, NO visible hardware\n`;
+  prompt += `- SCONCE (FORBIDDEN): Visible wall-mounted fixture with light both up AND down — NEVER render for WASH-UP▲ markers\n`;
+  prompt += `- SOFFIT DOWNLIGHT (FORBIDDEN): Recessed in overhang ceiling, beam DOWN — NEVER render for WASH-UP▲ markers\n`;
+  prompt += `- If your render shows a visible fixture at a WASH-UP▲ position = you rendered a SCONCE = WRONG\n`;
+  prompt += `- If your render shows downward light from the eaves = you rendered a SOFFIT DOWNLIGHT = WRONG\n`;
   prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
   prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
   prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
@@ -3221,8 +3072,12 @@ function buildManualPrompt(
 
   // 6b. Common mistakes section
   prompt += `## COMMON MISTAKES TO AVOID\n`;
-  prompt += `- WRONG: Rendering a soffit downlight when marker says "MOUNTED" (because it's near the roofline)\n`;
-  prompt += `  RIGHT: MOUNTED markers = light goes UP from the roof edge toward 2nd story, regardless of position\n`;
+  prompt += `- WRONG: Rendering a visible sconce/wall fixture for a "WASH-UP▲" marker\n`;
+  prompt += `  RIGHT: WASH-UP▲ = INVISIBLE fixture, only a warm glow on the wall ABOVE is visible\n`;
+  prompt += `- WRONG: Light going BOTH up and down from a "WASH-UP▲" marker (sconce behavior)\n`;
+  prompt += `  RIGHT: WASH-UP▲ = light UP ONLY. Wall below the marker must remain DARK.\n`;
+  prompt += `- WRONG: Rendering a soffit downlight or recessed light at a "WASH-UP▲" marker\n`;
+  prompt += `  RIGHT: WASH-UP▲ = light goes UPWARD, never downward. No recessed lights.\n`;
   prompt += `- WRONG: Rendering a visible brass cylinder for a "COREDRILL" marker\n`;
   prompt += `  RIGHT: Coredrill = invisible flush fixture in concrete, only the light beam is visible\n`;
   prompt += `- WRONG: Rendering a path light as a ground-level uplight (or vice versa)\n`;
@@ -3230,17 +3085,16 @@ function buildManualPrompt(
   prompt += `- WRONG: Moving a light to a "nicer" position instead of the exact marker location\n`;
   prompt += `  RIGHT: Trust the marker position — the user placed it deliberately\n\n`;
 
-  // 7. Dramatic lighting style
-  prompt += `## DRAMATIC LIGHTING STYLE (MANDATORY)\n`;
-  prompt += `- Each fixture creates a DISTINCT, ISOLATED pool of light\n`;
-  prompt += `- DARK GAPS between fixtures are MANDATORY — light pools do NOT blend into continuous wash\n`;
-  prompt += `- Beam angle: 15-25° narrow spot for dramatic contrast\n`;
-  prompt += `- INVERSE SQUARE LAW: Brightest at mid-point, rapid dimming with distance from fixture\n`;
-  prompt += `- Soft beam edges: 6-12 inch feathered transitions, never crisp circles or hard edges\n`;
-  prompt += `- Color temperature: warm amber (2700K-3000K)\n`;
-  prompt += `- Shadows are as important as light — professional lighting REQUIRES intentional dark areas between fixtures\n`;
-  prompt += `- WALL SECTIONS between uplight beams MUST show VISIBLE DARK GAPS — if two uplights are 10ft apart, the wall between them must have a noticeably darker zone\n`;
-  prompt += `- Each uplight creates a NARROW COLUMN, not a wide wash — adjacent columns do NOT merge into continuous illumination\n\n`;
+  // 7. Lighting style — photorealism
+  prompt += `## LIGHTING STYLE — MUST LOOK LIKE A REAL PHOTOGRAPH (MANDATORY)\n`;
+  prompt += `The output must be INDISTINGUISHABLE from a real photograph of a professionally lit home at night.\n\n`;
+  prompt += `- Color temperature: warm (2700K-3000K)\n`;
+  prompt += `- SOFT WALL WASHES: Light appears as a gentle, wide glow on the wall surface — the wall GLOWS warmly. NEVER render hard-edged triangles, cones, V-shapes, or geometric spotlight beams.\n`;
+  prompt += `- FULL WALL COVERAGE: Each uplight washes the wall from near-ground ALL THE WAY UP to the roofline/eaves. The entire wall height glows. Brightest in the lower half, gently fading toward the top — but still clearly visible at the roofline.\n`;
+  prompt += `- TEXTURE REVELATION: The warm light grazes across the wall surface, beautifully revealing stone texture, brick mortar joints, or siding lines. This texture interaction is what makes the lighting look REAL.\n`;
+  prompt += `- INVISIBLE FIXTURES: The light fixtures themselves are NOT visible at night. Do NOT draw brass cylinders, hardware, or any fixture body. Only draw the LIGHT EFFECT on the walls and surfaces.\n`;
+  prompt += `- NO GEOMETRIC SHAPES: Real landscape lighting NEVER creates hard triangles or cone shapes on walls. It creates soft, diffused washes. If your output has any triangle or cone shapes, it is WRONG.\n`;
+  prompt += `- REFERENCE: Look at professional landscape lighting photography — the walls glow warmly and evenly, fixtures are invisible, and the light reveals beautiful architectural texture.\n\n`;
 
   // 8. Absolute prohibition
   prompt += `## ABSOLUTELY FORBIDDEN — ZERO TOLERANCE\n`;
@@ -3269,7 +3123,7 @@ function buildManualPrompt(
     path: 'brass path light bollard',
     well: 'in-ground well light (beam UP)',
     hardscape: 'under-tread step light',
-    gutter: 'mounted uplight at roof edge (beam UP at 2nd story)',
+    gutter: 'invisible roof-edge uplight — warm wash on wall ABOVE only, no visible fixture',
     coredrill: 'flush in-ground core drill light (beam UP from concrete)'
   };
   spatialMap.placements.forEach((p, i) => {
@@ -3284,10 +3138,10 @@ function buildManualPrompt(
   prompt += `2. You MUST have EXACTLY ${count} light sources — one for each marker\n`;
   prompt += `3. If you count FEWER than ${count}: you MISSED a marker — go back and add the missing light\n`;
   prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light — REMOVE it immediately\n`;
-  prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, MOUNTED=upward beam from roof edge, PATH=bollard, etc.)\n`;
+  prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, WASH-UP▲=invisible uplight warm wall wash ABOVE only, PATH=bollard, etc.)\n`;
   let verifyNum = 6;
   if (presentTypes.has('gutter') && !presentTypes.has('soffit')) {
-    prompt += `${verifyNum}. Verify ZERO soffit/downlights exist — the user placed MOUNTED up lights, NOT soffit downlights\n`;
+    prompt += `${verifyNum}. Verify ZERO soffit/downlights exist AND ZERO visible sconces — the user placed WASH-UP▲ lights (invisible fixtures, upward wash only)\n`;
     verifyNum++;
   }
   prompt += `${verifyNum}. For each light, verify it is within 3% of the marker's x,y coordinates\n`;
@@ -3522,7 +3376,7 @@ export const generateManualScene = async (
   targetRatio: string,
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
-  _fixtures?: LightFixture[],
+  fixtures?: LightFixture[],
   nightBaseBase64?: string
 ): Promise<{ result: string; nightBase: string }> => {
   console.log('[Manual Mode] Starting two-pass manual generation...');
@@ -3546,28 +3400,36 @@ export const generateManualScene = async (
     nightBase = await generateNightBase(imageBase64, imageMimeType, targetRatio);
   }
 
-  // ── Pre-lit nighttime image (replaces gradient guide) ───────────────────────
+  const workingNightBase = nightBase;
+  const workingAspectRatio = targetRatio;
+
+  // ── Gradient generation (painted on ORIGINAL daytime image for contrast) ───
   onStageUpdate?.('generating');
 
-  // Paint realistic fixture glows on nighttime base + darken unlit areas
-  console.log(`[Manual Mode] Creating pre-lit nighttime image with ${spatialMap.placements.length} fixture glows...`);
-  const preLitImage = await createPreLitNighttime(nightBase, spatialMap, imageMimeType);
-  console.log('[Manual Mode] Pre-lit nighttime image created (glows + darkened unlit areas).');
+  const hasGradients = !!(fixtures && fixtures.length > 0);
+  let gradientImage: string | undefined;
+  let markedImage: string | undefined;
 
-  // Draw markers on daytime image for position reference
-  console.log('[Manual Mode] Drawing fixture markers for position reference...');
-  const markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
-  console.log('[Manual Mode] Markers drawn.');
+  if (hasGradients) {
+    console.log(`[Manual Mode] Painting directional light gradients for ${fixtures!.length} fixtures...`);
+    gradientImage = await paintLightGradients(imageBase64, fixtures!, imageMimeType);
+    console.log('[Manual Mode] Gradient map painted (includes numbered markers).');
+  } else {
+    console.log('[Manual Mode] Drawing fixture markers...');
+    markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
+    console.log('[Manual Mode] Markers drawn.');
+  }
+
+  const workingSpatialMap = spatialMap;
 
   const manualPrompt = buildManualPrompt(
-    spatialMap,
+    workingSpatialMap,
     colorTemperaturePrompt,
     lightIntensity,
     beamAngle,
-    true,   // hasGradientImage (uses dual-image reference)
-    true    // isPreLitMode (refinement prompt)
+    hasGradients
   );
-  console.log('[Manual Mode] Prompt built (refinement mode). Length:', manualPrompt.length, 'characters');
+  console.log('[Manual Mode] Prompt built. Length:', manualPrompt.length, 'characters');
 
   // Load few-shot reference examples for the selected fixture types
   const fixtureTypes = [...new Set(spatialMap.placements.map(p => p.fixtureType))];
@@ -3583,33 +3445,35 @@ export const generateManualScene = async (
     console.warn('[Manual Mode] Reference loading failed (non-blocking):', err);
   }
 
-  // ── PASS 2: Refine pre-lit image to photorealism ───────────────────────────
+  // ── PASS 2: Add lighting effects to nighttime base ─────────────────────────
   onStageUpdate?.('placing');
-  console.log('[Pass 2] Sending pre-lit nighttime + markers to Gemini for refinement...');
+  console.log('[Pass 2] Sending nighttime base + gradient to Gemini for lighting...');
 
   const result = await generateNightScene(
-    preLitImage,      // Pre-lit nighttime with realistic glows + darkened soffits
+    workingNightBase,
     manualPrompt,
     imageMimeType,
-    targetRatio,
+    workingAspectRatio,
     lightIntensity,
     beamAngle,
     colorTemperaturePrompt,
     userPreferences,
-    markedImage,      // Position reference with numbered markers
+    markedImage,
     true,
     referenceParts.length > 0 ? referenceParts : undefined,
-    undefined         // No separate gradient image needed
+    gradientImage
   );
 
   console.log('[Pass 2] Lighting generation complete!');
 
+  const finalResult = result;
+
   // Post-generation verification (non-blocking)
   onStageUpdate?.('verifying');
-  const verification = await verifyGeneratedImage(result, imageMimeType, spatialMap.placements);
+  const verification = await verifyGeneratedImage(finalResult, imageMimeType, spatialMap.placements);
   console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} — ${verification.details}`);
 
-  return { result, nightBase };
+  return { result: finalResult, nightBase };
 };
 
 /**
