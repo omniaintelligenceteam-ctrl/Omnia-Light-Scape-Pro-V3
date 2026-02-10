@@ -1457,7 +1457,7 @@ ${placementInstructions}
 
 # SHADOW REALISM FOR THIS PROPERTY
 Based on ${architecture.wall_height_estimate} walls:
-- Light must travel full height (${architecture.story_count === 1 ? '8-12ft' : architecture.story_count === 2 ? '18-25ft' : '25+ft'}) to soffit
+- Light must travel full height (${architecture.story_count === 1 ? '8-12ft' : architecture.story_count === 2 ? '18-25ft' : '25+ft'}) to the roofline
 - Intensity falloff: gradual dimming over full wall height
 - Between fixtures: GRADUAL TRANSITION shadows (NOT uniform darkness)
 - Ambient scatter: soft glow extends 2-3 feet beyond beam edge
@@ -1646,7 +1646,7 @@ export const generateNightScene = async (
 
 LIGHT OUTPUT CHARACTERISTICS:
 - Faint accent glow providing ambient definition
-- Light barely reaches first story soffit (8-10 ft max reach)
+- Light barely reaches first story roofline (8-10 ft max reach)
 - Soft, gentle pools of light with gradual falloff
 - Beam edges EXTREMELY soft and diffused (12+ inch transition zone)
 - Minimal atmospheric scatter visible near fixture
@@ -1670,7 +1670,7 @@ BEST FOR: Ambient mood, pathway marking, subtle accent, intimate settings`;
 
 LIGHT OUTPUT CHARACTERISTICS:
 - Standard 1st story reach (8-12 ft walls)
-- Light comfortably reaches soffit with gentle falloff
+- Light comfortably reaches the roofline with gentle falloff
 - Visible wall grazing that reveals texture WITHOUT hot spots
 - Soft beam edges with 6-8 inch feather/transition zone
 - Subtle atmospheric glow visible near fixture lens
@@ -1961,7 +1961,7 @@ ${preferenceContext}
     - ABSENCE = ABSOLUTE PROHIBITION
 
     ## SPECIFIC PROHIBITIONS
-    - NO soffit/downlights unless "Soffit Lights" is explicitly in DESIGN REQUEST
+    - NO recessed overhead lights or downward eave lights unless explicitly in DESIGN REQUEST
     - NO path lights unless "Path Lights" is explicitly in DESIGN REQUEST
     - NO tree up lights unless "Trees" sub-option is explicitly selected
     - NO siding up lights unless "Siding" sub-option is explicitly selected
@@ -2687,9 +2687,7 @@ function buildEnhancedPrompt(
       prompt += `## ABSOLUTELY FORBIDDEN — ZERO TOLERANCE\n`;
       prompt += `The following must have ZERO instances in the output:\n`;
       prompt += `- ANY light source without a corresponding numbered marker in IMAGE 2\n`;
-      if (!presentTypes.has('soffit')) {
-        prompt += `- ANY soffit downlights or recessed overhead lights (NONE were placed by the user)\n`;
-      }
+      prompt += `- ANY recessed overhead lights or downward light from eaves (NONE were placed)\n`;
       prompt += `- Porch lights, sconces, lanterns, string lights, pendant lights\n`;
       prompt += `- Window glow, interior lights, ambient room lighting visible through glass\n`;
       prompt += `- Ambient illumination or sky glow beyond what the ${count} placed fixtures produce\n`;
@@ -2701,7 +2699,6 @@ function buildEnhancedPrompt(
       prompt += `## MARKER CHECKLIST — Verify EVERY marker is converted:\n`;
       const labelMap: Record<string, string> = {
         up: 'small bronze uplight (beam UP)',
-        soffit: 'small bronze recessed downlight (beam DOWN)',
         path: 'small bronze path light',
         well: 'small bronze uplight (beam UP)',
         hardscape: 'small bronze step light',
@@ -2723,8 +2720,8 @@ function buildEnhancedPrompt(
       prompt += `3. If you count FEWER than ${count}: you MISSED a marker — go back and add the missing light\n`;
       prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light — REMOVE it immediately\n`;
       prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, WASH-UP▲=invisible uplight warm wall wash ABOVE only, PATH=bollard, etc.)\n`;
-      if (presentTypes.has('gutter') && !presentTypes.has('soffit')) {
-        prompt += `6. Verify ZERO soffit/downlights exist AND ZERO visible sconces — the user placed WASH-UP▲ lights (invisible fixtures, upward wash only)\n`;
+      if (presentTypes.has('gutter')) {
+        prompt += `6. Verify ZERO downward lights from eaves AND ZERO visible sconces — WASH-UP▲ = invisible fixtures, upward wash only\n`;
       }
       prompt += `\n`;
     }
@@ -2793,15 +2790,14 @@ function buildManualPrompt(
   // 1b. Exclusive fixture allowlist
   const allowlistLabelMap: Record<string, string> = {
     up: 'Ground-mounted uplight (brass cylinder, beam UP)',
-    gutter: 'Invisible roof-edge light — soft warm wash ONLY on wall ABOVE, ZERO light below, NO visible fixture, NOT a sconce, NOT a soffit',
+    gutter: 'Invisible roof-edge light — soft warm wash ONLY on wall ABOVE, ZERO light below, NO visible fixture',
     path: 'Path light bollard (brass dome-top, 360° ground pool)',
     well: 'In-ground well light (flush, beam UP at trees)',
     hardscape: 'Step/hardscape light (LED bar under tread, beam DOWN)',
-    soffit: 'Soffit downlight (recessed in overhang, beam DOWN)',
     coredrill: 'Core drill light (flush in concrete, beam UP, NO visible hardware)',
   };
 
-  const allFixtureTypes = ['up', 'gutter', 'path', 'well', 'hardscape', 'soffit', 'coredrill'];
+  const allFixtureTypes = ['up', 'gutter', 'path', 'well', 'hardscape', 'coredrill'];
   const nonSelectedTypes = allFixtureTypes.filter(t => !presentTypes.has(t));
 
   prompt += `## EXCLUSIVE FIXTURE ALLOWLIST — ONLY THESE TYPES MAY EXIST\n`;
@@ -2826,7 +2822,6 @@ function buildManualPrompt(
       path: 'No bollard fixtures, no circular ground pools along walkways',
       well: 'No flush in-ground lights in landscape beds, no tree uplighting from ground',
       hardscape: 'Step risers remain dark, no light bars under treads',
-      soffit: 'Eave undersides are dark shadows with NO downward illumination cones',
       coredrill: 'Concrete/paver surfaces have no flush lights, no wall-grazing from driveways',
     };
 
@@ -2900,10 +2895,10 @@ function buildManualPrompt(
 
     prompt += `## DIRECTION RULES\n`;
     prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, WASH-UP▲ uplights, core drills)\n`;
-    prompt += `- Downward-pointing hints = light beams going DOWN (soffit downlights, step lights)\n`;
+    prompt += `- Downward-pointing hints = light beams going DOWN (step lights, hardscape lights)\n`;
     prompt += `- Circular hints = omnidirectional ground-level pools (path lights, bollards)\n`;
     prompt += `- NEVER reverse the indicated direction\n`;
-    prompt += `- WASH-UP▲ markers beam UPWARD from the roof edge — INVISIBLE fixture, warm wash on wall ABOVE only, NO visible hardware, ZERO light below, NOT a sconce, NOT a soffit\n`;
+    prompt += `- WASH-UP▲ markers beam UPWARD from the roof edge — INVISIBLE fixture, warm wash on wall ABOVE only, NO visible hardware, ZERO light below\n`;
     prompt += `- If a marker is at the roofline with an upward hint, render light going UP — NEVER render it as a downlight or sconce\n\n`;
 
     prompt += `## COUNT RULES\n`;
@@ -2952,11 +2947,10 @@ function buildManualPrompt(
     if (c) {
       const labelMap2: Record<string, string> = {
         up: 'UP light (ground-mounted, beam UP)',
-        gutter: 'WASH-UP▲ (invisible roof-edge light — warm wash on wall ABOVE only, NO visible fixture, NOT a sconce, NOT a soffit)',
+        gutter: 'WASH-UP▲ (invisible roof-edge light — warm wash on wall ABOVE only, NO visible fixture)',
         path: 'PATH light (bollard on ground)',
         well: 'WELL light (in-ground, beam UP at trees)',
         hardscape: 'STEP/HARDSCAPE light (under tread)',
-        soffit: 'SOFFIT downlight (recessed, beam DOWN)',
         coredrill: 'COREDRILL light (flush in concrete, beam UP)',
       };
       prompt += `- ${c.name} circle (${c.hex}) = ${labelMap2[type] || type}\n`;
@@ -3035,7 +3029,7 @@ function buildManualPrompt(
 
   // WASH-UP▲ last — recency bias ensures the AI remembers this most-confused fixture type
   if (presentTypes.has('gutter')) {
-    prompt += `### "WASH-UP▲" MARKERS — Invisible Roof-Edge Uplights (NOT a sconce, NOT a soffit downlight)\n`;
+    prompt += `### "WASH-UP▲" MARKERS — Invisible Roof-Edge Uplights (BEAM UPWARD ONLY)\n`;
     prompt += `- FIXTURE: COMPLETELY INVISIBLE — you must NOT draw ANY visible fixture, sconce, bracket, or hardware at this position. NOTHING visible at the mounting point.\n`;
     prompt += `- LIGHT EFFECT: A soft, wide WASH of warm light on the wall ABOVE the marker. The 2nd story wall glows warmly, revealing texture (stone, siding, stucco). NOT a hard beam — a natural, diffused wash.\n`;
     prompt += `- DIRECTION: UPWARD ONLY. ABSOLUTELY ZERO light below the marker. The surface below must remain completely DARK.\n`;
@@ -3053,24 +3047,23 @@ function buildManualPrompt(
     });
     prompt += `\n`;
 
-    // Dedicated soffit prohibition when gutter is present
-    prompt += `## SOFFIT DOWNLIGHTS — ABSOLUTE PROHIBITION\n`;
-    prompt += `ZERO soffit downlights may appear in the output image.\n`;
-    prompt += `- Eave/soffit undersides MUST be PITCH BLACK — no recessed lights, no downward cones\n`;
-    prompt += `- If you see a WASH-UP▲/CYAN marker near the roofline: that is an UPWARD WASH, light goes UP\n`;
-    prompt += `- NEVER interpret a roofline marker as a soffit downlight\n`;
-    prompt += `- VISUAL TEST: All light near the roofline must travel UPWARD. Any downward light from the eaves = ERROR.\n`;
-    prompt += `- The upward arrow (▲) on each WASH-UP▲ marker confirms the light direction is UP.\n\n`;
+    // Positive-only eave darkness + upward confirmation (no soffit word)
+    prompt += `## EAVE/OVERHANG AREAS — MUST BE PITCH BLACK\n`;
+    prompt += `The underside of ALL roof overhangs and eaves MUST remain completely dark — deep shadow only.\n`;
+    prompt += `- ZERO recessed lights, ZERO downward light cones from any overhang\n`;
+    prompt += `- WASH-UP▲ markers near the roofline = light travels UPWARD onto the wall ABOVE\n`;
+    prompt += `- VISUAL TEST: ALL light near the roofline must travel UPWARD. Any downward light from eaves = ERROR.\n`;
+    prompt += `- The upward arrow (▲) on each WASH-UP▲ marker confirms: light goes UP.\n\n`;
   }
 
   // 6. Confusion prevention (UNCONDITIONAL — always include all distinctions)
   prompt += `## CRITICAL CONFUSION PREVENTION\n`;
-  prompt += `### WASH-UP▲ ≠ SCONCE ≠ SOFFIT (Critical — these are THREE DIFFERENT things)\n`;
-  prompt += `- WASH-UP▲ (WHAT USER SELECTED): INVISIBLE fixture — warm wash on wall ABOVE only, ZERO light below, NO visible hardware\n`;
-  prompt += `- SCONCE (FORBIDDEN): Visible wall-mounted fixture with light both up AND down — NEVER render for WASH-UP▲ markers\n`;
-  prompt += `- SOFFIT DOWNLIGHT (FORBIDDEN): Recessed in overhang ceiling, beam DOWN — NEVER render for WASH-UP▲ markers\n`;
-  prompt += `- If your render shows a visible fixture at a WASH-UP▲ position = you rendered a SCONCE = WRONG\n`;
-  prompt += `- If your render shows downward light from the eaves = you rendered a SOFFIT DOWNLIGHT = WRONG\n`;
+  prompt += `### WASH-UP▲ = INVISIBLE UPWARD WASH (the ONLY correct interpretation)\n`;
+  prompt += `- WASH-UP▲: INVISIBLE fixture — warm wash on wall ABOVE only, ZERO light below, NO visible hardware\n`;
+  prompt += `- FORBIDDEN: Any visible wall-mounted fixture (sconce) at a WASH-UP▲ position\n`;
+  prompt += `- FORBIDDEN: Any downward light from eaves or overhangs — eave undersides are PITCH BLACK\n`;
+  prompt += `- If your render shows a visible fixture at a WASH-UP▲ position = WRONG\n`;
+  prompt += `- If your render shows ANY downward light from the roofline area = WRONG\n`;
   prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
   prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
   prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
@@ -3087,8 +3080,8 @@ function buildManualPrompt(
   prompt += `  RIGHT: WASH-UP▲ = INVISIBLE fixture, only a warm glow on the wall ABOVE is visible\n`;
   prompt += `- WRONG: Light going BOTH up and down from a "WASH-UP▲" marker (sconce behavior)\n`;
   prompt += `  RIGHT: WASH-UP▲ = light UP ONLY. Wall below the marker must remain DARK.\n`;
-  prompt += `- WRONG: Rendering a soffit downlight or recessed light at a "WASH-UP▲" marker\n`;
-  prompt += `  RIGHT: WASH-UP▲ = light goes UPWARD, never downward. No recessed lights.\n`;
+  prompt += `- WRONG: Rendering ANY downward light or recessed overhead light at a "WASH-UP▲" marker\n`;
+  prompt += `  RIGHT: WASH-UP▲ = light goes UPWARD onto the wall above, eaves stay pitch black.\n`;
   prompt += `- WRONG: Rendering a visible brass cylinder for a "COREDRILL" marker\n`;
   prompt += `  RIGHT: Coredrill = invisible flush fixture in concrete, only the light beam is visible\n`;
   prompt += `- WRONG: Rendering a path light as a ground-level uplight (or vice versa)\n`;
@@ -3111,9 +3104,7 @@ function buildManualPrompt(
   prompt += `## ABSOLUTELY FORBIDDEN — ZERO TOLERANCE\n`;
   prompt += `The following must have ZERO instances in the output:\n`;
   prompt += `- ANY light source without a corresponding numbered marker in IMAGE 2\n`;
-  if (!presentTypes.has('soffit')) {
-    prompt += `- ANY soffit downlights or recessed overhead lights (NONE were placed by the user)\n`;
-  }
+  prompt += `- ANY recessed overhead lights or downward light from eaves (NONE were placed)\n`;
   prompt += `- Porch lights, sconces, lanterns, string lights, pendant lights\n`;
   prompt += `- Window glow, interior lights, ambient room lighting visible through glass\n`;
   prompt += `- Ambient illumination or sky glow beyond what the ${count} placed fixtures produce\n`;
@@ -3130,7 +3121,6 @@ function buildManualPrompt(
   prompt += `## MARKER CHECKLIST — Verify EVERY marker is converted:\n`;
   const labelMap: Record<string, string> = {
     up: 'ground-mounted uplight (beam UP)',
-    soffit: 'soffit downlight (beam DOWN)',
     path: 'brass path light bollard',
     well: 'in-ground well light (beam UP)',
     hardscape: 'under-tread step light',
@@ -3151,8 +3141,8 @@ function buildManualPrompt(
   prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light — REMOVE it immediately\n`;
   prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, WASH-UP▲=invisible uplight warm wall wash ABOVE only, PATH=bollard, etc.)\n`;
   let verifyNum = 6;
-  if (presentTypes.has('gutter') && !presentTypes.has('soffit')) {
-    prompt += `${verifyNum}. Verify ZERO soffit/downlights exist AND ZERO visible sconces — the user placed WASH-UP▲ lights (invisible fixtures, upward wash only)\n`;
+  if (presentTypes.has('gutter')) {
+    prompt += `${verifyNum}. Verify ZERO downward lights from eaves AND ZERO visible sconces — WASH-UP▲ = invisible fixtures, upward wash only\n`;
     verifyNum++;
   }
   prompt += `${verifyNum}. For each light, verify it is within 3% of the marker's x,y coordinates\n`;

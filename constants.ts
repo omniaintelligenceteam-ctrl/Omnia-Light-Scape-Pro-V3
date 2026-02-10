@@ -2361,7 +2361,7 @@ export const FEATURE_LIGHTING_GUIDELINES: Record<string, string> = {
   'column': 'Ground-mounted uplight at base of each column. Graze the full height to capital.',
   'pilaster': 'Treat like flat columns. One uplight per pilaster, tight to wall.',
   'archway': 'Flank with uplights to trace the arch curve. Two fixtures minimum.',
-  'portico': 'Combination of column uplights and soffit downlights for layered effect.',
+  'portico': 'Combination of column uplights and overhead downlights for layered effect.',
   'bay-window': 'Uplight from ground to emphasize projection. Avoid direct light on glass.',
   'balcony': 'Underlight the balcony floor or uplight supporting columns.',
   'turret': 'Multiple uplights around base to illuminate cylindrical form evenly.',
