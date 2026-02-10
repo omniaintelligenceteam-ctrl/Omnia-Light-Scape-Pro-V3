@@ -1789,9 +1789,9 @@ function buildEnhancedPrompt(
       prompt += `2. You MUST have EXACTLY ${count} light sources â€” one for each marker\n`;
       prompt += `3. If you count FEWER than ${count}: you MISSED a marker â€” go back and add the missing light\n`;
       prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light â€” REMOVE it immediately\n`;
-      prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, WASH-UPâ–²=invisible uplight warm wall wash ABOVE only, PATH=bollard, etc.)\n`;
+      prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, GUTTER=uplight in gutter beam UPWARD, PATH=bollard, etc.)\n`;
       if (presentTypes.has('gutter')) {
-        prompt += `6. Verify ZERO downward lights from eaves AND ZERO visible sconces â€” WASH-UPâ–² = invisible fixtures, upward wash only\n`;
+        prompt += `6. Verify ZERO downward lights from eaves â€" GUTTER fixtures aim UPWARD only, eave undersides stay DARK\n`;
       }
       prompt += `\n`;
     }
@@ -1896,7 +1896,7 @@ function buildManualPrompt(
       coredrill: 'Concrete/paver surfaces have no flush lights, no wall-grazing from driveways',
     };
 
-    const promptLabelMap: Record<string, string> = { gutter: 'WASH-UPâ–²' };
+    const promptLabelMap: Record<string, string> = { gutter: 'GUTTER' };
     prompt += `## THESE FIXTURE TYPES WERE NOT SELECTED â€” THEY MUST NOT APPEAR\n`;
     for (const type of nonSelectedTypes) {
       if (darkDescriptions[type]) {
@@ -1910,7 +1910,7 @@ function buildManualPrompt(
   // 1d. Type authority rule
   prompt += `## TYPE AUTHORITY RULE\n`;
   prompt += `The fixture TYPE is determined EXCLUSIVELY by the marker label â€” NEVER by location.\n`;
-  prompt += `- A marker labeled "WASH-UPâ–²" at ANY position = invisible roof-edge light, warm wash on wall ABOVE only, NO visible fixture â€” regardless of surroundings\n`;
+  prompt += `- A marker labeled "GUTTER" at ANY position = small uplight in rain gutter, beam UPWARD on wall above, NO downlights from eaves â€" regardless of surroundings\n`;
   prompt += `- A marker labeled "UP" at ANY position = ground-mounted uplight, regardless of surroundings\n`;
   prompt += `- You MUST NOT substitute one fixture type for another based on where the marker is placed\n`;
   prompt += `- The user placed each marker deliberately â€” the marker label IS the user's intent\n\n`;
@@ -1965,11 +1965,11 @@ function buildManualPrompt(
     prompt += `- Think: "the wall is glowing" NOT "a beam is hitting the wall"\n\n`;
 
     prompt += `## DIRECTION RULES\n`;
-    prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, WASH-UPâ–² uplights, core drills)\n`;
+    prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, GUTTER uplights, core drills)\n`;
     prompt += `- Downward-pointing hints = light beams going DOWN (step lights, hardscape lights)\n`;
     prompt += `- Circular hints = omnidirectional ground-level pools (path lights, bollards)\n`;
     prompt += `- NEVER reverse the indicated direction\n`;
-    prompt += `- WASH-UPâ–² markers beam UPWARD from the roof edge â€” INVISIBLE fixture, warm wash on wall ABOVE only, NO visible hardware, ZERO light below\n`;
+    prompt += `- GUTTER markers = small uplight in rain gutter at roof edge, beam goes UPWARD on wall above, NO downlights from eaves, ZERO light below\n`;
     prompt += `- If a marker is at the roofline with an upward hint, render light going UP â€” NEVER render it as a downlight or sconce\n\n`;
 
     prompt += `## COUNT RULES\n`;
@@ -1980,7 +1980,7 @@ function buildManualPrompt(
     prompt += `## PROHIBITED FIXTURES\n`;
     prompt += `Do NOT add any light sources that are not indicated by the annotated guide:\n`;
     prompt += `- NO wall-mounted sconces, lanterns, or decorative wall fixtures\n`;
-    prompt += `- NO visible fixtures at WASH-UPâ–² marker positions â€” the fixture is hidden and INVISIBLE\n`;
+    prompt += `- NO downlights from eaves â€" GUTTER fixtures aim UPWARD, eave undersides stay DARK\n`;
     prompt += `- NO porch lights, coach lights, or entrance fixtures\n`;
     prompt += `- NO string lights, recessed ceiling lights, or window glow\n`;
     prompt += `- The ONLY light sources in the scene are the ${count} fixtures marked in the guide\n`;
@@ -1994,7 +1994,7 @@ function buildManualPrompt(
     prompt += `- Match vertical position EXACTLY â€” if marker is at 80% from top, light must be at 80% from top\n`;
     prompt += `- DO NOT "snap" fixtures to architectural features â€” marker position overrides any perceived "correct" location\n`;
     prompt += `- If a marker appears in an unusual position, TRUST THE MARKER â€” the user placed it deliberately\n`;
-    prompt += `- For WASH-UPâ–² markers specifically: the marker Y% position IS where the light originates â€” warm wash goes ABOVE this point only\n`;
+    prompt += `- For GUTTER markers specifically: the marker Y% position IS where the light originates â€" warm light washes UPWARD on the wall above this point\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
   } else {
     prompt += `## DUAL-IMAGE REFERENCE\n`;
@@ -2008,7 +2008,7 @@ function buildManualPrompt(
     prompt += `- Match vertical position EXACTLY â€” if marker is at 80% from top, light must be at 80% from top\n`;
     prompt += `- DO NOT "snap" fixtures to architectural features â€” marker position overrides any perceived "correct" location\n`;
     prompt += `- If a marker appears in an unusual position, TRUST THE MARKER â€” the user placed it deliberately\n`;
-    prompt += `- For WASH-UPâ–² markers specifically: the marker Y% position IS where the light originates â€” warm wash goes ABOVE this point only\n`;
+    prompt += `- For GUTTER markers specifically: the marker Y% position IS where the light originates â€" warm light washes UPWARD on the wall above this point\n`;
     prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
   }
 
@@ -2020,7 +2020,7 @@ function buildManualPrompt(
     if (c) {
       const labelMap2: Record<string, string> = {
         up: 'UP light (ground-mounted, beam UP)',
-        gutter: 'WASH-UPâ–² (invisible roof-edge light â€” warm wash on wall ABOVE only, NO visible fixture)',
+        gutter: 'GUTTER (small uplight in rain gutter â€" beam UPWARD on wall above, NO downlights from eaves)',
         path: 'PATH light (bollard on ground)',
         well: 'WELL light (in-ground, beam UP at trees)',
         hardscape: 'STEP/HARDSCAPE light (under tread)',
@@ -2029,7 +2029,7 @@ function buildManualPrompt(
       prompt += `- ${c.name} circle (${c.hex}) = ${labelMap2[type] || type}\n`;
     }
   }
-  prompt += `\nEach marker also has a TEXT LABEL below it (UP, WASH-UPâ–², PATH, etc.) confirming the type.\n`;
+  prompt += `\nEach marker also has a TEXT LABEL below it (UP, GUTTER, PATH, etc.) confirming the type.\n`;
   prompt += `The NUMBER inside each circle is the fixture sequence number.\n\n`;
 
   // 3. Manual placement header
@@ -2100,12 +2100,13 @@ function buildManualPrompt(
     prompt += `- THIS IS NOT A PROTRUDING UPLIGHT â€” there is NO brass cylinder sticking up. The fixture is INVISIBLE, flush with the concrete surface\n\n`;
   }
 
-  // WASH-UPâ–² last â€” recency bias ensures the AI remembers this most-confused fixture type
+  // GUTTER last â€" recency bias ensures the AI remembers this most-confused fixture type
   if (presentTypes.has('gutter')) {
-    prompt += `### "WASH-UPâ–²" MARKERS â€” Invisible Uplights at 1st Story Roof Edge\n`;
-    prompt += `- NO VISIBLE FIXTURE â€” nothing visible at the mounting point. Only the light effect is visible.\n`;
-    prompt += `- LIGHT DIRECTION: UPWARD ONLY â€” warm wash on the 2nd story wall ABOVE each marker. ZERO light below.\n`;
-    prompt += `- EAVE UNDERSIDES: PITCH BLACK â€” absolutely NO recessed downlights, NO downward light from any overhang.\n`;
+    prompt += `### "GUTTER" MARKERS â€" Gutter-Mounted Uplights at 1st Story Roof Edge\n`;
+    prompt += `- FIXTURE: Small uplight mounted inside the rain gutter at the 1st story roofline\n`;
+    prompt += `- BEAM: Aims UPWARD â€" warm light washes UP the 2nd story wall directly above each marker\n`;
+    prompt += `- Each fixture lights ONLY the wall section above its own horizontal position\n`;
+    prompt += `- NO DOWNLIGHTS: Do NOT create soffit lights, eave lights, or any downward beam. Eave undersides stay DARK.\n`;
 
     // Per-fixture coordinate reinforcement for gutter placements
     const gutterPlacements = spatialMap.placements.filter(p => p.fixtureType === 'gutter');
@@ -2114,20 +2115,19 @@ function buildManualPrompt(
       const fixtureNum = gutterStartIdx + i + 1;
       const leftBound = Math.max(0, p.horizontalPosition - 8).toFixed(1);
       const rightBound = Math.min(100, p.horizontalPosition + 8).toFixed(1);
-      prompt += `- WASH-UPâ–² #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] â€” wall wash UPWARD between X=${leftBound}% and X=${rightBound}% ONLY. ZERO light below or outside this range.\n`;
+      prompt += `- GUTTER #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] â€" beam UPWARD on wall between X=${leftBound}% and X=${rightBound}% ONLY. ZERO light below or outside this range.\n`;
     });
-    prompt += `- Peaks/gables WITHOUT a WASH-UPâ–² marker below them = completely DARK.\n`;
-    prompt += `- If 3 peaks visible but only 1 has a marker below it â†’ ONLY that 1 peak is lit.\n\n`;
+    prompt += `- Peaks/gables WITHOUT a GUTTER marker below them = completely DARK.\n`;
+    prompt += `- If 3 peaks visible but only 1 has a marker below it â†' ONLY that 1 peak is lit.\n\n`;
   }
 
   // 6. Confusion prevention (UNCONDITIONAL â€” always include all distinctions)
   prompt += `## CRITICAL CONFUSION PREVENTION\n`;
-  prompt += `### WASH-UPâ–² = INVISIBLE UPWARD WASH (the ONLY correct interpretation)\n`;
-  prompt += `- WASH-UPâ–²: INVISIBLE fixture â€” warm wash on wall ABOVE only, ZERO light below, NO visible hardware\n`;
-  prompt += `- FORBIDDEN: Any visible wall-mounted fixture (sconce) at a WASH-UPâ–² position\n`;
-  prompt += `- FORBIDDEN: Any downward light from eaves or overhangs â€” eave undersides are PITCH BLACK\n`;
-  prompt += `- If your render shows a visible fixture at a WASH-UPâ–² position = WRONG\n`;
-  prompt += `- If your render shows ANY downward light from the roofline area = WRONG\n`;
+  prompt += `### GUTTER UPLIGHTS â€" LIGHT GOES UP, NEVER DOWN\n`;
+  prompt += `- GUTTER marker = small uplight in rain gutter, beam goes UPWARD on wall above\n`;
+  prompt += `- FORBIDDEN: Any downward light from eaves, soffits, or overhangs\n`;
+  prompt += `- FORBIDDEN: Wall-mounted sconces or visible hardware at GUTTER marker positions\n`;
+  prompt += `- If your render shows downward light from the roofline = WRONG â€" gutter lights aim UP\n`;
   prompt += `### COREDRILL â‰  UP (Different fixtures â€” do NOT confuse)\n`;
   prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
   prompt += `- UP: Small 4-inch brass ground stake in landscaping â€” light goes UP onto wall ONLY. NO ground pool. NOT a tall bollard.\n`;
@@ -2140,12 +2140,10 @@ function buildManualPrompt(
 
   // 6b. Common mistakes section
   prompt += `## COMMON MISTAKES TO AVOID\n`;
-  prompt += `- WRONG: Rendering a visible sconce/wall fixture for a "WASH-UPâ–²" marker\n`;
-  prompt += `  RIGHT: WASH-UPâ–² = INVISIBLE fixture, only a warm glow on the wall ABOVE is visible\n`;
-  prompt += `- WRONG: Light going BOTH up and down from a "WASH-UPâ–²" marker (sconce behavior)\n`;
-  prompt += `  RIGHT: WASH-UPâ–² = light UP ONLY. Wall below the marker must remain DARK.\n`;
-  prompt += `- WRONG: Rendering ANY downward light or recessed overhead light at a "WASH-UPâ–²" marker\n`;
-  prompt += `  RIGHT: WASH-UPâ–² = light goes UPWARD onto the wall above, eaves stay pitch black.\n`;
+  prompt += `- WRONG: Rendering soffit downlights or eave lights when "GUTTER" markers are placed\n`;
+  prompt += `  RIGHT: GUTTER = small uplight in gutter, warm light washes UP the wall above\n`;
+  prompt += `- WRONG: Light going BOTH up and down from a "GUTTER" marker\n`;
+  prompt += `  RIGHT: GUTTER = light UP ONLY. Eave undersides stay DARK, no downward light.\n`;
   prompt += `- WRONG: Rendering a visible brass cylinder for a "COREDRILL" marker\n`;
   prompt += `  RIGHT: Coredrill = invisible flush fixture in concrete, only the light beam is visible\n`;
   prompt += `- WRONG: Adding path light bollards or ground light pools when only "UP" markers were placed\n`;
@@ -2203,10 +2201,10 @@ function buildManualPrompt(
   prompt += `2. You MUST have EXACTLY ${count} light sources â€” one for each marker\n`;
   prompt += `3. If you count FEWER than ${count}: you MISSED a marker â€” go back and add the missing light\n`;
   prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light â€” REMOVE it immediately\n`;
-  prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, WASH-UPâ–²=invisible uplight warm wall wash ABOVE only, PATH=bollard, etc.)\n`;
+  prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, GUTTER=uplight in gutter beam UPWARD, PATH=bollard, etc.)\n`;
   let verifyNum = 6;
   if (presentTypes.has('gutter')) {
-    prompt += `${verifyNum}. Verify ZERO downward lights from eaves AND ZERO visible sconces â€” WASH-UPâ–² = invisible fixtures, upward wash only\n`;
+    prompt += `${verifyNum}. Verify ZERO downward lights from eaves â€" GUTTER fixtures aim UPWARD only, eave undersides stay DARK\n`;
     verifyNum++;
   }
   prompt += `${verifyNum}. For each light, verify it is within 3% of the marker's x,y coordinates\n`;
