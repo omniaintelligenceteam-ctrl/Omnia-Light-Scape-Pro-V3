@@ -247,6 +247,14 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     intensity: 0.80,
     pool: false,
   },
+  gutter: {
+    color: [255, 220, 150],   // warm white (same as up)
+    radiusX: 0.07,
+    radiusY: 0.16,            // tall vertical wash
+    offsetY: -0.10,           // shifts glow UPWARD (same as up)
+    intensity: 0.80,
+    pool: false,
+  },
   hardscape: {
     color: [255, 225, 165],   // warm step
     radiusX: 0.06,

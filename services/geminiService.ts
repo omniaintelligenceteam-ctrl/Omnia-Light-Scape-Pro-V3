@@ -916,7 +916,7 @@ VISUAL TEST:
 - CORRECT: Two warm washes flanking a peak, illuminating the full gable
 - WRONG: Visible sconce or wall-mounted fixture (WASH-UP▲ = INVISIBLE fixture)
 - WRONG: Light going both up AND down (sconce behavior — WASH-UP▲ = UP ONLY)
-- WRONG: Soffit downlight or recessed ceiling light (WASH-UP▲ = UPWARD, never down)
+- WRONG: Any downward light or recessed ceiling light from eaves (WASH-UP▲ = UPWARD, never down)
 - WRONG: Fixture sitting on roof shingles or mounted on wall face` : '';
 
     return {
@@ -2600,7 +2600,7 @@ function buildEnhancedPrompt(
         prompt += `- BEAM DIRECTION: UPWARD ONLY. ZERO light below the marker — wall/surface below must remain DARK.\n`;
         prompt += `- BEAM REACH: Full height of 2nd story wall above, from marker position up to the peak/gable.\n`;
         prompt += `- NOT A SCONCE: No visible fixture. No bidirectional light. No light going downward.\n`;
-        prompt += `- NOT A SOFFIT DOWNLIGHT: Light goes UP from this position, NEVER down. No recessed downlights.\n\n`;
+        prompt += `- Eave undersides are PITCH BLACK — light goes UP from this position, NEVER down. No recessed overhead lights.\n\n`;
       }
 
       if (presentTypes.has('path')) {
@@ -2651,12 +2651,12 @@ function buildEnhancedPrompt(
       // Critical confusion prevention
       prompt += `## CRITICAL CONFUSION PREVENTION\n`;
       if (presentTypes.has('gutter')) {
-        prompt += `### WASH-UP▲ ≠ SCONCE ≠ SOFFIT (Critical — these are THREE DIFFERENT things)\n`;
-        prompt += `- WASH-UP▲ (WHAT USER SELECTED): INVISIBLE fixture — warm wash on wall ABOVE only, ZERO light below, NO visible hardware\n`;
-        prompt += `- SCONCE (FORBIDDEN): Visible wall-mounted fixture with light both up AND down — NEVER render for WASH-UP▲ markers\n`;
-        prompt += `- SOFFIT DOWNLIGHT (FORBIDDEN): Recessed in overhang ceiling, beam DOWN — NEVER render for WASH-UP▲ markers\n`;
-        prompt += `- If your render shows a visible fixture at a WASH-UP▲ position = you rendered a SCONCE = WRONG\n`;
-        prompt += `- If your render shows downward light from the eaves = you rendered a SOFFIT DOWNLIGHT = WRONG\n`;
+        prompt += `### WASH-UP▲ = INVISIBLE UPWARD WASH (the ONLY correct interpretation)\n`;
+        prompt += `- WASH-UP▲: INVISIBLE fixture — warm wash on wall ABOVE only, ZERO light below, NO visible hardware\n`;
+        prompt += `- FORBIDDEN: Any visible wall-mounted fixture (sconce) at a WASH-UP▲ position\n`;
+        prompt += `- FORBIDDEN: Any downward light from eaves or overhangs — eave undersides are PITCH BLACK\n`;
+        prompt += `- If your render shows a visible fixture at a WASH-UP▲ position = WRONG\n`;
+        prompt += `- If your render shows ANY downward light from the roofline area = WRONG\n`;
       }
       if (presentTypes.has('coredrill') && presentTypes.has('up')) {
         prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
@@ -3035,7 +3035,7 @@ function buildManualPrompt(
     prompt += `- DIRECTION: UPWARD ONLY. ABSOLUTELY ZERO light below the marker. The surface below must remain completely DARK.\n`;
     prompt += `- REACH: Light washes ALL THE WAY UP from the marker to the peak/gable above — the FULL 2nd story wall height.\n`;
     prompt += `- NOT A WALL SCONCE — no visible fixture, no bidirectional light, no hardware. Only the warm glow on the wall above.\n`;
-    prompt += `- NOT A SOFFIT DOWNLIGHT — light goes UP, never down from the eaves. No recessed ceiling lights.\n`;
+    prompt += `- Eave undersides are PITCH BLACK — light goes UP onto the wall above, never down. No recessed ceiling lights.\n`;
     prompt += `- The marker position tells you EXACTLY where the light originates.\n`;
 
     // Per-fixture coordinate reinforcement for gutter placements
