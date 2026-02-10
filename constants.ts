@@ -1100,8 +1100,8 @@ FIXTURE VISIBILITY: INVISIBLE at night. Do NOT render any visible fixture hardwa
 
 BEAM DIRECTION:
 - Each fixture aims straight UPWARD — the beam illuminates the surface DIRECTLY ABOVE the fixture
-- SINGLE FIXTURE: Beam goes straight up, lighting the wall/facade directly above it
-- CROSSED PAIR (large peaks/gables): Two fixtures flanking a peak, beams angled inward to CROSS and illuminate the full peak section
+- Each fixture lights ONLY the wall section directly above its own position
+- Do NOT add extra fixtures or create "pairs" — render EXACTLY the count specified
 
 BEAM REACH:
 - Beams MUST reach the 2nd story features (10-25 ft distance)

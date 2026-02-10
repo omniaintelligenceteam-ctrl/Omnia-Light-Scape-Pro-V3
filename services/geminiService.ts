@@ -2083,7 +2083,7 @@ ${preferenceContext}
         parts: imageParts,
       },
       config: {
-        temperature: 0.2,
+        temperature: 0.1,
         imageConfig: {
             imageSize: "2K",
             aspectRatio: aspectRatio,
@@ -2303,7 +2303,7 @@ export const generateNightSceneDirect = async (
         ],
       },
       config: {
-        temperature: 0.2,
+        temperature: 0.1,
         imageConfig: {
           imageSize: "2K",
           aspectRatio: aspectRatio,
@@ -2788,7 +2788,8 @@ function buildManualPrompt(
   prompt += `5. Do NOT add lights for ANY reason not marked in IMAGE 2\n`;
   prompt += `6. Architecture and landscaping must be IDENTICAL to IMAGE 1\n`;
   prompt += `7. Remove ALL gradient overlays, labels, and markers — output is a CLEAN photo\n`;
-  prompt += `8. Every window MUST remain dark — no interior lights\n\n`;
+  prompt += `8. Every window MUST remain dark — no interior lights\n`;
+  prompt += `9. ZERO downward light from ANY roofline, eave, or overhang — ALL eave undersides are PITCH BLACK. Roofline markers = light goes UPWARD ONLY.\n\n`;
 
   // 1b. Exclusive fixture allowlist
   const allowlistLabelMap: Record<string, string> = {
@@ -2916,7 +2917,9 @@ function buildManualPrompt(
     prompt += `- NO porch lights, coach lights, or entrance fixtures\n`;
     prompt += `- NO string lights, recessed ceiling lights, or window glow\n`;
     prompt += `- The ONLY light sources in the scene are the ${count} fixtures marked in the guide\n`;
-    prompt += `- If a wall, door, or garage has no marker near it, it must have NO fixture on it\n\n`;
+    prompt += `- If a wall, door, or garage has no marker near it, it must have NO fixture on it\n`;
+    prompt += `- NO recessed eave downlights — eave/overhang undersides are ALL PITCH BLACK with zero light\n`;
+    prompt += `- Any marker at the roofline means light goes UPWARD — NEVER render a downlight at that position\n\n`;
 
     prompt += `## POSITION MATCHING RULE\n`;
     prompt += `Each marker's crosshair intersection is the PRECISE fixture location.\n`;
@@ -3032,14 +3035,10 @@ function buildManualPrompt(
 
   // WASH-UP▲ last — recency bias ensures the AI remembers this most-confused fixture type
   if (presentTypes.has('gutter')) {
-    prompt += `### "WASH-UP▲" MARKERS — Invisible Roof-Edge Uplights (BEAM UPWARD ONLY)\n`;
-    prompt += `- FIXTURE: COMPLETELY INVISIBLE — you must NOT draw ANY visible fixture, sconce, bracket, or hardware at this position. NOTHING visible at the mounting point.\n`;
-    prompt += `- LIGHT EFFECT: A soft, wide WASH of warm light on the wall DIRECTLY ABOVE this marker's horizontal (X) position. ONLY the wall section within ~8% of the marker's X-coordinate is illuminated. Peaks and gables WITHOUT a WASH-UP▲ marker below them MUST remain DARK.\n`;
-    prompt += `- DIRECTION: UPWARD ONLY. ABSOLUTELY ZERO light below the marker. The surface below must remain completely DARK.\n`;
-    prompt += `- REACH: Light washes from the marker UP to the peak DIRECTLY ABOVE this specific marker. Peaks, gables, and wall sections NOT directly above a WASH-UP▲ marker stay completely DARK.\n`;
-    prompt += `- NOT A WALL SCONCE — no visible fixture, no bidirectional light, no hardware. Only the warm glow on the wall above.\n`;
-    prompt += `- Eave undersides are PITCH BLACK — light goes UP onto the wall above, never down. No recessed ceiling lights.\n`;
-    prompt += `- The marker position tells you EXACTLY where the light originates.\n`;
+    prompt += `### "WASH-UP▲" MARKERS — Invisible Uplights at 1st Story Roof Edge\n`;
+    prompt += `- NO VISIBLE FIXTURE — nothing visible at the mounting point. Only the light effect is visible.\n`;
+    prompt += `- LIGHT DIRECTION: UPWARD ONLY — warm wash on the 2nd story wall ABOVE each marker. ZERO light below.\n`;
+    prompt += `- EAVE UNDERSIDES: PITCH BLACK — absolutely NO recessed downlights, NO downward light from any overhang.\n`;
 
     // Per-fixture coordinate reinforcement for gutter placements
     const gutterPlacements = spatialMap.placements.filter(p => p.fixtureType === 'gutter');
@@ -3048,24 +3047,10 @@ function buildManualPrompt(
       const fixtureNum = gutterStartIdx + i + 1;
       const leftBound = Math.max(0, p.horizontalPosition - 8).toFixed(1);
       const rightBound = Math.min(100, p.horizontalPosition + 8).toFixed(1);
-      prompt += `- WASH-UP▲ #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] — illuminates ONLY wall between X=${leftBound}% and X=${rightBound}%, going UPWARD. ZERO light below or outside this X-range. NO visible fixture.\n`;
+      prompt += `- WASH-UP▲ #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] — wall wash UPWARD between X=${leftBound}% and X=${rightBound}% ONLY. ZERO light below or outside this range.\n`;
     });
-    prompt += `\n`;
-
-    // Peak-exclusion rule — only light directly above markers
-    prompt += `## CRITICAL: ONLY LIGHT DIRECTLY ABOVE EACH MARKER\n`;
-    prompt += `- Each WASH-UP▲ marker lights ONLY the wall/peak DIRECTLY ABOVE its horizontal position\n`;
-    prompt += `- Peaks, gables, dormers WITHOUT a WASH-UP▲ marker below them MUST remain completely DARK\n`;
-    prompt += `- Do NOT spread light to adjacent sections — darkness between lit sections is intentional\n`;
-    prompt += `- Example: If 3 peaks are visible but only 1 has a marker below it, ONLY that 1 peak gets lit. The other 2 stay DARK.\n\n`;
-
-    // Positive-only eave darkness + upward confirmation (no soffit word)
-    prompt += `## EAVE/OVERHANG AREAS — MUST BE PITCH BLACK\n`;
-    prompt += `The underside of ALL roof overhangs and eaves MUST remain completely dark — deep shadow only.\n`;
-    prompt += `- ZERO recessed lights, ZERO downward light cones from any overhang\n`;
-    prompt += `- WASH-UP▲ markers near the roofline = light travels UPWARD onto the wall ABOVE\n`;
-    prompt += `- VISUAL TEST: ALL light near the roofline must travel UPWARD. Any downward light from eaves = ERROR.\n`;
-    prompt += `- The upward arrow (▲) on each WASH-UP▲ marker confirms: light goes UP.\n\n`;
+    prompt += `- Peaks/gables WITHOUT a WASH-UP▲ marker below them = completely DARK.\n`;
+    prompt += `- If 3 peaks visible but only 1 has a marker below it → ONLY that 1 peak is lit.\n\n`;
   }
 
   // 6. Confusion prevention (UNCONDITIONAL — always include all distinctions)
@@ -3078,7 +3063,7 @@ function buildManualPrompt(
   prompt += `- If your render shows ANY downward light from the roofline area = WRONG\n`;
   prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
   prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
-  prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
+  prompt += `- UP: Small 4-inch brass ground stake in landscaping — light goes UP onto wall ONLY. NO ground pool. NOT a tall bollard.\n`;
   prompt += `- If a marker says "COREDRILL", there must be NO visible fixture — only the light beam on the wall above.\n`;
   prompt += `### COREDRILL ≠ WELL (Different locations)\n`;
   prompt += `- COREDRILL: Flush in CONCRETE/PAVERS near walls and garage piers\n`;
@@ -3350,7 +3335,7 @@ REQUIREMENTS:
         { text: prompt }
       ]},
       config: {
-        temperature: 0.2,
+        temperature: 0.1,
         imageConfig: { imageSize: "2K", aspectRatio },
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },

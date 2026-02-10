@@ -78,7 +78,7 @@ const GRADIENT_CONFIGS: Record<FixtureCategory, GradientConfig> = {
     direction: 'up',
     heightPercent: 35,
     widthPercent: 8,
-    originOffsetYPercent: -1,
+    originOffsetYPercent: -3,
     opacity: 0.55,
   },
   downlight: {
