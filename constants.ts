@@ -1080,14 +1080,13 @@ EXCLUSIONS:
     positivePrompt: `CATEGORY ENABLED: WASH-UP▲ UPLIGHTS (INVISIBLE fixtures) at 1st Story Roof Edge.
 
 PLACEMENT: Fixtures MUST be mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high).
-TARGET: Beams shine UPWARD to illuminate 2nd story sections - AI decides what to light based on the home's architecture.
+TARGET: Beams shine UPWARD to illuminate 2nd story sections DIRECTLY ABOVE each fixture's horizontal position.
 
-WHAT TO LIGHT (AI decides based on what's present):
-- Dormers (if present): one fixture centered below each dormer
-- 2nd story windows and siding
-- Gable peaks and architectural features
-- Any 2nd story sections visible above the 1st story roofline
-- Towers, turrets, pop-outs, box bays - any 2nd story section
+WHAT EACH FIXTURE LIGHTS (position-constrained):
+- Each fixture illuminates ONLY the 2nd story wall DIRECTLY ABOVE its horizontal position
+- Peaks, gables, dormers WITHOUT a fixture below them remain completely DARK
+- Do NOT spread light to adjacent sections — only the wall above each fixture's position
+- The user controls exactly WHERE each light goes via marker placement
 
 FIXTURE COUNT: Use the EXACT count specified in the design request. Do NOT add extra fixtures. Do NOT decide your own count. Space fixtures 4-6 feet apart for even coverage.
 
@@ -1123,11 +1122,10 @@ CRITICAL RULE: ONLY 1ST STORY ROOF EDGE receives mounted up lights.
 - NEVER place lights at 2nd story or top-of-house level
 - 2nd story roof edges MUST remain empty - NO fixtures
 
-WHAT TO LIGHT (AI decides based on what's present):
-- Dormers: one fixture centered below each
-- 2nd story windows and siding
-- Gable peaks and architectural features
-- Any 2nd story section above the 1st story roofline
+WHAT EACH FIXTURE LIGHTS (position-constrained):
+- Each fixture illuminates ONLY the 2nd story wall directly above its horizontal position
+- Peaks, gables, dormers without a fixture below them remain DARK
+- Do NOT illuminate the whole facade — only the section above each fixture
 
 FIXTURE COUNT: Use the EXACT count from the design request. Do NOT add or remove fixtures beyond what is specified. Space 4-6 feet apart.`,
         negativePrompt: `Do NOT place any mounted up lights at the 1st story roof edge. 2nd story features must remain dark from roof-edge-level lighting.`,

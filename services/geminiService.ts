@@ -2599,7 +2599,7 @@ function buildEnhancedPrompt(
       if (presentTypes.has('gutter')) {
         prompt += `### "WASH-UP▲" MARKERS — Invisible Roof-Edge Uplights\n`;
         prompt += `- FIXTURE VISIBILITY: COMPLETELY INVISIBLE. Do NOT draw ANY fixture, bracket, sconce, or hardware. The fixture is hidden and cannot be seen at night.\n`;
-        prompt += `- LIGHT EFFECT: Soft, wide WASH of warm light on the 2nd story wall DIRECTLY ABOVE the marker. Wall glows warmly revealing texture.\n`;
+        prompt += `- LIGHT EFFECT: Soft, wide WASH of warm light on the 2nd story wall DIRECTLY ABOVE this marker's horizontal position ONLY. Peaks/gables without a marker below them stay DARK.\n`;
         prompt += `- BEAM DIRECTION: UPWARD ONLY. ZERO light below the marker — wall/surface below must remain DARK.\n`;
         prompt += `- BEAM REACH: Full height of 2nd story wall above, from marker position up to the peak/gable.\n`;
         prompt += `- NOT A SCONCE: No visible fixture. No bidirectional light. No light going downward.\n`;
@@ -2664,7 +2664,7 @@ function buildEnhancedPrompt(
       if (presentTypes.has('coredrill') && presentTypes.has('up')) {
         prompt += `### COREDRILL ≠ UP (Different fixtures — do NOT confuse)\n`;
         prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
-        prompt += `- UP: VISIBLE brass cylinder stake sitting on ground in landscaping bed. Distinct hardware visible.\n`;
+        prompt += `- UP: Small 4-inch brass ground stake in landscaping — light goes UP onto wall ONLY. NO ground pool. NOT a tall bollard.\n`;
         prompt += `- If a marker says "COREDRILL", there must be NO visible fixture — only the light beam on the wall above.\n`;
       }
       if (presentTypes.has('coredrill') && presentTypes.has('well')) {
@@ -2977,13 +2977,13 @@ function buildManualPrompt(
 
   if (presentTypes.has('up')) {
     prompt += `### "UP" MARKERS — Ground-Mounted Up Lights\n`;
-    prompt += `- FIXTURE: The fixture itself is INVISIBLE at night — you should NOT see a brass cylinder or any hardware. The only visible element is the LIGHT it produces on the wall.\n`;
+    prompt += `- FIXTURE: A small brass cylinder ground stake (~4 inches tall) in the landscaping bed at the wall base. At night, the dark bronze blends into landscaping — the dominant visible element is the warm LIGHT WASH on the wall above, NOT the fixture itself.\n`;
     prompt += `- MOUNTING: At ground level at the base of the wall.\n`;
     prompt += `- WHAT THE LIGHT LOOKS LIKE: A soft, wide WASH of warm light on the wall surface. NOT a hard triangle or cone shape. The light looks like a gentle glow that reveals the wall's texture (stone, brick, siding). Think of it as the wall itself glowing warmly — not a spotlight beam projected onto it.\n`;
     prompt += `- BEAM REACH: The warm wash covers the wall from near-ground ALL THE WAY UP to the roofline/eaves. The FULL wall height is illuminated. Brightest in the lower half, gently dimming toward the top — but light is still clearly visible at the roofline.\n`;
     prompt += `- BEAM WIDTH: Wide enough to softly illuminate 4-6 feet of wall width. The edges feather out gradually — NO hard edges, NO geometric shapes, NO triangles.\n`;
     prompt += `- TEXTURE INTERACTION: The light reveals the wall's material texture — stone mortar joints, brick patterns, siding lines. This is what makes it look REAL. The light grazes across the surface, creating subtle shadows in the texture.\n`;
-    prompt += `- DO NOT DRAW THE FIXTURE — only draw the light effect on the wall. The fixture is hidden in landscaping and invisible at night.\n\n`;
+    prompt += `- NOT A PATH LIGHT: NO tall bollard, NO dome/hat fixture, NO pool of light on the ground. Light goes UP onto the wall ONLY. The ground around the fixture remains DARK.\n\n`;
   }
 
   if (presentTypes.has('path')) {
@@ -3034,9 +3034,9 @@ function buildManualPrompt(
   if (presentTypes.has('gutter')) {
     prompt += `### "WASH-UP▲" MARKERS — Invisible Roof-Edge Uplights (BEAM UPWARD ONLY)\n`;
     prompt += `- FIXTURE: COMPLETELY INVISIBLE — you must NOT draw ANY visible fixture, sconce, bracket, or hardware at this position. NOTHING visible at the mounting point.\n`;
-    prompt += `- LIGHT EFFECT: A soft, wide WASH of warm light on the wall ABOVE the marker. The 2nd story wall glows warmly, revealing texture (stone, siding, stucco). NOT a hard beam — a natural, diffused wash.\n`;
+    prompt += `- LIGHT EFFECT: A soft, wide WASH of warm light on the wall DIRECTLY ABOVE this marker's horizontal (X) position. ONLY the wall section within ~8% of the marker's X-coordinate is illuminated. Peaks and gables WITHOUT a WASH-UP▲ marker below them MUST remain DARK.\n`;
     prompt += `- DIRECTION: UPWARD ONLY. ABSOLUTELY ZERO light below the marker. The surface below must remain completely DARK.\n`;
-    prompt += `- REACH: Light washes ALL THE WAY UP from the marker to the peak/gable above — the FULL 2nd story wall height.\n`;
+    prompt += `- REACH: Light washes from the marker UP to the peak DIRECTLY ABOVE this specific marker. Peaks, gables, and wall sections NOT directly above a WASH-UP▲ marker stay completely DARK.\n`;
     prompt += `- NOT A WALL SCONCE — no visible fixture, no bidirectional light, no hardware. Only the warm glow on the wall above.\n`;
     prompt += `- Eave undersides are PITCH BLACK — light goes UP onto the wall above, never down. No recessed ceiling lights.\n`;
     prompt += `- The marker position tells you EXACTLY where the light originates.\n`;
@@ -3046,9 +3046,18 @@ function buildManualPrompt(
     const gutterStartIdx = spatialMap.placements.findIndex(p => p.fixtureType === 'gutter');
     gutterPlacements.forEach((p, i) => {
       const fixtureNum = gutterStartIdx + i + 1;
-      prompt += `- WASH-UP▲ #${fixtureNum} at EXACTLY [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] — warm wall wash ABOVE this point ONLY. ZERO light below. NO visible fixture.\n`;
+      const leftBound = Math.max(0, p.horizontalPosition - 8).toFixed(1);
+      const rightBound = Math.min(100, p.horizontalPosition + 8).toFixed(1);
+      prompt += `- WASH-UP▲ #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] — illuminates ONLY wall between X=${leftBound}% and X=${rightBound}%, going UPWARD. ZERO light below or outside this X-range. NO visible fixture.\n`;
     });
     prompt += `\n`;
+
+    // Peak-exclusion rule — only light directly above markers
+    prompt += `## CRITICAL: ONLY LIGHT DIRECTLY ABOVE EACH MARKER\n`;
+    prompt += `- Each WASH-UP▲ marker lights ONLY the wall/peak DIRECTLY ABOVE its horizontal position\n`;
+    prompt += `- Peaks, gables, dormers WITHOUT a WASH-UP▲ marker below them MUST remain completely DARK\n`;
+    prompt += `- Do NOT spread light to adjacent sections — darkness between lit sections is intentional\n`;
+    prompt += `- Example: If 3 peaks are visible but only 1 has a marker below it, ONLY that 1 peak gets lit. The other 2 stay DARK.\n\n`;
 
     // Positive-only eave darkness + upward confirmation (no soffit word)
     prompt += `## EAVE/OVERHANG AREAS — MUST BE PITCH BLACK\n`;
@@ -3087,8 +3096,8 @@ function buildManualPrompt(
   prompt += `  RIGHT: WASH-UP▲ = light goes UPWARD onto the wall above, eaves stay pitch black.\n`;
   prompt += `- WRONG: Rendering a visible brass cylinder for a "COREDRILL" marker\n`;
   prompt += `  RIGHT: Coredrill = invisible flush fixture in concrete, only the light beam is visible\n`;
-  prompt += `- WRONG: Rendering a path light as a ground-level uplight (or vice versa)\n`;
-  prompt += `  RIGHT: Path lights = tall bollards with 360° ground pools; uplights = short cylinders with narrow upward beams\n`;
+  prompt += `- WRONG: Adding path light bollards or ground light pools when only "UP" markers were placed\n`;
+  prompt += `  RIGHT: UP = small 4-inch ground stake, light UP onto wall ONLY, ZERO ground pool. PATH = tall 22-inch dome-top bollard, 360° ground pools. Completely different fixtures.\n`;
   prompt += `- WRONG: Moving a light to a "nicer" position instead of the exact marker location\n`;
   prompt += `  RIGHT: Trust the marker position — the user placed it deliberately\n\n`;
 
