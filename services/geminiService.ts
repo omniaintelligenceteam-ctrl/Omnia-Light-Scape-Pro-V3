@@ -1699,7 +1699,7 @@ LIGHT OUTPUT CHARACTERISTICS:
 - More pronounced beam visibility and definition
 - Visible light cone in air near fixture (subtle atmospheric effect)
 - Noticeable bloom around fixture lens (2-3 inch radius)
-- Clear bounce light contribution on ground and adjacent surfaces
+- Light beam reaches ground with soft falloff at edges
 - Beam feathers over 8-12 inch transition zone
 
 INVERSE SQUARE LAW APPLICATION:
@@ -1725,7 +1725,7 @@ LIGHT OUTPUT CHARACTERISTICS:
 - Maximum wall coverage with strong definition
 - Pronounced atmospheric scatter near fixture (visible light cone)
 - Strong lens bloom and halo effect (3-4 inch radius)
-- Significant bounce/fill light contribution to surrounding areas
+- Wide beam coverage with natural falloff at edges
 - Beam still feathers at edges (10-15 inch transition zone)
 
 INVERSE SQUARE LAW APPLICATION:
@@ -1872,13 +1872,11 @@ ${preferenceContext}
     - The aspect ratio and boundaries must match the source image exactly
     - If the source shows the full front facade, the output MUST show the full front facade
 
-    # STEP 1: SOURCE IMAGE ANALYSIS (MANDATORY)
-    BEFORE making any changes, you MUST analyze and catalog the input photograph:
-    - Count and note the exact position of every window, door, and architectural feature
-    - Identify all landscaping elements (trees, bushes, plants) and their EXACT positions
-    - Identify all hardscape elements (driveways, sidewalks, patios, walkways) OR note their ABSENCE
-    - Note the exact shape of the roof, any dormers, columns, or decorative elements
-    YOUR OUTPUT MUST PRESERVE THIS CATALOG EXACTLY. Every element stays; no elements added.
+    # STEP 1: PRESERVE THE SOURCE IMAGE EXACTLY (MANDATORY)
+    - The output MUST be a pixel-perfect copy of the source photo with ONLY light effects added
+    - Do NOT add, remove, or modify ANY architectural features, landscaping, or hardscape
+    - Do NOT add windows, doors, walkways, driveways, trees, or any object not in the source
+    - Every pixel that is NOT directly illuminated by a requested fixture stays UNCHANGED
 
     # STEP 2: PIXEL-PERFECT PRESERVATION (CRITICAL)
     1. **ABSOLUTE STRUCTURE LOCK**: The generated image must be a 1:1 edit of the source photo.
@@ -1955,10 +1953,8 @@ ${preferenceContext}
     ## WHAT "NOT SELECTED" MEANS
     If a fixture or sub-option is NOT in the DESIGN REQUEST:
     - It does NOT exist in the output image
-    - The area where it WOULD be placed remains in deep shadow
-    - You do NOT add it "for balance" or "for realism"
-    - You do NOT add it because "it would look better"
-    - ABSENCE = ABSOLUTE PROHIBITION
+    - The area where it WOULD be placed remains in deep shadow — ZERO LIGHT
+    - ABSENCE = ABSOLUTE PROHIBITION — no exceptions for any reason
 
     ## SPECIFIC PROHIBITIONS
     - NO recessed overhead lights or downward eave lights unless explicitly in DESIGN REQUEST
@@ -2022,11 +2018,10 @@ ${preferenceContext}
     - PAINTED SURFACES: Color temperature affects perceived paint color
     - ALL SURFACES: Beam edges appear organic and slightly irregular, never ruler-straight
 
-    ## SECONDARY/BOUNCE LIGHT
-    - Lit surfaces reflect a small amount of light back into the scene
-    - Ground near up lights receives subtle AMBIENT GLOW from wall reflection
-    - Adjacent unlit surfaces receive faint FILL LIGHT from nearby lit areas
-    - This prevents the "floating light in void" artificial look
+    ## LIGHT CONTAINMENT
+    - Light ONLY appears where fixtures directly illuminate
+    - No ambient glow, no fill light, no bounce light beyond the fixture beam
+    - Unlit surfaces remain in deep shadow exactly as in the source image
 
     ## SHADOW QUALITY (LED SOURCES)
     - LED fixtures create SOFT SHADOWS with gradual edges (penumbra)
@@ -2088,6 +2083,7 @@ ${preferenceContext}
         parts: imageParts,
       },
       config: {
+        temperature: 0.2,
         imageConfig: {
             imageSize: "2K",
             aspectRatio: aspectRatio,
@@ -2307,10 +2303,17 @@ export const generateNightSceneDirect = async (
         ],
       },
       config: {
+        temperature: 0.2,
         imageConfig: {
           imageSize: "2K",
           aspectRatio: aspectRatio,
-        }
+        },
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        ],
       },
     });
 
@@ -3338,6 +3341,7 @@ REQUIREMENTS:
         { text: prompt }
       ]},
       config: {
+        temperature: 0.2,
         imageConfig: { imageSize: "2K", aspectRatio },
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
