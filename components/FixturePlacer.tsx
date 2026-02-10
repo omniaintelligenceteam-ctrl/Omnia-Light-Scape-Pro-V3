@@ -10,6 +10,7 @@ import {
   createFixture,
 } from '../types/fixtures';
 import { GradientPreview } from './GradientPreview';
+import { detectGutterLines, GutterLine, GutterDetectionResult } from '../services/geminiService';
 
 // Haptic feedback helper
 const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -69,6 +70,9 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const [isDragging, setIsDragging] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(false);
+  const [gutterLines, setGutterLines] = useState<GutterLine[]>([]);
+  const [showGutterGuides, setShowGutterGuides] = useState(true);
+  const [isDetectingGutters, setIsDetectingGutters] = useState(false);
   const [gridSize] = useState(5);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [showGradientPreview, setShowGradientPreview] = useState(false);
@@ -146,6 +150,44 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     }
   }, [containerSize, imageNaturalAspect]);
 
+  // Detect gutter lines when image loads
+  useEffect(() => {
+    if (!imageUrl || isDetectingGutters || gutterLines.length > 0) return;
+    const detectGutters = async () => {
+      try {
+        setIsDetectingGutters(true);
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const dataUrl = reader.result as string;
+          const [, base64] = dataUrl.split(',');
+          const result = await detectGutterLines(base64, blob.type);
+          setGutterLines(result.gutterLines);
+          if (result.hasGutters) setShowGutterGuides(true);
+        };
+        reader.readAsDataURL(blob);
+      } catch (err) {
+        console.error('Gutter detection failed:', err);
+      } finally {
+        setIsDetectingGutters(false);
+      }
+    };
+    detectGutters();
+  }, [imageUrl]);
+
+  // Find nearest gutter line to snap to
+  const findNearestGutter = useCallback((x: number, y: number): { x: number; y: number } | null => {
+    if (gutterLines.length === 0) return null;
+    const SNAP_THRESHOLD = 15; // percentage units
+    const applicable = gutterLines.filter(g => x >= g.startX && x <= g.endX);
+    if (applicable.length === 0) return null;
+    const nearest = applicable.reduce((closest, g) =>
+      Math.abs(g.y - y) < Math.abs(closest.y - y) ? g : closest
+    );
+    return Math.abs(nearest.y - y) <= SNAP_THRESHOLD ? { x, y: nearest.y } : null;
+  }, [gutterLines]);
+
   // Handle container resize
   useEffect(() => {
     if (!containerRef.current) return;
@@ -171,8 +213,42 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       x = Math.round(x / gridSize) * gridSize;
       y = Math.round(y / gridSize) * gridSize;
     }
+    // Snap to gutter for uplight/spot/wall_wash fixtures
+    if (activeType === 'uplight' || activeType === 'spot' || activeType === 'wall_wash') {
+      const gutterSnap = findNearestGutter(x, y);
+      if (gutterSnap) {
+        x = gutterSnap.x;
+        y = gutterSnap.y;
+      }
+    }
     return { x, y };
-  }, [imageBounds, snapToGrid, gridSize]);
+  }, [imageBounds, snapToGrid, gridSize, activeType, findNearestGutter]);
+
+  // Helper function to find nearest gutter line
+  const findNearestGutterLine = useCallback((y: number, x: number): GutterLine | null => {
+    if (gutterLines.length === 0) return null;
+    
+    // Find gutter lines that cover this X position
+    const applicableGutters = gutterLines.filter(gutter => 
+      x >= gutter.startX && x <= gutter.endX
+    );
+    
+    if (applicableGutters.length === 0) {
+      // No gutters at this X position, find closest overall
+      return gutterLines.reduce((closest, gutter) => {
+        const distance = Math.abs(gutter.y - y);
+        const closestDistance = Math.abs(closest.y - y);
+        return distance < closestDistance ? gutter : closest;
+      });
+    }
+    
+    // Find closest Y among applicable gutters
+    return applicableGutters.reduce((closest, gutter) => {
+      const distance = Math.abs(gutter.y - y);
+      const closestDistance = Math.abs(closest.y - y);
+      return distance < closestDistance ? gutter : closest;
+    });
+  }, [gutterLines]);
 
   // Find fixture near a screen position
   const findFixtureAtScreen = useCallback((clientX: number, clientY: number, radius = 20): LightFixture | null => {
@@ -262,11 +338,29 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     const coords = toImageCoords(e.clientX, e.clientY);
     if (!coords) return;
 
-    const newFixture = createFixture(coords.x, coords.y, activeFixtureType);
+    let { x, y } = coords;
+
+    // Apply snap-to-gutter for appropriate fixture types
+    if (snapToGutter && isGutterFixture && gutterLines.length > 0) {
+      const nearestGutter = findNearestGutterLine(y, x);
+      if (nearestGutter) {
+        const maxSnapDistance = 15; // Maximum 15% Y-distance for snapping
+        const distance = Math.abs(nearestGutter.y - y);
+        
+        if (distance <= maxSnapDistance) {
+          y = nearestGutter.y;
+          // Optionally constrain X to gutter bounds
+          x = Math.max(nearestGutter.startX, Math.min(nearestGutter.endX, x));
+          triggerHaptic('medium'); // Different haptic for gutter snap
+        }
+      }
+    }
+
+    const newFixture = createFixture(x, y, activeFixtureType);
     pushToHistory([...fixtures, newFixture]);
     setSelectedId(newFixture.id);
-    triggerHaptic('medium');
-  }, [isDragging, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory]);
+    triggerHaptic(snapToGutter && isGutterFixture ? 'medium' : 'light');
+  }, [isDragging, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory, snapToGutter, isGutterFixture, gutterLines, findNearestGutterLine]);
 
   const handleRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -634,6 +728,36 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
               backgroundSize: `${gridSize}% ${gridSize}%`,
             }}
           />
+        )}
+
+        {/* Gutter Guide Overlay */}
+        {showGutterGuides && gutterLines.length > 0 && (
+          <div className="absolute inset-0 pointer-events-none">
+            {gutterLines.map(gutter => (
+              <div
+                key={gutter.id}
+                className="absolute border-t-2 border-amber-400/60 transition-opacity duration-300"
+                style={{
+                  left: `${gutter.startX}%`,
+                  top: `${gutter.y}%`,
+                  width: `${gutter.endX - gutter.startX}%`,
+                  height: '1px',
+                  boxShadow: '0 0 4px rgba(251, 191, 36, 0.4)'
+                }}
+              >
+                {/* Gutter line label */}
+                <div className="absolute -top-6 left-0 text-xs text-amber-400 bg-gray-900/80 px-1 rounded whitespace-nowrap">
+                  {gutter.description}
+                </div>
+              </div>
+            ))}
+            {/* Detection confidence indicator */}
+            {gutterDetection && gutterDetection.confidence < 0.7 && (
+              <div className="absolute top-4 right-4 bg-yellow-600/80 text-white text-xs px-2 py-1 rounded">
+                ⚠️ Low confidence ({Math.round(gutterDetection.confidence * 100)}%)
+              </div>
+            )}
+          </div>
         )}
 
         {/* Gradient Preview Overlay */}
