@@ -1432,7 +1432,7 @@ export function generateNarrativePlacement(
   // Per-fixture "render as" micro-descriptions for type reinforcement
   const renderAsMap: Record<string, string> = {
     up: 'small bronze uplight at wall base, beam UPWARD',
-    gutter: 'invisible fixture, warm wall wash ABOVE only â€” NO visible hardware',
+    gutter: 'small uplight in rain gutter, beam UPWARD on wall above â€" NO downlights',
     path: 'small bronze fixture in landscaping, 360Â° ground pool',
     well: 'small bronze uplight at ground level, beam UPWARD at tree canopy',
     hardscape: 'small bronze fixture under step tread, beam DOWNWARD onto riser',
@@ -1617,26 +1617,16 @@ function buildEnhancedPrompt(
     prompt += '\n';
     prompt += `VERIFICATION RULE: Before finalizing the image, mentally count all fixtures. If the count exceeds the inventory above, REMOVE the extras. If any prohibited fixture types appear, REMOVE them entirely.\n\n`;
 
-    // Gutter anti-hallucination: add WASH-UPâ–² invisibility description when gutter is selected
+    // Gutter uplight direction enforcement
     if (selectedFixtures.includes('gutter')) {
-      prompt += `## WASH-UPâ–² GUTTER UPLIGHTS â€” INVISIBLE FIXTURE, EFFECT ONLY (CRITICAL)\n`;
-      prompt += `- FIXTURE: COMPLETELY INVISIBLE â€” hidden inside the gutter trough. Do NOT draw ANY fixture, bracket, sconce, or hardware.\n`;
-      prompt += `- LIGHT EFFECT: A soft, wide WASH of warm light appears on the wall DIRECTLY ABOVE the fixture position. The wall glows warmly, revealing texture.\n`;
-      prompt += `- BEAM DIRECTION: UPWARD ONLY â€” light illuminates ONLY the wall ABOVE the fixture. ABSOLUTELY ZERO light below the mounting point.\n`;
-      prompt += `- BEAM REACH: Light washes ALL THE WAY UP from the mounting point to the peak/gable above.\n\n`;
-      prompt += `WASH-UPâ–² VISUAL TEST:\n`;
-      prompt += `- CORRECT: Wall ABOVE glows warmly with a soft wash â€” NO visible fixture\n`;
-      prompt += `- WRONG: Visible sconce or wall-mounted fixture (WASH-UPâ–² = INVISIBLE)\n`;
-      prompt += `- WRONG: Light going both up AND down (that's a sconce â€” WASH-UPâ–² = UP ONLY)\n`;
-      prompt += `- WRONG: Downward light from eaves (that's a soffit light â€” WASH-UPâ–² = UPWARD only)\n\n`;
+      prompt += `## GUTTER-MOUNTED UPLIGHTS (CRITICAL)\n`;
+      prompt += `- FIXTURE: Small uplight clipped inside the rain gutter trough at the 1st story roofline\n`;
+      prompt += `- BEAM: Aims UPWARD â€" warm light washes UP the 2nd story wall above each fixture\n`;
+      prompt += `- EACH FIXTURE lights ONLY the wall section directly above its own position\n`;
+      prompt += `- NO DOWNLIGHTS: Do NOT create any downward-facing light from eaves or overhangs. Eave undersides stay DARK.\n\n`;
 
-      // Gutter vs sconce vs soffit distinction
       if (!selectedFixtures.includes('soffit')) {
-        prompt += `## CRITICAL DISTINCTION â€” THREE DIFFERENT FIXTURES\n`;
-        prompt += `WASH-UPâ–² (SELECTED): Invisible, inside gutter, light washes UPWARD only\n`;
-        prompt += `SCONCE (NOT SELECTED â€” FORBIDDEN): Visible wall-mounted fixture, light goes both up AND down\n`;
-        prompt += `SOFFIT DOWNLIGHT (NOT SELECTED â€” FORBIDDEN): Under-eave fixture pointing DOWN\n`;
-        prompt += `Eave undersides MUST remain PITCH BLACK â€” no downlights, no recessed fixtures in eaves.\n\n`;
+        prompt += `IMPORTANT: Soffit downlights are NOT selected. Eave undersides must be completely DARK â€" no recessed lights, no downward beams from the roofline.\n\n`;
       }
     }
   }
@@ -1678,13 +1668,11 @@ function buildEnhancedPrompt(
       }
 
       if (presentTypes.has('gutter')) {
-        prompt += `### "WASH-UPâ–²" MARKERS â€” Invisible Roof-Edge Uplights\n`;
-        prompt += `- FIXTURE VISIBILITY: COMPLETELY INVISIBLE. Do NOT draw ANY fixture, bracket, sconce, or hardware. The fixture is hidden and cannot be seen at night.\n`;
-        prompt += `- LIGHT EFFECT: Soft, wide WASH of warm light on the 2nd story wall DIRECTLY ABOVE this marker's horizontal position ONLY. Peaks/gables without a marker below them stay DARK.\n`;
-        prompt += `- BEAM DIRECTION: UPWARD ONLY. ZERO light below the marker â€” wall/surface below must remain DARK.\n`;
-        prompt += `- BEAM REACH: Full height of 2nd story wall above, from marker position up to the peak/gable.\n`;
-        prompt += `- NOT A SCONCE: No visible fixture. No bidirectional light. No light going downward.\n`;
-        prompt += `- Eave undersides are PITCH BLACK â€” light goes UP from this position, NEVER down. No recessed overhead lights.\n\n`;
+        prompt += `### "GUTTER" MARKERS â€" Gutter-Mounted Uplights\n`;
+        prompt += `- FIXTURE: Small uplight mounted inside the rain gutter at the 1st story roofline\n`;
+        prompt += `- BEAM DIRECTION: UPWARD ONLY â€" warm light washes UP the 2nd story wall directly above this marker position\n`;
+        prompt += `- Each fixture lights ONLY the wall section above its own horizontal position. Peaks/gables without a marker below stay DARK.\n`;
+        prompt += `- NO DOWNLIGHTS: Do NOT create soffit lights, eave lights, or any downward beam from the roofline. Eave undersides stay DARK.\n\n`;
       }
 
       if (presentTypes.has('path')) {
@@ -1735,12 +1723,10 @@ function buildEnhancedPrompt(
       // Critical confusion prevention
       prompt += `## CRITICAL CONFUSION PREVENTION\n`;
       if (presentTypes.has('gutter')) {
-        prompt += `### WASH-UPâ–² = INVISIBLE UPWARD WASH (the ONLY correct interpretation)\n`;
-        prompt += `- WASH-UPâ–²: INVISIBLE fixture â€” warm wash on wall ABOVE only, ZERO light below, NO visible hardware\n`;
-        prompt += `- FORBIDDEN: Any visible wall-mounted fixture (sconce) at a WASH-UPâ–² position\n`;
-        prompt += `- FORBIDDEN: Any downward light from eaves or overhangs â€” eave undersides are PITCH BLACK\n`;
-        prompt += `- If your render shows a visible fixture at a WASH-UPâ–² position = WRONG\n`;
-        prompt += `- If your render shows ANY downward light from the roofline area = WRONG\n`;
+        prompt += `### GUTTER UPLIGHTS â€" LIGHT GOES UP, NEVER DOWN\n`;
+        prompt += `- Gutter uplight: fixture in gutter, beam goes UPWARD on wall above\n`;
+        prompt += `- FORBIDDEN: Any downward light from eaves, soffits, or overhangs\n`;
+        prompt += `- If your render shows downward light from the roofline = WRONG â€" gutter lights aim UP\n`;
       }
       if (presentTypes.has('coredrill') && presentTypes.has('up')) {
         prompt += `### COREDRILL â‰  UP (Different fixtures â€” do NOT confuse)\n`;

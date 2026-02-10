@@ -179,14 +179,13 @@ LIGHT GENERATION RULES (CRITICAL)
 GUTTER LIGHT MOUNTING LOCATION (CRITICAL - WHEN GUTTER LIGHTS SELECTED)
 ═══════════════════════════════════════════════════════════════════════════════
 
-GUTTER LIGHT: The fixture is COMPLETELY HIDDEN inside the gutter
-channel — INVISIBLE at night. You must NOT draw any visible fixture.
-The light beam shoots UPWARD from the gutter position to create a
-soft warm WASH on the 2nd story wall ABOVE. Only the light effect
-on the wall is visible — the fixture itself cannot be seen.
+GUTTER UPLIGHT: A small uplight fixture is mounted INSIDE the rain gutter trough.
+The fixture clips into the gutter and aims UPWARD. The warm light beam washes
+UP the wall above the gutter, illuminating the 2nd story wall, peaks, and gables.
 
-NOT on the roof shingles. NOT on the fascia. NOT visible at all.
-The fixture is hidden inside the gutter channel — draw ONLY the light effect.
+LIGHT DIRECTION: UPWARD ONLY — the light goes UP onto the wall above.
+DO NOT create any downward-facing lights from the eaves, soffits, or overhangs.
+The eave undersides stay dark. Light travels UP the wall, never down.
 
 ═══════════════════════════════════════════════════════════════════════════════
 DRAMATIC LIGHTING STYLE (CRITICAL FOR PROFESSIONAL REALISM)
@@ -297,11 +296,11 @@ CORE DRILL SPECIFICATIONS (APPLIES TO ALL IN-GRADE SUB-OPTIONS)
 GUTTER LIGHT SPECIFICATIONS (APPLIES TO ALL GUTTER SUB-OPTIONS)
 ═══════════════════════════════════════════════════════════════════════════════
 
-- Type: Hidden uplight — INVISIBLE at night, only light effect visible
-- Housing: Not visible at night — do not render fixture hardware
-- Mounting: INSIDE the gutter trough — completely hidden from view
-- FORBIDDEN: On roof shingles, on gutter lip, on fascia board, any visible fixture
-- Beam MUST reach target (dormer/gable) regardless of distance
+- Type: Small uplight mounted inside the rain gutter trough
+- Beam: Aims UPWARD to wash light on wall above
+- Mounting: Clipped inside the gutter channel, sitting in the trough
+- FORBIDDEN: Downlights from eaves, soffit-mounted fixtures, any light aimed downward
+- Beam MUST reach target (dormer/gable/peak) above the fixture
 
 ═══════════════════════════════════════════════════════════════════════════════
 MULTI-SELECTION PRIORITY RULES (CRITICAL - PREVENTS DUPLICATE FIXTURES)
@@ -1077,38 +1076,28 @@ EXCLUSIONS:
     id: 'gutter',
     label: 'Gutter Mounted Up Lights',
     description: 'Up lights mounted in gutter illuminating up',
-    positivePrompt: `CATEGORY ENABLED: WASH-UP▲ UPLIGHTS (INVISIBLE fixtures) at 1st Story Roof Edge.
+    positivePrompt: `CATEGORY ENABLED: GUTTER-MOUNTED UPLIGHTS at 1st Story Roof Edge.
 
-PLACEMENT: Fixtures MUST be mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high).
-TARGET: Beams shine UPWARD to illuminate 2nd story sections DIRECTLY ABOVE each fixture's horizontal position.
+WHAT THIS IS: A small uplight fixture mounted inside the rain gutter trough at the 1st story roofline (~8-10 ft high). The fixture sits in the gutter and aims its beam UPWARD.
 
-WHAT EACH FIXTURE LIGHTS (position-constrained):
+LIGHT DIRECTION: UPWARD ONLY. The warm light washes UP the 2nd story wall directly above each fixture. Light goes from the gutter UP to the peak/gable above.
+
+WHAT EACH FIXTURE LIGHTS:
 - Each fixture illuminates ONLY the 2nd story wall DIRECTLY ABOVE its horizontal position
 - Peaks, gables, dormers WITHOUT a fixture below them remain completely DARK
 - Do NOT spread light to adjacent sections — only the wall above each fixture's position
-- The user controls exactly WHERE each light goes via marker placement
 
-FIXTURE COUNT: Use the EXACT count specified in the design request. Do NOT add extra fixtures. Do NOT decide your own count. Space fixtures 4-6 feet apart for even coverage.
+FIXTURE COUNT: Use the EXACT count specified. Do NOT add extra fixtures.
 
-MOUNTING (CRITICAL):
-- At the EDGE of the 1st story roof line (where roof meets fascia, ~8-10 ft high)
-- Fixture is INVISIBLE — hidden in the gutter, not visible at night
-- NEVER on roof shingles, wall surface, or any roof surface
-- NEVER at 2nd story or top-of-house level — 1st story roof edge ONLY
+MOUNTING:
+- Inside the rain gutter at the 1st story roof edge (~8-10 ft high)
+- NEVER on roof shingles or wall surface
+- NEVER at 2nd story level — 1st story gutter ONLY
 
-FIXTURE VISIBILITY: INVISIBLE at night. Do NOT render any visible fixture hardware. Only the light effect on the wall above is visible.
-
-BEAM DIRECTION:
-- Each fixture aims straight UPWARD — the beam illuminates the surface DIRECTLY ABOVE the fixture
-- Each fixture lights ONLY the wall section directly above its own position
-- Do NOT add extra fixtures or create "pairs" — render EXACTLY the count specified
-
-BEAM REACH:
-- Beams MUST reach the 2nd story features (10-25 ft distance)
-- Light travels from 1st story roof edge UP to illuminate features above
-- Beam should reach peaks/gables when present
-- For distant targets: higher wattage, narrower beam angles
-- The light ALWAYS reaches and illuminates the intended target fully`,
+CRITICAL — NO DOWNLIGHTS:
+- Do NOT create any downward-facing light from the eaves or overhangs
+- Eave undersides must stay DARK — no soffit lights, no recessed downlights
+- ALL light from these fixtures goes UPWARD onto the wall above`,
     negativePrompt: `HARD RULE: Do NOT generate any mounted up lights at the roof edge. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting from roof edge level.`,
     subOptions: [
       {
