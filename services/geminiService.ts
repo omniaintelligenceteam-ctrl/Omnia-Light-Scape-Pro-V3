@@ -2528,6 +2528,14 @@ function buildEnhancedPrompt(
     prompt += `7. ANY light source not corresponding to a numbered marker is a FAILURE\n\n`;
     prompt += `FRAMING: Output MUST have the EXACT same framing and composition as the source image. Do NOT crop, zoom, or reframe.\n`;
     prompt += `SKY: Pure black sky with full moon. No stars, gradients, blue tones, or atmospheric glow.\n\n`;
+
+    // Add prohibition list to manual mode too — critical for preventing unwanted fixture types
+    if (inventoryProhibitions) {
+      prompt += `## PROHIBITED FIXTURE TYPES — ZERO INSTANCES ALLOWED\n`;
+      prompt += `The user did NOT place these fixture types. They MUST NOT appear in the output:\n`;
+      prompt += inventoryProhibitions;
+      prompt += `\nIf you see yourself adding ANY fixture type not in the markers above, STOP — it is FORBIDDEN.\n\n`;
+    }
   } else {
     // Auto mode: full creative masterInstruction
     prompt += SYSTEM_PROMPT.masterInstruction + '\n\n';
