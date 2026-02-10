@@ -661,36 +661,70 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
                 zIndex: isSelected ? 100 : 10,
               }}
             >
-              {/* Glow effect */}
-              <div
-                className="absolute rounded-full"
-                style={{
-                  width: 64,
-                  height: 64,
-                  left: -32,
-                  top: -32,
-                  background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
-                  filter: 'blur(4px)',
-                }}
-              />
-              {/* Core dot */}
-              <div
-                className={`relative flex items-center justify-center w-5 h-5 rounded-full border-2 transition-transform ${
-                  isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
-                } ${fixture.locked ? 'opacity-60' : ''}`}
-                style={{
-                  left: -10,
-                  top: -10,
-                  backgroundColor: hexColor,
-                  borderColor: 'white',
-                  boxShadow: `0 0 12px ${hexColor}B3`,
-                }}
-              >
-                <span className="text-[9px] text-white font-bold leading-none">{preset.icon}</span>
-                {fixture.locked && (
-                  <Lock size={7} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
-                )}
-              </div>
+              {fixture.type === 'gutter_uplight' ? (
+                <>
+                  {/* Gutter icon: upward arrow + horizontal bar */}
+                  <div className="relative flex flex-col items-center" style={{ left: -16, top: -28 }}>
+                    {/* Arrowhead */}
+                    <div style={{
+                      width: 0, height: 0,
+                      borderLeft: '6px solid transparent',
+                      borderRight: '6px solid transparent',
+                      borderBottom: `8px solid ${hexColor}`,
+                    }} />
+                    {/* Stem */}
+                    <div style={{ width: 2, height: 10, backgroundColor: 'white' }} />
+                    {/* Horizontal bar (fixture body) */}
+                    <div
+                      className={`flex items-center justify-center rounded-sm border-2 transition-transform ${
+                        isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
+                      } ${fixture.locked ? 'opacity-60' : ''}`}
+                      style={{
+                        width: 32, height: 10,
+                        backgroundColor: hexColor,
+                        borderColor: 'white',
+                        boxShadow: `0 0 12px ${hexColor}B3`,
+                      }}
+                    />
+                  </div>
+                  {fixture.locked && (
+                    <Lock size={7} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Glow effect */}
+                  <div
+                    className="absolute rounded-full"
+                    style={{
+                      width: 64,
+                      height: 64,
+                      left: -32,
+                      top: -32,
+                      background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
+                      filter: 'blur(4px)',
+                    }}
+                  />
+                  {/* Core dot */}
+                  <div
+                    className={`relative flex items-center justify-center w-5 h-5 rounded-full border-2 transition-transform ${
+                      isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
+                    } ${fixture.locked ? 'opacity-60' : ''}`}
+                    style={{
+                      left: -10,
+                      top: -10,
+                      backgroundColor: hexColor,
+                      borderColor: 'white',
+                      boxShadow: `0 0 12px ${hexColor}B3`,
+                    }}
+                  >
+                    <span className="text-[9px] text-white font-bold leading-none">{preset.icon}</span>
+                    {fixture.locked && (
+                      <Lock size={7} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           );
         })}

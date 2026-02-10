@@ -267,7 +267,7 @@ export const FIXTURE_PRESETS: FixturePreset[] = [
     type: 'gutter_uplight',
     name: 'Gutter Light',
     description: 'Gutter-mounted uplight inside channel',
-    icon: '⌐',
+    icon: '↑',
     defaultIntensity: 0.8,
     defaultColorTemp: 2700,
     defaultBeamAngle: 30,

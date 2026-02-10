@@ -109,6 +109,73 @@ const MARKER_LABELS: Record<string, string> = {
  * @param mimeType    - Image MIME type
  * @returns base64 of image with markers drawn (no data URI prefix)
  */
+
+function drawGutterIcon(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  markerRadius: number,
+  color: string,
+  index: number
+): void {
+  const barWidth = markerRadius * 2.4;
+  const barHeight = markerRadius * 0.6;
+  const stemHeight = markerRadius * 2.5;
+  const arrowSize = markerRadius * 0.8;
+
+  // Horizontal bar (the fixture body)
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(cx - barWidth / 2 - 2, cy - barHeight / 2 - 2, barWidth + 4, barHeight + 4);
+  ctx.fillStyle = color;
+  ctx.fillRect(cx - barWidth / 2, cy - barHeight / 2, barWidth, barHeight);
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cx - barWidth / 2, cy - barHeight / 2, barWidth, barHeight);
+
+  // Vertical stem going UP
+  const stemTop = cy - barHeight / 2 - stemHeight;
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - barHeight / 2);
+  ctx.lineTo(cx, stemTop + arrowSize);
+  ctx.stroke();
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - barHeight / 2);
+  ctx.lineTo(cx, stemTop + arrowSize);
+  ctx.stroke();
+
+  // Arrowhead at top
+  ctx.fillStyle = color;
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, stemTop);
+  ctx.lineTo(cx - arrowSize, stemTop + arrowSize);
+  ctx.lineTo(cx + arrowSize, stemTop + arrowSize);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Number on the bar
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `bold ${Math.round(barHeight * 1.2)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(index + 1), cx, cy);
+
+  // "GUTTER" label below
+  const labelY = cy + barHeight / 2 + Math.round(markerRadius * 0.8);
+  ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+  ctx.fillStyle = '#000000';
+  ctx.fillText('GUTTER', cx + 1, labelY + 1);
+  ctx.fillText('GUTTER', cx - 1, labelY - 1);
+  ctx.fillStyle = color;
+  ctx.fillText('GUTTER', cx, labelY);
+}
+
 export async function drawFixtureMarkers(
   imageBase64: string,
   spatialMap: SpatialMap,
@@ -138,6 +205,12 @@ export async function drawFixtureMarkers(
           const color = MARKER_COLORS[placement.fixtureType] || DEFAULT_MARKER_COLOR;
           const label = MARKER_LABELS[placement.fixtureType] || 'LIGHT';
           const crossLen = markerRadius * 2;
+
+          // Gutter fixtures get a custom icon (horizontal bar + upward arrow)
+          if (placement.fixtureType === 'gutter') {
+            drawGutterIcon(ctx, cx, cy, markerRadius, color, index);
+            return;
+          }
 
           // Crosshair lines (drawn first, behind the circle)
           ctx.strokeStyle = '#FFFFFF';
