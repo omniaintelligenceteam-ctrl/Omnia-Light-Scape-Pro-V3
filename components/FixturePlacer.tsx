@@ -1,7 +1,8 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import {
   Trash2, Lock, Unlock,
-  Grid, RotateCcw, Download, Crosshair, Layers, Copy, Clipboard, Undo2, Redo2, Eye, EyeOff
+  Grid, RotateCcw, Download, Crosshair, Layers, Copy, Clipboard, Undo2, Redo2, Eye, EyeOff,
+  Minus,
 } from 'lucide-react';
 import {
   LightFixture,
@@ -10,6 +11,18 @@ import {
   createFixture,
 } from '../types/fixtures';
 import { GradientPreview } from './GradientPreview';
+
+// ── Gutter Line Types & Constants ──
+interface GutterLine {
+  id: string;
+  startX: number; startY: number; // 0-100% image coords
+  endX: number;   endY: number;
+}
+
+const GUTTER_SNAP_TYPES = new Set<FixtureCategory>(['uplight', 'spot', 'wall_wash', 'gutter_uplight']);
+const GUTTER_LINES_KEY = 'omnia_gutter_lines';
+const GUTTER_SNAP_THRESHOLD = 15; // % distance
+const MIN_LINE_LENGTH = 5;        // % minimum to save
 
 // Haptic feedback helper
 const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -73,6 +86,16 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [showGradientPreview, setShowGradientPreview] = useState(false);
 
+  // ── Gutter Line State ──
+  const [gutterLines, setGutterLines] = useState<GutterLine[]>(() => {
+    try { const s = localStorage.getItem(GUTTER_LINES_KEY); return s ? JSON.parse(s) : []; }
+    catch { return []; }
+  });
+  const [isDrawingGutter, setIsDrawingGutter] = useState(false);
+  const [gutterDrawStart, setGutterDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [gutterDrawEnd, setGutterDrawEnd] = useState<{ x: number; y: number } | null>(null);
+  const [snapToGutter, setSnapToGutter] = useState(true);
+
   // Undo/Redo history
   const [history, setHistory] = useState<LightFixture[][]>([fixtures]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -95,6 +118,11 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       prevFixturesRef.current = fixtures;
     }
   }, [fixtures]);
+
+  // Persist gutter lines to localStorage
+  useEffect(() => {
+    try { localStorage.setItem(GUTTER_LINES_KEY, JSON.stringify(gutterLines)); } catch { /* ignore */ }
+  }, [gutterLines]);
 
   const pushToHistory = useCallback((newFixtures: LightFixture[]) => {
     setHistory(prev => {
@@ -174,6 +202,52 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     return { x, y };
   }, [imageBounds, snapToGrid, gridSize]);
 
+  // ── Gutter Snap Utility ──
+  const findNearestGutterSnap = useCallback((px: number, py: number): { snappedY: number; distance: number } | null => {
+    if (gutterLines.length === 0) return null;
+    let bestDist = Infinity;
+    let bestY = py;
+    for (const line of gutterLines) {
+      const dx = line.endX - line.startX;
+      const dy = line.endY - line.startY;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq === 0) continue;
+      let t = ((px - line.startX) * dx + (py - line.startY) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      const closestX = line.startX + t * dx;
+      const closestY = line.startY + t * dy;
+      const dist = Math.sqrt((px - closestX) ** 2 + (py - closestY) ** 2);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestY = closestY;
+      }
+    }
+    return bestDist <= GUTTER_SNAP_THRESHOLD ? { snappedY: bestY, distance: bestDist } : null;
+  }, [gutterLines]);
+
+  // ── Gutter Line CRUD ──
+  const addGutterLine = useCallback((startX: number, startY: number, endX: number, endY: number) => {
+    const length = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+    if (length < MIN_LINE_LENGTH) return;
+    const newLine: GutterLine = {
+      id: `gutter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      startX, startY, endX, endY,
+    };
+    setGutterLines(prev => [...prev, newLine]);
+    triggerHaptic('medium');
+  }, []);
+
+  const deleteGutterLine = useCallback((id: string) => {
+    setGutterLines(prev => prev.filter(l => l.id !== id));
+    triggerHaptic('light');
+  }, []);
+
+  const clearAllGutterLines = useCallback(() => {
+    if (gutterLines.length === 0) return;
+    setGutterLines([]);
+    triggerHaptic('medium');
+  }, [gutterLines]);
+
   // Find fixture near a screen position
   const findFixtureAtScreen = useCallback((clientX: number, clientY: number, radius = 20): LightFixture | null => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -198,6 +272,13 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     if (readOnly || e.button !== 0) return;
     mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
 
+    // Gutter drawing mode: start line
+    if (isDrawingGutter) {
+      const coords = toImageCoords(e.clientX, e.clientY);
+      if (coords) { setGutterDrawStart(coords); setGutterDrawEnd(coords); }
+      return;
+    }
+
     const fixture = findFixtureAtScreen(e.clientX, e.clientY);
     if (fixture) {
       if (fixture.locked) {
@@ -215,9 +296,15 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       }
       triggerHaptic('light');
     }
-  }, [readOnly, findFixtureAtScreen, imageBounds]);
+  }, [readOnly, findFixtureAtScreen, imageBounds, isDrawingGutter, toImageCoords]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Gutter drawing mode: update preview
+    if (isDrawingGutter && gutterDrawStart) {
+      const coords = toImageCoords(e.clientX, e.clientY);
+      if (coords) setGutterDrawEnd(coords);
+      return;
+    }
     if (!isDragging || !selectedId || readOnly) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -229,18 +316,34 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       x = Math.round(x / gridSize) * gridSize;
       y = Math.round(y / gridSize) * gridSize;
     }
+    // Snap to gutter line if eligible
+    if (snapToGutter && gutterLines.length > 0) {
+      const draggedFixture = fixtures.find(f => f.id === selectedId);
+      if (draggedFixture && GUTTER_SNAP_TYPES.has(draggedFixture.type)) {
+        const snap = findNearestGutterSnap(x, y);
+        if (snap) y = snap.snappedY;
+      }
+    }
     // Update position live (no history push during drag)
     const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
-  }, [isDragging, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange]);
+  }, [isDragging, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isDragging) {
-      // Push final drag position to history
       pushToHistory(fixtures);
       setIsDragging(false);
       triggerHaptic('light');
+      return;
+    }
+
+    // Gutter drawing mode: finalize line
+    if (isDrawingGutter && gutterDrawStart && gutterDrawEnd) {
+      addGutterLine(gutterDrawStart.x, gutterDrawStart.y, gutterDrawEnd.x, gutterDrawEnd.y);
+      setGutterDrawStart(null);
+      setGutterDrawEnd(null);
+      setIsDrawingGutter(false);
       return;
     }
 
@@ -262,11 +365,19 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     const coords = toImageCoords(e.clientX, e.clientY);
     if (!coords) return;
 
-    const newFixture = createFixture(coords.x, coords.y, activeFixtureType);
+    // Apply gutter snap for eligible fixture types
+    let finalX = coords.x;
+    let finalY = coords.y;
+    if (snapToGutter && GUTTER_SNAP_TYPES.has(activeFixtureType)) {
+      const snap = findNearestGutterSnap(coords.x, coords.y);
+      if (snap) finalY = snap.snappedY;
+    }
+
+    const newFixture = createFixture(finalX, finalY, activeFixtureType);
     pushToHistory([...fixtures, newFixture]);
     setSelectedId(newFixture.id);
     triggerHaptic('medium');
-  }, [isDragging, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory]);
+  }, [isDragging, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, gutterDrawEnd, addGutterLine, snapToGutter, findNearestGutterSnap]);
 
   const handleRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -285,6 +396,14 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (readOnly || e.touches.length !== 1) return;
     const touch = e.touches[0];
+
+    // Gutter drawing mode: start line
+    if (isDrawingGutter) {
+      const coords = toImageCoords(touch.clientX, touch.clientY);
+      if (coords) { setGutterDrawStart(coords); setGutterDrawEnd(coords); }
+      return;
+    }
+
     const fixture = findFixtureAtScreen(touch.clientX, touch.clientY);
 
     touchStartRef.current = {
@@ -316,13 +435,20 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       }
       triggerHaptic('light');
     }
-  }, [readOnly, findFixtureAtScreen, imageBounds, fixtures, pushToHistory]);
+  }, [readOnly, findFixtureAtScreen, imageBounds, fixtures, pushToHistory, isDrawingGutter, toImageCoords]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     // Cancel long-press on movement
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+    }
+    // Gutter drawing mode: update preview
+    if (isDrawingGutter && gutterDrawStart) {
+      const touch = e.touches[0];
+      const coords = toImageCoords(touch.clientX, touch.clientY);
+      if (coords) setGutterDrawEnd(coords);
+      return;
     }
     if (!isDragging || !selectedId || readOnly) return;
     const touch = e.touches[0];
@@ -336,10 +462,18 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       x = Math.round(x / gridSize) * gridSize;
       y = Math.round(y / gridSize) * gridSize;
     }
+    // Snap to gutter line if eligible
+    if (snapToGutter && gutterLines.length > 0) {
+      const draggedFixture = fixtures.find(f => f.id === selectedId);
+      if (draggedFixture && GUTTER_SNAP_TYPES.has(draggedFixture.type)) {
+        const snap = findNearestGutterSnap(x, y);
+        if (snap) y = snap.snappedY;
+      }
+    }
     const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
-  }, [isDragging, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange]);
+  }, [isDragging, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (longPressTimerRef.current) {
@@ -351,6 +485,20 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       pushToHistory(fixtures);
       setIsDragging(false);
       triggerHaptic('light');
+      touchStartRef.current = null;
+      return;
+    }
+
+    // Gutter drawing mode: finalize line
+    if (isDrawingGutter && gutterDrawStart) {
+      const changedTouch = e.changedTouches[0];
+      if (changedTouch) {
+        const coords = toImageCoords(changedTouch.clientX, changedTouch.clientY);
+        if (coords) addGutterLine(gutterDrawStart.x, gutterDrawStart.y, coords.x, coords.y);
+      }
+      setGutterDrawStart(null);
+      setGutterDrawEnd(null);
+      setIsDrawingGutter(false);
       touchStartRef.current = null;
       return;
     }
@@ -375,14 +523,21 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       }
       const coords = toImageCoords(touchStartRef.current.x, touchStartRef.current.y);
       if (coords) {
-        const newFixture = createFixture(coords.x, coords.y, activeFixtureType);
+        // Apply gutter snap for eligible fixture types
+        let finalX = coords.x;
+        let finalY = coords.y;
+        if (snapToGutter && GUTTER_SNAP_TYPES.has(activeFixtureType)) {
+          const snap = findNearestGutterSnap(coords.x, coords.y);
+          if (snap) finalY = snap.snappedY;
+        }
+        const newFixture = createFixture(finalX, finalY, activeFixtureType);
         pushToHistory([...fixtures, newFixture]);
         setSelectedId(newFixture.id);
         triggerHaptic('medium');
       }
     }
     touchStartRef.current = null;
-  }, [isDragging, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory]);
+  }, [isDragging, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, addGutterLine, snapToGutter, findNearestGutterSnap]);
 
   // ── Toolbar Actions ──
 
@@ -455,7 +610,13 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           deleteSelected();
           break;
         case 'Escape':
-          setSelectedId(null);
+          if (isDrawingGutter) {
+            setIsDrawingGutter(false);
+            setGutterDrawStart(null);
+            setGutterDrawEnd(null);
+          } else {
+            setSelectedId(null);
+          }
           break;
         case 'd':
           if (e.metaKey || e.ctrlKey) { e.preventDefault(); duplicateSelected(); }
@@ -476,7 +637,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteSelected, duplicateSelected, toggleLock, undo, redo]);
+  }, [deleteSelected, duplicateSelected, toggleLock, undo, redo, isDrawingGutter]);
 
   // Expose imperative handle
   useImperativeHandle(ref, () => ({
@@ -487,11 +648,13 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     clearAll,
   }), [undo, redo, historyIndex, history.length, clearAll]);
 
-  const cursorStyle = isDragging
-    ? 'grabbing'
-    : (activeFixtureType && cursorColor)
-      ? getPlacementCursor(cursorColor)
-      : 'default';
+  const cursorStyle = isDrawingGutter
+    ? 'crosshair'
+    : isDragging
+      ? 'grabbing'
+      : (activeFixtureType && cursorColor)
+        ? getPlacementCursor(cursorColor)
+        : 'default';
 
   return (
     <div className={containerClassName || 'relative w-full h-full'}>
@@ -524,6 +687,48 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           >
             {showGradientPreview ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
+
+          <div className="w-px h-5 bg-white/10 flex-shrink-0" />
+
+          {/* Mark Gutter Line */}
+          <button
+            onClick={() => {
+              setIsDrawingGutter(prev => !prev);
+              if (!isDrawingGutter) { setSelectedId(null); setGutterDrawStart(null); setGutterDrawEnd(null); }
+            }}
+            className={`p-1.5 rounded-lg transition-all ${
+              isDrawingGutter
+                ? 'bg-amber-500 text-black ring-2 ring-amber-300'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+            title="Mark Gutter Line"
+          >
+            <Minus size={16} />
+          </button>
+
+          {/* Snap to Gutter toggle */}
+          {gutterLines.length > 0 && (
+            <button
+              onClick={() => setSnapToGutter(prev => !prev)}
+              className={`p-1.5 rounded-lg transition-all ${
+                snapToGutter ? 'bg-amber-500/80 text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+              title={`Snap to Gutter (${gutterLines.length} line${gutterLines.length > 1 ? 's' : ''})`}
+            >
+              <Crosshair size={16} />
+            </button>
+          )}
+
+          {/* Clear Gutter Lines */}
+          {gutterLines.length > 0 && (
+            <button
+              onClick={clearAllGutterLines}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
+              title={`Clear ${gutterLines.length} gutter line${gutterLines.length > 1 ? 's' : ''}`}
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
 
           <div className="w-px h-5 bg-white/10 flex-shrink-0" />
 
@@ -616,7 +821,10 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={() => { if (isDragging) { pushToHistory(fixtures); setIsDragging(false); } }}
+        onMouseLeave={() => {
+          if (isDragging) { pushToHistory(fixtures); setIsDragging(false); }
+          if (isDrawingGutter && gutterDrawStart) { setGutterDrawStart(null); setGutterDrawEnd(null); }
+        }}
         onContextMenu={handleRightClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -634,6 +842,58 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
               backgroundSize: `${gridSize}% ${gridSize}%`,
             }}
           />
+        )}
+
+        {/* Gutter Lines SVG Overlay */}
+        {(gutterLines.length > 0 || (isDrawingGutter && gutterDrawStart && gutterDrawEnd)) && (
+          <svg
+            className="absolute pointer-events-none"
+            style={{
+              left: imageBounds.offsetX,
+              top: imageBounds.offsetY,
+              width: imageBounds.width,
+              height: imageBounds.height,
+              zIndex: 5,
+            }}
+            viewBox={`0 0 ${imageBounds.width} ${imageBounds.height}`}
+          >
+            {/* Saved gutter lines */}
+            {gutterLines.map(line => {
+              const x1 = (line.startX / 100) * imageBounds.width;
+              const y1 = (line.startY / 100) * imageBounds.height;
+              const x2 = (line.endX / 100) * imageBounds.width;
+              const y2 = (line.endY / 100) * imageBounds.height;
+              const mx = (x1 + x2) / 2;
+              const my = (y1 + y2) / 2;
+              return (
+                <g key={line.id}>
+                  <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#F59E0B" strokeWidth={3} strokeDasharray="8 4" opacity={0.8} />
+                  <circle cx={x1} cy={y1} r={5} fill="#F59E0B" stroke="white" strokeWidth={1.5} />
+                  <circle cx={x2} cy={y2} r={5} fill="#F59E0B" stroke="white" strokeWidth={1.5} />
+                  {/* Delete button at midpoint */}
+                  <g
+                    className="pointer-events-auto cursor-pointer"
+                    onClick={(evt) => { evt.stopPropagation(); deleteGutterLine(line.id); }}
+                    onTouchEnd={(evt) => { evt.stopPropagation(); deleteGutterLine(line.id); }}
+                  >
+                    <circle cx={mx} cy={my} r={10} fill="#1f1f1f" stroke="#F59E0B" strokeWidth={1.5} opacity={0.9} />
+                    <line x1={mx - 4} y1={my - 4} x2={mx + 4} y2={my + 4} stroke="#EF4444" strokeWidth={2} />
+                    <line x1={mx + 4} y1={my - 4} x2={mx - 4} y2={my + 4} stroke="#EF4444" strokeWidth={2} />
+                  </g>
+                </g>
+              );
+            })}
+            {/* Live preview line during drawing */}
+            {isDrawingGutter && gutterDrawStart && gutterDrawEnd && (
+              <line
+                x1={(gutterDrawStart.x / 100) * imageBounds.width}
+                y1={(gutterDrawStart.y / 100) * imageBounds.height}
+                x2={(gutterDrawEnd.x / 100) * imageBounds.width}
+                y2={(gutterDrawEnd.y / 100) * imageBounds.height}
+                stroke="#F59E0B" strokeWidth={3} strokeDasharray="4 4" opacity={0.5}
+              />
+            )}
+          </svg>
         )}
 
         {/* Gradient Preview Overlay */}
@@ -730,7 +990,13 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         })}
 
         {/* Active tool indicator */}
-        {activeFixtureType && !readOnly && (
+        {isDrawingGutter && !readOnly && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-amber-500/90 backdrop-blur px-3 py-1 rounded-full text-[10px] text-black font-medium flex items-center gap-1.5 pointer-events-none z-30">
+            <Minus className="w-3 h-3" />
+            Draw gutter line (click &amp; drag)
+          </div>
+        )}
+        {activeFixtureType && !readOnly && !isDrawingGutter && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur px-3 py-1 rounded-full text-[10px] text-[#F6B45A] font-medium flex items-center gap-1.5 pointer-events-none">
             <Crosshair className="w-3 h-3" />
             Tap to place {getFixturePreset(activeFixtureType).name}
