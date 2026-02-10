@@ -1120,7 +1120,7 @@ BEAM ANGLE: 15-25° (narrow spot for texture grazing, NOT wide flood)
 DARK GAPS: Intentional unlit areas MUST exist between each fixture's illumination zone
 LIGHT PHYSICS: Inverse square law - brightness = 1/(distance squared), rapid falloff
 BEAM EDGES: Soft, feathered transition (6-12 inches), NEVER crisp circles
-EFFECT: Each fixture creates an ISOLATED vertical column of light
+EFFECT: Each fixture creates an ISOLATED conical wash of light
 TEXTURE: Narrow angle reveals brick mortar joints / stone texture / siding lines
 SEPARATION: Light pools do NOT blend together - visible dark wall sections between
 
@@ -1753,7 +1753,7 @@ BEST FOR: Tall facades, commercial properties, dramatic architectural statements
     if (angle <= 15) return `BEAM ANGLE: 15 DEGREES (NARROW SPOT) - MAXIMUM DRAMA
 
 BEAM GEOMETRY:
-- Tight, focused columns of light
+- Tight, focused conical beams (narrow at fixture, widening gradually upward)
 - Spread calculation: diameter = distance × 0.26 (tan 15°)
 - At 10 feet: ~2.6 foot diameter light pool
 - At 20 feet: ~5.2 foot diameter light pool
@@ -2000,6 +2000,8 @@ ${preferenceContext}
     - Beam edges should never be sharp/crisp - LED sources create soft, diffused boundaries
     - The transition from lit to unlit should span 6-12 inches, not a hard line
     - Light intensity follows inverse square law: brightness = 1/(distance squared)
+    - Light beams are CONICAL (narrow at fixture, organic spread) — NOT geometric cylinders with straight edges
+    - Beam boundaries interact with surface texture, creating naturally irregular edges
 
     ## ATMOSPHERIC LIGHT SCATTER
     - Night air has subtle particulates that catch and scatter light
@@ -2013,11 +2015,12 @@ ${preferenceContext}
     - The fixture housing may be barely visible as a dark silhouette
 
     ## SURFACE MATERIAL INTERACTION
-    - BRICK/STONE: Light catches texture, creates micro-shadows in mortar joints
-    - VINYL/ALUMINUM SIDING: Slight sheen, horizontal shadow lines from overlap
+    - BRICK/STONE: Light catches texture, creates micro-shadows in mortar joints — beam edges follow mortar/texture relief, NOT straight geometric lines
+    - VINYL/ALUMINUM SIDING: Slight sheen, horizontal shadow lines from overlap — beam interacts with siding texture, NOT uniform geometric wash
     - STUCCO: Diffuse reflection, soft appearance, minimal texture shadows
     - WOOD: Warm absorption, grain may be visible, natural material feel
     - PAINTED SURFACES: Color temperature affects perceived paint color
+    - ALL SURFACES: Beam edges appear organic and slightly irregular, never ruler-straight
 
     ## SECONDARY/BOUNCE LIGHT
     - Lit surfaces reflect a small amount of light back into the scene

@@ -182,12 +182,13 @@ function paintUpwardGradient(
   gradient.addColorStop(0.7, toRgbaString(rgb, maxAlpha * 0.5));
   gradient.addColorStop(1, toRgbaString(rgb, 0));
 
-  // Trapezoid clip path
+  // Organic conical clip path (bezier curves instead of straight lines)
+  const midY = (originY + topY) / 2;
   ctx.beginPath();
   ctx.moveTo(cx - halfWidthBottom, originY);
-  ctx.lineTo(cx - halfWidthTop, topY);
+  ctx.quadraticCurveTo(cx - halfWidthBottom * 1.3, midY, cx - halfWidthTop, topY);
   ctx.lineTo(cx + halfWidthTop, topY);
-  ctx.lineTo(cx + halfWidthBottom, originY);
+  ctx.quadraticCurveTo(cx + halfWidthBottom * 1.3, midY, cx + halfWidthBottom, originY);
   ctx.closePath();
   ctx.fillStyle = gradient;
   ctx.fill();
@@ -240,12 +241,13 @@ function paintDownwardGradient(
   gradient.addColorStop(0.7, toRgbaString(rgb, maxAlpha * 0.3));
   gradient.addColorStop(1, toRgbaString(rgb, 0));
 
-  // Inverted trapezoid
+  // Organic conical clip path
+  const midY = (originY + bottomY) / 2;
   ctx.beginPath();
   ctx.moveTo(cx - halfWidthTop, originY);
-  ctx.lineTo(cx - halfWidthBottom, bottomY);
+  ctx.quadraticCurveTo(cx - halfWidthTop * 1.3, midY, cx - halfWidthBottom, bottomY);
   ctx.lineTo(cx + halfWidthBottom, bottomY);
-  ctx.lineTo(cx + halfWidthTop, originY);
+  ctx.quadraticCurveTo(cx + halfWidthTop * 1.3, midY, cx + halfWidthTop, originY);
   ctx.closePath();
   ctx.fillStyle = gradient;
   ctx.fill();

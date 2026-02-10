@@ -65,7 +65,7 @@ SCENE VISION - WHAT WE ARE CREATING
 
 Imagine a luxury residential home as night falls. The sky becomes a pure black canvas with a luminous full moon casting the faintest silver outline on the roofline. Against this dramatic backdrop, professional-grade landscape lighting transforms the property.
 
-Ground-mounted brass uplights create distinct vertical columns of warm amber light (2700K-3000K) that graze textured surfaces - revealing the depth of mortar joints in brick, the horizontal shadow lines between siding boards, the irregular facets of natural stone. Each fixture stands alone, its illumination separated by intentional dark gaps that define professional lighting design.
+Ground-mounted brass uplights create distinct conical washes of warm amber light (2700K-3000K) — narrow at the fixture, spreading organically wider as the beam travels upward — that graze textured surfaces, revealing the depth of mortar joints in brick, the horizontal shadow lines between siding boards, the irregular facets of natural stone. Each fixture stands alone, its illumination separated by intentional dark gaps that define professional lighting design.
 
 The light follows the inverse square law: brightest at mid-wall where the narrow beam (15-25°) concentrates its energy, then gradually fading as it reaches the roofline above. There are no harsh hot spots at the fixture base, no continuous wash of light blending pools together. Instead, there is rhythm - alternating zones of light and shadow that give the facade depth, drama, and dimension.
 
@@ -203,7 +203,7 @@ Each fixture creates a DISTINCT, ISOLATED pool of light with these properties:
 
 2. **BEAM ANGLE & SPREAD (NARROW FOR DRAMA)**
    - Default beam angle: 15-25° (narrow spot)
-   - Creates tight vertical columns of light, NOT wide floods
+   - Creates tight conical beams of light (narrow at fixture, organic spread upward), NOT wide floods
    - Wider angles (45-60°) ONLY if specifically requested
    - Narrow beams reveal texture and create dramatic shadows
 
@@ -226,9 +226,16 @@ Each fixture creates a DISTINCT, ISOLATED pool of light with these properties:
    - Siding: horizontal shadow lines between boards
    - Smooth surfaces: subtle directional shading
 
+6. **ORGANIC LIGHT SHAPE (CRITICAL FOR REALISM)**
+   - Light beams are CONICAL: narrow at fixture base, gradually wider as beam travels
+   - Beam edges are ORGANIC and slightly IRREGULAR, NOT ruler-straight
+   - On textured surfaces (brick, stone, siding) beam edges follow surface relief
+   - NO mathematically perfect gradients or geometric cylinder shapes
+   - Think: soft watercolor spread, NOT hard CAD projection
+
 ### WHAT PROFESSIONAL LIGHTING LOOKS LIKE
 ✓ CORRECT: Distinct light pools with visible dark gaps between them
-✓ CORRECT: Vertical columns of light that don't merge together
+✓ CORRECT: Distinct conical light washes that don't merge together
 ✓ CORRECT: Deep shadows between fixtures creating rhythm
 ✓ CORRECT: Texture visible from grazing light angles
 
@@ -238,6 +245,7 @@ Each fixture creates a DISTINCT, ISOLATED pool of light with these properties:
 ✗ WRONG: Crisp, hard-edged circular light boundaries
 ✗ WRONG: Fill light that softens shadows between fixtures
 ✗ WRONG: Over-lit scenes with no dark areas
+✗ WRONG: Straight-edged, geometric beam shapes (real light has organic edges)
 
 ═══════════════════════════════════════════════════════════════════════════════
 UP LIGHT FIXTURE SPECIFICATIONS (APPLIES TO ALL UP LIGHT SUB-OPTIONS)
@@ -257,7 +265,7 @@ HOT SPOT AVOIDANCE (APPLIES TO ALL UP LIGHTS)
 - Angle fixture BACK 15-20° from vertical
 - Beam starts on wall 12-18 inches above ground, NOT at fixture height
 - Light is BRIGHTEST at mid-wall, not at fixture base
-- Avoid overly bright "hot spot" at base - light should be EVEN
+- Avoid overly bright "hot spot" at base - light should have GRADUATED FALLOFF (brightest at mid-wall per inverse square law)
 
 WATTAGE BY WALL HEIGHT:
 - 1st story only (8-12 ft): 3-5 watt LED (200-400 lumens)
@@ -352,7 +360,7 @@ OBJECT ADDITIONS: new vehicles, new furniture, new outdoor objects, added object
 PROHIBITED LIGHTING: string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, light fixtures not specified, unspecified fixtures, extra fixtures, security lights, security floodlights, motion sensor lights, existing security fixtures turned on, lit security lights, BREAK
 SKY ERRORS: bright moonlight, harsh moonlight, stars, starlight, blue sky, gradient sky, ambient sky glow, twilight, dusk colors, purple sky, blue tones, atmospheric glow, light pollution, horizon glow, BREAK
 MATERIAL CHANGES: paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, BREAK
-LIGHTING QUALITY ERRORS: uniform wall wash, blended light pools, no dark gaps, harsh beam edges, crisp circular beams, over-lit scene, no shadows, hot spots at fixture base, continuous illumination without gaps, flat lighting, BREAK
+LIGHTING QUALITY ERRORS: uniform wall wash, blended light pools, no dark gaps, harsh beam edges, crisp circular beams, over-lit scene, no shadows, hot spots at fixture base, continuous illumination without gaps, flat lighting, straight-edged beams, geometric light shapes, ruler-straight beam boundaries, computer-generated light patterns, BREAK
 STRUCTURE MODIFICATIONS: property modifications, house modifications, structure modifications, framing changes, composition changes, cropped house, zoomed in`,
 
   closingReinforcement: `
@@ -402,13 +410,13 @@ UP LIGHT PLACEMENT RULES (CRITICAL)
 - ALL up lights MUST reach the GUTTER LINE directly above them
 - For 1ST STORY walls: beam reaches 1st story gutter/roof edge (8-12 ft)
 - For 2ND STORY sections: beam MUST reach 2nd story roofline (18-25 ft)
-- Each up light creates a vertical column from ground to the gutter line above it
+- Each up light creates a conical wash from ground to the gutter line above it — narrow at fixture, spreading wider as it travels up
 - The gutter underside MUST show visible illumination ("kiss" the roofline)
 - NEVER stop the beam at 1st floor level on a 2-story facade
 
 ### HOT SPOT AVOIDANCE (CRITICAL FOR REALISM)
 - AVOID hot spots (overly bright areas at fixture base)
-- Light should be EVEN from base to roofline, not blinding at bottom
+- Light should have GRADUATED INTENSITY from base to roofline (brightest at mid-wall), not blinding at bottom
 - Technique: Angle fixture BACK 15-20 degrees from vertical
 - Beam should start on wall 12-18 inches above ground, NOT at fixture height
 - Light is BRIGHTEST at mid-wall, not at fixture base
@@ -428,7 +436,7 @@ The single most important visual characteristic of professional landscape lighti
 is the DRAMATIC INTERPLAY of LIGHT and DARK.
 
 ### DARK GAP REQUIREMENTS (MANDATORY)
-- Each fixture creates a DISTINCT vertical column of light
+- Each fixture creates a DISTINCT conical wash of light
 - DARK GAPS MUST be visible between each fixture's illumination zone
 - Wall sections between fixtures remain in DEEP SHADOW
 - The material (brick/siding/stone) is visible in shadow between light pools
