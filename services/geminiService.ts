@@ -547,18 +547,6 @@ export const buildLightingPlan = (
           }
         }
 
-        // FIX #2: Gutter Y-coordinate enforcement
-        // Gutter fixtures MUST be at Y >= 80% (ground level), NOT roof at Y=20-30%
-        if (fixtureType === 'gutter' && spatialPositions) {
-          const invalidPositions = spatialPositions.filter(sp => sp.y < 80);
-          if (invalidPositions.length > 0) {
-            console.warn(`[Gutter Fix] ${invalidPositions.length} fixtures at Y < 80% (roof area) - clamping to Y=85%`);
-            spatialPositions = spatialPositions.map(sp => ({
-              x: sp.x,
-              y: sp.y < 80 ? 85 : sp.y // Force ground-level gutter position
-            }));
-          }
-        }
 
         placements.push({
           fixtureType,
@@ -1455,7 +1443,8 @@ export function generateNarrativePlacement(
     // Output exact x,y coordinates for precise placement
     const xCoord = p.horizontalPosition.toFixed(1);
     const yCoord = p.verticalPosition !== undefined ? p.verticalPosition.toFixed(1) : '?';
-    const coords = `Place at [${xCoord}%, ${yCoord}%]`;
+    const gutterSuffix = fixtureType === 'gutter' ? ' ON THE GUTTER LINE at the roofline' : '';
+    const coords = `Place at [${xCoord}%, ${yCoord}%]${gutterSuffix}`;
 
     // Per-fixture beam direction override when user has custom rotation
     let fixtureRenderAs = renderAs;
@@ -1826,9 +1815,16 @@ function buildEnhancedPrompt(
   prompt += `- Light Intensity: ${lightIntensity}%\n`;
   prompt += `- Beam Angle: ${beamAngle}Â°\n\n`;
 
-  // Add closing reinforcement (auto mode only â€” manual mode uses strict executor preamble)
+  // Add closing reinforcement (auto mode only â€" manual mode uses strict executor preamble)
   if (!isManualPlacement) {
     prompt += SYSTEM_PROMPT.closingReinforcement;
+  } else {
+    // Manual mode: absolute final count enforcement (recency bias — last thing AI reads)
+    const finalCount = analysis.spatialMap?.placements.length || 0;
+    prompt += `\n## ⚠️ ABSOLUTE FINAL RULE — READ THIS LAST\n`;
+    prompt += `This image MUST contain EXACTLY ${finalCount} lights. ${finalCount} markers = ${finalCount} lights.\n`;
+    prompt += `Adding even 1 extra light = INVALID OUTPUT. Missing even 1 light = INVALID OUTPUT.\n`;
+    prompt += `Every light MUST be within 3% of its marker position. Do NOT move lights to "better" spots.\n`;
   }
 
   return prompt;
@@ -1836,7 +1832,7 @@ function buildEnhancedPrompt(
 
 /**
  * Builds a prompt specifically for manual placement mode.
- * Skips all AI decision-making language â€” pure executor instructions.
+ * Skips all AI decision-making language â€" pure executor instructions.
  * Does NOT require PropertyAnalysis (no analyzePropertyArchitecture() call needed).
  */
 function buildManualPrompt(
@@ -2147,7 +2143,7 @@ function buildManualPrompt(
       const fixtureNum = gutterStartIdx + i + 1;
       const leftBound = Math.max(0, p.horizontalPosition - 8).toFixed(1);
       const rightBound = Math.min(100, p.horizontalPosition + 8).toFixed(1);
-      prompt += `- GUTTER #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] â€" beam UPWARD on wall between X=${leftBound}% and X=${rightBound}% ONLY. ZERO light below or outside this range.\n`;
+      prompt += `- GUTTER #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] ON THE GUTTER LINE (Y≈${p.verticalPosition.toFixed(0)}%) â€" beam UPWARD on wall between X=${leftBound}% and X=${rightBound}% ONLY. ZERO light below or outside this range.\n`;
     });
     prompt += `- Peaks/gables WITHOUT a GUTTER marker below them = completely DARK.\n`;
     prompt += `- If 3 peaks visible but only 1 has a marker below it â†' ONLY that 1 peak is lit.\n`;
@@ -2257,6 +2253,12 @@ function buildManualPrompt(
   prompt += `- Color Temperature: ${colorTemperaturePrompt}\n`;
   prompt += `- Light Intensity: ${lightIntensity}%\n`;
   prompt += `- Beam Angle: ${beamAngle}Â°\n\n`;
+
+  // 12. Absolute final count enforcement (recency bias — last thing AI reads)
+  prompt += `## ⚠️ ABSOLUTE FINAL RULE — READ THIS LAST\n`;
+  prompt += `This image MUST contain EXACTLY ${count} lights. ${count} markers = ${count} lights.\n`;
+  prompt += `Adding even 1 extra light = INVALID OUTPUT. Missing even 1 light = INVALID OUTPUT.\n`;
+  prompt += `Every light MUST be within 3% of its marker position. Do NOT move lights to "better" spots.\n`;
 
   return prompt;
 }

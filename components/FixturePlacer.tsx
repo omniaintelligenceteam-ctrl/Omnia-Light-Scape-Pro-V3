@@ -18,6 +18,7 @@ const GUTTER_SNAP_TYPES = new Set<FixtureCategory>(['uplight', 'spot', 'wall_was
 const GUTTER_LINES_KEY = 'omnia_gutter_lines';
 const GUTTER_SNAP_THRESHOLD = 15; // % distance
 const MIN_LINE_LENGTH = 5;        // % minimum to save
+const FIRST_STORY_Y_THRESHOLD = 45; // % from top — above this, fixtures MUST be on a gutter line
 
 // ── Beam Cone Defaults Per Fixture Type ──
 const UI_BEAM_DEFAULTS: Record<FixtureCategory, { height: number; width: number; defaultRotation: number }> = {
@@ -372,6 +373,12 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         if (snap) { x = snap.snappedX; y = snap.snappedY; }
       }
     }
+    // HARD RULE: Above first story, must be on a gutter line or clamp to threshold
+    if (y < FIRST_STORY_Y_THRESHOLD) {
+      const snap = findNearestGutterSnap(x, y);
+      if (snap) { x = snap.snappedX; y = snap.snappedY; }
+      else { y = FIRST_STORY_Y_THRESHOLD; }
+    }
     // Update position live (no history push during drag)
     const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
     prevFixturesRef.current = updated;
@@ -425,6 +432,19 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     if (snapToGutter && GUTTER_SNAP_TYPES.has(activeFixtureType)) {
       const snap = findNearestGutterSnap(coords.x, coords.y);
       if (snap) { finalX = snap.snappedX; finalY = snap.snappedY; }
+    }
+
+    // HARD RULE: Above first story, fixtures MUST be on a gutter line
+    if (finalY < FIRST_STORY_Y_THRESHOLD) {
+      const snap = findNearestGutterSnap(finalX, finalY);
+      if (snap) {
+        finalX = snap.snappedX;
+        finalY = snap.snappedY;
+      } else {
+        // No gutter line nearby — reject placement
+        triggerHaptic('heavy');
+        return;
+      }
     }
 
     const newFixture = createFixture(finalX, finalY, activeFixtureType);
@@ -546,6 +566,12 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         if (snap) { x = snap.snappedX; y = snap.snappedY; }
       }
     }
+    // HARD RULE: Above first story, must be on a gutter line or clamp to threshold
+    if (y < FIRST_STORY_Y_THRESHOLD) {
+      const snap = findNearestGutterSnap(x, y);
+      if (snap) { x = snap.snappedX; y = snap.snappedY; }
+      else { y = FIRST_STORY_Y_THRESHOLD; }
+    }
     const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
@@ -614,6 +640,20 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           const snap = findNearestGutterSnap(coords.x, coords.y);
           if (snap) { finalX = snap.snappedX; finalY = snap.snappedY; }
         }
+
+        // HARD RULE: Above first story, fixtures MUST be on a gutter line
+        if (finalY < FIRST_STORY_Y_THRESHOLD) {
+          const snap = findNearestGutterSnap(finalX, finalY);
+          if (snap) {
+            finalX = snap.snappedX;
+            finalY = snap.snappedY;
+          } else {
+            triggerHaptic('heavy');
+            touchStartRef.current = null;
+            return;
+          }
+        }
+
         const newFixture = createFixture(finalX, finalY, activeFixtureType);
         pushToHistory([...fixtures, newFixture]);
         setSelectedId(newFixture.id);
