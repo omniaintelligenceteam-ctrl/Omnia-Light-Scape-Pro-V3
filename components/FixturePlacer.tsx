@@ -213,9 +213,10 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   }, [imageBounds, snapToGrid, gridSize]);
 
   // ── Gutter Snap Utility ──
-  const findNearestGutterSnap = useCallback((px: number, py: number): { snappedY: number; distance: number } | null => {
+  const findNearestGutterSnap = useCallback((px: number, py: number): { snappedX: number; snappedY: number; distance: number } | null => {
     if (gutterLines.length === 0) return null;
     let bestDist = Infinity;
+    let bestX = px;
     let bestY = py;
     for (const line of gutterLines) {
       const dx = line.endX - line.startX;
@@ -229,10 +230,11 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       const dist = Math.sqrt((px - closestX) ** 2 + (py - closestY) ** 2);
       if (dist < bestDist) {
         bestDist = dist;
+        bestX = closestX;
         bestY = closestY;
       }
     }
-    return bestDist <= GUTTER_SNAP_THRESHOLD ? { snappedY: bestY, distance: bestDist } : null;
+    return bestDist <= GUTTER_SNAP_THRESHOLD ? { snappedX: bestX, snappedY: bestY, distance: bestDist } : null;
   }, [gutterLines]);
 
   // ── Gutter Line CRUD ──
@@ -331,7 +333,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       const draggedFixture = fixtures.find(f => f.id === selectedId);
       if (draggedFixture && GUTTER_SNAP_TYPES.has(draggedFixture.type)) {
         const snap = findNearestGutterSnap(x, y);
-        if (snap) y = snap.snappedY;
+        if (snap) { x = snap.snappedX; y = snap.snappedY; }
       }
     }
     // Update position live (no history push during drag)
@@ -348,12 +350,11 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       return;
     }
 
-    // Gutter drawing mode: finalize line
+    // Gutter drawing mode: finalize line (stay in drawing mode for multiple lines)
     if (isDrawingGutter && gutterDrawStart && gutterDrawEnd) {
       addGutterLine(gutterDrawStart.x, gutterDrawStart.y, gutterDrawEnd.x, gutterDrawEnd.y);
       setGutterDrawStart(null);
       setGutterDrawEnd(null);
-      setIsDrawingGutter(false);
       return;
     }
 
@@ -380,7 +381,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     let finalY = coords.y;
     if (snapToGutter && GUTTER_SNAP_TYPES.has(activeFixtureType)) {
       const snap = findNearestGutterSnap(coords.x, coords.y);
-      if (snap) finalY = snap.snappedY;
+      if (snap) { finalX = snap.snappedX; finalY = snap.snappedY; }
     }
 
     const newFixture = createFixture(finalX, finalY, activeFixtureType);
@@ -477,7 +478,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       const draggedFixture = fixtures.find(f => f.id === selectedId);
       if (draggedFixture && GUTTER_SNAP_TYPES.has(draggedFixture.type)) {
         const snap = findNearestGutterSnap(x, y);
-        if (snap) y = snap.snappedY;
+        if (snap) { x = snap.snappedX; y = snap.snappedY; }
       }
     }
     const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
@@ -508,7 +509,6 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       }
       setGutterDrawStart(null);
       setGutterDrawEnd(null);
-      setIsDrawingGutter(false);
       touchStartRef.current = null;
       return;
     }
@@ -538,7 +538,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         let finalY = coords.y;
         if (snapToGutter && GUTTER_SNAP_TYPES.has(activeFixtureType)) {
           const snap = findNearestGutterSnap(coords.x, coords.y);
-          if (snap) finalY = snap.snappedY;
+          if (snap) { finalX = snap.snappedX; finalY = snap.snappedY; }
         }
         const newFixture = createFixture(finalX, finalY, activeFixtureType);
         pushToHistory([...fixtures, newFixture]);
@@ -933,6 +933,19 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
             >
               {fixture.type === 'gutter_uplight' ? (
                 <>
+                  {/* Uplight glow cone shining upward */}
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{
+                      width: 40,
+                      height: 60,
+                      left: -20,
+                      top: -68,
+                      background: `linear-gradient(to top, ${hexColor}90 0%, ${hexColor}40 40%, transparent 100%)`,
+                      clipPath: 'polygon(30% 100%, 0% 0%, 100% 0%, 70% 100%)',
+                      filter: 'blur(3px)',
+                    }}
+                  />
                   {/* Gutter icon: upward arrow + horizontal bar */}
                   <div className="relative flex flex-col items-center" style={{ left: -16, top: -28 }}>
                     {/* Arrowhead */}
