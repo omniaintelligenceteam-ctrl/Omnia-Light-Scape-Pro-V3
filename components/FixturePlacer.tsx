@@ -19,6 +19,20 @@ const GUTTER_LINES_KEY = 'omnia_gutter_lines';
 const GUTTER_SNAP_THRESHOLD = 15; // % distance
 const MIN_LINE_LENGTH = 5;        // % minimum to save
 
+// ── Beam Cone Defaults Per Fixture Type ──
+const UI_BEAM_DEFAULTS: Record<FixtureCategory, { height: number; width: number; defaultRotation: number }> = {
+  uplight:        { height: 50, width: 30, defaultRotation: 0 },
+  gutter_uplight: { height: 60, width: 40, defaultRotation: 0 },
+  downlight:      { height: 50, width: 40, defaultRotation: 180 },
+  path_light:     { height: 25, width: 35, defaultRotation: 0 },
+  coredrill:      { height: 55, width: 25, defaultRotation: 0 },
+  spot:           { height: 45, width: 20, defaultRotation: 0 },
+  wall_wash:      { height: 45, width: 50, defaultRotation: 0 },
+  well_light:     { height: 50, width: 28, defaultRotation: 0 },
+  bollard:        { height: 25, width: 35, defaultRotation: 0 },
+  step_light:     { height: 20, width: 35, defaultRotation: 180 },
+};
+
 // Haptic feedback helper
 const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
   if ('vibrate' in navigator) {
@@ -79,6 +93,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   // State
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingBeam, setIsDraggingBeam] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [gridSize] = useState(5);
@@ -311,6 +326,27 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   }, [readOnly, findFixtureAtScreen, imageBounds, isDrawingGutter, toImageCoords]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Beam drag: update rotation + length
+    if (isDraggingBeam && selectedId) {
+      const fixture = fixtures.find(f => f.id === selectedId);
+      if (!fixture) return;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const fx = rect.left + imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+      const fy = rect.top + imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+      const dx = e.clientX - fx;
+      const dy = e.clientY - fy;
+      const angle = ((Math.atan2(dx, -dy) * 180 / Math.PI) + 360) % 360;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const defaults = UI_BEAM_DEFAULTS[fixture.type];
+      const beamLength = Math.max(0.3, Math.min(2.5, dist / defaults.height));
+      const updated = fixtures.map(f =>
+        f.id === selectedId ? { ...f, rotation: Math.round(angle), beamLength: Math.round(beamLength * 100) / 100 } : f
+      );
+      prevFixturesRef.current = updated;
+      onFixturesChange(updated);
+      return;
+    }
     // Gutter drawing mode: update preview
     if (isDrawingGutter && gutterDrawStart) {
       const coords = toImageCoords(e.clientX, e.clientY);
@@ -340,9 +376,16 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
-  }, [isDragging, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap]);
+  }, [isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Beam drag end
+    if (isDraggingBeam) {
+      pushToHistory(fixtures);
+      setIsDraggingBeam(false);
+      triggerHaptic('light');
+      return;
+    }
     if (isDragging) {
       pushToHistory(fixtures);
       setIsDragging(false);
@@ -388,7 +431,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     pushToHistory([...fixtures, newFixture]);
     setSelectedId(newFixture.id);
     triggerHaptic('medium');
-  }, [isDragging, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, gutterDrawEnd, addGutterLine, snapToGutter, findNearestGutterSnap]);
+  }, [isDragging, isDraggingBeam, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, gutterDrawEnd, addGutterLine, snapToGutter, findNearestGutterSnap]);
 
   const handleRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -454,6 +497,28 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    // Beam drag: update rotation + length (touch)
+    if (isDraggingBeam && selectedId) {
+      const touch = e.touches[0];
+      const fixture = fixtures.find(f => f.id === selectedId);
+      if (!fixture || !touch) return;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const fx = rect.left + imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+      const fy = rect.top + imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+      const dx = touch.clientX - fx;
+      const dy = touch.clientY - fy;
+      const angle = ((Math.atan2(dx, -dy) * 180 / Math.PI) + 360) % 360;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const defaults = UI_BEAM_DEFAULTS[fixture.type];
+      const beamLength = Math.max(0.3, Math.min(2.5, dist / defaults.height));
+      const updated = fixtures.map(f =>
+        f.id === selectedId ? { ...f, rotation: Math.round(angle), beamLength: Math.round(beamLength * 100) / 100 } : f
+      );
+      prevFixturesRef.current = updated;
+      onFixturesChange(updated);
+      return;
+    }
     // Gutter drawing mode: update preview
     if (isDrawingGutter && gutterDrawStart) {
       const touch = e.touches[0];
@@ -484,12 +549,21 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
-  }, [isDragging, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap]);
+  }, [isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+    }
+
+    // Beam drag end (touch)
+    if (isDraggingBeam) {
+      pushToHistory(fixtures);
+      setIsDraggingBeam(false);
+      triggerHaptic('light');
+      touchStartRef.current = null;
+      return;
     }
 
     if (isDragging) {
@@ -547,7 +621,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       }
     }
     touchStartRef.current = null;
-  }, [isDragging, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, addGutterLine, snapToGutter, findNearestGutterSnap]);
+  }, [isDragging, isDraggingBeam, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, addGutterLine, snapToGutter, findNearestGutterSnap]);
 
   // ── Toolbar Actions ──
 
@@ -919,6 +993,12 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           const isSelected = fixture.id === selectedId;
           const preset = getFixturePreset(fixture.type);
           const hexColor = markerColors[fixture.type] || '#FF0000';
+          const defaults = UI_BEAM_DEFAULTS[fixture.type];
+          const rotation = fixture.rotation ?? defaults.defaultRotation;
+          const beamLen = fixture.beamLength ?? 1.0;
+          const beamH = defaults.height * beamLen;
+          const beamW = defaults.width * beamLen;
+          const rotRad = (rotation * Math.PI) / 180;
 
           return (
             <div
@@ -927,37 +1007,37 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
               style={{
                 left: imageBounds.offsetX + (fixture.x / 100) * imageBounds.width,
                 top: imageBounds.offsetY + (fixture.y / 100) * imageBounds.height,
-                transform: 'translate(-50%, -50%)',
                 zIndex: isSelected ? 100 : 10,
               }}
             >
+              {/* Beam cone (all fixture types) */}
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  width: beamW,
+                  height: beamH,
+                  left: -beamW / 2,
+                  top: -beamH,
+                  transformOrigin: 'center bottom',
+                  transform: `rotate(${rotation}deg)`,
+                  background: `linear-gradient(to top, ${hexColor}90 0%, ${hexColor}40 40%, transparent 100%)`,
+                  clipPath: 'polygon(30% 100%, 0% 0%, 100% 0%, 70% 100%)',
+                  filter: 'blur(3px)',
+                }}
+              />
+
+              {/* Fixture marker */}
               {fixture.type === 'gutter_uplight' ? (
                 <>
-                  {/* Uplight glow cone shining upward */}
-                  <div
-                    className="absolute pointer-events-none"
-                    style={{
-                      width: 40,
-                      height: 60,
-                      left: -4,
-                      top: -46,
-                      background: `linear-gradient(to top, ${hexColor}90 0%, ${hexColor}40 40%, transparent 100%)`,
-                      clipPath: 'polygon(30% 100%, 0% 0%, 100% 0%, 70% 100%)',
-                      filter: 'blur(3px)',
-                    }}
-                  />
-                  {/* Gutter icon: upward arrow + horizontal bar (bar centered at anchor = gutter line) */}
-                  <div className="relative flex flex-col items-center" style={{ left: 0, top: -9 }}>
-                    {/* Arrowhead */}
+                  {/* Gutter icon: upward arrow + horizontal bar */}
+                  <div className="absolute flex flex-col items-center" style={{ left: -16, top: -23 }}>
                     <div style={{
                       width: 0, height: 0,
                       borderLeft: '6px solid transparent',
                       borderRight: '6px solid transparent',
                       borderBottom: `8px solid ${hexColor}`,
                     }} />
-                    {/* Stem */}
                     <div style={{ width: 2, height: 10, backgroundColor: 'white' }} />
-                    {/* Horizontal bar (fixture body) */}
                     <div
                       className={`flex items-center justify-center rounded-sm border-2 transition-transform ${
                         isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
@@ -976,21 +1056,9 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
                 </>
               ) : (
                 <>
-                  {/* Glow effect */}
-                  <div
-                    className="absolute rounded-full"
-                    style={{
-                      width: 64,
-                      height: 64,
-                      left: -32,
-                      top: -32,
-                      background: `radial-gradient(circle, ${hexColor}80 0%, ${hexColor}26 50%, transparent 70%)`,
-                      filter: 'blur(4px)',
-                    }}
-                  />
                   {/* Core dot */}
                   <div
-                    className={`relative flex items-center justify-center w-5 h-5 rounded-full border-2 transition-transform ${
+                    className={`absolute flex items-center justify-center w-5 h-5 rounded-full border-2 transition-transform ${
                       isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
                     } ${fixture.locked ? 'opacity-60' : ''}`}
                     style={{
@@ -1007,6 +1075,33 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
                     )}
                   </div>
                 </>
+              )}
+
+              {/* Beam drag handle (only when selected) */}
+              {isSelected && !fixture.locked && !readOnly && (
+                <div
+                  className="absolute rounded-full cursor-grab active:cursor-grabbing"
+                  style={{
+                    width: 14,
+                    height: 14,
+                    left: Math.sin(rotRad) * beamH - 7,
+                    top: -Math.cos(rotRad) * beamH - 7,
+                    backgroundColor: 'white',
+                    border: '2px solid #F6B45A',
+                    boxShadow: '0 0 6px rgba(0,0,0,0.5)',
+                    pointerEvents: 'auto',
+                    zIndex: 200,
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setIsDraggingBeam(true);
+                  }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    setIsDraggingBeam(true);
+                  }}
+                />
               )}
             </div>
           );

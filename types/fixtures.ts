@@ -30,7 +30,8 @@ export interface LightFixture {
   beamAngle: number;   // Degrees (15-120 typical)
   label?: string;      // User-defined label
   locked?: boolean;    // Prevent accidental moves
-  rotation?: number;   // Degrees (0-360) for directional fixtures
+  rotation?: number;   // Degrees (0-360, 0=up) for beam direction
+  beamLength?: number; // Multiplier on default beam height (0.3–2.5, default 1.0)
 }
 
 /**

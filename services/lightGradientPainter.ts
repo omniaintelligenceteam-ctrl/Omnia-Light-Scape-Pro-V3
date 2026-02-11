@@ -611,21 +611,44 @@ export function paintGradientsToCanvas(
       console.warn(`[GradientPainter] Skipping fixture with unknown type: ${fixture.type}`);
       continue;
     }
+    // Per-fixture beam length scaling
+    const beamLen = fixture.beamLength ?? 1.0;
+    const scaledConfig = beamLen !== 1.0
+      ? { ...config, heightPercent: config.heightPercent * beamLen }
+      : config;
+
     const rgb = kelvinToRGB(fixture.colorTemp || 3000);
     const intensity = fixture.intensity ?? 0.8;
     const cx = (fixture.x / 100) * canvasWidth;
     const cy = (fixture.y / 100) * canvasHeight;
 
-    switch (config.direction) {
+    // Per-fixture rotation (relative to type's default direction)
+    const defaultRot = config.direction === 'down' ? 180 : 0;
+    const userRot = fixture.rotation ?? defaultRot;
+    const rotDelta = (userRot - defaultRot) * Math.PI / 180;
+    const needsRotation = Math.abs(rotDelta) > 0.01;
+
+    if (needsRotation) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotDelta);
+      ctx.translate(-cx, -cy);
+    }
+
+    switch (scaledConfig.direction) {
       case 'up':
-        paintUpwardGradient(ctx, cx, cy, config, rgb, intensity, canvasWidth, canvasHeight);
+        paintUpwardGradient(ctx, cx, cy, scaledConfig, rgb, intensity, canvasWidth, canvasHeight);
         break;
       case 'down':
-        paintDownwardGradient(ctx, cx, cy, config, rgb, intensity, canvasWidth, canvasHeight);
+        paintDownwardGradient(ctx, cx, cy, scaledConfig, rgb, intensity, canvasWidth, canvasHeight);
         break;
       case 'radial':
-        paintRadialGradient(ctx, cx, cy, config, rgb, intensity, canvasWidth, canvasHeight);
+        paintRadialGradient(ctx, cx, cy, scaledConfig, rgb, intensity, canvasWidth, canvasHeight);
         break;
+    }
+
+    if (needsRotation) {
+      ctx.restore();
     }
   }
 
