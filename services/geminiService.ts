@@ -1672,7 +1672,12 @@ function buildEnhancedPrompt(
         prompt += `- FIXTURE: Small uplight mounted inside the rain gutter at the 1st story roofline\n`;
         prompt += `- BEAM DIRECTION: UPWARD ONLY â€" warm light washes UP the 2nd story wall directly above this marker position\n`;
         prompt += `- Each fixture lights ONLY the wall section above its own horizontal position. Peaks/gables without a marker below stay DARK.\n`;
-        prompt += `- NO DOWNLIGHTS: Do NOT create soffit lights, eave lights, or any downward beam from the roofline. Eave undersides stay DARK.\n\n`;
+        prompt += `- NO DOWNLIGHTS: Do NOT create soffit lights, eave lights, or any downward beam from the roofline. Eave undersides stay DARK.\n`;
+        prompt += `\n### AMBER DASHED LINES — "GUTTER LINE" Annotations on IMAGE 2\n`;
+        prompt += `- The amber/yellow dashed lines labeled "GUTTER LINE" on IMAGE 2 mark the PHYSICAL GUTTER POSITION along the roofline\n`;
+        prompt += `- GUTTER fixtures sit ON these lines — their light casts UPWARD from the gutter edge onto the wall above\n`;
+        prompt += `- The line shows WHERE the gutter runs; each fixture ON the line illuminates the wall section DIRECTLY ABOVE its position\n`;
+        prompt += `- Light beams aim UPWARD ONLY from the gutter line — NO downward light, NO soffit light\n\n`;
       }
 
       if (presentTypes.has('path')) {
@@ -2118,7 +2123,12 @@ function buildManualPrompt(
       prompt += `- GUTTER #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] â€" beam UPWARD on wall between X=${leftBound}% and X=${rightBound}% ONLY. ZERO light below or outside this range.\n`;
     });
     prompt += `- Peaks/gables WITHOUT a GUTTER marker below them = completely DARK.\n`;
-    prompt += `- If 3 peaks visible but only 1 has a marker below it â†' ONLY that 1 peak is lit.\n\n`;
+    prompt += `- If 3 peaks visible but only 1 has a marker below it â†' ONLY that 1 peak is lit.\n`;
+    prompt += `\n### AMBER DASHED LINES — "GUTTER LINE" Annotations on IMAGE 2\n`;
+    prompt += `- The amber/yellow dashed lines labeled "GUTTER LINE" on IMAGE 2 mark the PHYSICAL GUTTER POSITION along the roofline\n`;
+    prompt += `- GUTTER fixtures sit ON these lines — their light casts UPWARD from the gutter edge onto the wall above\n`;
+    prompt += `- The line shows WHERE the gutter runs; each fixture ON the line illuminates the wall section DIRECTLY ABOVE its position\n`;
+    prompt += `- Light beams aim UPWARD ONLY from the gutter line — NO downward light, NO soffit light\n\n`;
   }
 
   // 6. Confusion prevention (UNCONDITIONAL â€” always include all distinctions)
