@@ -939,15 +939,15 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
                     style={{
                       width: 40,
                       height: 60,
-                      left: -20,
-                      top: -63,
+                      left: -4,
+                      top: -46,
                       background: `linear-gradient(to top, ${hexColor}90 0%, ${hexColor}40 40%, transparent 100%)`,
                       clipPath: 'polygon(30% 100%, 0% 0%, 100% 0%, 70% 100%)',
                       filter: 'blur(3px)',
                     }}
                   />
                   {/* Gutter icon: upward arrow + horizontal bar (bar centered at anchor = gutter line) */}
-                  <div className="relative flex flex-col items-center" style={{ left: -16, top: -23 }}>
+                  <div className="relative flex flex-col items-center" style={{ left: 0, top: -9 }}>
                     {/* Arrowhead */}
                     <div style={{
                       width: 0, height: 0,

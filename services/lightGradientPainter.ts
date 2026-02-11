@@ -77,10 +77,10 @@ const GRADIENT_CONFIGS: Record<FixtureCategory, GradientConfig> = {
   },
   gutter_uplight: {
     direction: 'up',
-    heightPercent: 35,
-    widthPercent: 8,
+    heightPercent: 45,
+    widthPercent: 10,
     originOffsetYPercent: -3,
-    opacity: 0.55,
+    opacity: 0.70,
   },
   downlight: {
     direction: 'down',
@@ -205,6 +205,18 @@ function paintUpwardGradient(
   ctx.arc(cx, originY, glowR, 0, Math.PI * 2);
   ctx.fillStyle = glow;
   ctx.fill();
+
+  // Bright center beam line for gutter uplights (heightPercent >= 40)
+  if (config.heightPercent >= 40) {
+    ctx.beginPath();
+    ctx.moveTo(cx, originY);
+    ctx.lineTo(cx, topY + gradH * 0.3);
+    ctx.strokeStyle = toRgbaString(rgb, maxAlpha * 0.6);
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 
   ctx.restore();
 }
@@ -548,6 +560,19 @@ function drawMarkers(
       ctx.lineWidth = 3;
       ctx.strokeText('\u25B2', cx, arrowY);
       ctx.fillText('\u25B2', cx, arrowY);
+
+      // Extra bold "↑ UP" label for gutter fixtures to signal upward-only light
+      if (pipelineType === 'gutter') {
+        const upLabelY = arrowY - Math.round(markerRadius * 0.8);
+        ctx.font = `bold ${Math.round(markerRadius * 1.2)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 4;
+        ctx.strokeText('\u2191 UP', cx, upLabelY);
+        ctx.fillStyle = '#F59E0B';
+        ctx.fillText('\u2191 UP', cx, upLabelY);
+      }
     } else if (downTypes.has(pipelineType)) {
       // Draw downward arrow below label
       const arrowY = labelY + Math.round(markerRadius * 0.8);
