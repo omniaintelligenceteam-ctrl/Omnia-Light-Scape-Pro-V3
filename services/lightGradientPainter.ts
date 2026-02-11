@@ -544,26 +544,72 @@ function drawMarkers(
     ctx.fillStyle = color;
     ctx.fillText(label, cx, labelY);
 
-    // Directional arrow above/below marker to indicate beam direction
-    const arrowSize = Math.round(markerRadius * 1.2);
-    const upTypes = new Set(['up', 'gutter', 'well', 'coredrill']);
-    const downTypes = new Set(['soffit', 'hardscape']);
+    // Rotation-aware directional arrow from fixture center
+    const radialTypes = new Set(['path']);
+    if (!radialTypes.has(pipelineType)) {
+      const arrowLen = Math.round(markerRadius * 2.0);
+      const beamLen = fixture.beamLength ?? 1.0;
+      const scaledArrowLen = Math.round(arrowLen * Math.min(beamLen, 2.0));
 
-    if (upTypes.has(pipelineType)) {
-      // Draw upward arrow above marker
-      const arrowY = cy - markerRadius - Math.round(markerRadius * 0.6);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = `bold ${arrowSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
+      // Determine rotation angle (0=up default for most, 180 for down types)
+      const downTypes = new Set(['soffit', 'hardscape']);
+      const rotDeg = fixture.rotation ?? (downTypes.has(pipelineType) ? 180 : 0);
+
+      // Convert to canvas radians: user 0°=up → canvas -PI/2
+      const canvasRad = (rotDeg - 90) * Math.PI / 180;
+
+      const ax = cx + Math.cos(canvasRad) * scaledArrowLen;
+      const ay = cy + Math.sin(canvasRad) * scaledArrowLen;
+
+      // Arrow line with black outline for contrast
+      ctx.save();
+      ctx.lineCap = 'round';
+
+      // Black outline
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.strokeText('\u25B2', cx, arrowY);
-      ctx.fillText('\u25B2', cx, arrowY);
+      ctx.lineWidth = Math.max(5, Math.round(markerRadius * 0.4));
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ax, ay);
+      ctx.stroke();
 
-      // Extra bold "↑ UP" label for gutter fixtures to signal upward-only light
-      if (pipelineType === 'gutter') {
-        const upLabelY = arrowY - Math.round(markerRadius * 0.8);
+      // White arrow line
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = Math.max(3, Math.round(markerRadius * 0.3));
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ax, ay);
+      ctx.stroke();
+
+      // Arrowhead at tip
+      const headLen = Math.round(markerRadius * 0.6);
+      const headAngle = 0.4;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = Math.max(4, Math.round(markerRadius * 0.35));
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - headLen * Math.cos(canvasRad - headAngle),
+                 ay - headLen * Math.sin(canvasRad - headAngle));
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - headLen * Math.cos(canvasRad + headAngle),
+                 ay - headLen * Math.sin(canvasRad + headAngle));
+      ctx.stroke();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = Math.max(2, Math.round(markerRadius * 0.25));
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - headLen * Math.cos(canvasRad - headAngle),
+                 ay - headLen * Math.sin(canvasRad - headAngle));
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - headLen * Math.cos(canvasRad + headAngle),
+                 ay - headLen * Math.sin(canvasRad + headAngle));
+      ctx.stroke();
+
+      ctx.restore();
+
+      // Keep gutter "↑ UP" label when rotation is near default (0°)
+      if (pipelineType === 'gutter' && (fixture.rotation === undefined || fixture.rotation < 22.5 || fixture.rotation >= 337.5)) {
+        const upLabelY = cy - markerRadius - Math.round(markerRadius * 1.4);
         ctx.font = `bold ${Math.round(markerRadius * 1.2)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
@@ -573,17 +619,6 @@ function drawMarkers(
         ctx.fillStyle = '#F59E0B';
         ctx.fillText('\u2191 UP', cx, upLabelY);
       }
-    } else if (downTypes.has(pipelineType)) {
-      // Draw downward arrow below label
-      const arrowY = labelY + Math.round(markerRadius * 0.8);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = `bold ${arrowSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.strokeText('\u25BC', cx, arrowY);
-      ctx.fillText('\u25BC', cx, arrowY);
     }
   });
 }

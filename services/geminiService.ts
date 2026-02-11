@@ -19,6 +19,7 @@ import { drawFixtureMarkers } from "./canvasNightService";
 import { buildReferenceParts } from "./referenceLibrary";
 import { paintLightGradients } from "./lightGradientPainter";
 import type { LightFixture, GutterLine } from "../types/fixtures";
+import { rotationToDirectionLabel, hasCustomRotation } from "../utils/fixtureConverter";
 
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
 const MODEL_NAME = 'gemini-3-pro-image-preview';
@@ -1456,11 +1457,28 @@ export function generateNarrativePlacement(
     const yCoord = p.verticalPosition !== undefined ? p.verticalPosition.toFixed(1) : '?';
     const coords = `Place at [${xCoord}%, ${yCoord}%]`;
 
+    // Per-fixture beam direction override when user has custom rotation
+    let fixtureRenderAs = renderAs;
+    if (p.rotation !== undefined && hasCustomRotation(p.rotation, p.fixtureType)) {
+      const dirLabel = rotationToDirectionLabel(p.rotation);
+      fixtureRenderAs = fixtureRenderAs
+        .replace(/beam UPWARD[^,–]*/gi, `beam ${dirLabel}`)
+        .replace(/beam DOWNWARD[^,–]*/gi, `beam ${dirLabel}`);
+    }
+
+    // Per-fixture beam length notation
+    let beamNote = '';
+    if (p.beamLength !== undefined && Math.abs(p.beamLength - 1.0) > 0.05) {
+      beamNote = p.beamLength > 1.0
+        ? ` – EXTENDED beam (${p.beamLength.toFixed(1)}x reach)`
+        : ` – SHORT beam (${p.beamLength.toFixed(1)}x reach)`;
+    }
+
     narrative += `FIXTURE ${i + 1} (${typeLabel}): ${coords}`;
     if (p.description) {
-      narrative += ` â€” ${p.description}`;
+      narrative += ` â€" ${p.description}`;
     }
-    narrative += ` â€” Render as: ${renderAs}\n`;
+    narrative += ` â€" Render as: ${fixtureRenderAs}${beamNote}\n`;
   });
 
   // Add inter-fixture spacing when 2+ fixtures
@@ -1974,8 +1992,17 @@ function buildManualPrompt(
     prompt += `- Downward-pointing hints = light beams going DOWN (step lights, hardscape lights)\n`;
     prompt += `- Circular hints = omnidirectional ground-level pools (path lights, bollards)\n`;
     prompt += `- NEVER reverse the indicated direction\n`;
+
+    // Add angled beam awareness when any fixture has custom rotation
+    const hasAnyCustomRotation = spatialMap.placements.some(
+      p => p.rotation !== undefined && hasCustomRotation(p.rotation, p.fixtureType)
+    );
+    if (hasAnyCustomRotation) {
+      prompt += `- CUSTOM BEAM ANGLES: Some fixtures have user-specified beam directions that differ from type defaults. The directional arrows and gradient cones in IMAGE 2 show the EXACT direction. Follow each fixture's specific direction from the PLACEMENT MAP below.\n`;
+    }
+
     prompt += `- GUTTER markers = small uplight in rain gutter at roof edge, beam goes UPWARD on wall above, NO downlights from eaves, ZERO light below\n`;
-    prompt += `- If a marker is at the roofline with an upward hint, render light going UP â€” NEVER render it as a downlight or sconce\n\n`;
+    prompt += `- If a marker is at the roofline with an upward hint, render light going UP â€" NEVER render it as a downlight or sconce\n\n`;
 
     prompt += `## COUNT RULES\n`;
     prompt += `The guide contains EXACTLY ${count} fixture positions.\n`;
@@ -2201,7 +2228,11 @@ function buildManualPrompt(
   };
   spatialMap.placements.forEach((p, i) => {
     const label = labelMap[p.fixtureType] || 'light';
-    prompt += `  ${i + 1}. Marker #${i + 1} â†’ ${label} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%]\n`;
+    let dirSuffix = '';
+    if (p.rotation !== undefined && hasCustomRotation(p.rotation, p.fixtureType)) {
+      dirSuffix = ` – beam ${rotationToDirectionLabel(p.rotation)}`;
+    }
+    prompt += `  ${i + 1}. Marker #${i + 1} â†' ${label} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%]${dirSuffix}\n`;
   });
   prompt += `\nTOTAL: ${count} markers = EXACTLY ${count} lights in the output. No more, no less.\n\n`;
 

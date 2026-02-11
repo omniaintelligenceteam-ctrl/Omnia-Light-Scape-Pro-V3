@@ -146,6 +146,8 @@ export function convertFixturesToSpatialMap(
       verticalPosition: f.y,
       anchor: generateAnchor(f),
       description: generateDescription(f),
+      rotation: f.rotation,
+      beamLength: f.beamLength,
     };
   });
 
@@ -189,4 +191,31 @@ export function deriveSelections(fixtures: LightFixture[]): {
   }
 
   return { selectedFixtures, fixtureSubOptions, fixtureCounts };
+}
+
+/**
+ * Convert a numeric rotation (0-360, 0=up) to a human-readable direction label
+ * for use in Gemini prompt text.
+ */
+export function rotationToDirectionLabel(rotation: number): string {
+  const norm = ((rotation % 360) + 360) % 360;
+  if (norm < 22.5 || norm >= 337.5) return 'STRAIGHT UP';
+  if (norm < 67.5)   return 'UP-RIGHT (angled ~45° from vertical)';
+  if (norm < 112.5)  return 'RIGHT (horizontal)';
+  if (norm < 157.5)  return 'DOWN-RIGHT (angled ~135° from vertical)';
+  if (norm < 202.5)  return 'STRAIGHT DOWN';
+  if (norm < 247.5)  return 'DOWN-LEFT (angled ~225° from vertical)';
+  if (norm < 292.5)  return 'LEFT (horizontal)';
+  return 'UP-LEFT (angled ~315° from vertical)';
+}
+
+/**
+ * Returns true if the fixture has a non-default rotation.
+ * Default for up-direction types is 0°, for down-direction types is 180°.
+ */
+export function hasCustomRotation(rotation: number | undefined, fixtureType: string): boolean {
+  if (rotation === undefined) return false;
+  const downTypes = new Set(['soffit', 'hardscape']);
+  const defaultRot = downTypes.has(fixtureType) ? 180 : 0;
+  return Math.abs(((rotation - defaultRot + 180) % 360) - 180) > 5;
 }
