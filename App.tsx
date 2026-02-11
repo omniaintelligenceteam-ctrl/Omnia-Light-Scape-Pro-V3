@@ -21,7 +21,7 @@ import { ClientPortal } from './components/ClientPortal';
 import { generateBOM } from './utils/bomCalculator';
 import { FixturePlacer } from './components/FixturePlacer';
 import type { FixturePlacerHandle } from './components/FixturePlacer';
-import type { LightFixture } from './types/fixtures';
+import type { LightFixture, GutterLine } from './types/fixtures';
 import { convertFixturesToSpatialMap, deriveSelections, PIPELINE_TYPE_TO_CATEGORY } from './utils/fixtureConverter';
 import { detectConflicts, ConflictResult, formatTimeSlot } from './utils/scheduleConflictDetection';
 import { useUserSync } from './hooks/useUserSync';
@@ -382,9 +382,18 @@ const App: React.FC = () => {
   // Manual Placement Mode (click-to-place on image)
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [manualFixtures, setManualFixtures] = useState<LightFixture[]>([]);
+  const [manualGutterLines, setManualGutterLines] = useState<GutterLine[]>(() => {
+    try { const s = localStorage.getItem('omnia_gutter_lines'); return s ? JSON.parse(s) : []; }
+    catch { return []; }
+  });
   const [activeManualFixtureType, setActiveManualFixtureType] = useState<string | null>(null);
   const fixturePlacerRef = useRef<FixturePlacerHandle>(null);
   const [imageNaturalAspect, setImageNaturalAspect] = useState<number>(16 / 10);
+
+  // Persist gutter lines to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('omnia_gutter_lines', JSON.stringify(manualGutterLines)); } catch { /* ignore */ }
+  }, [manualGutterLines]);
 
   // Favorite Presets State
   interface FixturePreset {
@@ -1843,7 +1852,8 @@ const App: React.FC = () => {
             userPreferences,
             (stage) => setGenerationStage(stage as typeof generationStage),
             manualFixtures,
-            nightBaseCache ?? undefined
+            nightBaseCache ?? undefined,
+            manualGutterLines.length > 0 ? manualGutterLines : undefined
           );
           result = manualResult.result;
           setNightBaseCache(manualResult.nightBase);
@@ -1865,7 +1875,8 @@ const App: React.FC = () => {
             userPreferences,
             (stage) => setGenerationStage(stage as typeof generationStage),
             manualSpatialMap,
-            isManualMode ? manualFixtures : undefined
+            isManualMode ? manualFixtures : undefined,
+            isManualMode && manualGutterLines.length > 0 ? manualGutterLines : undefined
           );
         }
       }
@@ -4634,6 +4645,8 @@ Notes: ${invoice.notes || 'N/A'}
                             imageUrl={previewUrl}
                             fixtures={manualFixtures}
                             onFixturesChange={setManualFixtures}
+                            gutterLines={manualGutterLines}
+                            onGutterLinesChange={setManualGutterLines}
                             activeFixtureType={activeManualFixtureType ? (PIPELINE_TYPE_TO_CATEGORY[activeManualFixtureType] ?? null) : null}
                             markerColors={FIXTURE_MARKER_COLOR}
                             cursorColor={activeManualFixtureType ? (PIPELINE_MARKER_COLOR[activeManualFixtureType] || '#FF0000') : undefined}

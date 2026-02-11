@@ -6,19 +6,14 @@ import {
 } from 'lucide-react';
 import {
   LightFixture,
+  GutterLine,
   FixtureCategory,
   getFixturePreset,
   createFixture,
 } from '../types/fixtures';
 import { GradientPreview } from './GradientPreview';
 
-// ── Gutter Line Types & Constants ──
-interface GutterLine {
-  id: string;
-  startX: number; startY: number; // 0-100% image coords
-  endX: number;   endY: number;
-}
-
+// ── Gutter Line Constants ──
 const GUTTER_SNAP_TYPES = new Set<FixtureCategory>(['uplight', 'spot', 'wall_wash', 'gutter_uplight']);
 const GUTTER_LINES_KEY = 'omnia_gutter_lines';
 const GUTTER_SNAP_THRESHOLD = 15; // % distance
@@ -42,6 +37,8 @@ export interface FixturePlacerProps {
   imageUrl: string;
   fixtures: LightFixture[];
   onFixturesChange: (fixtures: LightFixture[]) => void;
+  gutterLines?: GutterLine[];
+  onGutterLinesChange?: (lines: GutterLine[]) => void;
   activeFixtureType: FixtureCategory | null;
   markerColors: Record<string, string>;
   cursorColor?: string;
@@ -63,6 +60,8 @@ const MAX_HISTORY = 50;
 export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>(({
   fixtures,
   onFixturesChange,
+  gutterLines: gutterLinesProp,
+  onGutterLinesChange,
   activeFixtureType,
   markerColors,
   cursorColor,
@@ -86,11 +85,20 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [showGradientPreview, setShowGradientPreview] = useState(false);
 
-  // ── Gutter Line State ──
-  const [gutterLines, setGutterLines] = useState<GutterLine[]>(() => {
+  // ── Gutter Line State (prop-driven or internal) ──
+  const [gutterLinesInternal, setGutterLinesInternal] = useState<GutterLine[]>(() => {
     try { const s = localStorage.getItem(GUTTER_LINES_KEY); return s ? JSON.parse(s) : []; }
     catch { return []; }
   });
+  const gutterLines = gutterLinesProp ?? gutterLinesInternal;
+  const setGutterLines = useCallback((updater: GutterLine[] | ((prev: GutterLine[]) => GutterLine[])) => {
+    const newLines = typeof updater === 'function' ? updater(gutterLinesProp ?? gutterLinesInternal) : updater;
+    if (onGutterLinesChange) {
+      onGutterLinesChange(newLines);
+    } else {
+      setGutterLinesInternal(newLines);
+    }
+  }, [gutterLinesProp, gutterLinesInternal, onGutterLinesChange]);
   const [isDrawingGutter, setIsDrawingGutter] = useState(false);
   const [gutterDrawStart, setGutterDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [gutterDrawEnd, setGutterDrawEnd] = useState<{ x: number; y: number } | null>(null);
@@ -119,10 +127,12 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     }
   }, [fixtures]);
 
-  // Persist gutter lines to localStorage
+  // Persist gutter lines to localStorage (only when using internal state)
   useEffect(() => {
-    try { localStorage.setItem(GUTTER_LINES_KEY, JSON.stringify(gutterLines)); } catch { /* ignore */ }
-  }, [gutterLines]);
+    if (!onGutterLinesChange) {
+      try { localStorage.setItem(GUTTER_LINES_KEY, JSON.stringify(gutterLines)); } catch { /* ignore */ }
+    }
+  }, [gutterLines, onGutterLinesChange]);
 
   const pushToHistory = useCallback((newFixtures: LightFixture[]) => {
     setHistory(prev => {

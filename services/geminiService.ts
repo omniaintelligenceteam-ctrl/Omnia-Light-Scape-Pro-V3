@@ -18,7 +18,7 @@ import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/house
 import { drawFixtureMarkers } from "./canvasNightService";
 import { buildReferenceParts } from "./referenceLibrary";
 import { paintLightGradients } from "./lightGradientPainter";
-import type { LightFixture } from "../types/fixtures";
+import type { LightFixture, GutterLine } from "../types/fixtures";
 
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
 const MODEL_NAME = 'gemini-3-pro-image-preview';
@@ -2441,7 +2441,8 @@ export const generateManualScene = async (
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
   fixtures?: LightFixture[],
-  nightBaseBase64?: string
+  nightBaseBase64?: string,
+  gutterLines?: GutterLine[]
 ): Promise<{ result: string; nightBase: string }> => {
   console.log('[Manual Mode] Starting two-pass manual generation...');
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
@@ -2476,7 +2477,7 @@ export const generateManualScene = async (
 
   if (hasGradients) {
     console.log(`[Manual Mode] Painting directional light gradients for ${fixtures!.length} fixtures...`);
-    gradientImage = await paintLightGradients(imageBase64, fixtures!, imageMimeType);
+    gradientImage = await paintLightGradients(imageBase64, fixtures!, imageMimeType, gutterLines);
     console.log('[Manual Mode] Gradient map painted (includes numbered markers).');
   } else {
     console.log('[Manual Mode] Drawing fixture markers...');
@@ -2558,7 +2559,8 @@ export const generateNightSceneEnhanced = async (
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
   manualSpatialMap?: SpatialMap,
-  manualFixtures?: LightFixture[]
+  manualFixtures?: LightFixture[],
+  gutterLines?: GutterLine[]
 ): Promise<string> => {
 
   // â”€â”€â”€ GEMINI PIPELINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -2607,7 +2609,7 @@ export const generateNightSceneEnhanced = async (
   if (manualSpatialMap && manualSpatialMap.placements.length > 0) {
     if (manualFixtures && manualFixtures.length > 0) {
       console.log(`[Enhanced Mode] Painting directional light gradients for ${manualFixtures.length} fixtures...`);
-      gradientImageForGemini = await paintLightGradients(imageBase64, manualFixtures, imageMimeType);
+      gradientImageForGemini = await paintLightGradients(imageBase64, manualFixtures, imageMimeType, gutterLines);
       console.log('[Enhanced Mode] Gradient map painted (includes numbered markers).');
     } else {
       console.log('[Enhanced Mode] Drawing fixture markers on image copy for Gemini...');

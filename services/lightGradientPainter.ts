@@ -11,6 +11,7 @@
 
 import {
   LightFixture,
+  GutterLine,
   FixtureCategory,
   kelvinToRGB,
 } from '../types/fixtures';
@@ -391,6 +392,80 @@ function drawGutterIcon(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// GUTTER LINE DRAWING (amber dashed lines matching UI overlay)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function drawGutterLines(
+  ctx: CanvasRenderingContext2D,
+  gutterLines: GutterLine[],
+  imgW: number,
+  imgH: number
+): void {
+  if (!gutterLines || gutterLines.length === 0) return;
+
+  const lineWidth = Math.max(Math.round(imgW * 0.004), 3);
+  const fontSize = Math.max(Math.round(imgW * 0.018), 14);
+  const dashLen = Math.max(Math.round(imgW * 0.012), 8);
+  const gapLen = Math.max(Math.round(imgW * 0.006), 4);
+  const endR = Math.max(Math.round(imgW * 0.006), 4);
+
+  ctx.save();
+
+  for (const line of gutterLines) {
+    const x1 = (line.startX / 100) * imgW;
+    const y1 = (line.startY / 100) * imgH;
+    const x2 = (line.endX / 100) * imgW;
+    const y2 = (line.endY / 100) * imgH;
+
+    // Dark outline for contrast
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = lineWidth + 3;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // Amber dashed line
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = lineWidth;
+    ctx.setLineDash([dashLen, gapLen]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Endpoint circles
+    for (const [ex, ey] of [[x1, y1], [x2, y2]]) {
+      ctx.beginPath();
+      ctx.arc(ex, ey, endR, 0, Math.PI * 2);
+      ctx.fillStyle = '#F59E0B';
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // "GUTTER LINE" label at midpoint
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Dark shadow
+    ctx.fillStyle = '#000000';
+    ctx.fillText('GUTTER LINE', mx + 1, my - fontSize * 0.8 + 1);
+    ctx.fillText('GUTTER LINE', mx - 1, my - fontSize * 0.8 - 1);
+    // Amber text
+    ctx.fillStyle = '#F59E0B';
+    ctx.fillText('GUTTER LINE', mx, my - fontSize * 0.8);
+  }
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MARKER DRAWING (matches canvasNightService.ts drawFixtureMarkers)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -544,7 +619,8 @@ export function paintGradientsToCanvas(
 export async function paintLightGradients(
   imageBase64: string,
   fixtures: LightFixture[],
-  mimeType: string = 'image/jpeg'
+  mimeType: string = 'image/jpeg',
+  gutterLines?: GutterLine[]
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -578,6 +654,13 @@ export async function paintLightGradients(
 
         // 3. Paint directional gradients with screen blending
         paintGradientsToCanvas(ctx, fixtures, canvas.width, canvas.height);
+
+        // 3.5. Draw gutter lines (under markers, over gradients)
+        ctx.globalCompositeOperation = 'source-over';
+        if (gutterLines && gutterLines.length > 0) {
+          drawGutterLines(ctx, gutterLines, canvas.width, canvas.height);
+          console.log(`[GradientPainter] Drew ${gutterLines.length} gutter line(s) on annotated image.`);
+        }
 
         // 4. Reset composite and draw numbered markers on top
         ctx.globalCompositeOperation = 'source-over';

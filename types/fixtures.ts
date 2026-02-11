@@ -34,6 +34,16 @@ export interface LightFixture {
 }
 
 /**
+ * A gutter line drawn by the user on the property image.
+ * Coordinates are 0-100% of image dimensions.
+ */
+export interface GutterLine {
+  id: string;
+  startX: number; startY: number; // 0-100%
+  endX: number;   endY: number;
+}
+
+/**
  * Preset configurations for different fixture types
  */
 export interface FixturePreset {
