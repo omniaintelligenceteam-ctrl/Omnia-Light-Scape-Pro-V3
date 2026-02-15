@@ -43,6 +43,13 @@ export function useOrganization(): UseOrganizationResult {
 
       const response = await fetch(`/api/organizations?userId=${user.id}`);
       if (!response.ok) {
+        if (response.status === 404 || response.status === 500) {
+          setOrganization(null);
+          setRole(null);
+          setLocationId(null);
+          setIsLoading(false);
+          return;
+        }
         throw new Error('Failed to fetch organization');
       }
 

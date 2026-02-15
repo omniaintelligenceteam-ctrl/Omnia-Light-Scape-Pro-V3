@@ -39,8 +39,8 @@ export function useTeamMembers(): UseTeamMembersResult {
 
       const response = await fetch(`/api/organizations/members?userId=${user.id}`);
       if (!response.ok) {
-        if (response.status === 404) {
-          // User doesn't belong to an organization yet
+        if (response.status === 404 || response.status === 500) {
+          // User doesn't belong to an organization yet, or database not configured
           setMembers([]);
           setIsLoading(false);
           return;
@@ -70,8 +70,8 @@ export function useTeamMembers(): UseTeamMembersResult {
     try {
       const response = await fetch(`/api/organizations/invites?userId=${user.id}`);
       if (!response.ok) {
-        if (response.status === 403 || response.status === 404) {
-          // Not authorized or no org
+        if (response.status === 403 || response.status === 404 || response.status === 500) {
+          // Not authorized, no org, or database not configured
           setInvites([]);
           return;
         }

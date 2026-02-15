@@ -24,6 +24,10 @@ export function useBusinessGoals() {
         const response = await fetch(`/api/goals?userId=${user.id}`);
 
         if (!response.ok) {
+          if (response.status === 500 || response.status === 404) {
+            setIsLoading(false);
+            return;
+          }
           throw new Error('Failed to load goals');
         }
 
