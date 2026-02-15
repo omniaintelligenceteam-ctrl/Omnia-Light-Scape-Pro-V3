@@ -324,6 +324,9 @@ Base your analysis on:
           },
         ],
       },
+      config: {
+        thinkingConfig: { thinkingBudget: 8192 },
+      },
     });
 
     const response = await withTimeout(
@@ -335,7 +338,8 @@ Base your analysis on:
     if (response.candidates && response.candidates.length > 0) {
       const candidate = response.candidates[0];
       if (candidate.content && candidate.content.parts) {
-        const textPart = candidate.content.parts.find((p: { text?: string }) => p.text);
+        // Skip thinking parts (thought: true) — grab the final output text
+        const textPart = candidate.content.parts.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought).pop();
         if (textPart && textPart.text) {
           // Clean up the response - remove any markdown code blocks if present
           let jsonText = textPart.text.trim();
@@ -2849,6 +2853,9 @@ Return ONLY valid JSON. No markdown code blocks.`;
           },
         ],
       },
+      config: {
+        thinkingConfig: { thinkingBudget: 8192 },
+      },
     });
 
     const response = await withTimeout(
@@ -2860,7 +2867,8 @@ Return ONLY valid JSON. No markdown code blocks.`;
     if (response.candidates && response.candidates.length > 0) {
       const candidate = response.candidates[0];
       if (candidate.content && candidate.content.parts) {
-        const textPart = candidate.content.parts.find(p => p.text);
+        // Skip thinking parts (thought: true) — grab the final output text
+        const textPart = candidate.content.parts.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought).pop();
         if (textPart && textPart.text) {
           let jsonText = textPart.text.trim();
           if (jsonText.startsWith('```')) {
