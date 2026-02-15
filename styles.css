@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Premium Design System Variables */
 :root {
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
