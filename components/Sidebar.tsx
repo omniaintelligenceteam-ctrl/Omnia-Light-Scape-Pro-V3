@@ -44,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   // Define all menu items with their access requirements
   const allMenuItems: MenuItem[] = [
     { id: 'editor', label: 'Editor', icon: Paintbrush, requiredPermission: 'canCreateProjects' },
+    { id: 'manual-placement', label: 'AI Placement', icon: Sparkles, requiredPermission: 'canCreateProjects' },
     { id: 'projects', label: 'Projects', icon: FolderOpen }, // All roles can see (filtered view)
     { id: 'schedule', label: 'Schedule', icon: Calendar }, // All roles can see (filtered view)
     { id: 'settings', label: 'Settings', icon: Settings }, // All roles can see (role-filtered content)

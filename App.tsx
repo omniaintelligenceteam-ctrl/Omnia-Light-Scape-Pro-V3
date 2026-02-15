@@ -12,6 +12,7 @@ import AuthWrapper from './components/AuthWrapper';
 // InventoryView - currently unused, can re-enable when needed
 // import { InventoryView } from './components/InventoryView';
 import { ScheduleView } from './components/ScheduleView';
+import { ManualPlacementGenerator } from './components/ManualPlacementGenerator';
 // BOMView - currently unused, can re-enable when needed
 // import { BOMView } from './components/BOMView';
 import { Pricing } from './components/Pricing';
@@ -5547,6 +5548,29 @@ Notes: ${invoice.notes || 'N/A'}
                 )}
                 </AnimatePresence>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* TAB: MANUAL PLACEMENT (AI Placement) */}
+          {activeTab === 'manual-placement' && (
+            <motion.div
+              key="manual-placement"
+              initial={{ x: tabDirection * 100 + '%' }}
+              animate={{ x: 0 }}
+              exit={{ x: tabDirection * -100 + '%' }}
+              transition={{ type: 'spring', stiffness: 700, damping: 45 }}
+              className="absolute inset-0 h-full overflow-y-auto overflow-x-hidden bg-[#050505] pb-24 md:pb-20"
+            >
+              <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
+              <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+              
+              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
+                <ManualPlacementGenerator
+                  onGenerated={(result) => {
+                    showToast(`Generated night scene with ${result.fixtures.length} fixtures`, 'success');
+                  }}
+                />
               </div>
             </motion.div>
           )}
