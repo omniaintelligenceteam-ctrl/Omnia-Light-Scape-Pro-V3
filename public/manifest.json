@@ -1,0 +1,18 @@
+{
+  "name": "Omnia Light Scape Pro",
+  "short_name": "Omnia",
+  "description": "AI-powered landscape lighting design tool",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#F6B45A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
