@@ -384,18 +384,11 @@ const App: React.FC = () => {
   // Manual Placement Mode (click-to-place on image)
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [manualFixtures, setManualFixtures] = useState<LightFixture[]>([]);
-  const [manualGutterLines, setManualGutterLines] = useState<GutterLine[]>(() => {
-    try { const s = localStorage.getItem('omnia_gutter_lines'); return s ? JSON.parse(s) : []; }
-    catch { return []; }
-  });
+  const [manualGutterLines, setManualGutterLines] = useState<GutterLine[]>([]);
   const [activeManualFixtureType, setActiveManualFixtureType] = useState<string | null>(null);
   const fixturePlacerRef = useRef<FixturePlacerHandle>(null);
   const [imageNaturalAspect, setImageNaturalAspect] = useState<number>(16 / 10);
 
-  // Persist gutter lines to localStorage
-  useEffect(() => {
-    try { localStorage.setItem('omnia_gutter_lines', JSON.stringify(manualGutterLines)); } catch { /* ignore */ }
-  }, [manualGutterLines]);
 
   // Favorite Presets State
   interface FixturePreset {

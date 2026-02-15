@@ -15,7 +15,6 @@ import { GradientPreview } from './GradientPreview';
 
 // ── Gutter Line Constants ──
 const GUTTER_SNAP_TYPES = new Set<FixtureCategory>(['uplight', 'spot', 'wall_wash', 'gutter_uplight']);
-const GUTTER_LINES_KEY = 'omnia_gutter_lines';
 const GUTTER_SNAP_THRESHOLD = 15; // % distance
 const MIN_LINE_LENGTH = 5;        // % minimum to save
 const FIRST_STORY_Y_THRESHOLD = 45; // % from top — above this, fixtures MUST be on a gutter line
@@ -102,10 +101,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const [showGradientPreview, setShowGradientPreview] = useState(false);
 
   // ── Gutter Line State (prop-driven or internal) ──
-  const [gutterLinesInternal, setGutterLinesInternal] = useState<GutterLine[]>(() => {
-    try { const s = localStorage.getItem(GUTTER_LINES_KEY); return s ? JSON.parse(s) : []; }
-    catch { return []; }
-  });
+  const [gutterLinesInternal, setGutterLinesInternal] = useState<GutterLine[]>([]);
   const gutterLines = gutterLinesProp ?? gutterLinesInternal;
   const setGutterLines = useCallback((updater: GutterLine[] | ((prev: GutterLine[]) => GutterLine[])) => {
     const newLines = typeof updater === 'function' ? updater(gutterLinesProp ?? gutterLinesInternal) : updater;
@@ -143,12 +139,6 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     }
   }, [fixtures]);
 
-  // Persist gutter lines to localStorage (only when using internal state)
-  useEffect(() => {
-    if (!onGutterLinesChange) {
-      try { localStorage.setItem(GUTTER_LINES_KEY, JSON.stringify(gutterLines)); } catch { /* ignore */ }
-    }
-  }, [gutterLines, onGutterLinesChange]);
 
   const pushToHistory = useCallback((newFixtures: LightFixture[]) => {
     setHistory(prev => {
@@ -997,8 +987,10 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
                   {/* Delete button at midpoint */}
                   <g
                     className="pointer-events-auto cursor-pointer"
+                    onMouseDown={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
+                    onTouchStart={(evt) => { evt.stopPropagation(); }}
                     onClick={(evt) => { evt.stopPropagation(); deleteGutterLine(line.id); }}
-                    onTouchEnd={(evt) => { evt.stopPropagation(); deleteGutterLine(line.id); }}
+                    onTouchEnd={(evt) => { evt.stopPropagation(); evt.preventDefault(); deleteGutterLine(line.id); }}
                   >
                     <circle cx={mx} cy={my} r={10} fill="#1f1f1f" stroke="#F59E0B" strokeWidth={1.5} opacity={0.9} />
                     <line x1={mx - 4} y1={my - 4} x2={mx + 4} y2={my + 4} stroke="#EF4444" strokeWidth={2} />
