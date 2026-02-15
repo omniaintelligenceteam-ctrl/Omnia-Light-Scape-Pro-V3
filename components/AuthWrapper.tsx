@@ -18,10 +18,10 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   // Loading state
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-[#F6B45A] text-2xl font-bold mb-2">Omnia</div>
-          <div className="text-white text-sm">Loading...</div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center" style={{ minHeight:'100vh', background:'linear-gradient(135deg,#111827,#1e3a5f,#312e81)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div className="text-center" style={{ textAlign:'center' }}>
+          <div className="text-[#F6B45A] text-2xl font-bold mb-2" style={{ color:'#F6B45A', fontSize:'1.5rem', fontWeight:'bold', marginBottom:'0.5rem' }}>Omnia</div>
+          <div className="text-white text-sm" style={{ color:'#ffffff', fontSize:'0.875rem' }}>Loading...</div>
           {isTimedOut && (
             <button
               onClick={() => window.location.reload()}
@@ -38,11 +38,11 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   // Not signed in - show Clerk sign in
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Omnia Light Scape Pro</h1>
-            <p className="text-gray-300">Transform landscapes with AI-powered lighting</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center p-4" style={{ minHeight:'100vh', background:'linear-gradient(135deg,#111827,#1e3a5f,#312e81)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
+        <div className="max-w-md w-full" style={{ maxWidth:'28rem', width:'100%' }}>
+          <div className="text-center mb-8" style={{ textAlign:'center', marginBottom:'2rem' }}>
+            <h1 className="text-4xl font-bold text-white mb-2" style={{ fontSize:'2.25rem', fontWeight:'bold', color:'#ffffff', marginBottom:'0.5rem' }}>Omnia Light Scape Pro</h1>
+            <p className="text-gray-300" style={{ color:'#d1d5db' }}>Transform landscapes with AI-powered lighting</p>
           </div>
           <SignIn
             appearance={{

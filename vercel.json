@@ -12,7 +12,9 @@
     {
       "source": "/((?!api/|assets/).*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Surrogate-Control", "value": "no-store" },
+        { "key": "CDN-Cache-Control", "value": "no-store" }
       ]
     }
   ],

@@ -164,7 +164,7 @@ export class ErrorBoundary extends Component<Props, State> {
       const IconComponent = errorDetails.icon;
 
       return (
-        <div className="min-h-screen bg-[#050505] flex items-center justify-center p-8">
+        <div className="min-h-screen bg-[#050505] flex items-center justify-center p-8" style={{ minHeight:'100vh', backgroundColor:'#050505', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
           <div className="max-w-md w-full text-center space-y-6 p-8 bg-[#111] rounded-2xl border border-white/10 shadow-2xl">
             {/* Error Icon - contextual */}
             <div className="flex justify-center">
