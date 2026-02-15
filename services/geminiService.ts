@@ -133,9 +133,9 @@ function buildPreferenceContext(preferences: UserPreferences | null | undefined)
   return contextLines.join('\n');
 }
 
-// Analysis model - Gemini 3 Pro for other analysis functions
+// Analysis model - Gemini 3 Pro with Deep Think for property analysis
 const ANALYSIS_MODEL_NAME = 'gemini-3-pro-preview';
-const ANALYSIS_TIMEOUT_MS = 90000; // 90 seconds for analysis
+const ANALYSIS_TIMEOUT_MS = 120000; // 120 seconds for Deep Think analysis
 
 /**
  * Stage 1: ANALYZING
@@ -325,7 +325,7 @@ Base your analysis on:
         ],
       },
       config: {
-        thinkingConfig: { thinkingBudget: 8192 },
+        thinkingConfig: { thinkingLevel: 'high' },
       },
     });
 
@@ -2615,7 +2615,7 @@ export const generateNightSceneEnhanced = async (
 
   // Step 1: Analyze property with Gemini (includes spatial mapping)
   onStageUpdate?.('analyzing');
-  console.log('[Enhanced Mode] Step 1: Analyzing property with Gemini Pro 3...');
+  console.log('[Enhanced Mode] Step 1: Analyzing property with Gemini 3 Deep Think...');
   const analysis = await analyzePropertyArchitecture(
     imageBase64,
     imageMimeType,
@@ -2690,7 +2690,7 @@ export const generateNightSceneEnhanced = async (
 // Uses the new smart analysis system for better fixture suggestions
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-const ENHANCED_ANALYSIS_TIMEOUT_MS = 90000; // 90 seconds for comprehensive analysis
+const ENHANCED_ANALYSIS_TIMEOUT_MS = 120000; // 120 seconds for Deep Think analysis
 
 /**
  * Enhanced property analysis that provides smarter fixture suggestions
@@ -2854,7 +2854,7 @@ Return ONLY valid JSON. No markdown code blocks.`;
         ],
       },
       config: {
-        thinkingConfig: { thinkingBudget: 8192 },
+        thinkingConfig: { thinkingLevel: 'high' },
       },
     });
 
