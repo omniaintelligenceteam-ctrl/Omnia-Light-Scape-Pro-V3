@@ -30,7 +30,18 @@ export interface LightFixture {
   beamAngle: number;   // Degrees (15-120 typical)
   label?: string;      // User-defined label
   locked?: boolean;    // Prevent accidental moves
-  rotation?: number;   // Degrees (0-360) for directional fixtures
+  rotation?: number;   // Degrees (0-360, 0=up) for beam direction
+  beamLength?: number; // Multiplier on default beam height (0.3–2.5, default 1.0)
+}
+
+/**
+ * A gutter line drawn by the user on the property image.
+ * Coordinates are 0-100% of image dimensions.
+ */
+export interface GutterLine {
+  id: string;
+  startX: number; startY: number; // 0-100%
+  endX: number;   endY: number;
 }
 
 /**
@@ -267,7 +278,7 @@ export const FIXTURE_PRESETS: FixturePreset[] = [
     type: 'gutter_uplight',
     name: 'Gutter Light',
     description: 'Gutter-mounted uplight inside channel',
-    icon: '⌐',
+    icon: '↑',
     defaultIntensity: 0.8,
     defaultColorTemp: 2700,
     defaultBeamAngle: 30,

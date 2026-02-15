@@ -22,7 +22,7 @@ import { ClientPortal } from './components/ClientPortal';
 import { generateBOM } from './utils/bomCalculator';
 import { FixturePlacer } from './components/FixturePlacer';
 import type { FixturePlacerHandle } from './components/FixturePlacer';
-import type { LightFixture } from './types/fixtures';
+import type { LightFixture, GutterLine } from './types/fixtures';
 import { convertFixturesToSpatialMap, deriveSelections, PIPELINE_TYPE_TO_CATEGORY } from './utils/fixtureConverter';
 import { detectConflicts, ConflictResult, formatTimeSlot } from './utils/scheduleConflictDetection';
 import { useUserSync } from './hooks/useUserSync';
@@ -65,7 +65,7 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, generateManualScene, analyzePropertyArchitecture, verifyFixturesBeforeGeneration, validateCoordinatesBeforeGeneration, planLightingWithAI, craftPromptWithAI, validatePrompt } from './services/geminiService';
+import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, generateManualScene } from './services/geminiService';
 import { analyzeWithClaude } from './services/claudeService';
 // IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal, Crosshair } from 'lucide-react';
@@ -384,9 +384,18 @@ const App: React.FC = () => {
   // Manual Placement Mode (click-to-place on image)
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [manualFixtures, setManualFixtures] = useState<LightFixture[]>([]);
+  const [manualGutterLines, setManualGutterLines] = useState<GutterLine[]>(() => {
+    try { const s = localStorage.getItem('omnia_gutter_lines'); return s ? JSON.parse(s) : []; }
+    catch { return []; }
+  });
   const [activeManualFixtureType, setActiveManualFixtureType] = useState<string | null>(null);
   const fixturePlacerRef = useRef<FixturePlacerHandle>(null);
   const [imageNaturalAspect, setImageNaturalAspect] = useState<number>(16 / 10);
+
+  // Persist gutter lines to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('omnia_gutter_lines', JSON.stringify(manualGutterLines)); } catch { /* ignore */ }
+  }, [manualGutterLines]);
 
   // Favorite Presets State
   interface FixturePreset {
@@ -1845,7 +1854,8 @@ const App: React.FC = () => {
             userPreferences,
             (stage) => setGenerationStage(stage as typeof generationStage),
             manualFixtures,
-            nightBaseCache ?? undefined
+            nightBaseCache ?? undefined,
+            manualGutterLines.length > 0 ? manualGutterLines : undefined
           );
           result = manualResult.result;
           setNightBaseCache(manualResult.nightBase);
@@ -1867,7 +1877,8 @@ const App: React.FC = () => {
             userPreferences,
             (stage) => setGenerationStage(stage as typeof generationStage),
             manualSpatialMap,
-            isManualMode ? manualFixtures : undefined
+            isManualMode ? manualFixtures : undefined,
+            isManualMode && manualGutterLines.length > 0 ? manualGutterLines : undefined
           );
         }
       }
@@ -1950,117 +1961,38 @@ const App: React.FC = () => {
             userPreferences
           );
         } catch (directError) {
-          // If direct generation fails, fall back to full pipeline
-          console.warn('Direct generation failed, falling back to full pipeline:', directError);
-          result = await runFullPipeline();
-        }
-      }
-      // === FULL PIPELINE MODE (5-Stage) ===
-      else {
-        console.log('Using FULL PIPELINE MODE (5 stages)...');
-        result = await runFullPipeline();
-      }
-
-      // Helper function for full pipeline (used as fallback)
-      async function runFullPipeline(): Promise<string> {
-        let finalPrompt = activePrompt;
-        let finalIntensity = lightIntensity;
-        let finalBeamAngle = beamAngle;
-
-        setGenerationStage('analyzing');
-        let analysis: PropertyAnalysis | null = null;
-
-        try {
-          analysis = await analyzePropertyArchitecture(
+          // If direct generation fails, fall back to enhanced mode
+          console.warn('Direct generation failed, falling back to enhanced mode:', directError);
+          result = await generateNightSceneEnhanced(
             base64,
             mimeType,
-            selectedFixtures,
-            fixtureSubOptions,
-            fixtureCounts
-          );
-          setPropertyAnalysis(analysis);
-
-          if (generationCancelledRef.current) {
-            generationCancelledRef.current = false;
-            setGenerationStage('idle');
-            throw new Error('Generation cancelled');
-          }
-
-          setGenerationStage('planning');
-          const plan = await planLightingWithAI(
-            analysis,
-            {
-              fixtures: selectedFixtures,
-              subOptions: fixtureSubOptions,
-              counts: fixtureCounts,
-              placementNotes: fixturePlacementNotes
-            },
-            FIXTURE_TYPES
-          );
-
-          // Validate spatial coordinates before proceeding - throws if missing
-          console.log('=== COORDINATE VALIDATION ===');
-          validateCoordinatesBeforeGeneration(plan);
-          console.log('=== COORDINATES VALIDATED ===');
-
-          finalIntensity = plan.settings.intensity;
-          finalBeamAngle = plan.settings.beamAngle;
-
-          if (generationCancelledRef.current) {
-            generationCancelledRef.current = false;
-            setGenerationStage('idle');
-            throw new Error('Generation cancelled');
-          }
-
-          setGenerationStage('prompting');
-          const smartPrompt = await craftPromptWithAI(
-            analysis,
-            plan,
-            SYSTEM_PROMPT,
-            FIXTURE_TYPES,
+            effectiveFixtures,
+            effectiveSubOptions,
+            effectiveCounts,
             colorPrompt,
+            lightIntensity,
+            beamAngle,
+            targetRatio,
             userPreferences,
-            fixturePlacementNotes
+            (stage) => setGenerationStage(stage as typeof generationStage)
           );
-
-          const verifiedSummary = verifyFixturesBeforeGeneration(plan, {
-            fixtures: selectedFixtures,
-            subOptions: fixtureSubOptions,
-            counts: fixtureCounts
-          });
-
-          if (generationCancelledRef.current) {
-            generationCancelledRef.current = false;
-            setGenerationStage('idle');
-            throw new Error('Generation cancelled');
-          }
-
-          setGenerationStage('validating');
-          const validation = await validatePrompt(smartPrompt, analysis, plan);
-          const validatedPrompt = validation.fixedPrompt || smartPrompt;
-          finalPrompt = validatedPrompt + verifiedSummary.summary + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : '');
-
-        } catch (err) {
-          if ((err as Error).message === 'Generation cancelled') throw err;
-          setPropertyAnalysis(null);
         }
-
-        if (generationCancelledRef.current) {
-          generationCancelledRef.current = false;
-          setGenerationStage('idle');
-          throw new Error('Generation cancelled');
-        }
-
-        setGenerationStage('generating');
-        return await generateNightScene(
+      }
+      // === FALLBACK: Use Enhanced Mode ===
+      else {
+        console.log('Using ENHANCED MODE (fallback)...');
+        result = await generateNightSceneEnhanced(
           base64,
-          finalPrompt,
           mimeType,
-          targetRatio,
-          finalIntensity,
-          finalBeamAngle,
+          effectiveFixtures,
+          effectiveSubOptions,
+          effectiveCounts,
           colorPrompt,
-          userPreferences
+          lightIntensity,
+          beamAngle,
+          targetRatio,
+          userPreferences,
+          (stage) => setGenerationStage(stage as typeof generationStage)
         );
       }
 
@@ -4800,6 +4732,8 @@ Notes: ${invoice.notes || 'N/A'}
                             imageUrl={previewUrl}
                             fixtures={manualFixtures}
                             onFixturesChange={setManualFixtures}
+                            gutterLines={manualGutterLines}
+                            onGutterLinesChange={setManualGutterLines}
                             activeFixtureType={activeManualFixtureType ? (PIPELINE_TYPE_TO_CATEGORY[activeManualFixtureType] ?? null) : null}
                             markerColors={FIXTURE_MARKER_COLOR}
                             cursorColor={activeManualFixtureType ? (PIPELINE_MARKER_COLOR[activeManualFixtureType] || '#FF0000') : undefined}

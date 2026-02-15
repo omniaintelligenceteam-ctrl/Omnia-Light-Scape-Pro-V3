@@ -322,6 +322,8 @@ export interface SpatialFixturePlacement {
   verticalPosition: number;      // 0-100 (% from top edge)
   anchor: string;                // "right_of corner_left" or "below window_1"
   description: string;           // Human-readable: "At far LEFT corner, in landscaping bed"
+  rotation?: number;             // 0-360° beam direction (0=up). Per-fixture override.
+  beamLength?: number;           // 0.3-2.5 multiplier on default beam height.
 }
 
 export interface SpatialMap {

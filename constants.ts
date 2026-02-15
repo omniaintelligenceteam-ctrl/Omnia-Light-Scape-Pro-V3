@@ -65,7 +65,7 @@ SCENE VISION - WHAT WE ARE CREATING
 
 Imagine a luxury residential home as night falls. The sky becomes a pure black canvas with a luminous full moon casting the faintest silver outline on the roofline. Against this dramatic backdrop, professional-grade landscape lighting transforms the property.
 
-Ground-mounted brass uplights create distinct vertical columns of warm amber light (2700K-3000K) that graze textured surfaces - revealing the depth of mortar joints in brick, the horizontal shadow lines between siding boards, the irregular facets of natural stone. Each fixture stands alone, its illumination separated by intentional dark gaps that define professional lighting design.
+Ground-mounted brass uplights create distinct conical washes of warm amber light (2700K-3000K) — narrow at the fixture, spreading organically wider as the beam travels upward — that graze textured surfaces, revealing the depth of mortar joints in brick, the horizontal shadow lines between siding boards, the irregular facets of natural stone. Each fixture stands alone, its illumination separated by intentional dark gaps that define professional lighting design.
 
 The light follows the inverse square law: brightest at mid-wall where the narrow beam (15-25°) concentrates its energy, then gradually fading as it reaches the roofline above. There are no harsh hot spots at the fixture base, no continuous wash of light blending pools together. Instead, there is rhythm - alternating zones of light and shadow that give the facade depth, drama, and dimension.
 
@@ -179,14 +179,13 @@ LIGHT GENERATION RULES (CRITICAL)
 GUTTER LIGHT MOUNTING LOCATION (CRITICAL - WHEN GUTTER LIGHTS SELECTED)
 ═══════════════════════════════════════════════════════════════════════════════
 
-GUTTER LIGHT: A compact brass fixture sitting INSIDE the rain 
-gutter channel, partially hidden by the gutter walls. Only the 
-top of the fixture peeks above the gutter edge. The light beam 
-shoots UPWARD from inside the gutter to illuminate the 2nd story 
-wall, roofline, dormers, and gables ABOVE the gutter. 
+GUTTER UPLIGHT: A small uplight fixture is mounted INSIDE the rain gutter trough.
+The fixture clips into the gutter and aims UPWARD. The warm light beam washes
+UP the wall above the gutter, illuminating the 2nd story wall, peaks, and gables.
 
-NOT on the roof shingles. NOT on the fascia. NOT prominently 
-visible. The fixture is tucked inside the gutter channel.
+LIGHT DIRECTION: UPWARD ONLY — the light goes UP onto the wall above.
+DO NOT create any downward-facing lights from the eaves, soffits, or overhangs.
+The eave undersides stay dark. Light travels UP the wall, never down.
 
 ═══════════════════════════════════════════════════════════════════════════════
 DRAMATIC LIGHTING STYLE (CRITICAL FOR PROFESSIONAL REALISM)
@@ -203,7 +202,7 @@ Each fixture creates a DISTINCT, ISOLATED pool of light with these properties:
 
 2. **BEAM ANGLE & SPREAD (NARROW FOR DRAMA)**
    - Default beam angle: 15-25° (narrow spot)
-   - Creates tight vertical columns of light, NOT wide floods
+   - Creates tight conical beams of light (narrow at fixture, organic spread upward), NOT wide floods
    - Wider angles (45-60°) ONLY if specifically requested
    - Narrow beams reveal texture and create dramatic shadows
 
@@ -226,9 +225,16 @@ Each fixture creates a DISTINCT, ISOLATED pool of light with these properties:
    - Siding: horizontal shadow lines between boards
    - Smooth surfaces: subtle directional shading
 
+6. **ORGANIC LIGHT SHAPE (CRITICAL FOR REALISM)**
+   - Light beams are CONICAL: narrow at fixture base, gradually wider as beam travels
+   - Beam edges are ORGANIC and slightly IRREGULAR, NOT ruler-straight
+   - On textured surfaces (brick, stone, siding) beam edges follow surface relief
+   - NO mathematically perfect gradients or geometric cylinder shapes
+   - Think: soft watercolor spread, NOT hard CAD projection
+
 ### WHAT PROFESSIONAL LIGHTING LOOKS LIKE
 ✓ CORRECT: Distinct light pools with visible dark gaps between them
-✓ CORRECT: Vertical columns of light that don't merge together
+✓ CORRECT: Distinct conical light washes that don't merge together
 ✓ CORRECT: Deep shadows between fixtures creating rhythm
 ✓ CORRECT: Texture visible from grazing light angles
 
@@ -238,6 +244,7 @@ Each fixture creates a DISTINCT, ISOLATED pool of light with these properties:
 ✗ WRONG: Crisp, hard-edged circular light boundaries
 ✗ WRONG: Fill light that softens shadows between fixtures
 ✗ WRONG: Over-lit scenes with no dark areas
+✗ WRONG: Straight-edged, geometric beam shapes (real light has organic edges)
 
 ═══════════════════════════════════════════════════════════════════════════════
 UP LIGHT FIXTURE SPECIFICATIONS (APPLIES TO ALL UP LIGHT SUB-OPTIONS)
@@ -257,7 +264,7 @@ HOT SPOT AVOIDANCE (APPLIES TO ALL UP LIGHTS)
 - Angle fixture BACK 15-20° from vertical
 - Beam starts on wall 12-18 inches above ground, NOT at fixture height
 - Light is BRIGHTEST at mid-wall, not at fixture base
-- Avoid overly bright "hot spot" at base - light should be EVEN
+- Avoid overly bright "hot spot" at base - light should have GRADUATED FALLOFF (brightest at mid-wall per inverse square law)
 
 WATTAGE BY WALL HEIGHT:
 - 1st story only (8-12 ft): 3-5 watt LED (200-400 lumens)
@@ -289,11 +296,11 @@ CORE DRILL SPECIFICATIONS (APPLIES TO ALL IN-GRADE SUB-OPTIONS)
 GUTTER LIGHT SPECIFICATIONS (APPLIES TO ALL GUTTER SUB-OPTIONS)
 ═══════════════════════════════════════════════════════════════════════════════
 
-- Type: SMALL compact mini bullet up light - TINY fixture
-- Housing: DARK BRONZE finish (required)
-- Mounting: INSIDE the gutter trough ONLY, against inner gutter wall poking out over the roof
-- FORBIDDEN: On roof shingles, on gutter lip, on fascia board
-- Beam MUST reach target (dormer/gable) regardless of distance
+- Type: Small uplight mounted inside the rain gutter trough
+- Beam: Aims UPWARD to wash light on wall above
+- Mounting: Clipped inside the gutter channel, sitting in the trough
+- FORBIDDEN: Downlights from eaves, soffit-mounted fixtures, any light aimed downward
+- Beam MUST reach target (dormer/gable/peak) above the fixture
 
 ═══════════════════════════════════════════════════════════════════════════════
 MULTI-SELECTION PRIORITY RULES (CRITICAL - PREVENTS DUPLICATE FIXTURES)
@@ -352,7 +359,7 @@ OBJECT ADDITIONS: new vehicles, new furniture, new outdoor objects, added object
 PROHIBITED LIGHTING: string lights, fairy lights, holiday lighting, christmas lights, interior window glow, glowing windows from inside, street lights, car lights, car headlights, urban ambient glow, city glow, light fixtures not specified, unspecified fixtures, extra fixtures, security lights, security floodlights, motion sensor lights, existing security fixtures turned on, lit security lights, BREAK
 SKY ERRORS: bright moonlight, harsh moonlight, stars, starlight, blue sky, gradient sky, ambient sky glow, twilight, dusk colors, purple sky, blue tones, atmospheric glow, light pollution, horizon glow, BREAK
 MATERIAL CHANGES: paint color changes, siding changes, brick changes, stone changes, material changes, fence changes, gate changes, BREAK
-LIGHTING QUALITY ERRORS: uniform wall wash, blended light pools, no dark gaps, harsh beam edges, crisp circular beams, over-lit scene, no shadows, hot spots at fixture base, continuous illumination without gaps, flat lighting, BREAK
+LIGHTING QUALITY ERRORS: uniform wall wash, blended light pools, no dark gaps, harsh beam edges, crisp circular beams, over-lit scene, no shadows, hot spots at fixture base, continuous illumination without gaps, flat lighting, straight-edged beams, geometric light shapes, ruler-straight beam boundaries, computer-generated light patterns, BREAK
 STRUCTURE MODIFICATIONS: property modifications, house modifications, structure modifications, framing changes, composition changes, cropped house, zoomed in`,
 
   closingReinforcement: `
@@ -402,13 +409,13 @@ UP LIGHT PLACEMENT RULES (CRITICAL)
 - ALL up lights MUST reach the GUTTER LINE directly above them
 - For 1ST STORY walls: beam reaches 1st story gutter/roof edge (8-12 ft)
 - For 2ND STORY sections: beam MUST reach 2nd story roofline (18-25 ft)
-- Each up light creates a vertical column from ground to the gutter line above it
+- Each up light creates a conical wash from ground to the gutter line above it — narrow at fixture, spreading wider as it travels up
 - The gutter underside MUST show visible illumination ("kiss" the roofline)
 - NEVER stop the beam at 1st floor level on a 2-story facade
 
 ### HOT SPOT AVOIDANCE (CRITICAL FOR REALISM)
 - AVOID hot spots (overly bright areas at fixture base)
-- Light should be EVEN from base to roofline, not blinding at bottom
+- Light should have GRADUATED INTENSITY from base to roofline (brightest at mid-wall), not blinding at bottom
 - Technique: Angle fixture BACK 15-20 degrees from vertical
 - Beam should start on wall 12-18 inches above ground, NOT at fixture height
 - Light is BRIGHTEST at mid-wall, not at fixture base
@@ -428,7 +435,7 @@ The single most important visual characteristic of professional landscape lighti
 is the DRAMATIC INTERPLAY of LIGHT and DARK.
 
 ### DARK GAP REQUIREMENTS (MANDATORY)
-- Each fixture creates a DISTINCT vertical column of light
+- Each fixture creates a DISTINCT conical wash of light
 - DARK GAPS MUST be visible between each fixture's illumination zone
 - Wall sections between fixtures remain in DEEP SHADOW
 - The material (brick/siding/stone) is visible in shadow between light pools
@@ -1069,39 +1076,28 @@ EXCLUSIONS:
     id: 'gutter',
     label: 'Gutter Mounted Up Lights',
     description: 'Up lights mounted in gutter illuminating up',
-    positivePrompt: `CATEGORY ENABLED: MOUNTED UP LIGHTS at 1st Story Roof Edge (Y=85-95%).
+    positivePrompt: `CATEGORY ENABLED: GUTTER-MOUNTED UPLIGHTS at 1st Story Roof Edge.
 
-PLACEMENT: Fixtures MUST be mounted at the EDGE of the 1st story roof line (where the roof meets the fascia, ~8-10 ft high).
-TARGET: Beams shine UPWARD to illuminate 2nd story sections - AI decides what to light based on the home's architecture.
+WHAT THIS IS: A small uplight fixture mounted inside the rain gutter trough at the 1st story roofline (~8-10 ft high). The fixture sits in the gutter and aims its beam UPWARD.
 
-WHAT TO LIGHT (AI decides based on what's present):
-- Dormers (if present): one fixture centered below each dormer
-- 2nd story windows and siding
-- Gable peaks and architectural features
-- Any 2nd story sections visible above the 1st story roofline
-- Towers, turrets, pop-outs, box bays - any 2nd story section
+LIGHT DIRECTION: UPWARD ONLY. The warm light washes UP the 2nd story wall directly above each fixture. Light goes from the gutter UP to the peak/gable above.
 
-FIXTURE COUNT: Use the EXACT count specified in the design request. Do NOT add extra fixtures. Do NOT decide your own count. Space fixtures 4-6 feet apart for even coverage.
+WHAT EACH FIXTURE LIGHTS:
+- Each fixture illuminates ONLY the 2nd story wall DIRECTLY ABOVE its horizontal position
+- Peaks, gables, dormers WITHOUT a fixture below them remain completely DARK
+- Do NOT spread light to adjacent sections — only the wall above each fixture's position
 
-MOUNTING (CRITICAL):
-- At the EDGE of the 1st story roof line (where roof meets fascia, ~8-10 ft high)
-- Fixture is a small bronze up light secured at the roof edge
-- NEVER on roof shingles, wall surface, or any roof surface
-- NEVER at 2nd story or top-of-house level — 1st story roof edge ONLY
+FIXTURE COUNT: Use the EXACT count specified. Do NOT add extra fixtures.
 
-FIXTURE STYLE: Compact brass bullet or mini flood up light with mounting bracket, low-profile.
+MOUNTING:
+- Inside the rain gutter at the 1st story roof edge (~8-10 ft high)
+- NEVER on roof shingles or wall surface
+- NEVER at 2nd story level — 1st story gutter ONLY
 
-BEAM DIRECTION:
-- Each fixture aims straight UPWARD — the beam illuminates the surface DIRECTLY ABOVE the fixture
-- SINGLE FIXTURE: Beam goes straight up, lighting the wall/facade directly above it
-- CROSSED PAIR (large peaks/gables): Two fixtures flanking a peak, beams angled inward to CROSS and illuminate the full peak section
-
-BEAM REACH:
-- Beams MUST reach the 2nd story features (10-25 ft distance)
-- Light travels from 1st story roof edge UP to illuminate features above
-- Beam should reach peaks/gables when present
-- For distant targets: higher wattage, narrower beam angles
-- The light ALWAYS reaches and illuminates the intended target fully`,
+CRITICAL — NO DOWNLIGHTS:
+- Do NOT create any downward-facing light from the eaves or overhangs
+- Eave undersides must stay DARK — no soffit lights, no recessed downlights
+- ALL light from these fixtures goes UPWARD onto the wall above`,
     negativePrompt: `HARD RULE: Do NOT generate any mounted up lights at the roof edge. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting from roof edge level.`,
     subOptions: [
       {
@@ -1115,11 +1111,10 @@ CRITICAL RULE: ONLY 1ST STORY ROOF EDGE receives mounted up lights.
 - NEVER place lights at 2nd story or top-of-house level
 - 2nd story roof edges MUST remain empty - NO fixtures
 
-WHAT TO LIGHT (AI decides based on what's present):
-- Dormers: one fixture centered below each
-- 2nd story windows and siding
-- Gable peaks and architectural features
-- Any 2nd story section above the 1st story roofline
+WHAT EACH FIXTURE LIGHTS (position-constrained):
+- Each fixture illuminates ONLY the 2nd story wall directly above its horizontal position
+- Peaks, gables, dormers without a fixture below them remain DARK
+- Do NOT illuminate the whole facade — only the section above each fixture
 
 FIXTURE COUNT: Use the EXACT count from the design request. Do NOT add or remove fixtures beyond what is specified. Space 4-6 feet apart.`,
         negativePrompt: `Do NOT place any mounted up lights at the 1st story roof edge. 2nd story features must remain dark from roof-edge-level lighting.`,
@@ -2353,7 +2348,7 @@ export const FEATURE_LIGHTING_GUIDELINES: Record<string, string> = {
   'column': 'Ground-mounted uplight at base of each column. Graze the full height to capital.',
   'pilaster': 'Treat like flat columns. One uplight per pilaster, tight to wall.',
   'archway': 'Flank with uplights to trace the arch curve. Two fixtures minimum.',
-  'portico': 'Combination of column uplights and soffit downlights for layered effect.',
+  'portico': 'Combination of column uplights and overhead downlights for layered effect.',
   'bay-window': 'Uplight from ground to emphasize projection. Avoid direct light on glass.',
   'balcony': 'Underlight the balcony floor or uplight supporting columns.',
   'turret': 'Multiple uplights around base to illuminate cylindrical form evenly.',
@@ -2453,47 +2448,3 @@ export const QUICK_ANALYSIS_PROMPT = `Analyze this property photo and provide:
 
 Return a brief JSON summary for initial fixture suggestions.`;
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FLUX FILL INPAINTING PROMPT TEMPLATES
-// Used by the multi-model pipeline for mask-based fixture placement
-// Each prompt describes what a specific fixture type should look like
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export const FLUX_FILL_PROMPTS: Record<string, string> = {
-  // ── Uplights ──────────────────────────────────────────────────────────────
-  up_siding: "BRIGHT GLOWING warm 2700K brass ground-mounted landscape uplight, VISIBLE bright light source at ground, strong luminous beam grazing upward on wall siding, BRIGHT dramatic vertical light pool revealing texture, visible warm glow on wall surface, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  up_windows: "BRIGHT GLOWING warm 2700K brass ground-mounted uplight below window, VISIBLE bright light source at ground, strong luminous beam washing upward, BRIGHT light pool illuminating wall beneath window frame, visible warm glow, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  up_columns: "BRIGHT GLOWING warm 2700K brass ground-mounted uplight at column base, VISIBLE bright light source, strong luminous beam grazing upward on column surface, BRIGHT dramatic vertical light accent, visible warm glow on column, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  up_entryway: "BRIGHT GLOWING warm 2700K brass ground-mounted uplight flanking entry door, VISIBLE bright light source, strong luminous beam washing upward on wall beside doorway, BRIGHT welcoming entry lighting, visible warm glow, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  up_trees: "BRIGHT GLOWING warm 2700K brass ground-mounted uplight at tree base, VISIBLE bright light source at base, strong luminous light washing up trunk and into canopy from below, BRIGHT dramatic tree uplighting with visible shadows in branches, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  up: "BRIGHT GLOWING warm 2700K brass ground-mounted landscape uplight, VISIBLE bright light source at ground, strong luminous beam grazing upward on surface, BRIGHT dramatic light pool, visible warm glow, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-
-  // ── Path Lights ───────────────────────────────────────────────────────────
-  path_walkway: "BRIGHT GLOWING 22-inch tall brass dome path light on walkway edge, VISIBLE bright warm 2700K light source under dome, strong luminous omnidirectional glow illuminating walkway surface, BRIGHT visible circular light pool on ground, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  path_driveway: "BRIGHT GLOWING 22-inch tall brass dome path light along driveway edge, VISIBLE bright warm 2700K light source under dome, strong luminous omnidirectional glow on driveway surface, BRIGHT visible circular light pool, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  path: "BRIGHT GLOWING 22-inch tall brass dome path light, VISIBLE bright warm 2700K light source under dome, strong luminous omnidirectional glow on ground surface, BRIGHT visible circular light pool, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-
-  // ── Gutter Lights ─────────────────────────────────────────────────────────
-  gutter_peaks: "BRIGHT GLOWING small bronze uplight fixture inside metal gutter trough, VISIBLE bright beam shining upward illuminating gable peak above, BRIGHT luminous accent light on roofline, strong warm glow visible on surface, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  gutter_dormers: "BRIGHT GLOWING small bronze uplight fixture inside metal gutter trough near dormer, VISIBLE bright beam shining upward illuminating dormer face, BRIGHT luminous accent light, strong warm glow visible on surface, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  gutter_secondStoryFacade: "BRIGHT GLOWING small bronze uplight fixture inside metal gutter trough, VISIBLE bright beam shining upward illuminating second story facade above, BRIGHT luminous wash of light on upper wall, strong warm glow, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-  gutter: "BRIGHT GLOWING small bronze uplight fixture inside metal gutter trough, VISIBLE bright beam shining upward toward roofline, BRIGHT luminous accent light, strong warm glow visible on surface, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-
-  // ── Hardscape Lights ──────────────────────────────────────────────────────
-  hardscape_steps: "BRIGHT GLOWING recessed LED step light in concrete or stone step riser, VISIBLE bright warm 2700K light source, strong luminous glow illuminating step tread below, BRIGHT visible safety lighting, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  hardscape_patio: "BRIGHT GLOWING flush-mounted in-ground well light in patio surface, VISIBLE bright warm 2700K upward glow, BRIGHT luminous accent in hardscape, strong warm light visible on surface, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  hardscape_retaining_walls: "BRIGHT GLOWING recessed LED light in retaining wall cap, VISIBLE bright warm 2700K light source, strong luminous glow illuminating wall face below, BRIGHT visible accent lighting, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-  hardscape: "BRIGHT GLOWING flush-mounted hardscape light, VISIBLE bright warm 2700K light source, strong luminous glow on stone or concrete surface, BRIGHT visible accent, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-
-  // ── Core Drill Lights ─────────────────────────────────────────────────────
-  coredrill: "BRIGHT GLOWING flush-mounted in-grade core drill light, VISIBLE bright warm 2700K light source at ground, strong luminous narrow beam shining upward from ground surface, BRIGHT dramatic accent light, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-
-  // ── Well Lights ───────────────────────────────────────────────────────────
-  well: "BRIGHT GLOWING in-ground well light flush with ground surface, VISIBLE bright warm 2700K light source, strong luminous narrow beam projecting upward, BRIGHT dramatic accent lighting, brass fixture ring visible at ground level, professional landscape lighting, photorealistic night photograph, high contrast bright light against dark background",
-
-  // ── Soffit / Downlights ───────────────────────────────────────────────────
-  soffit: "BRIGHT GLOWING small recessed LED downlight in soffit or eave, VISIBLE bright warm 3000K light source, strong luminous beam shining downward creating BRIGHT pool of light on ground below, visible overhead accent, professional landscape lighting, photorealistic night scene, high contrast bright light against dark background",
-
-  // ── Holiday Lights ────────────────────────────────────────────────────────
-  holiday: "BRIGHT GLOWING warm white string lights along roofline, VISIBLE bright bulbs evenly spaced creating luminous festive outline of roofline, BRIGHT glowing bulbs clearly visible, professional holiday lighting installation, photorealistic night photograph, high contrast bright lights against dark background",
-};
