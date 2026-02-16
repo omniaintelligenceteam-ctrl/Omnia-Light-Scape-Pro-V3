@@ -1,6 +1,6 @@
 ﻿
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import type { UserPreferences, PropertyAnalysis, FixtureSelections, LightingPlan, FixturePlacement, SpatialMap, SpatialFixturePlacement } from "../types";
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, ThinkingLevel } from "@google/genai";
+import type { UserPreferences, PropertyAnalysis, SpatialMap, SpatialFixturePlacement } from "../types";
 // FixtureType and SystemPromptConfig imports removed (used by deleted Stages 2-4)
 import {
   LIGHTING_APPROACH_BY_STYLE,
@@ -11,11 +11,12 @@ import {
   ENHANCED_ANALYSIS_SYSTEM_PROMPT,
   FIXTURE_TYPES,
   SYSTEM_PROMPT,
+  DEEP_THINK_SYSTEM_PROMPT,
   type ArchitecturalStyleType,
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
-import { drawFixtureMarkers, cropTopPercent, compositeOntoFullImage, computeClosestAspectRatio } from "./canvasNightService";
+import { drawFixtureMarkers } from "./canvasNightService";
 import { buildReferenceParts } from "./referenceLibrary";
 import { paintLightGradients } from "./lightGradientPainter";
 import type { LightFixture, GutterLine } from "../types/fixtures";
@@ -29,6 +30,76 @@ const API_TIMEOUT_MS = 120000;
 
 // SOFFIT_HIDDEN removed — soffit is handled via "complete invisibility" approach
 // (not mentioning soffit at all when it's not selected)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DEEP THINK OUTPUT TYPE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface DeepThinkOutput {
+  prompt: string;
+  fixtureCount?: number;
+  fixtureBreakdown?: Record<string, number>;
+  analysisNotes?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STANDALONE INTENSITY / BEAM ANGLE DESCRIPTIONS (used by Deep Think input)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function getIntensityDescription(val: number): string {
+  if (val < 25) return `LIGHTING INTENSITY: SUBTLE (2-3W LED equivalent, 150-300 lumens)
+- Faint accent glow, light barely reaches first story roofline (8-10 ft max)
+- Soft, gentle pools with gradual falloff, extremely soft beam edges
+- Brightness at 2ft: 100%, at 4ft: 25%, at 8ft: 6% (barely visible)
+- Best for: Ambient mood, pathway marking, subtle accent`;
+
+  if (val < 50) return `LIGHTING INTENSITY: MODERATE (4-5W LED equivalent, 300-500 lumens)
+- Standard 1st story reach (8-12 ft walls), comfortably reaches roofline
+- Visible wall grazing that reveals texture WITHOUT hot spots
+- Brightness at 2ft: 100%, at 4ft: 25%, at 8ft: 6%, at 12ft: 3% (still visible)
+- Sufficient to show brick mortar joints, siding shadow lines
+- Best for: Single-story homes, accent features, balanced residential lighting`;
+
+  if (val < 75) return `LIGHTING INTENSITY: BRIGHT (6-8W LED equivalent, 500-800 lumens)
+- 2nd story reach (18-25 ft walls), strong wall grazing full wall height
+- More pronounced beam visibility, subtle atmospheric effect near fixture
+- Brightness at 2ft: 100%, at 6ft: 11%, at 12ft: 3%, at 20ft: 1% (still visible)
+- Strong shadows in brick/stone mortar joints, dramatic siding shadow lines
+- Best for: Two-story facades, tall trees, dramatic accent lighting`;
+
+  return `LIGHTING INTENSITY: HIGH POWER (10-15W LED equivalent, 800-1500 lumens)
+- Full 2-3 story reach (25+ ft walls), intense beams reaching tall walls and gable peaks
+- Maximum wall coverage with strong definition, pronounced atmospheric scatter
+- Brightness at 2ft: 100%, at 8ft: 6%, at 16ft: 1.5%, at 25ft: 0.6%
+- Maximum shadow definition, deep mortar joint shadows, dramatic texture grazing
+- Best for: Tall facades, commercial properties, dramatic architectural statements`;
+}
+
+function getBeamAngleDescription(angle: number): string {
+  if (angle <= 15) return `BEAM ANGLE: 15° (NARROW SPOT) — MAXIMUM DRAMA
+- Tight focused beams, spread: ~2.6ft at 10ft, ~5.2ft at 20ft
+- Ideal for revealing surface texture, deep mortar joint shadows
+- Creates VISIBLE DARK GAPS between fixtures — the professional look
+- Best for: Columns, narrow wall sections, focal points`;
+
+  if (angle <= 30) return `BEAM ANGLE: 30° (SPOT) — PROFESSIONAL STANDARD
+- Defined beam with moderate spread: ~5.4ft at 10ft, ~10.8ft at 20ft
+- Excellent balance of texture revelation and coverage
+- Creates visible separation between fixture illumination zones
+- Best for: Facade accent lighting, medium trees, general professional use`;
+
+  if (angle >= 60) return `BEAM ANGLE: 60° (WIDE FLOOD) — AREA COVERAGE
+- Broad even wash: ~11.5ft at 10ft, ~23ft at 20ft
+- Very soft edges, no distinct beam boundary
+- WARNING: Reduced texture revelation, can create flat uniform appearance
+- Best for: Large blank facades, area lighting where drama is NOT the goal`;
+
+  return `BEAM ANGLE: 45° (FLOOD) — BALANCED COVERAGE
+- Standard professional spread: ~8.3ft at 10ft, ~16.6ft at 20ft
+- Moderate texture revelation, soft but discernible beam shape
+- May require closer spacing to maintain dark gaps
+- Best for: General facade lighting, medium wall areas`;
+}
 
 /**
  * Wraps a promise with a timeout
@@ -325,7 +396,7 @@ Base your analysis on:
         ],
       },
       config: {
-        thinkingConfig: { thinkingLevel: 'high' },
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       },
     });
 
@@ -486,161 +557,6 @@ Only return the JSON array, no other text.`;
     ];
   }
 };
-
-/**
- * Stage 2: PLANNING
- * Builds lighting plan with exact placements, optimal settings, and validated counts
- */
-export const buildLightingPlan = (
-  analysis: PropertyAnalysis & { spatialMap?: SpatialMap },
-  userSelections: FixtureSelections
-): LightingPlan => {
-  const { architecture, recommendations } = analysis;
-
-  // Auto-select intensity based on wall height
-  let intensity: number;
-  switch (architecture.wall_height_estimate) {
-    case '25+ft':
-      intensity = 85;
-      break;
-    case '18-25ft':
-      intensity = 65;
-      break;
-    default:
-      intensity = 45;
-  }
-
-  // Auto-select beam angle based on materials
-  const hasTexturedMaterial = architecture.facade_materials.some(
-    m => m === 'brick' || m === 'stone'
-  );
-  const beamAngle = hasTexturedMaterial ? 15 : 30;
-
-  // Build placements for each selected fixture/sub-option
-  const placements: FixturePlacement[] = [];
-
-  userSelections.fixtures.forEach(fixtureType => {
-    const subOptions = userSelections.subOptions[fixtureType] || [];
-    subOptions.forEach(subOption => {
-      const key = `${fixtureType}_${subOption}`;
-      const recommendedCount = (recommendations.fixture_counts as Record<string, number>)[key] || 0;
-      const userCount = userSelections.counts?.[`${fixtureType}-${subOption}`];
-
-      // Use user count if specified, otherwise use AI recommendation
-      const count = userCount ?? recommendedCount;
-
-      if (typeof count === 'number' && count > 0) {
-        // Get positions from analysis if available
-        const positions = (recommendations.fixture_positions as Record<string, string[]>)?.[key] ||
-          generateDefaultPositions(fixtureType, subOption, count, analysis);
-
-        // Determine spacing based on fixture type
-        const spacing = getSpacingForFixture(fixtureType, subOption);
-
-        // Map spatialMap coordinates to spatialPositions if available
-        let spatialPositions: Array<{ x: number; y: number }> | undefined;
-        if (analysis.spatialMap) {
-          const matchingPlacements = analysis.spatialMap.placements.filter(
-            sp => sp.fixtureType === fixtureType && sp.subOption === subOption
-          );
-          if (matchingPlacements.length > 0) {
-            spatialPositions = matchingPlacements.map(sp => ({
-              x: sp.horizontalPosition,
-              y: sp.verticalPosition
-            }));
-          }
-        }
-
-
-        placements.push({
-          fixtureType,
-          subOption,
-          count,
-          positions,
-          spacing,
-          spatialPositions,
-        });
-      }
-    });
-  });
-
-  return {
-    placements,
-    settings: {
-      intensity,
-      beamAngle,
-      reasoning: `${intensity}% intensity for ${architecture.wall_height_estimate} walls, ${beamAngle}Â° beam for ${architecture.facade_materials.join('/')} texture`,
-    },
-    priorityOrder: recommendations.priority_areas,
-  };
-};
-
-/**
- * Helper: Generate default positions based on fixture type and count
- */
-function generateDefaultPositions(
-  fixtureType: string,
-  subOption: string,
-  count: number,
-  analysis: PropertyAnalysis
-): string[] {
-  const positions: string[] = [];
-
-  if (fixtureType === 'up' && subOption === 'siding') {
-    for (let i = 1; i <= count; i++) {
-      positions.push(`wall section ${i} between windows`);
-    }
-  } else if (fixtureType === 'up' && subOption === 'windows') {
-    for (let i = 1; i <= count; i++) {
-      positions.push(`centered below window ${i}`);
-    }
-  } else if (fixtureType === 'up' && subOption === 'trees') {
-    const treeDesc = analysis.landscaping.trees.positions || '';
-    for (let i = 1; i <= count; i++) {
-      positions.push(`at base of tree ${i}${treeDesc ? ` (${treeDesc})` : ''}`);
-    }
-  } else if (fixtureType === 'path' && subOption === 'walkway') {
-    const walkwayDesc = analysis.hardscape.walkway.description || 'along walkway';
-    for (let i = 1; i <= count; i++) {
-      positions.push(`${walkwayDesc} - position ${i} of ${count}`);
-    }
-  } else if (fixtureType === 'path' && subOption === 'driveway') {
-    for (let i = 1; i <= count; i++) {
-      positions.push(`driveway edge - position ${i}`);
-    }
-  } else {
-    for (let i = 1; i <= count; i++) {
-      positions.push(`${subOption} position ${i}`);
-    }
-  }
-
-  return positions;
-}
-
-/**
- * Helper: Get recommended spacing for fixture type
- */
-function getSpacingForFixture(fixtureType: string, subOption: string): string {
-  if (fixtureType === 'path') {
-    return '6-8 feet apart';
-  } else if (fixtureType === 'up' && subOption === 'siding') {
-    return '8-10 feet apart (between windows)';
-  } else if (fixtureType === 'up' && subOption === 'windows') {
-    return 'one per window, centered';
-  } else if (fixtureType === 'soffit') {
-    return '4-6 feet apart';
-  } else if (fixtureType === 'gutter') {
-    return 'whatever is needed to illuminate target areas';
-  }
-  return 'as needed for coverage';
-}
-
-// hasTextureDescription helper removed (unused after Stage 2-4 removal)
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Stages 2-4 (planLightingWithAI, craftPromptWithAI, validatePrompt) removed.
-// Enhanced mode uses deterministic buildLightingPlan() + buildEnhancedPrompt() instead.
-// This eliminates AI-to-AI drift and reduces generation from 5 API calls to 2.
 
 
 /**
@@ -1530,747 +1446,315 @@ export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
   return output;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2-STAGE PIPELINE: Deep Think → Nano Banana Pro
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /**
- * Builds an enhanced prompt for image generation using Gemini's analysis results
- * This replicates Claude's prompt quality using Gemini Pro 3 analysis
+ * Assembles all reference data for Deep Think to generate its prompt.
+ * This replaces the role of buildEnhancedPrompt/buildManualPrompt by providing
+ * raw materials to Deep Think rather than assembling the prompt directly.
  */
-function buildEnhancedPrompt(
-  analysis: PropertyAnalysis & { spatialMap?: SpatialMap },
+function buildDeepThinkInput(
+  mode: 'auto' | 'manual',
   selectedFixtures: string[],
   fixtureSubOptions: Record<string, string[]>,
   fixtureCounts: Record<string, number | null>,
   colorTemperaturePrompt: string,
   lightIntensity: number,
   beamAngle: number,
-  isManualPlacement: boolean = false
-): string {
-  // Build fixture inventory
-  let inventoryAllowlist = '';
-  let totalFixtureCount = 0;
+  userPreferences?: UserPreferences | null,
+  spatialMap?: SpatialMap
+): { systemPrompt: string; fixtureReference: string; userSelections: string; lightingParams: string; preferenceContext: string; spatialMapContext?: string } {
+
+  // 1. Build fixture reference data (selected + prohibited)
+  let fixtureReference = '';
+
+  // Selected fixtures with full definitions
+  fixtureReference += '### SELECTED FIXTURES (USER WANTS THESE)\n\n';
   selectedFixtures.forEach(fixtureId => {
     const fixtureType = FIXTURE_TYPES.find(f => f.id === fixtureId);
-    if (fixtureType) {
-      const subOpts = fixtureSubOptions[fixtureId] || [];
-      subOpts.forEach(subOptId => {
-        const subOpt = fixtureType.subOptions?.find(s => s.id === subOptId);
-        if (subOpt) {
-          const count = fixtureCounts[subOptId];
-          const countStr = count !== null ? `EXACTLY ${count}` : 'Auto (AI determines optimal count based on property)';
-          inventoryAllowlist += `- ${fixtureType.label} (${subOpt.label}): ${countStr}\n`;
-          if (count !== null) {
-            totalFixtureCount += count;
-          }
-        }
+    if (!fixtureType) return;
+
+    const subOpts = fixtureSubOptions[fixtureId] || [];
+
+    fixtureReference += `#### ${fixtureType.label.toUpperCase()} (id: ${fixtureType.id})\n`;
+    fixtureReference += `Description: ${fixtureType.description}\n`;
+    fixtureReference += `Prompt guidance: ${fixtureType.positivePrompt}\n\n`;
+
+    // Selected sub-options with counts
+    subOpts.forEach(subOptId => {
+      const subOpt = fixtureType.subOptions?.find(s => s.id === subOptId);
+      if (!subOpt) return;
+      const count = fixtureCounts[subOptId];
+      const countStr = count !== null && count !== undefined
+        ? `EXACTLY ${count} (user-specified, non-negotiable)`
+        : 'AUTO (you determine optimal count based on property)';
+      fixtureReference += `  Sub-option: ${subOpt.label} (id: ${subOpt.id})\n`;
+      fixtureReference += `  Count: ${countStr}\n`;
+      fixtureReference += `  Placement rules: ${subOpt.prompt}\n\n`;
+    });
+
+    // Non-selected sub-options (prohibited within this fixture type)
+    const nonSelected = fixtureType.subOptions?.filter(s => !subOpts.includes(s.id)) || [];
+    if (nonSelected.length > 0) {
+      fixtureReference += `  PROHIBITED sub-options within ${fixtureType.label}:\n`;
+      nonSelected.forEach(subOpt => {
+        fixtureReference += `  - ${subOpt.label}: FORBIDDEN. ${subOpt.darkDescription || subOpt.negativePrompt}\n`;
       });
+      fixtureReference += '\n';
     }
   });
 
-  // Build prohibition list (skip soffit for "complete invisibility")
-  let inventoryProhibitions = '';
-  FIXTURE_TYPES.forEach(fixtureType => {
-    // Skip soffit - complete invisibility approach
-    if (fixtureType.id === 'soffit') return;
-
-    if (!selectedFixtures.includes(fixtureType.id)) {
-      inventoryProhibitions += `- ${fixtureType.label}: FORBIDDEN - ZERO instances allowed\n`;
-    } else {
-      const selectedSubs = fixtureSubOptions[fixtureType.id] || [];
-      fixtureType.subOptions?.forEach(subOpt => {
-        if (!selectedSubs.includes(subOpt.id)) {
-          inventoryProhibitions += `- ${fixtureType.label} (${subOpt.label}): FORBIDDEN - ZERO instances allowed\n`;
-        }
-      });
+  // Non-selected fixture types (complete prohibition)
+  fixtureReference += '### PROHIBITED FIXTURES (MUST NOT APPEAR)\n\n';
+  FIXTURE_TYPES.forEach(ft => {
+    if (ft.id === 'soffit' && !selectedFixtures.includes('soffit')) return; // invisibility approach
+    if (!selectedFixtures.includes(ft.id)) {
+      fixtureReference += `- ${ft.label}: FORBIDDEN. ${ft.negativePrompt}\n`;
     }
   });
 
-  // Start building the comprehensive prompt
-  let prompt = '';
+  // 2. Build user selections summary
+  let userSelections = '### USER FIXTURE SELECTIONS\n';
+  selectedFixtures.forEach(fId => {
+    const ft = FIXTURE_TYPES.find(f => f.id === fId);
+    if (!ft) return;
+    const subs = fixtureSubOptions[fId] || [];
+    userSelections += `- ${ft.label}: ${subs.map(s => {
+      const count = fixtureCounts[s];
+      return `${s}${count !== null && count !== undefined ? ` (EXACTLY ${count})` : ' (Auto)'}`;
+    }).join(', ')}\n`;
+  });
 
-  if (isManualPlacement) {
-    // Manual mode: strict executor preamble â€” no creative vision, pure execution
-    const manualCount = analysis.spatialMap?.placements.length || 0;
-    prompt += `YOU ARE A PRECISION LIGHTING PLACEMENT TOOL.\n\n`;
-    prompt += `ABSOLUTE RULES:\n`;
-    prompt += `1. Render EXACTLY the fixture types specified â€” no substitutions\n`;
-    prompt += `2. Place fixtures at EXACTLY the positions marked â€” no repositioning\n`;
-    prompt += `3. Render EXACTLY ${manualCount} light sources â€” NO MORE, NO LESS\n`;
-    prompt += `4. Areas without markers MUST remain COMPLETELY DARK â€” zero ambient light, zero fill\n`;
-    prompt += `5. Do NOT add lights "for realism," "rhythm," "to complete the design," or for ANY other reason\n`;
-    prompt += `6. The home's architecture, landscaping, and hardscape must be PIXEL-PERFECT identical to the source\n`;
-    prompt += `7. ANY light source not corresponding to a numbered marker is a FAILURE\n\n`;
-    prompt += `FRAMING: Output MUST have the EXACT same framing and composition as the source image. Do NOT crop, zoom, or reframe.\n`;
-    prompt += `SKY: Pure black sky with full moon. No stars, gradients, blue tones, or atmospheric glow.\n\n`;
+  // 3. Build lighting parameter descriptions
+  let lightingParams = '### LIGHTING PARAMETERS\n';
+  lightingParams += `Color Temperature: ${colorTemperaturePrompt}\n`;
+  lightingParams += `Intensity: ${lightIntensity}%\n`;
+  lightingParams += getIntensityDescription(lightIntensity) + '\n\n';
+  lightingParams += `Beam Angle: ${beamAngle}°\n`;
+  lightingParams += getBeamAngleDescription(beamAngle) + '\n';
 
-    // Add prohibition list to manual mode too â€” critical for preventing unwanted fixture types
-    if (inventoryProhibitions) {
-      prompt += `## PROHIBITED FIXTURE TYPES â€” ZERO INSTANCES ALLOWED\n`;
-      prompt += `The user did NOT place these fixture types. They MUST NOT appear in the output:\n`;
-      prompt += inventoryProhibitions;
-      prompt += `\nIf you see yourself adding ANY fixture type not in the markers above, STOP â€” it is FORBIDDEN.\n\n`;
-    }
-  } else {
-    // Auto mode: full creative masterInstruction
-    prompt += SYSTEM_PROMPT.masterInstruction + '\n\n';
+  // 4. Preference context
+  const preferenceContext = buildPreferenceContext(userPreferences);
 
-    // Add fixture inventory (auto mode only â€” manual mode uses marker checklist instead)
-    prompt += `## COMPLETE FIXTURE INVENTORY\n`;
-    prompt += `This image will contain EXACTLY these fixtures and NO OTHERS:\n`;
-    prompt += inventoryAllowlist || '- None selected\n';
-    if (totalFixtureCount > 0) {
-      prompt += `\nTOTAL FIXTURES IN IMAGE: ${totalFixtureCount}\n`;
-    }
-    prompt += '\n';
-
-    // Add prohibition verification (auto mode only)
-    prompt += `## PROHIBITION VERIFICATION\n`;
-    prompt += `These fixture types MUST NOT appear AT ALL (ZERO instances):\n`;
-    prompt += inventoryProhibitions || '- None\n';
-    prompt += '\n';
-    prompt += `VERIFICATION RULE: Before finalizing the image, mentally count all fixtures. If the count exceeds the inventory above, REMOVE the extras. If any prohibited fixture types appear, REMOVE them entirely.\n\n`;
-
-    // Gutter uplight direction enforcement
-    if (selectedFixtures.includes('gutter')) {
-      prompt += `## GUTTER-MOUNTED UPLIGHTS (CRITICAL)\n`;
-      prompt += `- FIXTURE: Small uplight clipped inside the rain gutter trough at the 1st story roofline\n`;
-      prompt += `- BEAM: Aims UPWARD â€" warm light washes UP the 2nd story wall above each fixture\n`;
-      prompt += `- EACH FIXTURE lights ONLY the wall section directly above its own position\n`;
-      prompt += `- NO DOWNLIGHTS: Do NOT create any downward-facing light from eaves or overhangs. Eave undersides stay DARK.\n\n`;
-
-      if (!selectedFixtures.includes('soffit')) {
-        prompt += `IMPORTANT: Soffit downlights are NOT selected. Eave undersides must be completely DARK â€" no recessed lights, no downward beams from the roofline.\n\n`;
-      }
-    }
+  // 5. Spatial map context (manual mode)
+  let spatialMapContext: string | undefined;
+  if (spatialMap && spatialMap.placements.length > 0) {
+    spatialMapContext = formatSpatialMapForPrompt(spatialMap);
   }
 
-  // Add spatial placement map if available
-  if (analysis.spatialMap && analysis.spatialMap.placements.length > 0) {
-    prompt += formatSpatialMapForPrompt(analysis.spatialMap);
-    prompt += '\n';
+  // 6. Select system prompt based on mode
+  const systemPrompt = mode === 'auto'
+    ? DEEP_THINK_SYSTEM_PROMPT.autoMode
+    : DEEP_THINK_SYSTEM_PROMPT.manualMode;
 
-    // Manual placement: reference the visible colored markers drawn on the image
-    if (isManualPlacement) {
-      const count = analysis.spatialMap.placements.length;
-      const presentTypes = new Set(analysis.spatialMap.placements.map(p => p.fixtureType));
-
-      // Dual-image reference
-      prompt += `## DUAL-IMAGE REFERENCE\n`;
-      prompt += `You are given TWO images:\n`;
-      prompt += `- IMAGE 1: The clean, unmodified original photograph â€” use this as your BASE for the output\n`;
-      prompt += `- IMAGE 2: The same photograph with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
-      prompt += `Your task: Generate a night scene based on IMAGE 1, placing professional landscape lighting fixtures at the EXACT positions shown by the markers in IMAGE 2. The output should look like IMAGE 1 transformed into a professional night scene with NO colored markers visible.\n\n`;
-
-      // Manual placement header
-      prompt += `## CRITICAL: MANUAL PLACEMENT MODE â€” EXACTLY ${count} LIGHTS, ZERO EXTRAS\n`;
-      prompt += `IMAGE 2 contains EXACTLY ${count} bright colored numbered circle markers.\n`;
-      prompt += `Each marker shows the EXACT position and type of lighting fixture to place.\n`;
-      prompt += `Place EXACTLY ${count} lights total â€” one per marker. ZERO additional lights anywhere.\n\n`;
-
-      // Rich fixture type descriptions (only for types actually placed)
-      prompt += `## FIXTURE TYPE REFERENCE â€” WHAT EACH MARKER LABEL MEANS\n\n`;
-
-      if (presentTypes.has('up')) {
-        prompt += `### "UP" MARKERS â€” Ground-Mounted Up Lights\n`;
-        prompt += `- FIXTURE: Small brass/bronze cylinder ground stake, low-profile, nearly invisible at night\n`;
-        prompt += `- MOUNTING: Staked into the ground AT THE BASE of the house foundation, within 6 inches of the wall\n`;
-        prompt += `- BEAM DIRECTION: Aimed straight UP but LEANED BACK 15Â° from vertical (tilted slightly away from the wall). This prevents a harsh hot spot at the base and spreads the beam evenly up the entire wall.\n`;
-        prompt += `- BEAM REACH: The light column MUST illuminate the wall from bottom to top, reaching the gutter line / roofline directly above (8-25 ft). The beam does NOT stop at mid-wall â€” it lights the FULL HEIGHT.\n`;
-        prompt += `- LIGHT PHYSICS: Because of the 15Â° lean-back, light starts on the wall 12-18 inches above ground (not at the fixture). Brightest at mid-wall, even wash continuing up to the roofline, NO hot spots at the fixture base.\n`;
-        prompt += `- THIS IS A GROUND-LEVEL FIXTURE â€” the brass cylinder sits at ground level, NOT mounted on the wall\n\n`;
-      }
-
-      if (presentTypes.has('gutter')) {
-        prompt += `### "GUTTER" MARKERS â€" Gutter-Mounted Uplights\n`;
-        prompt += `- FIXTURE: Small uplight mounted inside the rain gutter at the 1st story roofline\n`;
-        prompt += `- BEAM DIRECTION: UPWARD ONLY â€" warm light washes UP the 2nd story wall directly above this marker position\n`;
-        prompt += `- Each fixture lights ONLY the wall section above its own horizontal position. Peaks/gables without a marker below stay DARK.\n`;
-        prompt += `- NO DOWNLIGHTS: Do NOT create soffit lights, eave lights, or any downward beam from the roofline. Eave undersides stay DARK.\n`;
-        prompt += `\n### AMBER DASHED LINES — "GUTTER LINE" Annotations on IMAGE 2\n`;
-        prompt += `- The amber/yellow dashed lines labeled "GUTTER LINE" on IMAGE 2 mark the PHYSICAL GUTTER POSITION along the roofline\n`;
-        prompt += `- GUTTER fixtures sit ON these lines — their light casts UPWARD from the gutter edge onto the wall above\n`;
-        prompt += `- The line shows WHERE the gutter runs; each fixture ON the line illuminates the wall section DIRECTLY ABOVE its position\n`;
-        prompt += `- Light beams aim UPWARD ONLY from the gutter line — NO downward light, NO soffit light\n\n`;
-      }
-
-      if (presentTypes.has('path')) {
-        prompt += `### "PATH" MARKERS â€” Path Lights\n`;
-        prompt += `- FIXTURE: Small bronze up light fixture, low-profile, nearly invisible at night\n`;
-        prompt += `- MOUNTING: Post-mounted, staked in landscaping beds alongside walkways (NOT on pavement)\n`;
-        prompt += `- BEAM DIRECTION: 360-degree omnidirectional downward distribution from under the hat\n`;
-        prompt += `- LIGHT POOL: 6-8 foot diameter warm pools on the ground around the fixture\n\n`;
-      }
-
-      if (presentTypes.has('well')) {
-        prompt += `### "WELL" MARKERS â€” In-Ground Well Lights\n`;
-        prompt += `- FIXTURE: Small bronze up light, flush-mounted at ground level, nearly invisible at night\n`;
-        prompt += `- MOUNTING: Completely flush with grade at ground level\n`;
-        prompt += `- BEAM DIRECTION: Aims UPWARD â€” typically used to uplight trees and canopy\n`;
-        prompt += `- LIGHT PHYSICS: Beam originates at ground level, projects upward; reveals bark texture, creates shadows in foliage\n\n`;
-      }
-
-      if (presentTypes.has('hardscape')) {
-        prompt += `### "STEP" MARKERS â€” Hardscape / Step Lights\n`;
-        prompt += `- FIXTURE: Small bronze fixture, low-profile, nearly invisible at night\n`;
-        prompt += `- MOUNTING: Under the tread nosing (front edge of step), facing downward\n`;
-        prompt += `- BEAM DIRECTION: Projects DOWNWARD from under tread to illuminate the riser below\n`;
-        prompt += `- Creates clear visual definition of each step edge; light spills onto the next tread below\n\n`;
-      }
-
-      if (presentTypes.has('soffit')) {
-        prompt += `### "DOWN" MARKERS â€” Soffit Downlights\n`;
-        prompt += `- FIXTURE: Small bronze recessed fixture, flush-mounted in soffit, nearly invisible at night\n`;
-        prompt += `- MOUNTING: Flush inside the soffit/roof overhang, no protrusion below soffit plane\n`;
-        prompt += `- BEAM DIRECTION: Projects DOWNWARD from soffit toward ground\n`;
-        prompt += `- Grazes window frames, columns, or wall surfaces depending on position\n\n`;
-      }
-
-      if (presentTypes.has('coredrill')) {
-        prompt += `### "COREDRILL" MARKERS â€” Flush In-Ground Core Drill Lights\n`;
-        prompt += `- FIXTURE: Extremely small bronze disc about the size of a dip can (~3 inch diameter), completely flush with the concrete surface, INVISIBLE â€” no hardware visible above grade\n`;
-        prompt += `- SIZE: The fixture is TINY â€” roughly 3 inches in diameter, like a small puck embedded in concrete. It must NOT appear as a large well light or oversized housing.\n`;
-        prompt += `- MOUNTING: Core-drilled into hardscape (concrete driveway, paver walkway), completely FLUSH with grade, ZERO protrusion above surface\n`;
-        prompt += `- BEAM DIRECTION: Aims UPWARD to graze the wall/pier/column surface directly above the fixture\n`;
-        prompt += `- TYPICAL USE: Garage door piers (flanking garage doors), concrete walkways, driveways\n`;
-        prompt += `- The light washes UP the vertical wall/pier surface above it, reaching the roofline\n`;
-        prompt += `- Distance from wall: 4-6 inches for proper grazing angle\n`;
-        prompt += `- THIS IS NOT A TREE UPLIGHT â€” these are embedded in CONCRETE near walls/piers, NOT in landscape beds\n`;
-        prompt += `- THIS IS NOT A PROTRUDING UPLIGHT â€” there is NO brass cylinder sticking up. The fixture is INVISIBLE, flush with the concrete surface\n\n`;
-      }
-
-      // Critical confusion prevention
-      prompt += `## CRITICAL CONFUSION PREVENTION\n`;
-      if (presentTypes.has('gutter')) {
-        prompt += `### GUTTER UPLIGHTS â€" LIGHT GOES UP, NEVER DOWN\n`;
-        prompt += `- Gutter uplight: fixture in gutter, beam goes UPWARD on wall above\n`;
-        prompt += `- FORBIDDEN: Any downward light from eaves, soffits, or overhangs\n`;
-        prompt += `- If your render shows downward light from the roofline = WRONG â€" gutter lights aim UP\n`;
-      }
-      if (presentTypes.has('coredrill') && presentTypes.has('up')) {
-        prompt += `### COREDRILL â‰  UP (Different fixtures â€” do NOT confuse)\n`;
-        prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
-        prompt += `- UP: Small 4-inch brass ground stake in landscaping â€” light goes UP onto wall ONLY. NO ground pool. NOT a tall bollard.\n`;
-        prompt += `- If a marker says "COREDRILL", there must be NO visible fixture â€” only the light beam on the wall above.\n`;
-      }
-      if (presentTypes.has('coredrill') && presentTypes.has('well')) {
-        prompt += `### COREDRILL â‰  WELL (Different locations)\n`;
-        prompt += `- COREDRILL: Flush in CONCRETE/PAVERS near walls and garage piers\n`;
-        prompt += `- WELL: Flush in LANDSCAPE BEDS near trees\n`;
-      }
-      if (presentTypes.has('up')) {
-        prompt += `- "UP" fixtures are at GROUND LEVEL aiming upward â€” NOT sconces, NOT wall-mounted, NOT high-mounted\n`;
-      }
-      prompt += `- Every marker label tells you the EXACT fixture type. NEVER substitute one type for another.\n\n`;
-
-      // Lighting style rules â€” photorealism
-      prompt += `## LIGHTING STYLE â€” MUST LOOK LIKE A REAL PHOTOGRAPH (MANDATORY)\n`;
-      prompt += `- Color temperature: warm (2700K-3000K)\n`;
-      prompt += `- SOFT WALL WASHES: Light appears as a gentle, wide glow on the wall â€” the wall GLOWS warmly. NEVER hard triangles, cones, or geometric beam shapes.\n`;
-      prompt += `- FULL WALL COVERAGE: Each uplight washes the wall from near-ground ALL THE WAY UP to the roofline. Brightest in lower half, gently fading but still visible at the top.\n`;
-      prompt += `- TEXTURE REVELATION: Warm light grazes across wall surfaces, revealing stone, brick, or siding texture beautifully.\n`;
-      prompt += `- INVISIBLE FIXTURES: Do NOT draw fixture hardware. Only the light effect on walls is visible.\n`;
-      prompt += `- NO GEOMETRIC SHAPES: Real lighting NEVER creates triangles or cones. It creates soft, diffused wall washes.\n\n`;
-
-      // Absolute prohibition - zero tolerance
-      prompt += `## ABSOLUTELY FORBIDDEN â€” ZERO TOLERANCE\n`;
-      prompt += `The following must have ZERO instances in the output:\n`;
-      prompt += `- ANY light source without a corresponding numbered marker in IMAGE 2\n`;
-      prompt += `- ANY recessed overhead lights or downward light from eaves (NONE were placed)\n`;
-      prompt += `- Porch lights, sconces, lanterns, string lights, pendant lights\n`;
-      prompt += `- Window glow, interior lights, ambient room lighting visible through glass\n`;
-      prompt += `- Ambient illumination or sky glow beyond what the ${count} placed fixtures produce\n`;
-      prompt += `- Decorative lights on walls, doors, columns, or any surface without a marker\n`;
-      prompt += `- Areas of the house WITHOUT a marker MUST remain COMPLETELY DARK â€” no exceptions\n`;
-      prompt += `- If you find yourself adding a light that doesn't correspond to a marker, STOP and REMOVE it\n\n`;
-
-      // Explicit marker checklist
-      prompt += `## MARKER CHECKLIST â€” Verify EVERY marker is converted:\n`;
-      const labelMap: Record<string, string> = {
-        up: 'small bronze uplight (beam UP)',
-        path: 'small bronze path light',
-        well: 'small bronze uplight (beam UP)',
-        hardscape: 'small bronze step light',
-        gutter: 'invisible roof-edge uplight â€” warm wash on wall ABOVE only, no visible fixture',
-        coredrill: 'tiny flush bronze disc in concrete (beam UP)'
-      };
-      analysis.spatialMap.placements.forEach((p, i) => {
-        const label = labelMap[p.fixtureType] || 'light';
-        const hDir = p.horizontalPosition < 33 ? 'left side' : p.horizontalPosition > 66 ? 'right side' : 'center';
-        const vDir = p.verticalPosition < 33 ? 'upper area' : p.verticalPosition > 66 ? 'lower area' : 'mid-height';
-        prompt += `  ${i + 1}. Marker #${i + 1} â†’ ${label} at ${hDir}, ${vDir}\n`;
-      });
-      prompt += `\nTOTAL: ${count} markers = EXACTLY ${count} lights in the output. No more, no less.\n\n`;
-
-      // Final verification
-      prompt += `## FINAL VERIFICATION â€” COUNT EVERY LIGHT IN YOUR OUTPUT\n`;
-      prompt += `1. Count all visible light sources in your generated image\n`;
-      prompt += `2. You MUST have EXACTLY ${count} light sources â€” one for each marker\n`;
-      prompt += `3. If you count FEWER than ${count}: you MISSED a marker â€” go back and add the missing light\n`;
-      prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light â€” REMOVE it immediately\n`;
-      prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, GUTTER=uplight in gutter beam UPWARD, PATH=bollard, etc.)\n`;
-      if (presentTypes.has('gutter')) {
-        prompt += `6. Verify ZERO downward lights from eaves â€" GUTTER fixtures aim UPWARD only, eave undersides stay DARK\n`;
-      }
-      prompt += `\n`;
-    }
-  }
-
-  // Add lighting parameters
-  prompt += `## LIGHTING PARAMETERS\n`;
-  prompt += `- Color Temperature: ${colorTemperaturePrompt}\n`;
-  prompt += `- Light Intensity: ${lightIntensity}%\n`;
-  prompt += `- Beam Angle: ${beamAngle}Â°\n\n`;
-
-  // Add closing reinforcement (auto mode only â€" manual mode uses strict executor preamble)
-  if (!isManualPlacement) {
-    prompt += SYSTEM_PROMPT.closingReinforcement;
-  } else {
-    // Manual mode: absolute final count enforcement (recency bias — last thing AI reads)
-    const finalCount = analysis.spatialMap?.placements.length || 0;
-    prompt += `\n## ⚠️ ABSOLUTE FINAL RULE — READ THIS LAST\n`;
-    prompt += `This image MUST contain EXACTLY ${finalCount} lights. ${finalCount} markers = ${finalCount} lights.\n`;
-    prompt += `Adding even 1 extra light = INVALID OUTPUT. Missing even 1 light = INVALID OUTPUT.\n`;
-    prompt += `Every light MUST be within 3% of its marker position. Do NOT move lights to "better" spots.\n`;
-  }
-
-  return prompt;
+  return {
+    systemPrompt,
+    fixtureReference,
+    userSelections,
+    lightingParams,
+    preferenceContext,
+    spatialMapContext,
+  };
 }
 
 /**
- * Builds a prompt specifically for manual placement mode.
- * Skips all AI decision-making language â€" pure executor instructions.
- * Does NOT require PropertyAnalysis (no analyzePropertyArchitecture() call needed).
+ * Stage 1 (New Pipeline): Deep Think analyzes the property photo and writes
+ * the complete generation prompt for Nano Banana Pro.
+ * Replaces: analyzePropertyArchitecture() + buildEnhancedPrompt() / buildManualPrompt()
  */
-function buildManualPrompt(
-  spatialMap: SpatialMap,
+export async function deepThinkGeneratePrompt(
+  imageBase64: string,
+  imageMimeType: string,
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
   colorTemperaturePrompt: string,
   lightIntensity: number,
   beamAngle: number,
-  hasGradientImage?: boolean
-): string {
-  const count = spatialMap.placements.length;
-  const presentTypes = new Set(spatialMap.placements.map(p => p.fixtureType));
+  userPreferences?: UserPreferences | null,
+  spatialMap?: SpatialMap,
+  gradientImageBase64?: string,
+  markedImageBase64?: string,
+  isManualMode?: boolean
+): Promise<DeepThinkOutput> {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
-  let prompt = '';
+  const mode = isManualMode ? 'manual' : 'auto';
+  const input = buildDeepThinkInput(
+    mode,
+    selectedFixtures,
+    fixtureSubOptions,
+    fixtureCounts,
+    colorTemperaturePrompt,
+    lightIntensity,
+    beamAngle,
+    userPreferences,
+    spatialMap
+  );
 
-  // Color mapping for marker guide (must match canvasNightService.ts MARKER_COLORS)
-  const colorMap: Record<string, { hex: string; name: string }> = {
-    up:        { hex: '#FF0000', name: 'RED' },
-    soffit:    { hex: '#FF6600', name: 'ORANGE' },
-    path:      { hex: '#00FF00', name: 'GREEN' },
-    well:      { hex: '#FFFF00', name: 'YELLOW' },
-    hardscape: { hex: '#FF00FF', name: 'MAGENTA' },
-    gutter:    { hex: '#00CCFF', name: 'CYAN' },
-    coredrill: { hex: '#FFA500', name: 'AMBER' },
-  };
-
-  // 1. Executor preamble â€” two-pass: IMAGE 1 is nighttime base, IMAGE 2 is gradient guide
-  prompt += `YOU ARE A PROFESSIONAL LANDSCAPE LIGHTING RENDERER.\n\n`;
-  prompt += `Your task is to add PHOTOREALISTIC landscape lighting to a nighttime house photo.\n`;
-  prompt += `The lighting must look like a REAL photograph of a professionally lit home â€” not CGI, not illustrated, not cartoonish.\n`;
-  prompt += `Add ONLY the specific fixtures listed below â€” nothing more.\n\n`;
-  prompt += `IMAGE 1 is a nighttime photograph of a house with NO lights on.\n`;
-  prompt += `IMAGE 2 is the SAME house with gradient overlays showing where lighting effects should appear.\n\n`;
-  prompt += `YOUR TASK: Add photorealistic warm landscape lighting effects to IMAGE 1 at the exact positions and directions shown by the gradients in IMAGE 2.\n\n`;
-  prompt += `ABSOLUTE RULES:\n`;
-  prompt += `1. Render EXACTLY the fixture types specified â€” no substitutions\n`;
-  prompt += `2. Place fixtures at EXACTLY the positions marked â€” no repositioning\n`;
-  prompt += `3. Render EXACTLY ${count} light sources â€” NO MORE, NO LESS\n`;
-  prompt += `4. Areas without markers MUST remain COMPLETELY DARK\n`;
-  prompt += `5. Do NOT add lights for ANY reason not marked in IMAGE 2\n`;
-  prompt += `6. Architecture and landscaping must be IDENTICAL to IMAGE 1\n`;
-  prompt += `7. Remove ALL gradient overlays, labels, and markers â€” output is a CLEAN photo\n`;
-  prompt += `8. Every window MUST remain dark â€” no interior lights\n`;
-  prompt += `9. ZERO downward light from ANY roofline, eave, or overhang â€” ALL eave undersides are PITCH BLACK. Roofline markers = light goes UPWARD ONLY.\n\n`;
-
-  // 1b. Exclusive fixture allowlist
-  const allowlistLabelMap: Record<string, string> = {
-    up: 'Ground-mounted uplight (brass cylinder, beam UP)',
-    gutter: 'Invisible roof-edge light â€” soft warm wash ONLY on wall ABOVE, ZERO light below, NO visible fixture',
-    path: 'Path light bollard (brass dome-top, 360Â° ground pool)',
-    well: 'In-ground well light (flush, beam UP at trees)',
-    hardscape: 'Step/hardscape light (LED bar under tread, beam DOWN)',
-    coredrill: 'Core drill light (flush in concrete, beam UP, NO visible hardware)',
-  };
-
-  const allFixtureTypes = ['up', 'gutter', 'path', 'well', 'hardscape', 'coredrill'];
-  const nonSelectedTypes = allFixtureTypes.filter(t => !presentTypes.has(t));
-
-  prompt += `## EXCLUSIVE FIXTURE ALLOWLIST â€” ONLY THESE TYPES MAY EXIST\n`;
-  prompt += `The ONLY lighting fixtures permitted in the output image are:\n`;
-  for (const type of presentTypes) {
-    if (allowlistLabelMap[type]) {
-      prompt += `- ${allowlistLabelMap[type]}\n`;
-    }
+  // Assemble the full prompt for Deep Think
+  let deepThinkPrompt = input.systemPrompt;
+  deepThinkPrompt += '\n\n## FIXTURE REFERENCE DATA\n' + input.fixtureReference;
+  deepThinkPrompt += '\n\n' + input.userSelections;
+  deepThinkPrompt += '\n\n' + input.lightingParams;
+  if (input.preferenceContext) {
+    deepThinkPrompt += '\n\n' + input.preferenceContext;
   }
-  prompt += `\nNO OTHER light source of ANY kind may appear. This includes:\n`;
-  prompt += `- NO ambient glow on surfaces without a marker\n`;
-  prompt += `- NO fill light that softens dark areas\n`;
-  prompt += `- NO bounce light, reflected light, or secondary illumination\n`;
-  prompt += `- NO light that "completes" the scene aesthetically\n`;
-  prompt += `VALIDATION: If ANY light source appears that is not in this allowlist = INVALID IMAGE\n\n`;
+  if (input.spatialMapContext) {
+    deepThinkPrompt += '\n\n## SPATIAL MAP DATA (exact coordinates for each fixture)\n' + input.spatialMapContext;
+  }
 
-  // 1c. Prohibition-by-type for non-selected fixtures
-  if (nonSelectedTypes.length > 0) {
-    const darkDescriptions: Record<string, string> = {
-      up: 'Wall bases remain in shadow, NO upward beam columns on walls from ground level',
-      gutter: 'Roof edge is dark, NO mounted uplights, NO upward illumination onto 2nd story from the roofline',
-      path: 'No bollard fixtures, no circular ground pools along walkways',
-      well: 'No flush in-ground lights in landscape beds, no tree uplighting from ground',
-      hardscape: 'Step risers remain dark, no light bars under treads',
-      coredrill: 'Concrete/paver surfaces have no flush lights, no wall-grazing from driveways',
-    };
+  // Build image parts
+  const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
+  imageParts.push({ inlineData: { data: imageBase64, mimeType: imageMimeType } });
 
-    const promptLabelMap: Record<string, string> = { gutter: 'GUTTER' };
-    prompt += `## THESE FIXTURE TYPES WERE NOT SELECTED â€” THEY MUST NOT APPEAR\n`;
-    for (const type of nonSelectedTypes) {
-      if (darkDescriptions[type]) {
-        const label = promptLabelMap[type] || type.toUpperCase();
-        prompt += `- ${label}: ${darkDescriptions[type]}\n`;
+  // For manual mode: include gradient/marker image so Deep Think can see positions
+  if (gradientImageBase64) {
+    imageParts.push({ inlineData: { data: gradientImageBase64, mimeType: imageMimeType } });
+  } else if (markedImageBase64) {
+    imageParts.push({ inlineData: { data: markedImageBase64, mimeType: imageMimeType } });
+  }
+
+  imageParts.push({ text: deepThinkPrompt });
+
+  console.log(`[DeepThink] Sending to Deep Think (${mode} mode). Input prompt: ${deepThinkPrompt.length} chars`);
+
+  return withRetry(async () => {
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: ANALYSIS_MODEL_NAME, // gemini-3-pro-preview
+        contents: { parts: imageParts },
+        config: {
+          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+        },
+      }),
+      ANALYSIS_TIMEOUT_MS,
+      'Deep Think prompt generation timed out. Please try again.'
+    );
+
+    if (response.candidates?.[0]?.content?.parts) {
+      // Skip thinking parts (thought: true) — grab the final output text
+      const textPart = response.candidates[0].content.parts
+        .filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought)
+        .pop();
+
+      if (textPart?.text) {
+        let jsonText = textPart.text.trim();
+        if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+        }
+
+        try {
+          const output: DeepThinkOutput = JSON.parse(jsonText);
+          console.log(`[DeepThink] Prompt generated. Length: ${output.prompt.length} chars, Fixtures: ${output.fixtureCount}`);
+          if (output.analysisNotes) console.log(`[DeepThink] Notes: ${output.analysisNotes}`);
+          return output;
+        } catch (parseError) {
+          console.warn('[DeepThink] JSON parse failed, using raw text as prompt:', parseError);
+          // Fallback: treat entire text as the prompt
+          return { prompt: textPart.text, analysisNotes: 'JSON parse failed, using raw text' };
+        }
       }
     }
-    prompt += `\n`;
+    throw new Error('Deep Think returned no output. Please try again.');
+  }, 3, 2000);
+}
+
+/**
+ * Stage 2 (New Pipeline): Thin wrapper around Nano Banana Pro API.
+ * Takes the prompt from Deep Think + images and generates the night scene.
+ */
+export async function executeGeneration(
+  imageBase64: string,
+  imageMimeType: string,
+  generationPrompt: string,
+  aspectRatio: string,
+  prefixParts?: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }>,
+  gradientImageBase64?: string,
+  markedImageBase64?: string
+): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+  // Resize images to prevent timeouts
+  const resizedImage = await resizeImageBase64(imageBase64, imageMimeType);
+  const resizedGradient = gradientImageBase64
+    ? await resizeImageBase64(gradientImageBase64, imageMimeType)
+    : undefined;
+  const resizedMarked = markedImageBase64
+    ? await resizeImageBase64(markedImageBase64, imageMimeType)
+    : undefined;
+
+  // Build parts array
+  const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
+
+  // Few-shot references first
+  if (prefixParts && prefixParts.length > 0) {
+    imageParts.push(...prefixParts);
   }
 
-  // 1d. Type authority rule
-  prompt += `## TYPE AUTHORITY RULE\n`;
-  prompt += `The fixture TYPE is determined EXCLUSIVELY by the marker label â€” NEVER by location.\n`;
-  prompt += `- A marker labeled "GUTTER" at ANY position = small uplight in rain gutter, beam UPWARD on wall above, NO downlights from eaves â€" regardless of surroundings\n`;
-  prompt += `- A marker labeled "UP" at ANY position = ground-mounted uplight, regardless of surroundings\n`;
-  prompt += `- You MUST NOT substitute one fixture type for another based on where the marker is placed\n`;
-  prompt += `- The user placed each marker deliberately â€” the marker label IS the user's intent\n\n`;
+  // Base image
+  imageParts.push({ inlineData: { data: resizedImage, mimeType: imageMimeType } });
 
-  // 1e. Essential preservation rules
-  prompt += `## FRAMING & COMPOSITION PRESERVATION (CRITICAL)\n`;
-  prompt += `- Output MUST have the EXACT SAME framing and composition as IMAGE 1\n`;
-  prompt += `- Keep the ENTIRE house in frame â€” do NOT crop, zoom in, or cut off any part\n`;
-  prompt += `- Do NOT change the camera angle, perspective, or viewpoint\n`;
-  prompt += `- The aspect ratio and boundaries must match IMAGE 1 exactly\n\n`;
+  // Gradient or marker image
+  if (resizedGradient) {
+    imageParts.push({ inlineData: { data: resizedGradient, mimeType: imageMimeType } });
+  } else if (resizedMarked) {
+    imageParts.push({ inlineData: { data: resizedMarked, mimeType: imageMimeType } });
+  }
 
-  prompt += `## PIXEL-PERFECT PRESERVATION\n`;
-  prompt += `- The generated image must be a 1:1 edit of IMAGE 1\n`;
-  prompt += `- Every building, tree, bush, object MUST appear EXACTLY as shown in IMAGE 1\n`;
-  prompt += `- You are ONLY permitted to add the specific requested light fixtures â€” nothing else changes\n`;
-  prompt += `- FORBIDDEN: Adding new trees, bushes, walkways, driveways, patios, steps, railings, windows, doors, or any matter not in IMAGE 1\n`;
-  prompt += `- If IMAGE 1 has NO sidewalk, output has NO sidewalk. If IMAGE 1 has NO driveway, output has NO driveway.\n\n`;
+  // The prompt from Deep Think
+  imageParts.push({ text: generationPrompt });
 
-  prompt += `## DARKNESS PRESERVATION\n`;
-  prompt += `- IMAGE 1 is ALREADY correctly dark â€” PRESERVE this darkness level exactly\n`;
-  prompt += `- Do NOT brighten the sky, add ambient light, or lighten shadows\n`;
-  prompt += `- Sky must remain pitch black â€” no blue gradients, no twilight glow\n`;
-  prompt += `- Unlit areas stay exactly as dark as they appear in IMAGE 1\n`;
-  prompt += `- Only the landscape lighting fixtures provide meaningful illumination\n`;
-  prompt += `- Light pools on ground: soft feathered edges. Hard surfaces reflect slightly more than grass/mulch.\n\n`;
+  console.log(`[executeGeneration] Sending to Nano Banana Pro. Prompt: ${generationPrompt.length} chars, Images: ${imageParts.filter(p => 'inlineData' in p).length}`);
 
-  // 2. Image reference instruction (gradient map or marker-only)
-  if (hasGradientImage) {
-    prompt += `## DUAL-IMAGE REFERENCE\n`;
-    prompt += `You are given TWO task images:\n`;
-    prompt += `- IMAGE 1 (NIGHTTIME BASE): A nighttime photograph of the house with NO lights on â€” use as your BASE\n`;
-    prompt += `- IMAGE 2 (ANNOTATED GUIDE): The same house (daytime) with semi-transparent directional hints and numbered markers showing where to add lights\n\n`;
+  const response = await withTimeout(
+    ai.models.generateContent({
+      model: MODEL_NAME, // gemini-3-pro-image-preview
+      contents: { parts: imageParts },
+      config: {
+        temperature: 0.1,
+        responseModalities: ['TEXT', 'IMAGE'],
+        imageConfig: { imageSize: '2K', aspectRatio },
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        ],
+      },
+    }),
+    API_TIMEOUT_MS,
+    'Image generation timed out. Please try again.'
+  );
 
-    prompt += `## CRITICAL: CLEAN OUTPUT â€” NO ANNOTATIONS VISIBLE\n`;
-    prompt += `The colored markers, numbers, text labels, and gradient overlays in IMAGE 2 are INVISIBLE GUIDES ONLY.\n`;
-    prompt += `Your output MUST look like a clean, professional photograph with ZERO annotation artifacts:\n`;
-    prompt += `- NO numbered circles or colored dots\n`;
-    prompt += `- NO text labels or type names\n`;
-    prompt += `- NO colored triangular or conical shapes\n`;
-    prompt += `- NO gradient overlays or semi-transparent colored regions\n`;
-    prompt += `- The output should be INDISTINGUISHABLE from a real nighttime photograph\n\n`;
-
-    prompt += `## HOW TO USE THE ANNOTATED GUIDE\n`;
-    prompt += `The faint warm-colored shapes in IMAGE 2 indicate ONLY two things:\n`;
-    prompt += `- POSITION: Where each light fixture is located (center of the marker)\n`;
-    prompt += `- DIRECTION: Which way the light beam points (upward shape = uplight, downward shape = downlight, circular = omnidirectional)\n\n`;
-    prompt += `DO NOT reproduce the gradient shapes literally. The gradients are just POSITION and DIRECTION guides. Instead, render each light as:\n`;
-    prompt += `- A soft, wide WALL WASH â€” the wall surface itself glows warmly, revealing its texture\n`;
-    prompt += `- ABSOLUTELY NO hard triangles, cones, V-shapes, or geometric beam patterns\n`;
-    prompt += `- Light that looks IDENTICAL to real professional landscape lighting photography\n`;
-    prompt += `- The wall's material (stone, brick, siding) should be beautifully revealed by the warm light grazing across its surface\n`;
-    prompt += `- Think: "the wall is glowing" NOT "a beam is hitting the wall"\n\n`;
-
-    prompt += `## DIRECTION RULES\n`;
-    prompt += `- Upward-pointing hints = light beams going UP the wall (uplights, GUTTER uplights, core drills)\n`;
-    prompt += `- Downward-pointing hints = light beams going DOWN (step lights, hardscape lights)\n`;
-    prompt += `- Circular hints = omnidirectional ground-level pools (path lights, bollards)\n`;
-    prompt += `- NEVER reverse the indicated direction\n`;
-
-    // Add angled beam awareness when any fixture has custom rotation
-    const hasAnyCustomRotation = spatialMap.placements.some(
-      p => p.rotation !== undefined && hasCustomRotation(p.rotation, p.fixtureType)
-    );
-    if (hasAnyCustomRotation) {
-      prompt += `- CUSTOM BEAM ANGLES: Some fixtures have user-specified beam directions that differ from type defaults. The directional arrows and gradient cones in IMAGE 2 show the EXACT direction. Follow each fixture's specific direction from the PLACEMENT MAP below.\n`;
+  // Extract image from response
+  if (response.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData?.data) {
+        return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+      }
     }
-
-    prompt += `- GUTTER markers = small uplight in rain gutter at roof edge, beam goes UPWARD on wall above, NO downlights from eaves, ZERO light below\n`;
-    prompt += `- If a marker is at the roofline with an upward hint, render light going UP â€" NEVER render it as a downlight or sconce\n\n`;
-
-    prompt += `## COUNT RULES\n`;
-    prompt += `The guide contains EXACTLY ${count} fixture positions.\n`;
-    prompt += `Your output MUST contain EXACTLY ${count} light effects â€” no more, no fewer.\n`;
-    prompt += `Any area WITHOUT an annotated fixture MUST remain COMPLETELY DARK.\n\n`;
-
-    prompt += `## PROHIBITED FIXTURES\n`;
-    prompt += `Do NOT add any light sources that are not indicated by the annotated guide:\n`;
-    prompt += `- NO wall-mounted sconces, lanterns, or decorative wall fixtures\n`;
-    prompt += `- NO downlights from eaves â€" GUTTER fixtures aim UPWARD, eave undersides stay DARK\n`;
-    prompt += `- NO porch lights, coach lights, or entrance fixtures\n`;
-    prompt += `- NO string lights, recessed ceiling lights, or window glow\n`;
-    prompt += `- The ONLY light sources in the scene are the ${count} fixtures marked in the guide\n`;
-    prompt += `- If a wall, door, or garage has no marker near it, it must have NO fixture on it\n`;
-    prompt += `- NO recessed eave downlights â€” eave/overhang undersides are ALL PITCH BLACK with zero light\n`;
-    prompt += `- Any marker at the roofline means light goes UPWARD â€” NEVER render a downlight at that position\n\n`;
-
-    prompt += `## POSITION MATCHING RULE\n`;
-    prompt += `Each marker's crosshair intersection is the PRECISE fixture location.\n`;
-    prompt += `- Match horizontal position EXACTLY â€” if marker is at 35% from left, light must be at 35% from left\n`;
-    prompt += `- Match vertical position EXACTLY â€” if marker is at 80% from top, light must be at 80% from top\n`;
-    prompt += `- DO NOT "snap" fixtures to architectural features â€” marker position overrides any perceived "correct" location\n`;
-    prompt += `- If a marker appears in an unusual position, TRUST THE MARKER â€” the user placed it deliberately\n`;
-    prompt += `- For GUTTER markers specifically: the marker Y% position IS where the light originates â€" warm light washes UPWARD on the wall above this point\n`;
-    prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner.\n\n`;
-  } else {
-    prompt += `## DUAL-IMAGE REFERENCE\n`;
-    prompt += `You are given TWO task images (the last two images in this message):\n`;
-    prompt += `- IMAGE 1 (NIGHTTIME BASE): A nighttime photograph of the house with NO lights on â€” use this as your BASE\n`;
-    prompt += `- MARKED IMAGE: The same house (daytime) with bright colored numbered circle markers showing EXACTLY where to place each light fixture\n\n`;
-    prompt += `Your task: Add professional landscape lighting effects to IMAGE 1 at the EXACT positions shown by the markers in the MARKED IMAGE. The output should look like IMAGE 1 with realistic lighting added â€” NO colored markers visible.\n\n`;
-    prompt += `## POSITION MATCHING RULE\n`;
-    prompt += `Each marker's crosshair intersection is the PRECISE fixture location.\n`;
-    prompt += `- Match horizontal position EXACTLY â€” if marker is at 35% from left, light must be at 35% from left\n`;
-    prompt += `- Match vertical position EXACTLY â€” if marker is at 80% from top, light must be at 80% from top\n`;
-    prompt += `- DO NOT "snap" fixtures to architectural features â€” marker position overrides any perceived "correct" location\n`;
-    prompt += `- If a marker appears in an unusual position, TRUST THE MARKER â€” the user placed it deliberately\n`;
-    prompt += `- For GUTTER markers specifically: the marker Y% position IS where the light originates â€" warm light washes UPWARD on the wall above this point\n`;
-    prompt += `Coordinates use: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom). 0%,0% is the TOP-LEFT corner of the image.\n\n`;
-  }
-
-  // 2b. Color-to-type mapping
-  prompt += `## MARKER COLOR GUIDE (MARKED IMAGE)\n`;
-  prompt += `Each marker on the MARKED IMAGE has a specific color indicating its fixture type:\n`;
-  for (const type of presentTypes) {
-    const c = colorMap[type];
-    if (c) {
-      const labelMap2: Record<string, string> = {
-        up: 'UP light (ground-mounted, beam UP)',
-        gutter: 'GUTTER (small uplight in rain gutter â€" beam UPWARD on wall above, NO downlights from eaves)',
-        path: 'PATH light (bollard on ground)',
-        well: 'WELL light (in-ground, beam UP at trees)',
-        hardscape: 'STEP/HARDSCAPE light (under tread)',
-        coredrill: 'COREDRILL light (flush in concrete, beam UP)',
-      };
-      prompt += `- ${c.name} circle (${c.hex}) = ${labelMap2[type] || type}\n`;
+    // Check for text-only response (blocked or error)
+    const textPart = response.candidates[0].content.parts.find((p: { text?: string }) => p.text);
+    if (textPart && 'text' in textPart && textPart.text) {
+      throw new Error(`Generation blocked: ${textPart.text}`);
     }
   }
-  prompt += `\nEach marker also has a TEXT LABEL below it (UP, GUTTER, PATH, etc.) confirming the type.\n`;
-  prompt += `The NUMBER inside each circle is the fixture sequence number.\n\n`;
 
-  // 3. Manual placement header
-  prompt += `## CRITICAL: MANUAL PLACEMENT MODE â€” EXACTLY ${count} LIGHTS, ZERO EXTRAS\n`;
-  prompt += `IMAGE 2 contains EXACTLY ${count} bright colored numbered circle markers.\n`;
-  prompt += `Each marker shows the EXACT position and type of lighting fixture to place.\n`;
-  prompt += `Place EXACTLY ${count} lights total â€” one per marker. ZERO additional lights anywhere.\n\n`;
-
-  // 4. Spatial map with exact coordinates
-  prompt += formatSpatialMapForPrompt(spatialMap);
-  prompt += '\n';
-
-  // 5. Fixture visual descriptions (only for types actually placed)
-  prompt += `## FIXTURE TYPE REFERENCE â€” WHAT EACH MARKER LABEL MEANS\n\n`;
-
-  if (presentTypes.has('up')) {
-    prompt += `### "UP" MARKERS â€” Ground-Mounted Up Lights\n`;
-    prompt += `- FIXTURE: A small brass cylinder ground stake (~4 inches tall) in the landscaping bed at the wall base. At night, the dark bronze blends into landscaping â€” the dominant visible element is the warm LIGHT WASH on the wall above, NOT the fixture itself.\n`;
-    prompt += `- MOUNTING: At ground level at the base of the wall.\n`;
-    prompt += `- WHAT THE LIGHT LOOKS LIKE: A soft, wide WASH of warm light on the wall surface. NOT a hard triangle or cone shape. The light looks like a gentle glow that reveals the wall's texture (stone, brick, siding). Think of it as the wall itself glowing warmly â€” not a spotlight beam projected onto it.\n`;
-    prompt += `- BEAM REACH: The warm wash covers the wall from near-ground ALL THE WAY UP to the roofline/eaves. The FULL wall height is illuminated. Brightest in the lower half, gently dimming toward the top â€” but light is still clearly visible at the roofline.\n`;
-    prompt += `- BEAM WIDTH: Wide enough to softly illuminate 4-6 feet of wall width. The edges feather out gradually â€” NO hard edges, NO geometric shapes, NO triangles.\n`;
-    prompt += `- TEXTURE INTERACTION: The light reveals the wall's material texture â€” stone mortar joints, brick patterns, siding lines. This is what makes it look REAL. The light grazes across the surface, creating subtle shadows in the texture.\n`;
-    prompt += `- NOT A PATH LIGHT: NO tall bollard, NO dome/hat fixture, NO pool of light on the ground. Light goes UP onto the wall ONLY. The ground around the fixture remains DARK.\n\n`;
+  // Check finish reason
+  const finishReason = response.candidates?.[0]?.finishReason;
+  if (finishReason && finishReason !== 'STOP') {
+    throw new Error(`Generation ended with reason: ${finishReason}`);
   }
 
-  if (presentTypes.has('path')) {
-    prompt += `### "PATH" MARKERS â€” Path Lights\n`;
-    prompt += `- FIXTURE: Cast brass "china hat" or dome-top path light, ~22 inches tall, solid brass with aged bronze patina\n`;
-    prompt += `- MOUNTING: Post-mounted, staked in landscaping beds alongside walkways (NOT on pavement)\n`;
-    prompt += `- BEAM DIRECTION: 360-degree omnidirectional downward distribution from under the hat\n`;
-    prompt += `- LIGHT POOL: 6-8 foot diameter warm pools on the ground around the fixture\n\n`;
-  }
-
-  if (presentTypes.has('well')) {
-    prompt += `### "WELL" MARKERS â€” In-Ground Well Lights\n`;
-    prompt += `- FIXTURE: Flush-mounted in-ground well light, brass housing, tempered glass lens, zero protrusion\n`;
-    prompt += `- MOUNTING: Completely flush with grade at ground level\n`;
-    prompt += `- BEAM DIRECTION: Aims UPWARD â€” typically used to uplight trees and canopy\n`;
-    prompt += `- LIGHT PHYSICS: Beam originates at ground level, projects upward; reveals bark texture, creates shadows in foliage\n\n`;
-  }
-
-  if (presentTypes.has('hardscape')) {
-    prompt += `### "STEP" MARKERS â€” Hardscape / Step Lights\n`;
-    prompt += `- FIXTURE: Linear LED light bar (7-19" length), low-profile brass housing, 12V\n`;
-    prompt += `- MOUNTING: Under the tread nosing (front edge of step), facing downward\n`;
-    prompt += `- BEAM DIRECTION: Projects DOWNWARD from under tread to illuminate the riser below\n`;
-    prompt += `- Creates clear visual definition of each step edge; light spills onto the next tread below\n\n`;
-  }
-
-  if (presentTypes.has('soffit')) {
-    prompt += `### "DOWN" MARKERS â€” Soffit Downlights\n`;
-    prompt += `- FIXTURE: Recessed canless LED downlight, flush-mounted in soffit, IP65+ rated\n`;
-    prompt += `- MOUNTING: Flush inside the soffit/roof overhang, no protrusion below soffit plane\n`;
-    prompt += `- BEAM DIRECTION: Projects DOWNWARD from soffit toward ground\n`;
-    prompt += `- Grazes window frames, columns, or wall surfaces depending on position\n\n`;
-  }
-
-  if (presentTypes.has('coredrill')) {
-    prompt += `### "COREDRILL" MARKERS â€” Flush In-Ground Core Drill Lights\n`;
-    prompt += `- FIXTURE: Flush-mounted well light recessed into CONCRETE or PAVERS, brass/stainless housing, tempered glass lens, vehicle-rated\n`;
-    prompt += `- MOUNTING: Core-drilled into hardscape (concrete driveway, paver walkway), completely FLUSH with grade, ZERO protrusion above surface\n`;
-    prompt += `- BEAM DIRECTION: Aims UPWARD to graze the wall/pier/column surface directly above the fixture\n`;
-    prompt += `- TYPICAL USE: Garage door piers (flanking garage doors), concrete walkways, driveways\n`;
-    prompt += `- The light washes UP the vertical wall/pier surface above it, reaching the roofline\n`;
-    prompt += `- Distance from wall: 4-6 inches for proper grazing angle\n`;
-    prompt += `- THIS IS NOT A TREE UPLIGHT â€” these are embedded in CONCRETE near walls/piers, NOT in landscape beds\n`;
-    prompt += `- THIS IS NOT A PROTRUDING UPLIGHT â€” there is NO brass cylinder sticking up. The fixture is INVISIBLE, flush with the concrete surface\n\n`;
-  }
-
-  // GUTTER last â€" recency bias ensures the AI remembers this most-confused fixture type
-  if (presentTypes.has('gutter')) {
-    prompt += `### "GUTTER" MARKERS â€" Gutter-Mounted Uplights at 1st Story Roof Edge\n`;
-    prompt += `- FIXTURE: Small uplight mounted inside the rain gutter at the 1st story roofline\n`;
-    prompt += `- BEAM: Aims UPWARD â€" warm light washes UP the 2nd story wall directly above each marker\n`;
-    prompt += `- Each fixture lights ONLY the wall section above its own horizontal position\n`;
-    prompt += `- NO DOWNLIGHTS: Do NOT create soffit lights, eave lights, or any downward beam. Eave undersides stay DARK.\n`;
-
-    // Per-fixture coordinate reinforcement for gutter placements
-    const gutterPlacements = spatialMap.placements.filter(p => p.fixtureType === 'gutter');
-    const gutterStartIdx = spatialMap.placements.findIndex(p => p.fixtureType === 'gutter');
-    gutterPlacements.forEach((p, i) => {
-      const fixtureNum = gutterStartIdx + i + 1;
-      const leftBound = Math.max(0, p.horizontalPosition - 8).toFixed(1);
-      const rightBound = Math.min(100, p.horizontalPosition + 8).toFixed(1);
-      prompt += `- GUTTER #${fixtureNum} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%] ON THE GUTTER LINE (Y≈${p.verticalPosition.toFixed(0)}%) â€" beam UPWARD on wall between X=${leftBound}% and X=${rightBound}% ONLY. ZERO light below or outside this range.\n`;
-    });
-    prompt += `- Peaks/gables WITHOUT a GUTTER marker below them = completely DARK.\n`;
-    prompt += `- If 3 peaks visible but only 1 has a marker below it â†' ONLY that 1 peak is lit.\n`;
-    prompt += `\n### AMBER DASHED LINES — "GUTTER LINE" Annotations on IMAGE 2\n`;
-    prompt += `- The amber/yellow dashed lines labeled "GUTTER LINE" on IMAGE 2 mark the PHYSICAL GUTTER POSITION along the roofline\n`;
-    prompt += `- GUTTER fixtures sit ON these lines — their light casts UPWARD from the gutter edge onto the wall above\n`;
-    prompt += `- The line shows WHERE the gutter runs; each fixture ON the line illuminates the wall section DIRECTLY ABOVE its position\n`;
-    prompt += `- Light beams aim UPWARD ONLY from the gutter line — NO downward light, NO soffit light\n\n`;
-  }
-
-  // 6. Confusion prevention (UNCONDITIONAL â€” always include all distinctions)
-  prompt += `## CRITICAL CONFUSION PREVENTION\n`;
-  prompt += `### GUTTER UPLIGHTS â€" LIGHT GOES UP, NEVER DOWN\n`;
-  prompt += `- GUTTER marker = small uplight in rain gutter, beam goes UPWARD on wall above\n`;
-  prompt += `- FORBIDDEN: Any downward light from eaves, soffits, or overhangs\n`;
-  prompt += `- FORBIDDEN: Wall-mounted sconces or visible hardware at GUTTER marker positions\n`;
-  prompt += `- If your render shows downward light from the roofline = WRONG â€" gutter lights aim UP\n`;
-  prompt += `### COREDRILL â‰  UP (Different fixtures â€” do NOT confuse)\n`;
-  prompt += `- COREDRILL: INVISIBLE fixture flush in concrete, no visible hardware above surface. Light grazes nearby wall/pier.\n`;
-  prompt += `- UP: Small 4-inch brass ground stake in landscaping â€” light goes UP onto wall ONLY. NO ground pool. NOT a tall bollard.\n`;
-  prompt += `- If a marker says "COREDRILL", there must be NO visible fixture â€” only the light beam on the wall above.\n`;
-  prompt += `### COREDRILL â‰  WELL (Different locations)\n`;
-  prompt += `- COREDRILL: Flush in CONCRETE/PAVERS near walls and garage piers\n`;
-  prompt += `- WELL: Flush in LANDSCAPE BEDS near trees\n`;
-  prompt += `- "UP" fixtures are at GROUND LEVEL aiming upward â€” NOT sconces, NOT wall-mounted, NOT high-mounted\n`;
-  prompt += `- Every marker label tells you the EXACT fixture type. NEVER substitute one type for another.\n\n`;
-
-  // 6b. Common mistakes section
-  prompt += `## COMMON MISTAKES TO AVOID\n`;
-  prompt += `- WRONG: Rendering soffit downlights or eave lights when "GUTTER" markers are placed\n`;
-  prompt += `  RIGHT: GUTTER = small uplight in gutter, warm light washes UP the wall above\n`;
-  prompt += `- WRONG: Light going BOTH up and down from a "GUTTER" marker\n`;
-  prompt += `  RIGHT: GUTTER = light UP ONLY. Eave undersides stay DARK, no downward light.\n`;
-  prompt += `- WRONG: Rendering a visible brass cylinder for a "COREDRILL" marker\n`;
-  prompt += `  RIGHT: Coredrill = invisible flush fixture in concrete, only the light beam is visible\n`;
-  prompt += `- WRONG: Adding path light bollards or ground light pools when only "UP" markers were placed\n`;
-  prompt += `  RIGHT: UP = small 4-inch ground stake, light UP onto wall ONLY, ZERO ground pool. PATH = tall 22-inch dome-top bollard, 360Â° ground pools. Completely different fixtures.\n`;
-  prompt += `- WRONG: Moving a light to a "nicer" position instead of the exact marker location\n`;
-  prompt += `  RIGHT: Trust the marker position â€” the user placed it deliberately\n\n`;
-
-  // 7. Lighting style â€” photorealism
-  prompt += `## LIGHTING STYLE â€” MUST LOOK LIKE A REAL PHOTOGRAPH (MANDATORY)\n`;
-  prompt += `The output must be INDISTINGUISHABLE from a real photograph of a professionally lit home at night.\n\n`;
-  prompt += `- Color temperature: warm (2700K-3000K)\n`;
-  prompt += `- SOFT WALL WASHES: Light appears as a gentle, wide glow on the wall surface â€” the wall GLOWS warmly. NEVER render hard-edged triangles, cones, V-shapes, or geometric spotlight beams.\n`;
-  prompt += `- FULL WALL COVERAGE: Each uplight washes the wall from near-ground ALL THE WAY UP to the roofline/eaves. The entire wall height glows. Brightest in the lower half, gently fading toward the top â€” but still clearly visible at the roofline.\n`;
-  prompt += `- TEXTURE REVELATION: The warm light grazes across the wall surface, beautifully revealing stone texture, brick mortar joints, or siding lines. This texture interaction is what makes the lighting look REAL.\n`;
-  prompt += `- INVISIBLE FIXTURES: The light fixtures themselves are NOT visible at night. Do NOT draw brass cylinders, hardware, or any fixture body. Only draw the LIGHT EFFECT on the walls and surfaces.\n`;
-  prompt += `- NO GEOMETRIC SHAPES: Real landscape lighting NEVER creates hard triangles or cone shapes on walls. It creates soft, diffused washes. If your output has any triangle or cone shapes, it is WRONG.\n`;
-  prompt += `- REFERENCE: Look at professional landscape lighting photography â€” the walls glow warmly and evenly, fixtures are invisible, and the light reveals beautiful architectural texture.\n\n`;
-
-  // 8. Absolute prohibition
-  prompt += `## ABSOLUTELY FORBIDDEN â€” ZERO TOLERANCE\n`;
-  prompt += `The following must have ZERO instances in the output:\n`;
-  prompt += `- ANY light source without a corresponding numbered marker in IMAGE 2\n`;
-  prompt += `- ANY recessed overhead lights or downward light from eaves (NONE were placed)\n`;
-  prompt += `- Porch lights, sconces, lanterns, string lights, pendant lights\n`;
-  prompt += `- Window glow, interior lights, ambient room lighting visible through glass\n`;
-  prompt += `- Ambient illumination or sky glow beyond what the ${count} placed fixtures produce\n`;
-  prompt += `- Decorative lights on walls, doors, columns, or any surface without a marker\n`;
-  prompt += `- Areas of the house WITHOUT a marker MUST remain COMPLETELY DARK â€” no exceptions\n`;
-  prompt += `- If you find yourself adding a light that doesn't correspond to a marker, STOP and REMOVE it\n`;
-  prompt += `- Ambient glow on walls, ground, or surfaces without a corresponding marker\n`;
-  prompt += `- Fill light that softens dark shadows between fixtures\n`;
-  prompt += `- Bounce light, reflected illumination, or secondary light sources\n`;
-  prompt += `- General illumination that "completes" the scene â€” darkness IS the design intent\n`;
-  prompt += `- Light on walls, columns, garage doors, or any surface that has NO marker near it\n\n`;
-
-  // 9. Marker checklist
-  prompt += `## MARKER CHECKLIST â€” Verify EVERY marker is converted:\n`;
-  const labelMap: Record<string, string> = {
-    up: 'ground-mounted uplight (beam UP)',
-    path: 'brass path light bollard',
-    well: 'in-ground well light (beam UP)',
-    hardscape: 'under-tread step light',
-    gutter: 'invisible roof-edge uplight â€” warm wash on wall ABOVE only, no visible fixture',
-    coredrill: 'flush in-ground core drill light (beam UP from concrete)'
-  };
-  spatialMap.placements.forEach((p, i) => {
-    const label = labelMap[p.fixtureType] || 'light';
-    let dirSuffix = '';
-    if (p.rotation !== undefined && hasCustomRotation(p.rotation, p.fixtureType)) {
-      dirSuffix = ` – beam ${rotationToDirectionLabel(p.rotation)}`;
-    }
-    prompt += `  ${i + 1}. Marker #${i + 1} â†' ${label} at [${p.horizontalPosition.toFixed(1)}%, ${p.verticalPosition.toFixed(1)}%]${dirSuffix}\n`;
-  });
-  prompt += `\nTOTAL: ${count} markers = EXACTLY ${count} lights in the output. No more, no less.\n\n`;
-
-  // 10. Final verification
-  prompt += `## FINAL VERIFICATION â€” COUNT EVERY LIGHT IN YOUR OUTPUT\n`;
-  prompt += `1. Count all visible light sources in your generated image\n`;
-  prompt += `2. You MUST have EXACTLY ${count} light sources â€” one for each marker\n`;
-  prompt += `3. If you count FEWER than ${count}: you MISSED a marker â€” go back and add the missing light\n`;
-  prompt += `4. If you count MORE than ${count}: you added an UNAUTHORIZED light â€” REMOVE it immediately\n`;
-  prompt += `5. Verify each light matches its marker type (UP=upward beam from ground, GUTTER=uplight in gutter beam UPWARD, PATH=bollard, etc.)\n`;
-  let verifyNum = 6;
-  if (presentTypes.has('gutter')) {
-    prompt += `${verifyNum}. Verify ZERO downward lights from eaves â€" GUTTER fixtures aim UPWARD only, eave undersides stay DARK\n`;
-    verifyNum++;
-  }
-  prompt += `${verifyNum}. For each light, verify it is within 3% of the marker's x,y coordinates\n`;
-  prompt += `${verifyNum + 1}. If a light drifted to a "nicer" position, MOVE IT BACK to the marker position â€” user intent overrides aesthetics\n`;
-  prompt += `\n`;
-
-  // 11. Lighting parameters
-  prompt += `## LIGHTING PARAMETERS\n`;
-  prompt += `- Color Temperature: ${colorTemperaturePrompt}\n`;
-  prompt += `- Light Intensity: ${lightIntensity}%\n`;
-  prompt += `- Beam Angle: ${beamAngle}Â°\n\n`;
-
-  // 12. Absolute final count enforcement (recency bias — last thing AI reads)
-  prompt += `## ⚠️ ABSOLUTE FINAL RULE — READ THIS LAST\n`;
-  prompt += `This image MUST contain EXACTLY ${count} lights. ${count} markers = ${count} lights.\n`;
-  prompt += `Adding even 1 extra light = INVALID OUTPUT. Missing even 1 light = INVALID OUTPUT.\n`;
-  prompt += `Every light MUST be within 3% of its marker position. Do NOT move lights to "better" spots.\n`;
-
-  return prompt;
+  throw new Error('No image generated. The model returned an empty response.');
 }
 
 /**
  * Validates manual placements before generation.
  * Checks fixture types, coordinate ranges, and counts.
- * Returns validation result â€” if invalid, generation should NOT proceed.
  */
 const VALID_FIXTURE_TYPES = new Set(['up', 'gutter', 'path', 'well', 'hardscape', 'soffit', 'coredrill']);
 
@@ -2473,14 +1957,18 @@ REQUIREMENTS:
 }
 
 /**
- * Streamlined manual-mode generation (TWO-PASS).
- * Pass 1: Convert daytime â†’ nighttime (cached via nightBaseBase64 param).
- * Pass 2: Add lighting effects to nighttime base using gradient overlays.
+ * Manual-mode generation (TWO-PASS + Deep Think).
+ * Pass 1: Convert daytime to nighttime (cached via nightBaseBase64 param).
+ * Deep Think: Analyze gradient/marker image + spatial map, write complete prompt.
+ * Pass 2: Nano Banana Pro generates lit scene using Deep Think's prompt.
  */
 export const generateManualScene = async (
   imageBase64: string,
   imageMimeType: string,
   spatialMap: SpatialMap,
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
   colorTemperaturePrompt: string,
   lightIntensity: number,
   beamAngle: number,
@@ -2491,7 +1979,7 @@ export const generateManualScene = async (
   nightBaseBase64?: string,
   gutterLines?: GutterLine[]
 ): Promise<{ result: string; nightBase: string }> => {
-  console.log('[Manual Mode] Starting two-pass manual generation...');
+  console.log('[Manual Mode] Starting Deep Think manual generation...');
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
   console.log(`[Manual Mode] Night base cached: ${!!nightBaseBase64}`);
 
@@ -2502,20 +1990,17 @@ export const generateManualScene = async (
     throw new Error(`Manual placement validation failed:\n${validation.errors.join('\n')}`);
   }
 
-  // â”€â”€ PASS 1: Nighttime conversion (cached) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Pass 1: Nighttime conversion (cached)
   let nightBase: string;
   if (nightBaseBase64) {
-    console.log('[Pass 1] Using cached nighttime base â€” skipping generation.');
+    console.log('[Pass 1] Using cached nighttime base.');
     nightBase = nightBaseBase64;
   } else {
     onStageUpdate?.('converting');
     nightBase = await generateNightBase(imageBase64, imageMimeType, targetRatio);
   }
 
-  const workingNightBase = nightBase;
-  const workingAspectRatio = targetRatio;
-
-  // â”€â”€ Gradient generation (painted on ORIGINAL daytime image for contrast) â”€â”€â”€
+  // Generate gradient/marker overlays (painted on ORIGINAL daytime image for contrast)
   onStageUpdate?.('generating');
 
   const hasGradients = !!(fixtures && fixtures.length > 0);
@@ -2532,17 +2017,6 @@ export const generateManualScene = async (
     console.log('[Manual Mode] Markers drawn.');
   }
 
-  const workingSpatialMap = spatialMap;
-
-  const manualPrompt = buildManualPrompt(
-    workingSpatialMap,
-    colorTemperaturePrompt,
-    lightIntensity,
-    beamAngle,
-    hasGradients
-  );
-  console.log('[Manual Mode] Prompt built. Length:', manualPrompt.length, 'characters');
-
   // Load few-shot reference examples for the selected fixture types
   const fixtureTypes = [...new Set(spatialMap.placements.map(p => p.fixtureType))];
   let referenceParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
@@ -2550,48 +2024,58 @@ export const generateManualScene = async (
     referenceParts = await buildReferenceParts(fixtureTypes);
     if (referenceParts.length > 0) {
       console.log(`[Manual Mode] Injecting ${referenceParts.length} reference parts for types: ${fixtureTypes.join(', ')}`);
-    } else {
-      console.log('[Manual Mode] No reference images available â€” generating without examples');
     }
   } catch (err) {
     console.warn('[Manual Mode] Reference loading failed (non-blocking):', err);
   }
 
-  // â”€â”€ PASS 2: Add lighting effects to nighttime base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  onStageUpdate?.('placing');
-  console.log('[Pass 2] Sending nighttime base + gradient to Gemini for lighting...');
-
-  const result = await generateNightScene(
-    workingNightBase,
-    manualPrompt,
+  // Deep Think: Analyze gradient/marker image + spatial map, write the complete prompt
+  onStageUpdate?.('analyzing');
+  console.log('[Manual Mode] Deep Think analyzing placements + writing prompt...');
+  const deepThinkResult = await deepThinkGeneratePrompt(
+    nightBase,
     imageMimeType,
-    workingAspectRatio,
+    selectedFixtures,
+    fixtureSubOptions,
+    fixtureCounts,
+    colorTemperaturePrompt,
     lightIntensity,
     beamAngle,
-    colorTemperaturePrompt,
     userPreferences,
+    spatialMap,
+    gradientImage,
     markedImage,
-    true,
+    true
+  );
+  console.log(`[Manual Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
+
+  // Pass 2: Nano Banana Pro generates the lit scene
+  onStageUpdate?.('placing');
+  console.log('[Pass 2] Generating lit scene with Nano Banana Pro...');
+  const result = await executeGeneration(
+    nightBase,
+    imageMimeType,
+    deepThinkResult.prompt,
+    targetRatio,
     referenceParts.length > 0 ? referenceParts : undefined,
-    gradientImage
+    gradientImage,
+    markedImage
   );
 
   console.log('[Pass 2] Lighting generation complete!');
 
-  const finalResult = result;
-
   // Post-generation verification (non-blocking)
   onStageUpdate?.('verifying');
-  const verification = await verifyGeneratedImage(finalResult, imageMimeType, spatialMap.placements);
-  console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} â€” ${verification.details}`);
+  const verification = await verifyGeneratedImage(result, imageMimeType, spatialMap.placements);
+  console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
 
-  return { result: finalResult, nightBase };
+  return { result, nightBase };
 };
 
 /**
  * Enhanced Night Scene Generation using Gemini Pro 3 Only
  * This replaces the Claude + Gemini hybrid mode with a Gemini-only pipeline
- * while maintaining the same quality through ported features
+ * 2-Stage Pipeline: Deep Think (analysis + prompt) → Nano Banana Pro (image generation)
  */
 export const generateNightSceneEnhanced = async (
   imageBase64: string,
@@ -2604,81 +2088,37 @@ export const generateNightSceneEnhanced = async (
   beamAngle: number,
   targetRatio: string,
   userPreferences?: UserPreferences | null,
-  onStageUpdate?: (stage: string) => void,
-  manualSpatialMap?: SpatialMap,
-  manualFixtures?: LightFixture[],
-  gutterLines?: GutterLine[]
+  onStageUpdate?: (stage: string) => void
 ): Promise<string> => {
+  console.log('[Enhanced Mode] Starting 2-stage Deep Think pipeline...');
 
-  // â”€â”€â”€ GEMINI PIPELINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  console.log('[Enhanced Mode] Starting Gemini generation...');
-
-  // Step 1: Analyze property with Gemini (includes spatial mapping)
+  // Stage 1: Deep Think analyzes property and writes the complete generation prompt
   onStageUpdate?.('analyzing');
-  console.log('[Enhanced Mode] Step 1: Analyzing property with Gemini 3 Deep Think...');
-  const analysis = await analyzePropertyArchitecture(
+  console.log('[Enhanced Mode] Stage 1: Deep Think analyzing property + generating prompt...');
+  const deepThinkResult = await deepThinkGeneratePrompt(
     imageBase64,
     imageMimeType,
-    selectedFixtures,
-    fixtureSubOptions,
-    fixtureCounts
-  );
-
-  console.log('[Enhanced Mode] Analysis complete. Spatial map:', analysis.spatialMap ? 'included' : 'not included');
-
-  // If manual placements exist, override the AI spatial map with user's placements
-  if (manualSpatialMap && manualSpatialMap.placements.length > 0) {
-    console.log(`[Enhanced Mode] Overriding AI spatial map with ${manualSpatialMap.placements.length} manual placements`);
-    analysis.spatialMap = manualSpatialMap;
-  }
-
-  // Step 2: Build enhanced prompt using Claude's quality approach
-  console.log('[Enhanced Mode] Step 2: Building enhanced prompt...');
-  const enhancedPrompt = buildEnhancedPrompt(
-    analysis,
     selectedFixtures,
     fixtureSubOptions,
     fixtureCounts,
     colorTemperaturePrompt,
     lightIntensity,
     beamAngle,
-    !!manualSpatialMap
+    userPreferences
   );
-
-  console.log('[Enhanced Mode] Enhanced prompt built. Length:', enhancedPrompt.length, 'characters');
-
-  // Step 3: Generate image with Gemini 3 Pro Image using enhanced prompt
-  onStageUpdate?.('generating');
-
-  // Manual mode: generate gradient map (includes markers) or markers-only fallback
-  let markedImageForGemini: string | undefined;
-  let gradientImageForGemini: string | undefined;
-  if (manualSpatialMap && manualSpatialMap.placements.length > 0) {
-    if (manualFixtures && manualFixtures.length > 0) {
-      console.log(`[Enhanced Mode] Painting directional light gradients for ${manualFixtures.length} fixtures...`);
-      gradientImageForGemini = await paintLightGradients(imageBase64, manualFixtures, imageMimeType, gutterLines);
-      console.log('[Enhanced Mode] Gradient map painted (includes numbered markers).');
-    } else {
-      console.log('[Enhanced Mode] Drawing fixture markers on image copy for Gemini...');
-      markedImageForGemini = await drawFixtureMarkers(imageBase64, manualSpatialMap, imageMimeType);
-      console.log('[Enhanced Mode] Markers drawn. Sending clean + marked images to Gemini.');
-    }
+  console.log(`[Enhanced Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
+  if (deepThinkResult.fixtureBreakdown) {
+    console.log('[Enhanced Mode] Fixture breakdown:', deepThinkResult.fixtureBreakdown);
   }
 
-  console.log('[Enhanced Mode] Step 3: Generating image with Gemini 3 Pro Image...');
-  const result = await generateNightScene(
-    imageBase64,              // Always send the CLEAN original
-    enhancedPrompt,
+  // Stage 2: Nano Banana Pro generates the image using Deep Think's prompt
+  onStageUpdate?.('generating');
+  console.log('[Enhanced Mode] Stage 2: Generating image with Nano Banana Pro...');
+  const result = await executeGeneration(
+    imageBase64,
     imageMimeType,
-    targetRatio,
-    lightIntensity,
-    beamAngle,
-    colorTemperaturePrompt,
-    userPreferences,
-    markedImageForGemini,     // Send marked image as second reference (fallback)
-    undefined,                // rawPromptMode
-    undefined,                // prefixParts
-    gradientImageForGemini    // Send gradient map (preferred, includes markers)
+    deepThinkResult.prompt,
+    targetRatio
   );
 
   console.log('[Enhanced Mode] Generation complete!');
@@ -2854,7 +2294,7 @@ Return ONLY valid JSON. No markdown code blocks.`;
         ],
       },
       config: {
-        thinkingConfig: { thinkingLevel: 'high' },
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       },
     });
 

@@ -1840,6 +1840,9 @@ const App: React.FC = () => {
             base64,
             mimeType,
             manualSpatialMap,
+            effectiveFixtures,
+            effectiveSubOptions,
+            effectiveCounts,
             colorPrompt,
             lightIntensity,
             beamAngle,
@@ -1868,10 +1871,7 @@ const App: React.FC = () => {
             beamAngle,
             targetRatio,
             userPreferences,
-            (stage) => setGenerationStage(stage as typeof generationStage),
-            manualSpatialMap,
-            isManualMode ? manualFixtures : undefined,
-            isManualMode && manualGutterLines.length > 0 ? manualGutterLines : undefined
+            (stage) => setGenerationStage(stage as typeof generationStage)
           );
         }
       }
