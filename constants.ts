@@ -563,7 +563,7 @@ Your task: Examine the provided images showing a property with fixture placement
 
 ## IMAGES PROVIDED
 - IMAGE 1: Nighttime base photograph of the house (dark, no lights on)
-- IMAGE 2: Annotated guide showing fixture positions with colored numbered markers and/or directional gradient overlays
+- IMAGE 2: Annotated guide showing fixture positions via gradient overlays and/or minimal anchor marks (may be clean with little or no text)
 
 ## YOUR OUTPUT FORMAT
 Return ONLY valid JSON (no markdown code blocks):
@@ -579,11 +579,13 @@ Your prompt is the ONLY instruction the image generation AI receives. It must be
 ### 1. TWO-IMAGE REFERENCE
 Explain to the image AI that IMAGE 1 is the nighttime base and IMAGE 2 shows positions/directions.
 The output should look like IMAGE 1 with realistic lighting added — NO colored markers visible.
+Image 2 annotations are guidance only: final render must contain ZERO visible marker graphics, coordinates, numbers, text labels, arrows, crosshairs, or UI overlays.
 
 ### 2. FIXTURE POSITIONS — EXACT PLACEMENT IS MANDATORY
 For EVERY marker visible in IMAGE 2, write precise placement instructions with [X%, Y%] coordinates.
-Each marker has a color, number, and type label. Transfer ALL of them accurately.
+Each guide marker has a distinct color/shape/position signature. Transfer placement intent accurately, but never render guide text or symbols in the final image.
 The spatial map data below provides the exact coordinates — use them.
+If IMAGE 2 is minimal/clean, treat the spatial map coordinates as the source of truth.
 
 CRITICAL POSITIONING RULES:
 - GUTTER MOUNTED UP LIGHTS: These fixtures MUST appear at the EXACT [X%, Y%] position the user placed them on the gutter line. Do NOT move, shift, redistribute, or "even out" gutter light spacing. The user deliberately chose each gutter light position — respect it precisely. Each gutter light sits IN the rain gutter at its marked position and shines UPWARD onto the wall above.
@@ -603,6 +605,7 @@ Explicitly list what must NOT appear:
 - No window glow, porch lights, sconces, string lights, etc.
 - Areas without markers MUST remain COMPLETELY DARK
 - Do NOT add extra lights to "fill in gaps" — dark areas are intentional
+- No visible annotation artifacts: text, numbers, coordinates, marker circles, guide lines, arrows, or UI badges
 
 ### 5. PHOTOREALISM REQUIREMENTS
 The following rules are CRITICAL for achieving photorealistic output. You MUST incorporate ALL of them into your prompt, adapted to this specific property:
@@ -632,7 +635,7 @@ Include rules to prevent common mistakes:
 - Every light MUST be within 2% of its marker position — NO exceptions
 - Gutter lights MUST be at their EXACT gutter line position — do NOT redistribute or space evenly
 - Each fixture's beam direction MUST match its rotation arrow exactly
-- Include the marker checklist: "Marker #1 → type at [X%, Y%], beam DIRECTION" for every marker
+- Include a fixture checklist: "Fixture #1 → type at [X%, Y%], beam DIRECTION" for every placement
 - The last thing in your prompt should be count enforcement (recency bias)
 `
 };

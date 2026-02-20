@@ -16,19 +16,24 @@ import {
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
-import { drawFixtureMarkers } from "./canvasNightService";
+import { drawFixtureMarkers, CLEAN_MODEL_MARKER_OPTIONS } from "./canvasNightService";
 import { buildReferenceParts } from "./referenceLibrary";
-import { paintLightGradients } from "./lightGradientPainter";
+import { paintLightGradients, CLEAN_MODEL_GUIDE_OPTIONS } from "./lightGradientPainter";
 import type { LightFixture, GutterLine } from "../types/fixtures";
 import { rotationToDirectionLabel, hasCustomRotation } from "../utils/fixtureConverter";
+import { suggestGutterLines } from "./gutterDetectionService";
 
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
 const MODEL_NAME = 'gemini-3-pro-image-preview';
 
 // Timeout for API calls (2 minutes)
 const API_TIMEOUT_MS = 120000;
-const MAX_PHOTOREAL_RETRY_ATTEMPTS = 1;
+const MAX_PHOTOREAL_RETRY_ATTEMPTS = 2;
 const PHOTOREAL_MIN_SCORE = 85;
+const MAX_ARTIFACT_RETRY_ATTEMPTS = 1;
+const ANNOTATION_ARTIFACT_MAX_SCORE = 8;
+const MAX_AUTO_GUTTER_LINES = 3;
+const MODEL_GUIDE_DEBUG = String(import.meta.env.VITE_MODEL_GUIDE_DEBUG || '').toLowerCase() === 'true';
 
 // Non-selected fixture types, including soffit, are explicitly forbidden in prompt assembly.
 
@@ -163,6 +168,20 @@ interface PhotorealismVerificationResult {
   issues: string[];
 }
 
+interface AnnotationArtifactVerificationResult {
+  passed: boolean;
+  score: number;
+  details: string;
+  issues: string[];
+}
+
+interface HeuristicPhotorealismResult {
+  passed: boolean;
+  score: number;
+  details: string;
+  issues: string[];
+}
+
 function extractBase64Data(imageOrDataUri: string): string {
   const commaIndex = imageOrDataUri.indexOf(',');
   return commaIndex >= 0 ? imageOrDataUri.slice(commaIndex + 1) : imageOrDataUri;
@@ -184,6 +203,8 @@ function buildPhotorealismLockAddendum(): string {
 - Maintain visible dark gaps between adjacent fixtures (no uniform wall wash).
 - Preserve architecture/materials pixel-accurately; no invented structures or fake texture.
 - Keep warm amber residential tone (2700K-3000K) unless explicitly overridden by user.
+- NEVER render text, numbers, coordinates, labels, crosshairs, arrows, UI badges, or debug overlays.
+- Marker/guide annotations from reference images are placement guides only and must be invisible in final output.
 - If any requirement conflicts, prioritize photorealism and physical light behavior.
 `;
 }
@@ -209,6 +230,30 @@ MANDATORY FIXES:
 - Reinstate dark gaps between fixtures; avoid flat/uniform washes.
 - Preserve original architecture and material texture fidelity.
 - Keep warm residential amber tone.
+- Remove any visible text, numbers, marker glyphs, guide lines, or UI overlays.
+`;
+}
+
+function buildArtifactCorrectionPrompt(
+  basePrompt: string,
+  issues: string[]
+): string {
+  const issueList = issues.length > 0
+    ? issues.map((issue, idx) => `${idx + 1}. ${issue}`).join('\n')
+    : '1. Visible text/UI annotation artifacts are present in the generated image.';
+
+  return `${basePrompt}
+
+=== ARTIFACT CLEANUP PASS (MANDATORY) ===
+The previous output contains annotation artifacts. Remove them completely while preserving fixture placement/count.
+Address these issues:
+${issueList}
+
+MANDATORY FIXES:
+- Remove all visible text, numbers, coordinates, labels, badges, or symbols.
+- Remove marker circles, crosshairs, gutter line graphics, and guidance arrows.
+- Keep every fixture source at its exact required mount/ground coordinate.
+- Preserve architecture, framing, and photorealistic light behavior.
 `;
 }
 
@@ -268,6 +313,248 @@ Respond in exact JSON (no markdown):
       passed: false,
       score: 0,
       details: `Photoreal verification error: ${error}`,
+      issues: ['Verification service error.'],
+    };
+  }
+}
+
+function percentileFromHistogram(hist: Uint32Array, total: number, percentile: number): number {
+  if (total <= 0) return 0;
+  const target = Math.max(0, Math.min(total - 1, Math.floor(percentile * (total - 1))));
+  let running = 0;
+  for (let i = 0; i < hist.length; i++) {
+    running += hist[i];
+    if (running > target) return i;
+  }
+  return hist.length - 1;
+}
+
+async function verifyPhotorealismHeuristic(
+  generatedImageBase64: string,
+  imageMimeType: string
+): Promise<HeuristicPhotorealismResult> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const maxDim = 640;
+        let w = img.width;
+        let h = img.height;
+        if (Math.max(w, h) > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.max(1, Math.round(w * scale));
+          h = Math.max(1, Math.round(h * scale));
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve({
+            passed: false,
+            score: 0,
+            details: 'Heuristic photorealism failed: no canvas context.',
+            issues: ['Heuristic photorealism check failed to initialize canvas.'],
+          });
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, w, h);
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const data = imageData.data;
+        const totalPixels = w * h;
+        if (totalPixels <= 0) {
+          resolve({
+            passed: false,
+            score: 0,
+            details: 'Heuristic photorealism failed: empty image.',
+            issues: ['Heuristic photorealism check received empty image data.'],
+          });
+          return;
+        }
+
+        const overallHist = new Uint32Array(256);
+        const skyHist = new Uint32Array(256);
+        const facadeHist = new Uint32Array(256);
+        let skyCount = 0;
+        let facadeCount = 0;
+        let darkPixels = 0;
+        let highlightPixels = 0;
+        let clippedPixels = 0;
+
+        const skyMaxY = Math.max(1, Math.floor(h * 0.18));
+        const facadeMinY = Math.floor(h * 0.24);
+        const facadeMaxY = Math.floor(h * 0.82);
+
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const luminance = Math.max(0, Math.min(255, Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b)));
+
+            overallHist[luminance]++;
+            if (luminance < 40) darkPixels++;
+            if (luminance > 220) highlightPixels++;
+            if (luminance > 245) clippedPixels++;
+
+            if (y <= skyMaxY) {
+              skyHist[luminance]++;
+              skyCount++;
+            }
+            if (y >= facadeMinY && y <= facadeMaxY) {
+              facadeHist[luminance]++;
+              facadeCount++;
+            }
+          }
+        }
+
+        const p05 = percentileFromHistogram(overallHist, totalPixels, 0.05);
+        const p10 = percentileFromHistogram(overallHist, totalPixels, 0.10);
+        const p90 = percentileFromHistogram(overallHist, totalPixels, 0.90);
+        const p95 = percentileFromHistogram(overallHist, totalPixels, 0.95);
+        const dynamicRange = p95 - p10;
+
+        const skyMedian = percentileFromHistogram(skyHist, skyCount, 0.50);
+        const skyP90 = percentileFromHistogram(skyHist, skyCount, 0.90);
+        const facadeP25 = percentileFromHistogram(facadeHist, facadeCount, 0.25);
+        const facadeP75 = percentileFromHistogram(facadeHist, facadeCount, 0.75);
+        const facadeSpread = facadeP75 - facadeP25;
+
+        const darkRatio = darkPixels / totalPixels;
+        const highlightRatio = highlightPixels / totalPixels;
+        const clippedRatio = clippedPixels / totalPixels;
+
+        const issues: string[] = [];
+        let score = 100;
+
+        if (skyMedian > 24) {
+          const penalty = Math.min(28, (skyMedian - 24) * 1.8);
+          score -= penalty;
+          issues.push(`Sky luminance too bright (median ${skyMedian}).`);
+        }
+        if (skyP90 > 70) {
+          const penalty = Math.min(16, (skyP90 - 70) * 0.7);
+          score -= penalty;
+          issues.push(`Sky upper luminance too high (p90 ${skyP90}).`);
+        }
+        if (darkRatio < 0.38) {
+          const penalty = Math.min(18, (0.38 - darkRatio) * 120);
+          score -= penalty;
+          issues.push(`Insufficient deep-shadow coverage (${(darkRatio * 100).toFixed(1)}%).`);
+        }
+        if (highlightRatio > 0.12) {
+          const penalty = Math.min(16, (highlightRatio - 0.12) * 140);
+          score -= penalty;
+          issues.push(`Too much bright area (${(highlightRatio * 100).toFixed(1)}%).`);
+        }
+        if (clippedRatio > 0.015) {
+          const penalty = Math.min(12, (clippedRatio - 0.015) * 350);
+          score -= penalty;
+          issues.push(`Highlight clipping detected (${(clippedRatio * 100).toFixed(2)}%).`);
+        }
+        if (dynamicRange < 50) {
+          const penalty = Math.min(14, (50 - dynamicRange) * 0.5);
+          score -= penalty;
+          issues.push(`Global contrast too flat (range ${dynamicRange}).`);
+        }
+        if (facadeSpread < 18 && facadeP75 > 42) {
+          const penalty = Math.min(12, (18 - facadeSpread) * 0.6);
+          score -= penalty;
+          issues.push(`Facade lighting appears too uniform (IQR ${facadeSpread}).`);
+        }
+
+        score = Math.max(0, Math.min(100, Math.round(score)));
+        const passed = score >= 82;
+        const details =
+          `Heuristic photoreal score ${score}/100. Luma p05/p90: ${p05}/${p90}. Sky median/p90: ${skyMedian}/${skyP90}. ` +
+          `Dark ratio ${(darkRatio * 100).toFixed(1)}%, highlights ${(highlightRatio * 100).toFixed(1)}%, ` +
+          `dynamic range ${dynamicRange}.`;
+
+        resolve({ passed, score, details, issues });
+      } catch (error) {
+        resolve({
+          passed: false,
+          score: 0,
+          details: `Heuristic photorealism error: ${error}`,
+          issues: ['Heuristic photorealism check failed unexpectedly.'],
+        });
+      }
+    };
+
+    img.onerror = () => {
+      resolve({
+        passed: false,
+        score: 0,
+        details: 'Heuristic photorealism failed to decode image.',
+        issues: ['Heuristic photorealism check could not decode generated image.'],
+      });
+    };
+
+    img.src = `data:${imageMimeType};base64,${generatedImageBase64}`;
+  });
+}
+
+async function verifyAnnotationArtifacts(
+  generatedImageBase64: string,
+  imageMimeType: string
+): Promise<AnnotationArtifactVerificationResult> {
+  try {
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+    const prompt = `Check this nighttime architectural lighting image for visible annotation artifacts.
+
+Artifacts to detect:
+1) Text/words, numbers, coordinate labels, or marker IDs
+2) Crosshairs, circles, arrows, dashed guide lines, UI badges
+3) Any overlay graphics that look like design-tool markup/debug output
+
+Return exact JSON (no markdown):
+{"artifactScore": <0-100>, "passed": <true|false>, "issues": ["<issue1>", "<issue2>"]}`;
+
+    const response = await ai.models.generateContent({
+      model: ANALYSIS_MODEL_NAME,
+      contents: {
+        parts: [
+          { inlineData: { data: generatedImageBase64, mimeType: imageMimeType } },
+          { text: prompt },
+        ],
+      },
+      config: { temperature: 0.1 },
+    });
+
+    const text = response.text?.trim() || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return {
+        passed: false,
+        score: 100,
+        details: 'Artifact verification parse failed.',
+        issues: ['Unable to parse annotation artifact analysis response.'],
+      };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as {
+      artifactScore?: number;
+      score?: number;
+      passed?: boolean;
+      issues?: string[];
+    };
+    const score = typeof parsed.artifactScore === 'number'
+      ? parsed.artifactScore
+      : (typeof parsed.score === 'number' ? parsed.score : 100);
+    const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
+    const passedByThreshold = score <= ANNOTATION_ARTIFACT_MAX_SCORE && issues.length === 0;
+    const passed = typeof parsed.passed === 'boolean'
+      ? (parsed.passed && score <= ANNOTATION_ARTIFACT_MAX_SCORE)
+      : passedByThreshold;
+    const details = `Annotation artifact score ${score}/100 (lower is better). ${issues.length > 0 ? `Issues: ${issues.join(' | ')}` : 'No visible annotation artifacts detected.'}`;
+    return { passed, score, details, issues };
+  } catch (error) {
+    return {
+      passed: false,
+      score: 100,
+      details: `Artifact verification error: ${error}`,
       issues: ['Verification service error.'],
     };
   }
@@ -1616,6 +1903,168 @@ export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
   return output;
 }
 
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
+function sanitizeFixtureType(type: string): string | null {
+  const normalized = (type || '').toLowerCase().trim();
+  if (VALID_FIXTURE_TYPES.has(normalized)) return normalized;
+  if (normalized === 'uplight') return 'up';
+  if (normalized === 'downlight') return 'soffit';
+  if (normalized === 'steplight') return 'hardscape';
+  return null;
+}
+
+function mapPipelineTypeToCategory(fixtureType: string): LightFixture['type'] | null {
+  switch (fixtureType) {
+    case 'up':
+      return 'uplight';
+    case 'gutter':
+      return 'gutter_uplight';
+    case 'path':
+      return 'path_light';
+    case 'well':
+      return 'well_light';
+    case 'hardscape':
+      return 'step_light';
+    case 'soffit':
+      return 'downlight';
+    case 'coredrill':
+      return 'coredrill';
+    default:
+      return null;
+  }
+}
+
+function buildAutoSpatialMapFromSuggestions(
+  suggestions: SuggestedFixture[],
+  selectedFixtures: string[],
+  fixtureCounts: Record<string, number | null>
+): SpatialMap {
+  const placements: SpatialFixturePlacement[] = [];
+
+  suggestions
+    .slice()
+    .sort((a, b) => a.priority - b.priority)
+    .forEach((suggestion, suggestionIdx) => {
+      const fixtureType = sanitizeFixtureType(suggestion.fixtureType);
+      if (!fixtureType || !selectedFixtures.includes(fixtureType)) return;
+
+      const positions = Array.isArray(suggestion.positions) ? suggestion.positions : [];
+      if (positions.length === 0) return;
+
+      const explicitSubCount = fixtureCounts[suggestion.subOption];
+      const desiredCount =
+        typeof explicitSubCount === 'number'
+          ? Math.max(0, Math.round(explicitSubCount))
+          : Math.max(1, Math.min(positions.length, Math.round(suggestion.count || positions.length)));
+      const boundedCount = Math.min(positions.length, desiredCount);
+      const normalizedSubOption =
+        fixtureType === 'gutter'
+          ? 'gutterUpLights'
+          : (suggestion.subOption || 'general');
+
+      positions.slice(0, boundedCount).forEach((pos, idx) => {
+        placements.push({
+          id: `auto_${fixtureType}_${normalizedSubOption}_${suggestionIdx + 1}_${idx + 1}`,
+          fixtureType,
+          subOption: normalizedSubOption,
+          horizontalPosition: clampPercent(pos.xPercent),
+          verticalPosition: clampPercent(pos.yPercent),
+          anchor: `auto_${fixtureType}_${idx + 1}`,
+          description: pos.description || pos.target || `${fixtureType} auto placement`,
+        });
+      });
+    });
+
+  return { features: [], placements };
+}
+
+function buildGuideFixturesFromSpatialMap(spatialMap: SpatialMap): LightFixture[] {
+  return spatialMap.placements
+    .map((placement, index) => {
+      const category = mapPipelineTypeToCategory(placement.fixtureType);
+      if (!category) return null;
+
+      const fixture: LightFixture = {
+        id: `auto_guide_${placement.id || index}`,
+        type: category,
+        x: placement.horizontalPosition,
+        y: placement.verticalPosition,
+        intensity: 0.8,
+        colorTemp: 3000,
+        beamAngle: placement.fixtureType === 'path' ? 120 : 35,
+        rotation: placement.rotation,
+        beamLength: placement.beamLength,
+      };
+
+      if (placement.fixtureType === 'gutter') {
+        fixture.gutterLineId = placement.gutterLineId;
+        fixture.gutterLineX = placement.gutterLineX;
+        fixture.gutterLineY = placement.gutterLineY;
+        fixture.gutterMountDepthPercent = placement.gutterMountDepthPercent;
+      }
+
+      return fixture;
+    })
+    .filter((fixture): fixture is LightFixture => !!fixture);
+}
+
+function ensureAutoGutterRailPlacements(
+  spatialMap: SpatialMap,
+  gutterLines: GutterLine[] | undefined,
+  fixtureCounts: Record<string, number | null>
+): SpatialMap {
+  if (!gutterLines || gutterLines.length === 0) return spatialMap;
+
+  const existingGutters = spatialMap.placements.filter(p => p.fixtureType === 'gutter');
+  if (existingGutters.length > 0) return spatialMap;
+
+  const requestedCount = fixtureCounts['gutterUpLights'];
+  const desiredCount = typeof requestedCount === 'number'
+    ? Math.max(1, Math.min(12, Math.round(requestedCount)))
+    : Math.max(2, Math.min(6, gutterLines.length * 2));
+  const lineCount = gutterLines.length;
+  const basePerLine = Math.floor(desiredCount / lineCount);
+  let remainder = desiredCount % lineCount;
+  const generated: SpatialFixturePlacement[] = [];
+
+  gutterLines.forEach((line, lineIndex) => {
+    const placementsForLine = basePerLine + (remainder > 0 ? 1 : 0);
+    remainder = Math.max(0, remainder - 1);
+    if (placementsForLine <= 0) return;
+
+    const depth = resolveRequestedGutterDepth(undefined, line);
+    for (let i = 0; i < placementsForLine; i++) {
+      const t = (i + 1) / (placementsForLine + 1);
+      const lineX = line.startX + (line.endX - line.startX) * t;
+      const lineY = line.startY + (line.endY - line.startY) * t;
+      const mounted = applyGutterMountDepth(lineX, lineY, line, depth);
+
+      generated.push({
+        id: `auto_gutter_rail_${lineIndex + 1}_${i + 1}`,
+        fixtureType: 'gutter',
+        subOption: 'gutterUpLights',
+        horizontalPosition: Number(mounted.mountX.toFixed(3)),
+        verticalPosition: Number(mounted.mountY.toFixed(3)),
+        anchor: `gutter_line_${lineIndex + 1}`,
+        description: 'Auto rail placement from detected gutter line',
+        gutterLineId: line.id,
+        gutterLineX: Number(lineX.toFixed(3)),
+        gutterLineY: Number(lineY.toFixed(3)),
+        gutterMountDepthPercent: Number(mounted.appliedDepth.toFixed(3)),
+      });
+    }
+  });
+
+  if (generated.length === 0) return spatialMap;
+  return {
+    ...spatialMap,
+    placements: [...spatialMap.placements, ...generated],
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2-STAGE PIPELINE: Deep Think → Nano Banana Pro
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2623,14 +3072,14 @@ export async function generateNightBase(
   const prompt = `Convert this daytime photograph into a photorealistic nighttime scene.
 
 REQUIREMENTS:
-- Deep 1AM darkness â€” pitch black sky, subtle stars, faint moon glow on clouds
-- The house and landscaping should be barely visible â€” deep shadows everywhere
+- Deep 1AM darkness with true black sky (#000000 to #0A0A0A) and ONE realistic full moon
+- No stylized stars, fantasy sky effects, or dramatic cloud glows
+- The house and landscaping should be barely visible in deep shadow
 - Do NOT add ANY lighting fixtures, landscape lights, porch lights, sconces, or any artificial light sources
-- Every window MUST be completely dark â€” no interior lights visible
-- The entire scene should appear as if all power is off â€” naturally dark with only moonlight
+- Every window MUST be completely dark with no interior glow
 - Preserve the EXACT framing, composition, architecture, and all objects pixel-perfect
-- Do NOT add, remove, or modify any architectural elements, trees, bushes, or hardscape
-- The ONLY change is the time of day: daytime â†’ deep nighttime`;
+- Do NOT add, remove, or modify architectural elements, trees, bushes, or hardscape
+- The ONLY change is time-of-day conversion: daytime to deep nighttime`;
 
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
   const resized = await resizeImageBase64(imageBase64, imageMimeType);
@@ -2685,6 +3134,7 @@ function buildGutterCorrectionPrompt(
   correction += 'MANDATORY RULES:\n';
   correction += '- Keep exact fixture count and preserve all non-light pixels.\n';
   correction += '- Do not add or remove any fixture type.\n';
+  correction += '- Final image must contain zero visible guide annotations, labels, coordinates, or UI overlays.\n';
   if (unexpectedTypes.length > 0) {
     correction += 'REMOVE UNEXPECTED FIXTURE TYPES:\n';
     unexpectedTypes.forEach(type => {
@@ -2787,17 +3237,25 @@ export const generateManualScene = async (
 
   if (hasGradients) {
     console.log(`[Manual Mode] Painting directional light gradients for ${normalizedGuideFixtures.fixtures!.length} fixtures...`);
+    const guideOptions = MODEL_GUIDE_DEBUG ? undefined : CLEAN_MODEL_GUIDE_OPTIONS;
     gradientImage = await paintLightGradients(
       imageBase64,
       normalizedGuideFixtures.fixtures!,
       imageMimeType,
-      gutterLines
+      gutterLines,
+      guideOptions
     );
-    console.log('[Manual Mode] Gradient map painted (includes numbered markers).');
+    console.log(`[Manual Mode] ${MODEL_GUIDE_DEBUG ? 'Debug' : 'Clean'} gradient guide map painted.`);
   } else {
     console.log('[Manual Mode] Drawing fixture markers...');
-    markedImage = await drawFixtureMarkers(imageBase64, normalizedSpatialMap, imageMimeType);
-    console.log('[Manual Mode] Markers drawn.');
+    const markerOptions = MODEL_GUIDE_DEBUG ? undefined : CLEAN_MODEL_MARKER_OPTIONS;
+    markedImage = await drawFixtureMarkers(
+      imageBase64,
+      normalizedSpatialMap,
+      imageMimeType,
+      markerOptions
+    );
+    console.log(`[Manual Mode] ${MODEL_GUIDE_DEBUG ? 'Debug' : 'Clean'} marker guide map drawn.`);
   }
 
   // Load few-shot reference examples for the selected fixture types
@@ -2907,10 +3365,66 @@ export const generateManualScene = async (
   }
 
   onStageUpdate?.('verifying');
-  let photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
-  console.log(`[Manual Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
+  let artifactCheck = await verifyAnnotationArtifacts(extractBase64Data(result), imageMimeType);
+  console.log(`[Manual Mode] Annotation artifacts: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
 
-  if (!photorealCheck.passed) {
+  if (!artifactCheck.passed) {
+    for (let attempt = 1; attempt <= MAX_ARTIFACT_RETRY_ATTEMPTS; attempt++) {
+      console.warn(`[Manual Mode] Annotation artifacts detected, running cleanup retry ${attempt}/${MAX_ARTIFACT_RETRY_ATTEMPTS}...`);
+      onStageUpdate?.('placing');
+      const baseCorrectionPrompt = buildGutterCorrectionPrompt(
+        lockedPrompt,
+        normalizedSpatialMap.placements,
+        gutterLines,
+        verification.unexpectedTypes
+      );
+      const correctionPrompt = buildArtifactCorrectionPrompt(baseCorrectionPrompt, artifactCheck.issues);
+      const retryResult = await executeGeneration(
+        nightBase,
+        imageMimeType,
+        correctionPrompt,
+        targetRatio,
+        referenceParts.length > 0 ? referenceParts : undefined,
+        gradientImage,
+        markedImage
+      );
+
+      onStageUpdate?.('verifying');
+      const retryVerification = await verifyGeneratedImage(
+        retryResult,
+        imageMimeType,
+        normalizedSpatialMap.placements,
+        gutterLines
+      );
+      const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
+
+      const placementNotWorse =
+        retryVerification.verified ||
+        retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      if (
+        (retryArtifactCheck.passed && placementNotWorse) ||
+        retryArtifactCheck.score < artifactCheck.score
+      ) {
+        result = retryResult;
+        verification = retryVerification;
+        artifactCheck = retryArtifactCheck;
+      }
+
+      if (artifactCheck.passed) break;
+    }
+    console.log(`[Manual Mode] Post-artifact retry: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
+  }
+
+  onStageUpdate?.('verifying');
+  let photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
+  let heuristicPhotorealCheck = await verifyPhotorealismHeuristic(extractBase64Data(result), imageMimeType);
+  let photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
+  console.log(`[Manual Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
+  console.log(
+    `[Manual Mode] Photorealism heuristic: ${heuristicPhotorealCheck.passed ? 'PASSED' : 'WARNING'} - ${heuristicPhotorealCheck.details}`
+  );
+
+  if (!photorealPassed) {
     for (let attempt = 1; attempt <= MAX_PHOTOREAL_RETRY_ATTEMPTS; attempt++) {
       console.warn(`[Manual Mode] Photorealism failed, running correction retry ${attempt}/${MAX_PHOTOREAL_RETRY_ATTEMPTS}...`);
       onStageUpdate?.('placing');
@@ -2920,7 +3434,8 @@ export const generateManualScene = async (
         gutterLines,
         verification.unexpectedTypes
       );
-      const correctionPrompt = buildPhotorealismCorrectionPrompt(baseCorrectionPrompt, photorealCheck.issues);
+      const combinedIssues = [...new Set([...photorealCheck.issues, ...heuristicPhotorealCheck.issues])];
+      const correctionPrompt = buildPhotorealismCorrectionPrompt(baseCorrectionPrompt, combinedIssues);
       const retryResult = await executeGeneration(
         nightBase,
         imageMimeType,
@@ -2939,22 +3454,40 @@ export const generateManualScene = async (
         gutterLines
       );
       const retryPhotorealCheck = await verifyPhotorealism(extractBase64Data(retryResult), imageMimeType);
+      const retryHeuristicPhotorealCheck = await verifyPhotorealismHeuristic(
+        extractBase64Data(retryResult),
+        imageMimeType
+      );
+      const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
 
       const placementNotWorse =
         retryVerification.verified ||
         retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      const artifactNotWorse =
+        retryArtifactCheck.passed ||
+        retryArtifactCheck.score <= artifactCheck.score;
+      const retryPhotorealPassed = retryPhotorealCheck.passed && retryHeuristicPhotorealCheck.passed;
+      const currentCompositePhotorealScore =
+        photorealCheck.score * 0.7 + heuristicPhotorealCheck.score * 0.3;
+      const retryCompositePhotorealScore =
+        retryPhotorealCheck.score * 0.7 + retryHeuristicPhotorealCheck.score * 0.3;
       if (
-        (retryPhotorealCheck.passed && placementNotWorse) ||
-        retryPhotorealCheck.score > photorealCheck.score
+        ((retryPhotorealPassed && placementNotWorse && artifactNotWorse)) ||
+        (retryCompositePhotorealScore > currentCompositePhotorealScore && artifactNotWorse)
       ) {
         result = retryResult;
         verification = retryVerification;
         photorealCheck = retryPhotorealCheck;
+        heuristicPhotorealCheck = retryHeuristicPhotorealCheck;
+        artifactCheck = retryArtifactCheck;
       }
 
-      if (photorealCheck.passed) break;
+      photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
+      if (photorealPassed) break;
     }
-    console.log(`[Manual Mode] Post-photoreal retry: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
+    console.log(
+      `[Manual Mode] Post-photoreal retry: ${photorealPassed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details} | ${heuristicPhotorealCheck.details}`
+    );
   }
 
   return { result, nightBase };
@@ -2980,11 +3513,106 @@ export const generateNightSceneEnhanced = async (
 ): Promise<string> => {
   console.log('[Enhanced Mode] Starting 2-stage Deep Think pipeline...');
 
+  // Stage 0: Build auto spatial constraints (same canonical model as manual mode)
+  onStageUpdate?.('analyzing');
+  let autoSpatialMap: SpatialMap | undefined;
+  let autoGutterLines: GutterLine[] | undefined;
+  let autoGuideImage: string | undefined;
+
+  try {
+    if (selectedFixtures.length > 0) {
+      console.log('[Enhanced Mode] Building auto spatial map from enhanced analysis...');
+      const enhanced = await enhancedAnalyzeProperty(
+        imageBase64,
+        imageMimeType,
+        selectedFixtures,
+        fixtureSubOptions
+      );
+      const filteredSuggestions = getFilteredSuggestions(
+        enhanced,
+        selectedFixtures,
+        fixtureSubOptions
+      );
+      autoSpatialMap = buildAutoSpatialMapFromSuggestions(
+        filteredSuggestions,
+        selectedFixtures,
+        fixtureCounts
+      );
+      console.log(`[Enhanced Mode] Auto spatial map contains ${autoSpatialMap.placements.length} placement(s).`);
+
+      if (selectedFixtures.includes('gutter')) {
+        const imageDataUri = `data:${imageMimeType};base64,${imageBase64}`;
+        try {
+          const gutterDetection = await suggestGutterLines(imageDataUri, MAX_AUTO_GUTTER_LINES);
+          if (gutterDetection.lines.length > 0) {
+            autoGutterLines = gutterDetection.lines;
+            console.log(
+              `[Enhanced Mode] Detected ${autoGutterLines.length} gutter rail(s) for auto mode (${gutterDetection.source}).`
+            );
+          } else {
+            console.warn('[Enhanced Mode] No gutter rails detected for auto mode.');
+          }
+        } catch (gutterError) {
+          console.warn('[Enhanced Mode] Gutter rail detection failed for auto mode (continuing without rails):', gutterError);
+        }
+      }
+
+      if (selectedFixtures.includes('gutter') && autoSpatialMap && autoGutterLines && autoGutterLines.length > 0) {
+        const withRailFallback = ensureAutoGutterRailPlacements(autoSpatialMap, autoGutterLines, fixtureCounts);
+        const generatedCount = withRailFallback.placements.length - autoSpatialMap.placements.length;
+        autoSpatialMap = withRailFallback;
+        if (generatedCount > 0) {
+          console.log(`[Enhanced Mode] Added ${generatedCount} auto gutter placement(s) from detected rails.`);
+        }
+      }
+
+      if (autoSpatialMap.placements.length > 0 && autoGutterLines && autoGutterLines.length > 0) {
+        const normalized = normalizeGutterPlacements(autoSpatialMap, autoGutterLines);
+        autoSpatialMap = normalized.spatialMap;
+        if (normalized.snappedCount > 0) {
+          console.log(`[Enhanced Mode] Snapped ${normalized.snappedCount} auto gutter fixture(s) onto detected gutter rails.`);
+        }
+      }
+
+      if (autoSpatialMap.placements.length > 0) {
+        const guideFixtures = buildGuideFixturesFromSpatialMap(autoSpatialMap);
+        if (guideFixtures.length > 0) {
+          const guideOptions = MODEL_GUIDE_DEBUG ? undefined : CLEAN_MODEL_GUIDE_OPTIONS;
+          autoGuideImage = await paintLightGradients(
+            imageBase64,
+            guideFixtures,
+            imageMimeType,
+            autoGutterLines,
+            guideOptions
+          );
+          console.log(
+            `[Enhanced Mode] ${MODEL_GUIDE_DEBUG ? 'Debug' : 'Clean'} auto guide map generated (${guideFixtures.length} fixtures).`
+          );
+        }
+      }
+    }
+  } catch (autoConstraintError) {
+    console.warn('[Enhanced Mode] Auto spatial constraint build failed (falling back to prompt-only auto):', autoConstraintError);
+    autoSpatialMap = undefined;
+    autoGutterLines = undefined;
+    autoGuideImage = undefined;
+  }
+
   // Stage 1: Deep Think analyzes property and writes the complete generation prompt
+  onStageUpdate?.('converting');
+  let baseNightImage = imageBase64;
+  try {
+    console.log('[Enhanced Mode] Generating nighttime base for auto mode...');
+    baseNightImage = await generateNightBase(imageBase64, imageMimeType, targetRatio);
+  } catch (nightBaseError) {
+    console.warn('[Enhanced Mode] Night base generation failed, falling back to source image:', nightBaseError);
+    baseNightImage = imageBase64;
+  }
+
   onStageUpdate?.('analyzing');
   console.log('[Enhanced Mode] Stage 1: Deep Think analyzing property + generating prompt...');
   const deepThinkResult = await deepThinkGeneratePrompt(
-    imageBase64,
+    baseNightImage,
     imageMimeType,
     selectedFixtures,
     fixtureSubOptions,
@@ -2992,7 +3620,11 @@ export const generateNightSceneEnhanced = async (
     colorTemperaturePrompt,
     lightIntensity,
     beamAngle,
-    userPreferences
+    userPreferences,
+    autoSpatialMap,
+    autoGuideImage,
+    undefined,
+    false
   );
   console.log(`[Enhanced Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
   if (deepThinkResult.fixtureBreakdown) {
@@ -3004,35 +3636,202 @@ export const generateNightSceneEnhanced = async (
   onStageUpdate?.('generating');
   console.log('[Enhanced Mode] Stage 2: Generating image with Nano Banana Pro...');
   let result = await executeGeneration(
-    imageBase64,
+    baseNightImage,
     imageMimeType,
     lockedPrompt,
-    targetRatio
+    targetRatio,
+    undefined,
+    autoGuideImage,
+    undefined
   );
 
-  onStageUpdate?.('validating');
-  let photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
-  console.log(`[Enhanced Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
+  const expectedPlacements = autoSpatialMap?.placements ?? [];
+  const constrainedSelectedTypes = selectedFixtures.filter(type => VALID_FIXTURE_TYPES.has(type));
+  const constrainedPlacementTypes = new Set(expectedPlacements.map(p => p.fixtureType));
+  const hasCoverageForConstrainedTypes = constrainedSelectedTypes.every(type => constrainedPlacementTypes.has(type));
+  const placementVerificationEnabled = expectedPlacements.length > 0 && hasCoverageForConstrainedTypes;
+  if (!placementVerificationEnabled) {
+    console.warn(
+      '[Enhanced Mode] Placement verification skipped: auto constraints are incomplete for selected fixture types.'
+    );
+  }
+  let verification: {
+    verified: boolean;
+    confidence: number;
+    details: string;
+    gutterVerified: boolean;
+    unexpectedTypes: string[];
+  } = {
+    verified: !placementVerificationEnabled,
+    confidence: placementVerificationEnabled ? 0 : 100,
+    details: placementVerificationEnabled
+      ? 'Placement verification pending.'
+      : 'Placement verification skipped (no spatial constraints).',
+    gutterVerified: true,
+    unexpectedTypes: [],
+  };
 
-  if (!photorealCheck.passed) {
-    for (let attempt = 1; attempt <= MAX_PHOTOREAL_RETRY_ATTEMPTS; attempt++) {
-      console.warn(`[Enhanced Mode] Photorealism failed, running correction retry ${attempt}/${MAX_PHOTOREAL_RETRY_ATTEMPTS}...`);
+  onStageUpdate?.('validating');
+  if (placementVerificationEnabled) {
+    verification = await verifyGeneratedImage(
+      result,
+      imageMimeType,
+      expectedPlacements,
+      autoGutterLines
+    );
+    console.log(`[Enhanced Mode] Placement verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
+  }
+
+  if (placementVerificationEnabled && !verification.verified) {
+    for (let attempt = 1; attempt <= MAX_GUTTER_RETRY_ATTEMPTS; attempt++) {
+      console.warn(`[Enhanced Mode] Placement verification failed, running correction retry ${attempt}/${MAX_GUTTER_RETRY_ATTEMPTS}...`);
       onStageUpdate?.('generating');
-      const correctionPrompt = buildPhotorealismCorrectionPrompt(lockedPrompt, photorealCheck.issues);
+      const correctionPrompt = buildGutterCorrectionPrompt(
+        lockedPrompt,
+        expectedPlacements,
+        autoGutterLines,
+        verification.unexpectedTypes
+      );
       const retryResult = await executeGeneration(
-        imageBase64,
+        baseNightImage,
         imageMimeType,
         correctionPrompt,
-        targetRatio
+        targetRatio,
+        undefined,
+        autoGuideImage,
+        undefined
       );
 
       onStageUpdate?.('validating');
-      const retryPhotorealCheck = await verifyPhotorealism(extractBase64Data(retryResult), imageMimeType);
-      if (retryPhotorealCheck.passed || retryPhotorealCheck.score >= photorealCheck.score) {
+      const retryVerification = await verifyGeneratedImage(
+        retryResult,
+        imageMimeType,
+        expectedPlacements,
+        autoGutterLines
+      );
+
+      if (
+        retryVerification.verified ||
+        retryVerification.unexpectedTypes.length < verification.unexpectedTypes.length ||
+        retryVerification.confidence >= verification.confidence
+      ) {
         result = retryResult;
-        photorealCheck = retryPhotorealCheck;
+        verification = retryVerification;
       }
-      if (photorealCheck.passed) break;
+
+      if (verification.verified) break;
+    }
+    console.log(`[Enhanced Mode] Post-placement retry: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
+  }
+
+  onStageUpdate?.('validating');
+  let artifactCheck = await verifyAnnotationArtifacts(extractBase64Data(result), imageMimeType);
+  console.log(`[Enhanced Mode] Annotation artifacts: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
+
+  if (!artifactCheck.passed) {
+    for (let attempt = 1; attempt <= MAX_ARTIFACT_RETRY_ATTEMPTS; attempt++) {
+      console.warn(`[Enhanced Mode] Annotation artifacts detected, running cleanup retry ${attempt}/${MAX_ARTIFACT_RETRY_ATTEMPTS}...`);
+      onStageUpdate?.('generating');
+      const baseCorrectionPrompt = buildGutterCorrectionPrompt(
+        lockedPrompt,
+        expectedPlacements,
+        autoGutterLines,
+        verification.unexpectedTypes
+      );
+      const correctionPrompt = buildArtifactCorrectionPrompt(baseCorrectionPrompt, artifactCheck.issues);
+      const retryResult = await executeGeneration(
+        baseNightImage,
+        imageMimeType,
+        correctionPrompt,
+        targetRatio,
+        undefined,
+        autoGuideImage,
+        undefined
+      );
+
+      onStageUpdate?.('validating');
+      const retryVerification = placementVerificationEnabled
+        ? await verifyGeneratedImage(retryResult, imageMimeType, expectedPlacements, autoGutterLines)
+        : verification;
+      const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
+
+      const placementNotWorse =
+        !placementVerificationEnabled ||
+        retryVerification.verified ||
+        retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      if (
+        (retryArtifactCheck.passed && placementNotWorse) ||
+        retryArtifactCheck.score < artifactCheck.score
+      ) {
+        result = retryResult;
+        verification = retryVerification;
+        artifactCheck = retryArtifactCheck;
+      }
+
+      if (artifactCheck.passed) break;
+    }
+    console.log(`[Enhanced Mode] Post-artifact retry: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
+  }
+
+  onStageUpdate?.('validating');
+  let photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
+  let heuristicPhotorealCheck = await verifyPhotorealismHeuristic(extractBase64Data(result), imageMimeType);
+  let photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
+  console.log(`[Enhanced Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
+  console.log(
+    `[Enhanced Mode] Photorealism heuristic: ${heuristicPhotorealCheck.passed ? 'PASSED' : 'WARNING'} - ${heuristicPhotorealCheck.details}`
+  );
+
+  if (!photorealPassed) {
+    for (let attempt = 1; attempt <= MAX_PHOTOREAL_RETRY_ATTEMPTS; attempt++) {
+      console.warn(`[Enhanced Mode] Photorealism failed, running correction retry ${attempt}/${MAX_PHOTOREAL_RETRY_ATTEMPTS}...`);
+      onStageUpdate?.('generating');
+      const combinedIssues = [...new Set([...photorealCheck.issues, ...heuristicPhotorealCheck.issues])];
+      const correctionPrompt = buildPhotorealismCorrectionPrompt(lockedPrompt, combinedIssues);
+      const retryResult = await executeGeneration(
+        baseNightImage,
+        imageMimeType,
+        correctionPrompt,
+        targetRatio,
+        undefined,
+        autoGuideImage,
+        undefined
+      );
+
+      onStageUpdate?.('validating');
+      const retryVerification = placementVerificationEnabled
+        ? await verifyGeneratedImage(retryResult, imageMimeType, expectedPlacements, autoGutterLines)
+        : verification;
+      const retryPhotorealCheck = await verifyPhotorealism(extractBase64Data(retryResult), imageMimeType);
+      const retryHeuristicPhotorealCheck = await verifyPhotorealismHeuristic(
+        extractBase64Data(retryResult),
+        imageMimeType
+      );
+      const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
+      const placementNotWorse =
+        !placementVerificationEnabled ||
+        retryVerification.verified ||
+        retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      const artifactNotWorse =
+        retryArtifactCheck.passed ||
+        retryArtifactCheck.score <= artifactCheck.score;
+      const retryPhotorealPassed = retryPhotorealCheck.passed && retryHeuristicPhotorealCheck.passed;
+      const currentCompositePhotorealScore =
+        photorealCheck.score * 0.7 + heuristicPhotorealCheck.score * 0.3;
+      const retryCompositePhotorealScore =
+        retryPhotorealCheck.score * 0.7 + retryHeuristicPhotorealCheck.score * 0.3;
+      if (
+        ((retryPhotorealPassed && placementNotWorse && artifactNotWorse)) ||
+        (retryCompositePhotorealScore >= currentCompositePhotorealScore && placementNotWorse && artifactNotWorse)
+      ) {
+        result = retryResult;
+        verification = retryVerification;
+        artifactCheck = retryArtifactCheck;
+        photorealCheck = retryPhotorealCheck;
+        heuristicPhotorealCheck = retryHeuristicPhotorealCheck;
+      }
+      photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
+      if (photorealPassed) break;
     }
   }
 

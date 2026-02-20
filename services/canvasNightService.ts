@@ -100,6 +100,30 @@ const MARKER_LABELS: Record<string, string> = {
   coredrill: 'COREDRILL',
 };
 
+export interface MarkerRenderOptions {
+  includeMarkerBodies?: boolean;
+  includeNumbers?: boolean;
+  includeTypeLabels?: boolean;
+  includeCrosshairs?: boolean;
+  includeGutterTextLabels?: boolean;
+}
+
+const DEFAULT_MARKER_RENDER_OPTIONS: Required<MarkerRenderOptions> = {
+  includeMarkerBodies: true,
+  includeNumbers: true,
+  includeTypeLabels: true,
+  includeCrosshairs: true,
+  includeGutterTextLabels: true,
+};
+
+export const CLEAN_MODEL_MARKER_OPTIONS: MarkerRenderOptions = {
+  includeMarkerBodies: false,
+  includeNumbers: false,
+  includeTypeLabels: false,
+  includeCrosshairs: false,
+  includeGutterTextLabels: false,
+};
+
 /**
  * Draw bright numbered markers on the image at each fixture position.
  * Gemini can SEE these markers and knows exactly where to place lights.
@@ -116,8 +140,22 @@ function drawGutterIcon(
   cy: number,
   markerRadius: number,
   color: string,
-  index: number
+  index: number,
+  options: Required<MarkerRenderOptions>
 ): void {
+  if (!options.includeMarkerBodies) {
+    const dotRadius = Math.max(3, Math.round(markerRadius * 0.22));
+    ctx.beginPath();
+    ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(2, dotRadius - 1), 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    return;
+  }
+
   const barWidth = markerRadius * 2.4;
   const barHeight = markerRadius * 0.6;
   const stemHeight = markerRadius * 2.5;
@@ -159,28 +197,36 @@ function drawGutterIcon(
   ctx.fill();
   ctx.stroke();
 
-  // Number on the bar
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = `bold ${Math.round(barHeight * 1.2)}px Arial`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(String(index + 1), cx, cy);
+  if (options.includeNumbers) {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold ${Math.round(barHeight * 1.2)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(index + 1), cx, cy);
+  }
 
-  // "GUTTER" label below
-  const labelY = cy + barHeight / 2 + Math.round(markerRadius * 0.8);
-  ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
-  ctx.fillStyle = '#000000';
-  ctx.fillText('GUTTER', cx + 1, labelY + 1);
-  ctx.fillText('GUTTER', cx - 1, labelY - 1);
-  ctx.fillStyle = color;
-  ctx.fillText('GUTTER', cx, labelY);
+  if (options.includeGutterTextLabels) {
+    const labelY = cy + barHeight / 2 + Math.round(markerRadius * 0.8);
+    ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+    ctx.fillStyle = '#000000';
+    ctx.fillText('GUTTER', cx + 1, labelY + 1);
+    ctx.fillText('GUTTER', cx - 1, labelY - 1);
+    ctx.fillStyle = color;
+    ctx.fillText('GUTTER', cx, labelY);
+  }
 }
 
 export async function drawFixtureMarkers(
   imageBase64: string,
   spatialMap: SpatialMap,
-  mimeType: string = 'image/jpeg'
+  mimeType: string = 'image/jpeg',
+  options?: MarkerRenderOptions
 ): Promise<string> {
+  const resolvedOptions: Required<MarkerRenderOptions> = {
+    ...DEFAULT_MARKER_RENDER_OPTIONS,
+    ...(options || {}),
+  };
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -208,52 +254,64 @@ export async function drawFixtureMarkers(
 
           // Gutter fixtures get a custom icon (horizontal bar + upward arrow)
           if (placement.fixtureType === 'gutter') {
-            drawGutterIcon(ctx, cx, cy, markerRadius, color, index);
+            drawGutterIcon(ctx, cx, cy, markerRadius, color, index, resolvedOptions);
             return;
           }
 
           // Crosshair lines (drawn first, behind the circle)
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(cx - crossLen, cy);
-          ctx.lineTo(cx + crossLen, cy);
-          ctx.moveTo(cx, cy - crossLen);
-          ctx.lineTo(cx, cy + crossLen);
-          ctx.stroke();
+          if (resolvedOptions.includeCrosshairs) {
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx - crossLen, cy);
+            ctx.lineTo(cx + crossLen, cy);
+            ctx.moveTo(cx, cy - crossLen);
+            ctx.lineTo(cx, cy + crossLen);
+            ctx.stroke();
+          }
 
-          // Dark backing circle for contrast on any background
-          ctx.beginPath();
-          ctx.arc(cx, cy, markerRadius * 1.4, 0, Math.PI * 2);
-          ctx.fillStyle = '#000000';
-          ctx.fill();
+          if (resolvedOptions.includeMarkerBodies) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, markerRadius * 1.4, 0, Math.PI * 2);
+            ctx.fillStyle = '#000000';
+            ctx.fill();
 
-          // Bright colored circle
-          ctx.beginPath();
-          ctx.arc(cx, cy, markerRadius, 0, Math.PI * 2);
-          ctx.fillStyle = color;
-          ctx.fill();
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(cx, cy, markerRadius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.stroke();
+          } else {
+            const dotRadius = Math.max(3, Math.round(markerRadius * 0.22));
+            ctx.beginPath();
+            ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx, cy, Math.max(2, dotRadius - 1), 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+          }
 
-          // Number inside the circle
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(String(index + 1), cx, cy);
+          if (resolvedOptions.includeNumbers) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(index + 1), cx, cy);
+          }
 
-          // Label below the circle with dark shadow for readability
-          const labelY = cy + markerRadius + Math.round(markerRadius * 0.8);
-          ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
-          // Shadow
-          ctx.fillStyle = '#000000';
-          ctx.fillText(label, cx + 1, labelY + 1);
-          ctx.fillText(label, cx - 1, labelY - 1);
-          // Colored label on top
-          ctx.fillStyle = color;
-          ctx.fillText(label, cx, labelY);
+          if (resolvedOptions.includeTypeLabels) {
+            const labelY = cy + markerRadius + Math.round(markerRadius * 0.8);
+            ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+            ctx.fillStyle = '#000000';
+            ctx.fillText(label, cx + 1, labelY + 1);
+            ctx.fillText(label, cx - 1, labelY - 1);
+            ctx.fillStyle = color;
+            ctx.fillText(label, cx, labelY);
+          }
         });
 
         const dataUrl = canvas.toDataURL(mimeType, 0.92);

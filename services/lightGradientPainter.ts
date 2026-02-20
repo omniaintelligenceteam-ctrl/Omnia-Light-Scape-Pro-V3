@@ -55,6 +55,54 @@ const MARKER_LABELS: Record<string, string> = {
   coredrill: 'COREDRILL',
 };
 
+export interface GuideOverlayOptions {
+  includeMarkerBodies?: boolean;
+  includeMarkerNumbers?: boolean;
+  includeMarkerTypeLabels?: boolean;
+  includeGutterTextLabels?: boolean;
+  includeGutterLineLabels?: boolean;
+  includeCrosshairs?: boolean;
+  includeDirectionalArrows?: boolean;
+  showArrowsForDefaultDirection?: boolean;
+  includeDirectionalText?: boolean;
+  includeGutterLines?: boolean;
+  includeGutterCenterGuide?: boolean;
+  darkenAlpha?: number;
+  gradientOpacityScale?: number;
+}
+
+const DEFAULT_OVERLAY_OPTIONS: Required<GuideOverlayOptions> = {
+  includeMarkerBodies: true,
+  includeMarkerNumbers: true,
+  includeMarkerTypeLabels: true,
+  includeGutterTextLabels: true,
+  includeGutterLineLabels: true,
+  includeCrosshairs: true,
+  includeDirectionalArrows: true,
+  showArrowsForDefaultDirection: true,
+  includeDirectionalText: true,
+  includeGutterLines: true,
+  includeGutterCenterGuide: true,
+  darkenAlpha: 0.4,
+  gradientOpacityScale: 1,
+};
+
+export const CLEAN_MODEL_GUIDE_OPTIONS: GuideOverlayOptions = {
+  includeMarkerBodies: false,
+  includeMarkerNumbers: false,
+  includeMarkerTypeLabels: false,
+  includeGutterTextLabels: false,
+  includeGutterLineLabels: false,
+  includeCrosshairs: false,
+  includeDirectionalArrows: true,
+  showArrowsForDefaultDirection: false,
+  includeDirectionalText: false,
+  includeGutterLines: true,
+  includeGutterCenterGuide: false,
+  darkenAlpha: 0.25,
+  gradientOpacityScale: 0.45,
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // GRADIENT CONFIGS PER FIXTURE TYPE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -160,12 +208,14 @@ function paintUpwardGradient(
   rgb: [number, number, number],
   intensity: number,
   canvasW: number,
-  canvasH: number
+  canvasH: number,
+  opacityScale: number = 1,
+  showCenterGuide: boolean = true
 ): void {
   const gradH = canvasH * (config.heightPercent / 100);
   const gradW = canvasW * (config.widthPercent / 100);
   const offsetY = canvasH * (config.originOffsetYPercent / 100);
-  const maxAlpha = config.opacity * intensity;
+  const maxAlpha = config.opacity * intensity * opacityScale;
 
   const originY = cy + offsetY;
   const topY = originY - gradH;
@@ -207,7 +257,7 @@ function paintUpwardGradient(
   ctx.fill();
 
   // Bright center beam line for gutter uplights (heightPercent >= 40)
-  if (config.heightPercent >= 40) {
+  if (showCenterGuide && config.heightPercent >= 40) {
     ctx.beginPath();
     ctx.moveTo(cx, originY);
     ctx.lineTo(cx, topY + gradH * 0.3);
@@ -233,12 +283,13 @@ function paintDownwardGradient(
   rgb: [number, number, number],
   intensity: number,
   canvasW: number,
-  canvasH: number
+  canvasH: number,
+  opacityScale: number = 1
 ): void {
   const gradH = canvasH * (config.heightPercent / 100);
   const gradW = canvasW * (config.widthPercent / 100);
   const offsetY = canvasH * (config.originOffsetYPercent / 100);
-  const maxAlpha = config.opacity * intensity;
+  const maxAlpha = config.opacity * intensity * opacityScale;
 
   const originY = cy + offsetY;
   const bottomY = originY + gradH;
@@ -291,11 +342,12 @@ function paintRadialGradient(
   rgb: [number, number, number],
   intensity: number,
   canvasW: number,
-  canvasH: number
+  canvasH: number,
+  opacityScale: number = 1
 ): void {
   const poolW = canvasW * (config.widthPercent / 100);
   const poolH = canvasH * (config.heightPercent / 100);
-  const maxAlpha = config.opacity * intensity;
+  const maxAlpha = config.opacity * intensity * opacityScale;
 
   const radiusX = poolW / 2;
   const radiusY = poolH / 2;
@@ -340,8 +392,22 @@ function drawGutterIcon(
   cy: number,
   markerRadius: number,
   color: string,
-  index: number
+  index: number,
+  options: Required<GuideOverlayOptions>
 ): void {
+  if (!options.includeMarkerBodies) {
+    const dotRadius = Math.max(3, Math.round(markerRadius * 0.22));
+    ctx.beginPath();
+    ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(2, dotRadius - 1), 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    return;
+  }
+
   const barWidth = markerRadius * 2.4;
   const barHeight = markerRadius * 0.6;
   const stemHeight = markerRadius * 2.5;
@@ -386,21 +452,23 @@ function drawGutterIcon(
   ctx.fill();
   ctx.stroke();
 
-  // Number on the bar
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = `bold ${Math.round(barHeight * 1.2)}px Arial`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(String(index + 1), cx, cy);
+  if (options.includeMarkerNumbers) {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold ${Math.round(barHeight * 1.2)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(index + 1), cx, cy);
+  }
 
-  // "GUTTER" label below the bar
-  const labelY = cy + barHeight / 2 + Math.round(markerRadius * 0.8);
-  ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
-  ctx.fillStyle = '#000000';
-  ctx.fillText('GUTTER', cx + 1, labelY + 1);
-  ctx.fillText('GUTTER', cx - 1, labelY - 1);
-  ctx.fillStyle = color;
-  ctx.fillText('GUTTER', cx, labelY);
+  if (options.includeGutterTextLabels) {
+    const labelY = cy + barHeight / 2 + Math.round(markerRadius * 0.8);
+    ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+    ctx.fillStyle = '#000000';
+    ctx.fillText('GUTTER', cx + 1, labelY + 1);
+    ctx.fillText('GUTTER', cx - 1, labelY - 1);
+    ctx.fillStyle = color;
+    ctx.fillText('GUTTER', cx, labelY);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -411,7 +479,8 @@ function drawGutterLines(
   ctx: CanvasRenderingContext2D,
   gutterLines: GutterLine[],
   imgW: number,
-  imgH: number
+  imgH: number,
+  options: Required<GuideOverlayOptions>
 ): void {
   if (!gutterLines || gutterLines.length === 0) return;
 
@@ -459,19 +528,18 @@ function drawGutterLines(
       ctx.stroke();
     }
 
-    // "GUTTER LINE" label at midpoint
-    const mx = (x1 + x2) / 2;
-    const my = (y1 + y2) / 2;
-    ctx.font = `bold ${fontSize}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    // Dark shadow
-    ctx.fillStyle = '#000000';
-    ctx.fillText('GUTTER LINE', mx + 1, my - fontSize * 0.8 + 1);
-    ctx.fillText('GUTTER LINE', mx - 1, my - fontSize * 0.8 - 1);
-    // Amber text
-    ctx.fillStyle = '#F59E0B';
-    ctx.fillText('GUTTER LINE', mx, my - fontSize * 0.8);
+    if (options.includeGutterLineLabels) {
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#000000';
+      ctx.fillText('GUTTER LINE', mx + 1, my - fontSize * 0.8 + 1);
+      ctx.fillText('GUTTER LINE', mx - 1, my - fontSize * 0.8 - 1);
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillText('GUTTER LINE', mx, my - fontSize * 0.8);
+    }
   }
 
   ctx.restore();
@@ -485,7 +553,8 @@ function drawMarkers(
   ctx: CanvasRenderingContext2D,
   fixtures: LightFixture[],
   imgW: number,
-  imgH: number
+  imgH: number,
+  options: Required<GuideOverlayOptions>
 ): void {
   const markerRadius = Math.max(Math.round(imgW * 0.025), 16);
 
@@ -496,64 +565,86 @@ function drawMarkers(
     const color = MARKER_COLORS[pipelineType] || DEFAULT_MARKER_COLOR;
     const label = MARKER_LABELS[pipelineType] || 'LIGHT';
     const crossLen = markerRadius * 2;
+    const downTypes = new Set(['soffit', 'hardscape']);
+    const defaultRot = downTypes.has(pipelineType) ? 180 : 0;
+    const resolvedRot = fixture.rotation ?? defaultRot;
+    const rotationDelta = Math.abs((((resolvedRot - defaultRot) % 360) + 540) % 360 - 180);
+    const hasCustomRotation = rotationDelta > 6;
 
     // Gutter fixtures get a custom icon (horizontal bar + upward arrow)
     if (pipelineType === 'gutter') {
-      drawGutterIcon(ctx, cx, cy, markerRadius, color, index);
+      drawGutterIcon(ctx, cx, cy, markerRadius, color, index, options);
       return;
     }
 
     // Crosshair lines
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cx - crossLen, cy);
-    ctx.lineTo(cx + crossLen, cy);
-    ctx.moveTo(cx, cy - crossLen);
-    ctx.lineTo(cx, cy + crossLen);
-    ctx.stroke();
+    if (options.includeCrosshairs) {
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx - crossLen, cy);
+      ctx.lineTo(cx + crossLen, cy);
+      ctx.moveTo(cx, cy - crossLen);
+      ctx.lineTo(cx, cy + crossLen);
+      ctx.stroke();
+    }
 
-    // Dark backing circle
-    ctx.beginPath();
-    ctx.arc(cx, cy, markerRadius * 1.4, 0, Math.PI * 2);
-    ctx.fillStyle = '#000000';
-    ctx.fill();
+    if (options.includeMarkerBodies) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, markerRadius * 1.4, 0, Math.PI * 2);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
 
-    // Bright colored circle
-    ctx.beginPath();
-    ctx.arc(cx, cy, markerRadius, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, cy, markerRadius, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.stroke();
+    } else {
+      const dotRadius = Math.max(3, Math.round(markerRadius * 0.22));
+      ctx.beginPath();
+      ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(2, dotRadius - 1), 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
 
-    // Number inside
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(index + 1), cx, cy);
+    if (options.includeMarkerNumbers) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(index + 1), cx, cy);
+    }
 
-    // Label below with shadow
-    const labelY = cy + markerRadius + Math.round(markerRadius * 0.8);
-    ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
-    ctx.fillStyle = '#000000';
-    ctx.fillText(label, cx + 1, labelY + 1);
-    ctx.fillText(label, cx - 1, labelY - 1);
-    ctx.fillStyle = color;
-    ctx.fillText(label, cx, labelY);
+    if (options.includeMarkerTypeLabels) {
+      const labelY = cy + markerRadius + Math.round(markerRadius * 0.8);
+      ctx.font = `bold ${Math.round(markerRadius * 1.0)}px Arial`;
+      ctx.fillStyle = '#000000';
+      ctx.fillText(label, cx + 1, labelY + 1);
+      ctx.fillText(label, cx - 1, labelY - 1);
+      ctx.fillStyle = color;
+      ctx.fillText(label, cx, labelY);
+    }
 
     // Rotation-aware directional arrow from fixture center
     const radialTypes = new Set(['path']);
-    if (!radialTypes.has(pipelineType)) {
+    const shouldDrawDirectionArrow =
+      options.includeDirectionalArrows &&
+      !radialTypes.has(pipelineType) &&
+      (options.showArrowsForDefaultDirection || hasCustomRotation);
+    if (shouldDrawDirectionArrow) {
       const arrowLen = Math.round(markerRadius * 2.0);
       const beamLen = fixture.beamLength ?? 1.0;
       const scaledArrowLen = Math.round(arrowLen * Math.min(beamLen, 2.0));
 
       // Determine rotation angle (0=up default for most, 180 for down types)
-      const downTypes = new Set(['soffit', 'hardscape']);
-      const rotDeg = fixture.rotation ?? (downTypes.has(pipelineType) ? 180 : 0);
+      const rotDeg = resolvedRot;
 
       // Convert to canvas radians: user 0°=up → canvas -PI/2
       const canvasRad = (rotDeg - 90) * Math.PI / 180;
@@ -608,7 +699,11 @@ function drawMarkers(
       ctx.restore();
 
       // Keep gutter "↑ UP" label when rotation is near default (0°)
-      if (pipelineType === 'gutter' && (fixture.rotation === undefined || fixture.rotation < 22.5 || fixture.rotation >= 337.5)) {
+      if (
+        options.includeDirectionalText &&
+        pipelineType === 'gutter' &&
+        (fixture.rotation === undefined || fixture.rotation < 22.5 || fixture.rotation >= 337.5)
+      ) {
         const upLabelY = cy - markerRadius - Math.round(markerRadius * 1.4);
         ctx.font = `bold ${Math.round(markerRadius * 1.2)}px Arial`;
         ctx.textAlign = 'center';
@@ -635,8 +730,16 @@ export function paintGradientsToCanvas(
   ctx: CanvasRenderingContext2D,
   fixtures: LightFixture[],
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
+  options?: GuideOverlayOptions
 ): void {
+  const resolvedOptions: Required<GuideOverlayOptions> = {
+    ...DEFAULT_OVERLAY_OPTIONS,
+    ...(options || {}),
+  };
+  const opacityScale = Math.max(0, resolvedOptions.gradientOpacityScale);
+  const includeGutterCenterGuide = resolvedOptions.includeGutterCenterGuide;
+
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
@@ -672,13 +775,44 @@ export function paintGradientsToCanvas(
 
     switch (scaledConfig.direction) {
       case 'up':
-        paintUpwardGradient(ctx, cx, cy, scaledConfig, rgb, intensity, canvasWidth, canvasHeight);
+        paintUpwardGradient(
+          ctx,
+          cx,
+          cy,
+          scaledConfig,
+          rgb,
+          intensity,
+          canvasWidth,
+          canvasHeight,
+          opacityScale,
+          includeGutterCenterGuide
+        );
         break;
       case 'down':
-        paintDownwardGradient(ctx, cx, cy, scaledConfig, rgb, intensity, canvasWidth, canvasHeight);
+        paintDownwardGradient(
+          ctx,
+          cx,
+          cy,
+          scaledConfig,
+          rgb,
+          intensity,
+          canvasWidth,
+          canvasHeight,
+          opacityScale
+        );
         break;
       case 'radial':
-        paintRadialGradient(ctx, cx, cy, scaledConfig, rgb, intensity, canvasWidth, canvasHeight);
+        paintRadialGradient(
+          ctx,
+          cx,
+          cy,
+          scaledConfig,
+          rgb,
+          intensity,
+          canvasWidth,
+          canvasHeight,
+          opacityScale
+        );
         break;
     }
 
@@ -703,8 +837,14 @@ export async function paintLightGradients(
   imageBase64: string,
   fixtures: LightFixture[],
   mimeType: string = 'image/jpeg',
-  gutterLines?: GutterLine[]
+  gutterLines?: GutterLine[],
+  options?: GuideOverlayOptions
 ): Promise<string> {
+  const resolvedOptions: Required<GuideOverlayOptions> = {
+    ...DEFAULT_OVERLAY_OPTIONS,
+    ...(options || {}),
+  };
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -732,22 +872,23 @@ export async function paintLightGradients(
         ctx.drawImage(img, 0, 0, w, h);
 
         // 2. Darken to ~40% so gradients are subtle hints, not bold shapes
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        const darkenAlpha = Math.max(0, Math.min(0.9, resolvedOptions.darkenAlpha));
+        ctx.fillStyle = `rgba(0, 0, 0, ${darkenAlpha})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // 3. Paint directional gradients with screen blending
-        paintGradientsToCanvas(ctx, fixtures, canvas.width, canvas.height);
+        paintGradientsToCanvas(ctx, fixtures, canvas.width, canvas.height, resolvedOptions);
 
         // 3.5. Draw gutter lines (under markers, over gradients)
         ctx.globalCompositeOperation = 'source-over';
-        if (gutterLines && gutterLines.length > 0) {
-          drawGutterLines(ctx, gutterLines, canvas.width, canvas.height);
+        if (resolvedOptions.includeGutterLines && gutterLines && gutterLines.length > 0) {
+          drawGutterLines(ctx, gutterLines, canvas.width, canvas.height, resolvedOptions);
           console.log(`[GradientPainter] Drew ${gutterLines.length} gutter line(s) on annotated image.`);
         }
 
         // 4. Reset composite and draw numbered markers on top
         ctx.globalCompositeOperation = 'source-over';
-        drawMarkers(ctx, fixtures, canvas.width, canvas.height);
+        drawMarkers(ctx, fixtures, canvas.width, canvas.height, resolvedOptions);
 
         // 5. Validation: verify gradient count matches fixture count
         if (fixtures.length > 0) {
