@@ -46,6 +46,7 @@ export interface GutterLine {
   id: string;
   startX: number; startY: number; // 0-100%
   endX: number;   endY: number;
+  mountDepthPercent?: number;     // Positive screen-space depth below line for gutter fixture mounting
 }
 
 /**

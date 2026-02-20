@@ -2,6 +2,7 @@ import type { GutterLine } from '../types/fixtures';
 
 const DEFAULT_MAX_LINES = 3;
 const REMOTE_DETECTOR_URL = import.meta.env.VITE_GUTTER_DETECTOR_URL as string | undefined;
+const DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT = 0.6;
 
 export interface GutterDetectionResult {
   lines: GutterLine[];
@@ -33,6 +34,7 @@ function normalizeLines(lines: RawGutterLine[], prefix: string, maxLines: number
       startY: clampPercent(line.startY),
       endX: clampPercent(line.endX),
       endY: clampPercent(line.endY),
+      mountDepthPercent: DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT,
     }))
     .filter(line => {
       const dx = line.endX - line.startX;
@@ -216,6 +218,7 @@ function detectWithHeuristic(
       startY: clampPercent((y / height) * 100),
       endX: clampPercent((lastX / width) * 100),
       endY: clampPercent((y / height) * 100),
+      mountDepthPercent: DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT,
     });
   });
 

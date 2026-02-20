@@ -1987,6 +1987,16 @@ function applyGutterMountDepth(
   return { mountX, mountY, appliedDepth: clampedDepth };
 }
 
+function resolveRequestedGutterDepth(
+  explicitDepth: number | undefined,
+  line?: GutterLine
+): number {
+  const rawDepth = typeof explicitDepth === 'number'
+    ? explicitDepth
+    : (typeof line?.mountDepthPercent === 'number' ? line.mountDepthPercent : DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT);
+  return Math.max(MIN_GUTTER_MOUNT_DEPTH_PERCENT, Math.min(MAX_GUTTER_MOUNT_DEPTH_PERCENT, rawDepth));
+}
+
 function resolveGutterLine(
   placement: SpatialFixturePlacement,
   gutterLines?: GutterLine[]
@@ -2070,9 +2080,7 @@ function normalizeGutterPlacements(
       nearest.line.endX,
       nearest.line.endY
     );
-    const requestedDepth = typeof p.gutterMountDepthPercent === 'number'
-      ? p.gutterMountDepthPercent
-      : DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT;
+    const requestedDepth = resolveRequestedGutterDepth(p.gutterMountDepthPercent, nearest.line);
     const mounted = applyGutterMountDepth(lineProjection.x, lineProjection.y, nearest.line, requestedDepth);
 
     const nextX = Number(mounted.mountX.toFixed(3));
@@ -2144,9 +2152,7 @@ function normalizeGutterGuideFixtures(
       nearest.line.endX,
       nearest.line.endY
     );
-    const requestedDepth = typeof fixture.gutterMountDepthPercent === 'number'
-      ? fixture.gutterMountDepthPercent
-      : DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT;
+    const requestedDepth = resolveRequestedGutterDepth(fixture.gutterMountDepthPercent, nearest.line);
     const mounted = applyGutterMountDepth(lineProjection.x, lineProjection.y, nearest.line, requestedDepth);
     const nextX = Number(mounted.mountX.toFixed(3));
     const nextY = Number(mounted.mountY.toFixed(3));
@@ -2414,13 +2420,12 @@ function evaluateGutterVerification(
               expectedLineProjection
             );
 
+      const fallbackDepth = resolveRequestedGutterDepth(undefined, expectedLineProjection.line);
       const expectedDepth = Math.max(
         MIN_GUTTER_MOUNT_DEPTH_PERCENT,
         Math.min(
           MAX_GUTTER_MOUNT_DEPTH_PERCENT,
-          expectedDepthFromPlacement > 0
-            ? expectedDepthFromPlacement
-            : DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT
+          expectedDepthFromPlacement > 0 ? expectedDepthFromPlacement : fallbackDepth
         )
       );
 
@@ -2709,7 +2714,8 @@ function buildGutterCorrectionPrompt(
     if (gutterLines && gutterLines.length > 0) {
       correction += 'REFERENCE GUTTER LINES:\n';
       gutterLines.forEach((line, i) => {
-        correction += `- LINE ${i + 1}: [${line.startX.toFixed(2)}%, ${line.startY.toFixed(2)}%] -> [${line.endX.toFixed(2)}%, ${line.endY.toFixed(2)}%]\n`;
+        const depth = resolveRequestedGutterDepth(undefined, line);
+        correction += `- LINE ${i + 1}: [${line.startX.toFixed(2)}%, ${line.startY.toFixed(2)}%] -> [${line.endX.toFixed(2)}%, ${line.endY.toFixed(2)}%], depth=${depth.toFixed(2)}%\n`;
       });
     }
     correction += 'FINAL CHECK: All gutter fixtures must remain within 4% of expected mount coordinates and stay inside the gutter trough depth band.\n';
