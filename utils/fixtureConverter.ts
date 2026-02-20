@@ -139,6 +139,14 @@ export function convertFixturesToSpatialMap(
   const placements: SpatialFixturePlacement[] = fixtures.map((f, index) => {
     const pipelineType = CATEGORY_TO_PIPELINE_TYPE[f.type];
     const subOption = inferSubOption(f);
+    const gutterMeta = pipelineType === 'gutter'
+      ? {
+          gutterLineId: f.gutterLineId,
+          gutterLineX: f.gutterLineX,
+          gutterLineY: f.gutterLineY,
+          gutterMountDepthPercent: f.gutterMountDepthPercent,
+        }
+      : {};
 
     return {
       id: `manual_${pipelineType}_${subOption}_${index + 1}`,
@@ -150,6 +158,7 @@ export function convertFixturesToSpatialMap(
       description: generateDescription(f),
       rotation: f.rotation,
       beamLength: f.beamLength,
+      ...gutterMeta,
     };
   });
 

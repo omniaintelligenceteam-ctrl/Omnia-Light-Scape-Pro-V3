@@ -32,6 +32,10 @@ export interface LightFixture {
   locked?: boolean;    // Prevent accidental moves
   rotation?: number;   // Degrees (0-360, 0=up) for beam direction
   beamLength?: number; // Multiplier on default beam height (0.3–2.5, default 1.0)
+  gutterLineId?: string;            // Source gutter line id for gutter-mounted fixtures
+  gutterLineX?: number;             // Projected point on gutter line (0-100%)
+  gutterLineY?: number;             // Projected point on gutter line (0-100%)
+  gutterMountDepthPercent?: number; // Positive screen-space depth below gutter line (0-100%)
 }
 
 /**

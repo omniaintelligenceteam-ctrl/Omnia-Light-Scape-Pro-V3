@@ -325,6 +325,9 @@ export interface SpatialFixturePlacement {
   rotation?: number;             // 0-360° beam direction (0=up). Per-fixture override.
   beamLength?: number;           // 0.3-2.5 multiplier on default beam height.
   gutterLineId?: string;         // Optional source line id when gutter fixture is snapped to a gutter line.
+  gutterLineX?: number;          // Optional exact projection point on gutter line (0-100%).
+  gutterLineY?: number;          // Optional exact projection point on gutter line (0-100%).
+  gutterMountDepthPercent?: number; // Optional signed depth below gutter line in screen-space percent.
   distanceToGutter?: number;     // Optional distance in % to nearest gutter line after normalization.
 }
 

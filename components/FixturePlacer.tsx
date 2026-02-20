@@ -14,14 +14,27 @@ import {
 import { GradientPreview } from './GradientPreview';
 import { suggestGutterLines } from '../services/gutterDetectionService';
 
-// ── Gutter Line Constants ──
+type GutterSnapResult = {
+  snappedX: number;
+  snappedY: number;
+  distance: number;
+  line: GutterLine;
+  lineX: number;
+  lineY: number;
+  mountX: number;
+  mountY: number;
+  mountDepthPercent: number;
+};
+
+// -- Gutter Line Constants --
 const GUTTER_SNAP_TYPES = new Set<FixtureCategory>(['uplight', 'spot', 'wall_wash', 'gutter_uplight']);
 const GUTTER_SNAP_THRESHOLD = 15; // % distance
 const MIN_LINE_LENGTH = 5;        // % minimum to save
 const MAX_GUTTER_LINES = 10;      // maximum gutter lines allowed
-const FIRST_STORY_Y_THRESHOLD = 45; // % from top — above this, fixtures MUST be on a gutter line
+const FIRST_STORY_Y_THRESHOLD = 45; // % from top - above this, fixtures MUST be on a gutter line
+const DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT = 0.6; // shift gutter fixtures into trough below roof edge
 
-// ── Beam Cone Defaults Per Fixture Type ──
+// -- Beam Cone Defaults Per Fixture Type --
 const UI_BEAM_DEFAULTS: Record<FixtureCategory, { height: number; width: number; defaultRotation: number }> = {
   uplight:        { height: 50, width: 30, defaultRotation: 0 },
   gutter_uplight: { height: 60, width: 40, defaultRotation: 0 },
@@ -104,7 +117,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const [showGradientPreview, setShowGradientPreview] = useState(false);
   const [isAutoDetectingGutter, setIsAutoDetectingGutter] = useState(false);
 
-  // ── Gutter Line State (prop-driven or internal) ──
+  // -- Gutter Line State (prop-driven or internal) --
   const [gutterLinesInternal, setGutterLinesInternal] = useState<GutterLine[]>([]);
   const gutterLines = gutterLinesProp ?? gutterLinesInternal;
   const gutterLinesRef = useRef(gutterLines);
@@ -134,7 +147,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const prevFixturesRef = useRef(fixtures);
   useEffect(() => {
     if (prevFixturesRef.current !== fixtures) {
-      // External change detected — only reset history if it's a fundamentally different set
+      // External change detected - only reset history if it's a fundamentally different set
       // (e.g., clear all from parent). Skip if it's our own change propagating back.
       const prevLen = prevFixturesRef.current.length;
       const newLen = fixtures.length;
@@ -226,16 +239,44 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     return { x, y };
   }, [imageBounds, snapToGrid, gridSize]);
 
-  // ── Gutter Snap Utility ──
+  // -- Gutter Snap Utility --
+  const getDownwardNormal = useCallback((line: GutterLine): { nx: number; ny: number } | null => {
+    const dx = line.endX - line.startX;
+    const dy = line.endY - line.startY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return null;
+
+    const n1 = { nx: -dy / len, ny: dx / len };
+    const n2 = { nx: dy / len, ny: -dx / len };
+    return n1.ny >= n2.ny ? n1 : n2;
+  }, []);
+
+  const projectToGutterMount = useCallback((
+    lineX: number,
+    lineY: number,
+    line: GutterLine,
+    depthPercent = DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT
+  ): { mountX: number; mountY: number; depthPercent: number } => {
+    const normal = getDownwardNormal(line);
+    if (!normal) {
+      return { mountX: lineX, mountY: lineY, depthPercent: 0 };
+    }
+
+    const mountX = Math.max(0, Math.min(100, lineX + normal.nx * depthPercent));
+    const mountY = Math.max(0, Math.min(100, lineY + normal.ny * depthPercent));
+    return { mountX, mountY, depthPercent };
+  }, [getDownwardNormal]);
+
   const findNearestGutterSnap = useCallback((
     px: number,
     py: number,
-    options?: { force?: boolean; maxDistance?: number }
-  ): { snappedX: number; snappedY: number; distance: number } | null => {
+    options?: { force?: boolean; maxDistance?: number; mountDepthPercent?: number }
+  ): GutterSnapResult | null => {
     if (gutterLines.length === 0) return null;
     let bestDist = Infinity;
     let bestX = px;
     let bestY = py;
+    let bestLine: GutterLine | null = null;
     for (const line of gutterLines) {
       const dx = line.endX - line.startX;
       const dy = line.endY - line.startY;
@@ -250,15 +291,44 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         bestDist = dist;
         bestX = closestX;
         bestY = closestY;
+        bestLine = line;
       }
     }
     const maxDistance = options?.force
       ? Infinity
       : (options?.maxDistance ?? GUTTER_SNAP_THRESHOLD);
-    return bestDist <= maxDistance ? { snappedX: bestX, snappedY: bestY, distance: bestDist } : null;
-  }, [gutterLines]);
+    if (!bestLine || bestDist > maxDistance) return null;
 
-  // ── Gutter Line CRUD ──
+    const mounted = projectToGutterMount(
+      bestX,
+      bestY,
+      bestLine,
+      options?.mountDepthPercent ?? DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT
+    );
+    return {
+      snappedX: bestX,
+      snappedY: bestY,
+      distance: bestDist,
+      line: bestLine,
+      lineX: bestX,
+      lineY: bestY,
+      mountX: mounted.mountX,
+      mountY: mounted.mountY,
+      mountDepthPercent: mounted.depthPercent,
+    };
+  }, [gutterLines, projectToGutterMount]);
+
+  const applyGutterSnapToFixture = useCallback((fixture: LightFixture, snap: GutterSnapResult): LightFixture => ({
+    ...fixture,
+    x: Number(snap.mountX.toFixed(3)),
+    y: Number(snap.mountY.toFixed(3)),
+    gutterLineId: snap.line.id,
+    gutterLineX: Number(snap.lineX.toFixed(3)),
+    gutterLineY: Number(snap.lineY.toFixed(3)),
+    gutterMountDepthPercent: Number(snap.mountDepthPercent.toFixed(3)),
+  }), []);
+
+  // -- Gutter Line CRUD --
   const addGutterLine = useCallback((startX: number, startY: number, endX: number, endY: number) => {
     if (gutterLines.length >= MAX_GUTTER_LINES) {
       triggerHaptic('heavy');
@@ -325,7 +395,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     return nearest?.fixture ?? null;
   }, [fixtures, imageBounds]);
 
-  // ── Mouse Handlers ──
+  // -- Mouse Handlers --
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (readOnly || e.button !== 0) return;
@@ -397,12 +467,13 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       y = Math.round(y / gridSize) * gridSize;
     }
     const draggedFixture = fixtures.find(f => f.id === selectedId);
+    let gutterSnap: GutterSnapResult | null = null;
     if (draggedFixture?.type === 'gutter_uplight') {
-      // Gutter fixtures are line-locked: always project onto a gutter line.
-      const snap = findNearestGutterSnap(x, y, { force: true });
-      if (!snap) return;
-      x = snap.snappedX;
-      y = snap.snappedY;
+      // Gutter fixtures are line-locked: project to line, then shift into trough depth.
+      gutterSnap = findNearestGutterSnap(x, y, { force: true });
+      if (!gutterSnap) return;
+      x = gutterSnap.mountX;
+      y = gutterSnap.mountY;
     } else {
       // Snap to gutter line if eligible
       if (snapToGutter && gutterLines.length > 0 && draggedFixture && GUTTER_SNAP_TYPES.has(draggedFixture.type)) {
@@ -417,10 +488,16 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       }
     }
     // Update position live (no history push during drag)
-    const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
+    const updated = fixtures.map(f => {
+      if (f.id !== selectedId) return f;
+      if (gutterSnap && f.type === 'gutter_uplight') {
+        return applyGutterSnapToFixture(f, gutterSnap);
+      }
+      return { ...f, x, y };
+    });
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
-  }, [isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap]);
+  }, [isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap, applyGutterSnapToFixture]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     // Beam drag end
@@ -445,7 +522,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       return;
     }
 
-    // Quick click → place new fixture
+    // Quick click -> place new fixture
     if (!activeFixtureType || readOnly) return;
     if (mouseDownPosRef.current) {
       const dx = Math.abs(e.clientX - mouseDownPosRef.current.x);
@@ -466,18 +543,19 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     // Apply gutter snap for eligible fixture types
     let finalX = coords.x;
     let finalY = coords.y;
+    let gutterSnap: GutterSnapResult | null = null;
     if (activeFixtureType === 'gutter_uplight') {
       if (gutterLines.length === 0) {
         triggerHaptic('heavy');
         return;
       }
-      const snap = findNearestGutterSnap(coords.x, coords.y, { force: true });
-      if (!snap) {
+      gutterSnap = findNearestGutterSnap(coords.x, coords.y, { force: true });
+      if (!gutterSnap) {
         triggerHaptic('heavy');
         return;
       }
-      finalX = snap.snappedX;
-      finalY = snap.snappedY;
+      finalX = gutterSnap.mountX;
+      finalY = gutterSnap.mountY;
     } else {
       if (snapToGutter && GUTTER_SNAP_TYPES.has(activeFixtureType)) {
         const snap = findNearestGutterSnap(coords.x, coords.y);
@@ -491,18 +569,21 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           finalX = snap.snappedX;
           finalY = snap.snappedY;
         } else {
-          // No gutter line nearby — reject placement
+          // No gutter line nearby - reject placement
           triggerHaptic('heavy');
           return;
         }
       }
     }
 
-    const newFixture = createFixture(finalX, finalY, activeFixtureType);
+    const baseFixture = createFixture(finalX, finalY, activeFixtureType);
+    const newFixture = (activeFixtureType === 'gutter_uplight' && gutterSnap)
+      ? applyGutterSnapToFixture(baseFixture, gutterSnap)
+      : baseFixture;
     pushToHistory([...fixtures, newFixture]);
     setSelectedId(newFixture.id);
     triggerHaptic('medium');
-  }, [isDragging, isDraggingBeam, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, gutterDrawEnd, addGutterLine, snapToGutter, findNearestGutterSnap]);
+  }, [isDragging, isDraggingBeam, activeFixtureType, readOnly, fixtures, findFixtureAtScreen, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, gutterDrawEnd, addGutterLine, snapToGutter, findNearestGutterSnap, gutterLines.length, applyGutterSnapToFixture]);
 
   const handleRightClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -516,7 +597,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     }
   }, [readOnly, fixtures, findFixtureAtScreen, selectedId, pushToHistory]);
 
-  // ── Touch Handlers ──
+  // -- Touch Handlers --
 
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (readOnly || e.touches.length !== 1) return;
@@ -610,11 +691,12 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       y = Math.round(y / gridSize) * gridSize;
     }
     const draggedFixture = fixtures.find(f => f.id === selectedId);
+    let gutterSnap: GutterSnapResult | null = null;
     if (draggedFixture?.type === 'gutter_uplight') {
-      const snap = findNearestGutterSnap(x, y, { force: true });
-      if (!snap) return;
-      x = snap.snappedX;
-      y = snap.snappedY;
+      gutterSnap = findNearestGutterSnap(x, y, { force: true });
+      if (!gutterSnap) return;
+      x = gutterSnap.mountX;
+      y = gutterSnap.mountY;
     } else {
       // Snap to gutter line if eligible
       if (snapToGutter && gutterLines.length > 0 && draggedFixture && GUTTER_SNAP_TYPES.has(draggedFixture.type)) {
@@ -628,10 +710,16 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         else { y = FIRST_STORY_Y_THRESHOLD; }
       }
     }
-    const updated = fixtures.map(f => f.id === selectedId ? { ...f, x, y } : f);
+    const updated = fixtures.map(f => {
+      if (f.id !== selectedId) return f;
+      if (gutterSnap && f.type === 'gutter_uplight') {
+        return applyGutterSnapToFixture(f, gutterSnap);
+      }
+      return { ...f, x, y };
+    });
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
-  }, [isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap]);
+  }, [isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap, applyGutterSnapToFixture]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (longPressTimerRef.current) {
@@ -669,7 +757,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       return;
     }
 
-    // Quick tap → place new fixture
+    // Quick tap -> place new fixture
     if (!touchStartRef.current || touchStartRef.current.fixtureId) {
       touchStartRef.current = null;
       return;
@@ -692,20 +780,21 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         // Apply gutter snap for eligible fixture types
         let finalX = coords.x;
         let finalY = coords.y;
+        let gutterSnap: GutterSnapResult | null = null;
         if (activeFixtureType === 'gutter_uplight') {
           if (gutterLines.length === 0) {
             triggerHaptic('heavy');
             touchStartRef.current = null;
             return;
           }
-          const snap = findNearestGutterSnap(coords.x, coords.y, { force: true });
-          if (!snap) {
+          gutterSnap = findNearestGutterSnap(coords.x, coords.y, { force: true });
+          if (!gutterSnap) {
             triggerHaptic('heavy');
             touchStartRef.current = null;
             return;
           }
-          finalX = snap.snappedX;
-          finalY = snap.snappedY;
+          finalX = gutterSnap.mountX;
+          finalY = gutterSnap.mountY;
         } else {
           if (snapToGutter && GUTTER_SNAP_TYPES.has(activeFixtureType)) {
             const snap = findNearestGutterSnap(coords.x, coords.y);
@@ -726,16 +815,19 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           }
         }
 
-        const newFixture = createFixture(finalX, finalY, activeFixtureType);
+        const baseFixture = createFixture(finalX, finalY, activeFixtureType);
+        const newFixture = (activeFixtureType === 'gutter_uplight' && gutterSnap)
+          ? applyGutterSnapToFixture(baseFixture, gutterSnap)
+          : baseFixture;
         pushToHistory([...fixtures, newFixture]);
         setSelectedId(newFixture.id);
         triggerHaptic('medium');
       }
     }
     touchStartRef.current = null;
-  }, [isDragging, isDraggingBeam, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, addGutterLine, snapToGutter, findNearestGutterSnap]);
+  }, [isDragging, isDraggingBeam, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, addGutterLine, snapToGutter, findNearestGutterSnap, gutterLines.length, applyGutterSnapToFixture]);
 
-  // ── Toolbar Actions ──
+  // -- Toolbar Actions --
 
   const deleteSelected = useCallback(() => {
     if (!selectedId) return;
@@ -756,17 +848,24 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
 
   const duplicateSelected = useCallback(() => {
     if (!selectedFixture) return;
-    const newFixture: LightFixture = {
+    const baseFixture: LightFixture = {
       ...selectedFixture,
       id: `fixture_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       x: Math.min(100, selectedFixture.x + 5),
       y: Math.min(100, selectedFixture.y + 5),
       locked: false,
     };
+    const newFixture =
+      baseFixture.type === 'gutter_uplight'
+        ? (() => {
+            const snap = findNearestGutterSnap(baseFixture.x, baseFixture.y, { force: true });
+            return snap ? applyGutterSnapToFixture(baseFixture, snap) : baseFixture;
+          })()
+        : baseFixture;
     pushToHistory([...fixtures, newFixture]);
     setSelectedId(newFixture.id);
     triggerHaptic('medium');
-  }, [selectedFixture, fixtures, pushToHistory]);
+  }, [selectedFixture, fixtures, pushToHistory, findNearestGutterSnap, applyGutterSnapToFixture]);
 
   const clearAll = useCallback(() => {
     if (fixtures.length === 0) return;
