@@ -17,6 +17,7 @@ import { GradientPreview } from './GradientPreview';
 const GUTTER_SNAP_TYPES = new Set<FixtureCategory>(['uplight', 'spot', 'wall_wash', 'gutter_uplight']);
 const GUTTER_SNAP_THRESHOLD = 15; // % distance
 const MIN_LINE_LENGTH = 5;        // % minimum to save
+const MAX_GUTTER_LINES = 10;      // maximum gutter lines allowed
 const FIRST_STORY_Y_THRESHOLD = 45; // % from top — above this, fixtures MUST be on a gutter line
 
 // ── Beam Cone Defaults Per Fixture Type ──
@@ -103,14 +104,18 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   // ── Gutter Line State (prop-driven or internal) ──
   const [gutterLinesInternal, setGutterLinesInternal] = useState<GutterLine[]>([]);
   const gutterLines = gutterLinesProp ?? gutterLinesInternal;
+  const gutterLinesRef = useRef(gutterLines);
+  gutterLinesRef.current = gutterLines;
+  const onGutterLinesChangeRef = useRef(onGutterLinesChange);
+  onGutterLinesChangeRef.current = onGutterLinesChange;
   const setGutterLines = useCallback((updater: GutterLine[] | ((prev: GutterLine[]) => GutterLine[])) => {
-    const newLines = typeof updater === 'function' ? updater(gutterLinesProp ?? gutterLinesInternal) : updater;
-    if (onGutterLinesChange) {
-      onGutterLinesChange(newLines);
+    const newLines = typeof updater === 'function' ? updater(gutterLinesRef.current) : updater;
+    if (onGutterLinesChangeRef.current) {
+      onGutterLinesChangeRef.current(newLines);
     } else {
       setGutterLinesInternal(newLines);
     }
-  }, [gutterLinesProp, gutterLinesInternal, onGutterLinesChange]);
+  }, []);
   const [isDrawingGutter, setIsDrawingGutter] = useState(false);
   const [gutterDrawStart, setGutterDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [gutterDrawEnd, setGutterDrawEnd] = useState<{ x: number; y: number } | null>(null);
@@ -245,6 +250,10 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
 
   // ── Gutter Line CRUD ──
   const addGutterLine = useCallback((startX: number, startY: number, endX: number, endY: number) => {
+    if (gutterLines.length >= MAX_GUTTER_LINES) {
+      triggerHaptic('heavy');
+      return;
+    }
     const length = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
     if (length < MIN_LINE_LENGTH) return;
     const newLine: GutterLine = {
@@ -253,7 +262,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     };
     setGutterLines(prev => [...prev, newLine]);
     triggerHaptic('medium');
-  }, []);
+  }, [gutterLines.length]);
 
   const deleteGutterLine = useCallback((id: string) => {
     setGutterLines(prev => prev.filter(l => l.id !== id));
@@ -807,17 +816,25 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           {/* Mark Gutter Line */}
           <button
             onClick={() => {
+              if (gutterLines.length >= MAX_GUTTER_LINES && !isDrawingGutter) { triggerHaptic('heavy'); return; }
               setIsDrawingGutter(prev => !prev);
               if (!isDrawingGutter) { setSelectedId(null); setGutterDrawStart(null); setGutterDrawEnd(null); }
             }}
-            className={`p-1.5 rounded-lg transition-all ${
-              isDrawingGutter
-                ? 'bg-amber-500 text-black ring-2 ring-amber-300'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            className={`p-1.5 rounded-lg transition-all relative ${
+              gutterLines.length >= MAX_GUTTER_LINES && !isDrawingGutter
+                ? 'text-gray-600 cursor-not-allowed opacity-50'
+                : isDrawingGutter
+                  ? 'bg-amber-500 text-black ring-2 ring-amber-300'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
-            title="Mark Gutter Line"
+            title={gutterLines.length >= MAX_GUTTER_LINES ? `Max ${MAX_GUTTER_LINES} gutter lines reached` : `Mark Gutter Line (${gutterLines.length}/${MAX_GUTTER_LINES})`}
           >
             <Minus size={16} />
+            {gutterLines.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-black text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                {gutterLines.length}
+              </span>
+            )}
           </button>
 
           {/* Snap to Gutter toggle */}
@@ -972,7 +989,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
             viewBox={`0 0 ${imageBounds.width} ${imageBounds.height}`}
           >
             {/* Saved gutter lines */}
-            {gutterLines.map(line => {
+            {gutterLines.map((line, idx) => {
               const x1 = (line.startX / 100) * imageBounds.width;
               const y1 = (line.startY / 100) * imageBounds.height;
               const x2 = (line.endX / 100) * imageBounds.width;
@@ -984,17 +1001,24 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
                   <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#F59E0B" strokeWidth={3} strokeDasharray="8 4" opacity={0.8} />
                   <circle cx={x1} cy={y1} r={5} fill="#F59E0B" stroke="white" strokeWidth={1.5} />
                   <circle cx={x2} cy={y2} r={5} fill="#F59E0B" stroke="white" strokeWidth={1.5} />
+                  {/* Line number label */}
+                  <g>
+                    <circle cx={x1 + 12} cy={y1 - 12} r={9} fill="#F59E0B" stroke="white" strokeWidth={1} />
+                    <text x={x1 + 12} y={y1 - 8} textAnchor="middle" fontSize={11} fontWeight="bold" fill="black">{idx + 1}</text>
+                  </g>
                   {/* Delete button at midpoint */}
                   <g
                     className="pointer-events-auto cursor-pointer"
                     onMouseDown={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
-                    onTouchStart={(evt) => { evt.stopPropagation(); }}
-                    onClick={(evt) => { evt.stopPropagation(); deleteGutterLine(line.id); }}
+                    onMouseUp={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
+                    onTouchStart={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
+                    onTouchMove={(evt) => { evt.stopPropagation(); }}
+                    onClick={(evt) => { evt.stopPropagation(); evt.preventDefault(); deleteGutterLine(line.id); }}
                     onTouchEnd={(evt) => { evt.stopPropagation(); evt.preventDefault(); deleteGutterLine(line.id); }}
                   >
-                    <circle cx={mx} cy={my} r={10} fill="#1f1f1f" stroke="#F59E0B" strokeWidth={1.5} opacity={0.9} />
-                    <line x1={mx - 4} y1={my - 4} x2={mx + 4} y2={my + 4} stroke="#EF4444" strokeWidth={2} />
-                    <line x1={mx + 4} y1={my - 4} x2={mx - 4} y2={my + 4} stroke="#EF4444" strokeWidth={2} />
+                    <circle cx={mx} cy={my} r={14} fill="#1f1f1f" stroke="#EF4444" strokeWidth={2} opacity={0.95} />
+                    <line x1={mx - 5} y1={my - 5} x2={mx + 5} y2={my + 5} stroke="#EF4444" strokeWidth={2.5} />
+                    <line x1={mx + 5} y1={my - 5} x2={mx - 5} y2={my + 5} stroke="#EF4444" strokeWidth={2.5} />
                   </g>
                 </g>
               );
