@@ -34,6 +34,13 @@ const MAX_ARTIFACT_RETRY_ATTEMPTS = 1;
 const ANNOTATION_ARTIFACT_MAX_SCORE = 8;
 const MAX_AUTO_GUTTER_LINES = 3;
 const MODEL_GUIDE_DEBUG = String(import.meta.env.VITE_MODEL_GUIDE_DEBUG || '').toLowerCase() === 'true';
+const DEFAULT_INITIAL_CANDIDATE_COUNT = 2;
+const MAX_INITIAL_CANDIDATE_COUNT = 3;
+const INITIAL_CANDIDATE_COUNT = (() => {
+  const raw = Number(import.meta.env.VITE_INITIAL_CANDIDATE_COUNT);
+  if (!Number.isFinite(raw)) return DEFAULT_INITIAL_CANDIDATE_COUNT;
+  return Math.max(1, Math.min(MAX_INITIAL_CANDIDATE_COUNT, Math.round(raw)));
+})();
 
 // Non-selected fixture types, including soffit, are explicitly forbidden in prompt assembly.
 
@@ -180,6 +187,25 @@ interface HeuristicPhotorealismResult {
   score: number;
   details: string;
   issues: string[];
+}
+
+export interface PlacementVerificationResult {
+  verified: boolean;
+  confidence: number;
+  details: string;
+  gutterVerified: boolean;
+  unexpectedTypes: string[];
+}
+
+export interface GenerationCandidateEvaluation {
+  result: string;
+  placementVerification: PlacementVerificationResult;
+  artifactCheck: AnnotationArtifactVerificationResult;
+  photorealCheck: PhotorealismVerificationResult;
+  heuristicPhotorealCheck: HeuristicPhotorealismResult;
+  photorealPassed: boolean;
+  photorealCompositeScore: number;
+  compositeScore: number;
 }
 
 function extractBase64Data(imageOrDataUri: string): string {
@@ -558,6 +584,186 @@ Return exact JSON (no markdown):
       issues: ['Verification service error.'],
     };
   }
+}
+
+function clampScore(score: number): number {
+  return Math.max(0, Math.min(100, score));
+}
+
+function createSkippedPlacementVerification(details: string): PlacementVerificationResult {
+  return {
+    verified: true,
+    confidence: 100,
+    details,
+    gutterVerified: true,
+    unexpectedTypes: [],
+  };
+}
+
+function getPlacementQualityScore(
+  placementVerification: PlacementVerificationResult,
+  placementVerificationEnabled: boolean
+): number {
+  if (!placementVerificationEnabled) return 100;
+
+  let score = placementVerification.confidence;
+  if (placementVerification.verified) {
+    score = Math.max(score, 88);
+  } else {
+    score -= 12;
+  }
+  if (!placementVerification.gutterVerified) {
+    score -= 20;
+  }
+  score -= placementVerification.unexpectedTypes.length * 10;
+  return clampScore(score);
+}
+
+function computeCandidateCompositeScore(
+  placementVerification: PlacementVerificationResult,
+  placementVerificationEnabled: boolean,
+  artifactCheck: AnnotationArtifactVerificationResult,
+  photorealCheck: PhotorealismVerificationResult,
+  heuristicPhotorealCheck: HeuristicPhotorealismResult
+): { compositeScore: number; photorealCompositeScore: number; photorealPassed: boolean } {
+  const photorealCompositeScore = photorealCheck.score * 0.7 + heuristicPhotorealCheck.score * 0.3;
+  const photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
+  const artifactQualityScore = clampScore(100 - artifactCheck.score);
+  const placementQualityScore = getPlacementQualityScore(placementVerification, placementVerificationEnabled);
+
+  const baseScore = placementVerificationEnabled
+    ? placementQualityScore * 0.50 + photorealCompositeScore * 0.35 + artifactQualityScore * 0.15
+    : photorealCompositeScore * 0.72 + artifactQualityScore * 0.28;
+
+  let adjusted = baseScore;
+  if (placementVerificationEnabled && !placementVerification.verified) adjusted -= 10;
+  if (!artifactCheck.passed) adjusted -= 8;
+  if (!photorealPassed) adjusted -= 10;
+
+  return {
+    compositeScore: clampScore(adjusted),
+    photorealCompositeScore: clampScore(photorealCompositeScore),
+    photorealPassed,
+  };
+}
+
+function pickBestGenerationCandidate(candidates: GenerationCandidateEvaluation[]): GenerationCandidateEvaluation {
+  return candidates.reduce((best, candidate) => {
+    const epsilon = 0.05;
+    if (candidate.compositeScore > best.compositeScore + epsilon) return candidate;
+    if (candidate.compositeScore + epsilon < best.compositeScore) return best;
+
+    if (candidate.placementVerification.verified !== best.placementVerification.verified) {
+      return candidate.placementVerification.verified ? candidate : best;
+    }
+    if (candidate.artifactCheck.passed !== best.artifactCheck.passed) {
+      return candidate.artifactCheck.passed ? candidate : best;
+    }
+    if (candidate.artifactCheck.score !== best.artifactCheck.score) {
+      return candidate.artifactCheck.score < best.artifactCheck.score ? candidate : best;
+    }
+    return candidate.photorealCompositeScore >= best.photorealCompositeScore ? candidate : best;
+  });
+}
+
+async function evaluateGenerationCandidate(
+  generatedImageDataUri: string,
+  imageMimeType: string,
+  expectedPlacements: SpatialFixturePlacement[],
+  placementVerificationEnabled: boolean,
+  gutterLines?: GutterLine[],
+  skippedPlacementDetails?: string
+): Promise<GenerationCandidateEvaluation> {
+  const generatedBase64 = extractBase64Data(generatedImageDataUri);
+  const placementPromise: Promise<PlacementVerificationResult> = placementVerificationEnabled
+    ? verifyGeneratedImage(generatedImageDataUri, imageMimeType, expectedPlacements, gutterLines)
+    : Promise.resolve(
+      createSkippedPlacementVerification(
+        skippedPlacementDetails || 'Placement verification skipped (no spatial constraints).'
+      )
+    );
+
+  const [placementVerification, artifactCheck, photorealCheck, heuristicPhotorealCheck] = await Promise.all([
+    placementPromise,
+    verifyAnnotationArtifacts(generatedBase64, imageMimeType),
+    verifyPhotorealism(generatedBase64, imageMimeType),
+    verifyPhotorealismHeuristic(generatedBase64, imageMimeType),
+  ]);
+
+  const score = computeCandidateCompositeScore(
+    placementVerification,
+    placementVerificationEnabled,
+    artifactCheck,
+    photorealCheck,
+    heuristicPhotorealCheck
+  );
+
+  return {
+    result: generatedImageDataUri,
+    placementVerification,
+    artifactCheck,
+    photorealCheck,
+    heuristicPhotorealCheck,
+    photorealPassed: score.photorealPassed,
+    photorealCompositeScore: score.photorealCompositeScore,
+    compositeScore: score.compositeScore,
+  };
+}
+
+export async function evaluateGeneratedLightingOutput(
+  generatedImageDataUri: string,
+  imageMimeType: string,
+  expectedPlacements: SpatialFixturePlacement[] = [],
+  options?: {
+    placementVerificationEnabled?: boolean;
+    gutterLines?: GutterLine[];
+    placementSkipDetails?: string;
+  }
+): Promise<GenerationCandidateEvaluation> {
+  const placementVerificationEnabled =
+    typeof options?.placementVerificationEnabled === 'boolean'
+      ? options.placementVerificationEnabled
+      : expectedPlacements.length > 0;
+
+  return evaluateGenerationCandidate(
+    generatedImageDataUri,
+    imageMimeType,
+    expectedPlacements,
+    placementVerificationEnabled,
+    options?.gutterLines,
+    options?.placementSkipDetails
+  );
+}
+
+async function generateAndRankInitialCandidates(
+  modeLabel: string,
+  candidateCount: number,
+  generateCandidate: () => Promise<string>,
+  evaluateCandidate: (generatedImageDataUri: string, candidateIndex: number) => Promise<GenerationCandidateEvaluation>
+): Promise<GenerationCandidateEvaluation> {
+  const boundedCount = Math.max(1, Math.min(MAX_INITIAL_CANDIDATE_COUNT, candidateCount));
+  const candidates: GenerationCandidateEvaluation[] = [];
+
+  for (let i = 0; i < boundedCount; i++) {
+    const index = i + 1;
+    console.log(`[${modeLabel}] Generating candidate ${index}/${boundedCount}...`);
+    const generatedImageDataUri = await generateCandidate();
+    const evaluated = await evaluateCandidate(generatedImageDataUri, index);
+    candidates.push(evaluated);
+    console.log(
+      `[${modeLabel}] Candidate ${index}: composite ${evaluated.compositeScore.toFixed(1)} | placement ${evaluated.placementVerification.confidence.toFixed(1)} | artifacts ${evaluated.artifactCheck.score.toFixed(1)} | photoreal ${evaluated.photorealCompositeScore.toFixed(1)}`
+    );
+  }
+
+  const best = pickBestGenerationCandidate(candidates);
+  if (candidates.length > 1) {
+    const selectedIndex = candidates.indexOf(best) + 1;
+    console.log(
+      `[${modeLabel}] Selected candidate ${selectedIndex}/${candidates.length} (composite ${best.compositeScore.toFixed(1)}).`
+    );
+  }
+
+  return best;
 }
 
 /**
@@ -3294,30 +3500,46 @@ export const generateManualScene = async (
   // Pass 2: Nano Banana Pro generates the lit scene
   onStageUpdate?.('placing');
   console.log('[Pass 2] Generating lit scene with Nano Banana Pro...');
-  let result = await executeGeneration(
-    nightBase,
-    imageMimeType,
-    lockedPrompt,
-    targetRatio,
-    referenceParts.length > 0 ? referenceParts : undefined,
-    gradientImage,
-    markedImage
+  const manualPlacementVerificationEnabled = normalizedSpatialMap.placements.length > 0;
+  const manualPlacementSkipDetails = 'Placement verification skipped (no manual spatial constraints).';
+  const initialCandidateCount = INITIAL_CANDIDATE_COUNT;
+  const bestInitialCandidate = await generateAndRankInitialCandidates(
+    'Manual Mode',
+    initialCandidateCount,
+    () => executeGeneration(
+      nightBase,
+      imageMimeType,
+      lockedPrompt,
+      targetRatio,
+      referenceParts.length > 0 ? referenceParts : undefined,
+      gradientImage,
+      markedImage
+    ),
+    (candidateResult) => evaluateGenerationCandidate(
+      candidateResult,
+      imageMimeType,
+      normalizedSpatialMap.placements,
+      manualPlacementVerificationEnabled,
+      gutterLines,
+      manualPlacementSkipDetails
+    )
   );
+
+  let result = bestInitialCandidate.result;
+  let verification = bestInitialCandidate.placementVerification;
+  let artifactCheck = bestInitialCandidate.artifactCheck;
+  let photorealCheck = bestInitialCandidate.photorealCheck;
+  let heuristicPhotorealCheck = bestInitialCandidate.heuristicPhotorealCheck;
+  let photorealPassed = bestInitialCandidate.photorealPassed;
+  let artifactCheckStale = false;
+  let photorealCheckStale = false;
 
   console.log('[Pass 2] Lighting generation complete!');
-
-  // Post-generation verification (non-blocking)
-  onStageUpdate?.('verifying');
-  let verification = await verifyGeneratedImage(
-    result,
-    imageMimeType,
-    normalizedSpatialMap.placements,
-    gutterLines
-  );
   console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
 
   const hasGutterFixtures = normalizedSpatialMap.placements.some(p => p.fixtureType === 'gutter');
-  const shouldRetryVerificationFailure = !verification.verified &&
+  const shouldRetryVerificationFailure = manualPlacementVerificationEnabled &&
+    !verification.verified &&
     (hasGutterFixtures || verification.unexpectedTypes.length > 0);
 
   if (shouldRetryVerificationFailure) {
@@ -3357,6 +3579,8 @@ export const generateManualScene = async (
       ) {
         result = retryResult;
         verification = retryVerification;
+        artifactCheckStale = true;
+        photorealCheckStale = true;
       }
 
       if (verification.verified) break;
@@ -3365,7 +3589,10 @@ export const generateManualScene = async (
   }
 
   onStageUpdate?.('verifying');
-  let artifactCheck = await verifyAnnotationArtifacts(extractBase64Data(result), imageMimeType);
+  if (artifactCheckStale) {
+    artifactCheck = await verifyAnnotationArtifacts(extractBase64Data(result), imageMimeType);
+    artifactCheckStale = false;
+  }
   console.log(`[Manual Mode] Annotation artifacts: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
 
   if (!artifactCheck.passed) {
@@ -3408,6 +3635,7 @@ export const generateManualScene = async (
         result = retryResult;
         verification = retryVerification;
         artifactCheck = retryArtifactCheck;
+        photorealCheckStale = true;
       }
 
       if (artifactCheck.passed) break;
@@ -3416,9 +3644,12 @@ export const generateManualScene = async (
   }
 
   onStageUpdate?.('verifying');
-  let photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
-  let heuristicPhotorealCheck = await verifyPhotorealismHeuristic(extractBase64Data(result), imageMimeType);
-  let photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
+  if (photorealCheckStale) {
+    photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
+    heuristicPhotorealCheck = await verifyPhotorealismHeuristic(extractBase64Data(result), imageMimeType);
+    photorealCheckStale = false;
+  }
+  photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
   console.log(`[Manual Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
   console.log(
     `[Manual Mode] Photorealism heuristic: ${heuristicPhotorealCheck.passed ? 'PASSED' : 'WARNING'} - ${heuristicPhotorealCheck.details}`
@@ -3632,55 +3863,55 @@ export const generateNightSceneEnhanced = async (
   }
   const lockedPrompt = `${deepThinkResult.prompt}\n${buildPhotorealismLockAddendum()}`;
 
-  // Stage 2: Nano Banana Pro generates the image using Deep Think's prompt
-  onStageUpdate?.('generating');
-  console.log('[Enhanced Mode] Stage 2: Generating image with Nano Banana Pro...');
-  let result = await executeGeneration(
-    baseNightImage,
-    imageMimeType,
-    lockedPrompt,
-    targetRatio,
-    undefined,
-    autoGuideImage,
-    undefined
-  );
-
   const expectedPlacements = autoSpatialMap?.placements ?? [];
   const constrainedSelectedTypes = selectedFixtures.filter(type => VALID_FIXTURE_TYPES.has(type));
   const constrainedPlacementTypes = new Set(expectedPlacements.map(p => p.fixtureType));
   const hasCoverageForConstrainedTypes = constrainedSelectedTypes.every(type => constrainedPlacementTypes.has(type));
   const placementVerificationEnabled = expectedPlacements.length > 0 && hasCoverageForConstrainedTypes;
+  const placementSkipDetails = placementVerificationEnabled
+    ? 'Placement verification pending.'
+    : 'Placement verification skipped (no spatial constraints).';
+
+  // Stage 2: Nano Banana Pro generates the image using Deep Think's prompt
+  onStageUpdate?.('generating');
+  console.log('[Enhanced Mode] Stage 2: Generating image with Nano Banana Pro...');
+  const bestInitialCandidate = await generateAndRankInitialCandidates(
+    'Enhanced Mode',
+    INITIAL_CANDIDATE_COUNT,
+    () => executeGeneration(
+      baseNightImage,
+      imageMimeType,
+      lockedPrompt,
+      targetRatio,
+      undefined,
+      autoGuideImage,
+      undefined
+    ),
+    (candidateResult) => evaluateGenerationCandidate(
+      candidateResult,
+      imageMimeType,
+      expectedPlacements,
+      placementVerificationEnabled,
+      autoGutterLines,
+      placementSkipDetails
+    )
+  );
+
+  let result = bestInitialCandidate.result;
+  let verification = bestInitialCandidate.placementVerification;
+  let artifactCheck = bestInitialCandidate.artifactCheck;
+  let photorealCheck = bestInitialCandidate.photorealCheck;
+  let heuristicPhotorealCheck = bestInitialCandidate.heuristicPhotorealCheck;
+  let photorealPassed = bestInitialCandidate.photorealPassed;
+  let artifactCheckStale = false;
+  let photorealCheckStale = false;
+
   if (!placementVerificationEnabled) {
     console.warn(
       '[Enhanced Mode] Placement verification skipped: auto constraints are incomplete for selected fixture types.'
     );
   }
-  let verification: {
-    verified: boolean;
-    confidence: number;
-    details: string;
-    gutterVerified: boolean;
-    unexpectedTypes: string[];
-  } = {
-    verified: !placementVerificationEnabled,
-    confidence: placementVerificationEnabled ? 0 : 100,
-    details: placementVerificationEnabled
-      ? 'Placement verification pending.'
-      : 'Placement verification skipped (no spatial constraints).',
-    gutterVerified: true,
-    unexpectedTypes: [],
-  };
-
-  onStageUpdate?.('validating');
-  if (placementVerificationEnabled) {
-    verification = await verifyGeneratedImage(
-      result,
-      imageMimeType,
-      expectedPlacements,
-      autoGutterLines
-    );
-    console.log(`[Enhanced Mode] Placement verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
-  }
+  console.log(`[Enhanced Mode] Placement verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
 
   if (placementVerificationEnabled && !verification.verified) {
     for (let attempt = 1; attempt <= MAX_GUTTER_RETRY_ATTEMPTS; attempt++) {
@@ -3717,6 +3948,8 @@ export const generateNightSceneEnhanced = async (
       ) {
         result = retryResult;
         verification = retryVerification;
+        artifactCheckStale = true;
+        photorealCheckStale = true;
       }
 
       if (verification.verified) break;
@@ -3725,7 +3958,10 @@ export const generateNightSceneEnhanced = async (
   }
 
   onStageUpdate?.('validating');
-  let artifactCheck = await verifyAnnotationArtifacts(extractBase64Data(result), imageMimeType);
+  if (artifactCheckStale) {
+    artifactCheck = await verifyAnnotationArtifacts(extractBase64Data(result), imageMimeType);
+    artifactCheckStale = false;
+  }
   console.log(`[Enhanced Mode] Annotation artifacts: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
 
   if (!artifactCheck.passed) {
@@ -3766,6 +4002,7 @@ export const generateNightSceneEnhanced = async (
         result = retryResult;
         verification = retryVerification;
         artifactCheck = retryArtifactCheck;
+        photorealCheckStale = true;
       }
 
       if (artifactCheck.passed) break;
@@ -3774,9 +4011,12 @@ export const generateNightSceneEnhanced = async (
   }
 
   onStageUpdate?.('validating');
-  let photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
-  let heuristicPhotorealCheck = await verifyPhotorealismHeuristic(extractBase64Data(result), imageMimeType);
-  let photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
+  if (photorealCheckStale) {
+    photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
+    heuristicPhotorealCheck = await verifyPhotorealismHeuristic(extractBase64Data(result), imageMimeType);
+    photorealCheckStale = false;
+  }
+  photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
   console.log(`[Enhanced Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
   console.log(
     `[Enhanced Mode] Photorealism heuristic: ${heuristicPhotorealCheck.passed ? 'PASSED' : 'WARNING'} - ${heuristicPhotorealCheck.details}`

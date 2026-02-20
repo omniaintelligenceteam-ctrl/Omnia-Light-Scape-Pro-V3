@@ -1,12 +1,13 @@
 import type { GutterLine } from '../types/fixtures';
 
 const DEFAULT_MAX_LINES = 3;
+const SAM_DETECTOR_URL = import.meta.env.VITE_GUTTER_SAM_URL as string | undefined;
 const REMOTE_DETECTOR_URL = import.meta.env.VITE_GUTTER_DETECTOR_URL as string | undefined;
 const DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT = 0.6;
 
 export interface GutterDetectionResult {
   lines: GutterLine[];
-  source: 'remote' | 'heuristic';
+  source: 'sam' | 'remote' | 'heuristic';
 }
 
 interface RawGutterLine {
@@ -25,15 +26,112 @@ function makeLineId(prefix: string, index: number): string {
   return `${prefix}_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function parseFiniteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function toPercent(value: number): number {
+  return Math.abs(value) <= 1 ? value * 100 : value;
+}
+
+function parsePoint(value: unknown): { x: number; y: number } | null {
+  if (!value || typeof value !== 'object') return null;
+  const point = value as Record<string, unknown>;
+  const x = parseFiniteNumber(point.x);
+  const y = parseFiniteNumber(point.y);
+  if (x === null || y === null) return null;
+  return { x, y };
+}
+
+function parseRawLine(value: unknown): RawGutterLine | null {
+  if (!value || typeof value !== 'object') return null;
+  const line = value as Record<string, unknown>;
+
+  const startX = parseFiniteNumber(line.startX);
+  const startY = parseFiniteNumber(line.startY);
+  const endX = parseFiniteNumber(line.endX);
+  const endY = parseFiniteNumber(line.endY);
+  if (startX !== null && startY !== null && endX !== null && endY !== null) {
+    return {
+      id: typeof line.id === 'string' ? line.id : undefined,
+      startX,
+      startY,
+      endX,
+      endY,
+    };
+  }
+
+  const x1 = parseFiniteNumber(line.x1);
+  const y1 = parseFiniteNumber(line.y1);
+  const x2 = parseFiniteNumber(line.x2);
+  const y2 = parseFiniteNumber(line.y2);
+  if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
+    return {
+      id: typeof line.id === 'string' ? line.id : undefined,
+      startX: x1,
+      startY: y1,
+      endX: x2,
+      endY: y2,
+    };
+  }
+
+  const startPoint = parsePoint(line.start);
+  const endPoint = parsePoint(line.end);
+  if (startPoint && endPoint) {
+    return {
+      id: typeof line.id === 'string' ? line.id : undefined,
+      startX: startPoint.x,
+      startY: startPoint.y,
+      endX: endPoint.x,
+      endY: endPoint.y,
+    };
+  }
+
+  if (Array.isArray(line.points) && line.points.length >= 2) {
+    const first = parsePoint(line.points[0]);
+    const last = parsePoint(line.points[line.points.length - 1]);
+    if (first && last) {
+      return {
+        id: typeof line.id === 'string' ? line.id : undefined,
+        startX: first.x,
+        startY: first.y,
+        endX: last.x,
+        endY: last.y,
+      };
+    }
+  }
+
+  return null;
+}
+
+function extractRawLines(payload: unknown): RawGutterLine[] {
+  if (!payload) return [];
+
+  const candidates: unknown[] = [];
+  if (Array.isArray(payload)) {
+    candidates.push(...payload);
+  } else if (typeof payload === 'object') {
+    const typed = payload as Record<string, unknown>;
+    if (Array.isArray(typed.lines)) candidates.push(...typed.lines);
+    if (Array.isArray(typed.gutterLines)) candidates.push(...typed.gutterLines);
+    if (Array.isArray(typed.segments)) candidates.push(...typed.segments);
+    if (Array.isArray(typed.results)) candidates.push(...typed.results);
+  }
+
+  return candidates
+    .map(parseRawLine)
+    .filter((line): line is RawGutterLine => !!line);
+}
+
 function normalizeLines(lines: RawGutterLine[], prefix: string, maxLines: number): GutterLine[] {
   return lines
     .slice(0, maxLines)
     .map((line, index) => ({
       id: line.id || makeLineId(prefix, index),
-      startX: clampPercent(line.startX),
-      startY: clampPercent(line.startY),
-      endX: clampPercent(line.endX),
-      endY: clampPercent(line.endY),
+      startX: clampPercent(toPercent(line.startX)),
+      startY: clampPercent(toPercent(line.startY)),
+      endX: clampPercent(toPercent(line.endX)),
+      endY: clampPercent(toPercent(line.endY)),
       mountDepthPercent: DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT,
     }))
     .filter(line => {
@@ -96,12 +194,42 @@ async function detectWithRemoteModel(
   }
 
   const payload = await response.json();
-  const rawLines = (Array.isArray(payload) ? payload : payload?.lines) as RawGutterLine[] | undefined;
-  if (!rawLines || rawLines.length === 0) {
+  const rawLines = extractRawLines(payload);
+  if (rawLines.length === 0) {
     return [];
   }
 
   return normalizeLines(rawLines, 'gutter_remote', maxLines);
+}
+
+async function detectWithSamModel(
+  imageBase64: string,
+  mimeType: string,
+  maxLines: number
+): Promise<GutterLine[]> {
+  if (!SAM_DETECTOR_URL) return [];
+
+  const response = await fetch(SAM_DETECTOR_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      imageBase64,
+      mimeType,
+      maxLines,
+      feature: 'gutter_lines',
+      detector: 'sam',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`SAM gutter detector failed (${response.status})`);
+  }
+
+  const payload = await response.json();
+  const rawLines = extractRawLines(payload);
+  if (rawLines.length === 0) return [];
+
+  return normalizeLines(rawLines, 'gutter_sam', maxLines);
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -254,6 +382,18 @@ export async function suggestGutterLines(
   maxLines: number = DEFAULT_MAX_LINES
 ): Promise<GutterDetectionResult> {
   const boundedMaxLines = Math.max(1, Math.min(10, maxLines));
+
+  if (SAM_DETECTOR_URL) {
+    try {
+      const { base64, mimeType } = await dataUrlFromImageSrc(imageSrc);
+      const samLines = await detectWithSamModel(base64, mimeType, boundedMaxLines);
+      if (samLines.length > 0) {
+        return { lines: samLines, source: 'sam' };
+      }
+    } catch (error) {
+      console.warn('[GutterDetection] SAM detector failed, falling back to remote/heuristic detection:', error);
+    }
+  }
 
   if (REMOTE_DETECTOR_URL) {
     try {
