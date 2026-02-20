@@ -28,8 +28,7 @@ const MODEL_NAME = 'gemini-3-pro-image-preview';
 // Timeout for API calls (2 minutes)
 const API_TIMEOUT_MS = 120000;
 
-// SOFFIT_HIDDEN removed — soffit is handled via "complete invisibility" approach
-// (not mentioning soffit at all when it's not selected)
+// Non-selected fixture types, including soffit, are explicitly forbidden in prompt assembly.
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DEEP THINK OUTPUT TYPE
@@ -1192,11 +1191,9 @@ const buildDirectPrompt = (
   }
 
   // Add PROHIBITION section for non-selected fixture types
-  // IMPORTANT: Skip soffit entirely - if we don't mention it, AI can't generate it
-  // This is the "complete invisibility" approach for soffit control
   prompt += '=== PROHIBITED FIXTURES (MUST REMAIN DARK) ===\n\n';
   const nonSelectedFixtures = FIXTURE_TYPES.filter(f =>
-    !selectedFixtures.includes(f.id) && f.id !== 'soffit'
+    !selectedFixtures.includes(f.id)
   );
   if (nonSelectedFixtures.length > 0) {
     nonSelectedFixtures.forEach(fixture => {
@@ -1526,7 +1523,6 @@ function buildDeepThinkInput(
   // Non-selected fixture types (complete prohibition)
   fixtureReference += '### PROHIBITED FIXTURES (MUST NOT APPEAR)\n\n';
   FIXTURE_TYPES.forEach(ft => {
-    if (ft.id === 'soffit' && !selectedFixtures.includes('soffit')) return; // invisibility approach
     if (!selectedFixtures.includes(ft.id)) {
       fixtureReference += `- ${ft.label}: FORBIDDEN. ${ft.negativePrompt}\n`;
     }
@@ -1998,6 +1994,60 @@ function isGutterLikeType(type: string): boolean {
   return normalized.includes('gutter') || (normalized.includes('roof') && normalized.includes('up'));
 }
 
+function normalizeDetectedFixtureType(type: string): string | null {
+  const normalized = (type || '').toLowerCase();
+  if (!normalized) return null;
+
+  if (
+    normalized.includes('soffit') ||
+    normalized.includes('eave') ||
+    normalized.includes('downlight')
+  ) return 'soffit';
+  if (
+    normalized.includes('gutter') ||
+    (normalized.includes('roof') && normalized.includes('up'))
+  ) return 'gutter';
+  if (normalized.includes('path') || normalized.includes('walk')) return 'path';
+  if (normalized.includes('well')) return 'well';
+  if (normalized.includes('hardscape') || normalized.includes('step')) return 'hardscape';
+  if (normalized.includes('core') || normalized.includes('drill')) return 'coredrill';
+  if (normalized.includes('holiday') || normalized.includes('string')) return 'holiday';
+  if (normalized.includes('up')) return 'up';
+
+  return null;
+}
+
+function evaluateUnexpectedFixtureTypes(
+  expectedPlacements: SpatialFixturePlacement[],
+  detectedFixtures: DetectedFixture[]
+): { verified: boolean; details: string; unexpectedTypes: string[] } {
+  const expectedTypes = new Set(expectedPlacements.map(p => p.fixtureType));
+  const unexpected = new Set<string>();
+
+  for (const fixture of detectedFixtures) {
+    const canonical = normalizeDetectedFixtureType(fixture.type);
+    if (!canonical) continue;
+    if (!expectedTypes.has(canonical)) {
+      unexpected.add(canonical);
+    }
+  }
+
+  const unexpectedTypes = [...unexpected];
+  if (unexpectedTypes.length > 0) {
+    return {
+      verified: false,
+      details: `Unexpected fixture types detected: ${unexpectedTypes.join(', ')}.`,
+      unexpectedTypes,
+    };
+  }
+
+  return {
+    verified: true,
+    details: 'No unexpected fixture types detected.',
+    unexpectedTypes: [],
+  };
+}
+
 function evaluateGutterVerification(
   expectedPlacements: SpatialFixturePlacement[],
   detectedFixtures: DetectedFixture[],
@@ -2084,7 +2134,7 @@ async function verifyGeneratedImage(
   imageMimeType: string,
   expectedPlacements: SpatialFixturePlacement[],
   gutterLines?: GutterLine[]
-): Promise<{ verified: boolean; confidence: number; details: string; gutterVerified: boolean }> {
+): Promise<{ verified: boolean; confidence: number; details: string; gutterVerified: boolean; unexpectedTypes: string[] }> {
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
@@ -2124,7 +2174,13 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.warn('[Manual Mode] Verification: Could not parse response as JSON');
-      return { verified: false, confidence: 0, details: 'Could not parse verification response', gutterVerified: false };
+      return {
+        verified: false,
+        confidence: 0,
+        details: 'Could not parse verification response',
+        gutterVerified: false,
+        unexpectedTypes: [],
+      };
     }
 
     const parsed = JSON.parse(jsonMatch[0]) as { count: number; fixtures: DetectedFixture[]; confidence: number };
@@ -2133,14 +2189,15 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
     const countMatch = actualCount === expectedCount;
     const fixtures = Array.isArray(parsed.fixtures) ? parsed.fixtures : [];
     const gutterVerification = evaluateGutterVerification(expectedPlacements, fixtures, gutterLines);
-    const verified = countMatch && gutterVerification.verified;
+    const typeVerification = evaluateUnexpectedFixtureTypes(expectedPlacements, fixtures);
+    const verified = countMatch && gutterVerification.verified && typeVerification.verified;
 
-    const details = `Expected ${expectedCount} fixtures, found ${actualCount}. Confidence: ${confidence}%. Types expected: [${expectedTypes.join(', ')}]. ${gutterVerification.details}`;
+    const details = `Expected ${expectedCount} fixtures, found ${actualCount}. Confidence: ${confidence}%. Types expected: [${expectedTypes.join(', ')}]. ${gutterVerification.details} ${typeVerification.details}`;
 
     if (verified) {
-      console.log(`[Manual Mode] Verification PASSED: ${actualCount}/${expectedCount} fixtures confirmed (${confidence}% confidence). ${gutterVerification.details}`);
+      console.log(`[Manual Mode] Verification PASSED: ${actualCount}/${expectedCount} fixtures confirmed (${confidence}% confidence). ${gutterVerification.details} ${typeVerification.details}`);
     } else {
-      console.warn(`[Manual Mode] Verification WARNING: Expected ${expectedCount} fixtures but found ${actualCount} (${confidence}% confidence). ${gutterVerification.details}`);
+      console.warn(`[Manual Mode] Verification WARNING: Expected ${expectedCount} fixtures but found ${actualCount} (${confidence}% confidence). ${gutterVerification.details} ${typeVerification.details}`);
       if (fixtures) {
         fixtures.forEach((f, i) => {
           console.warn(`  Found fixture ${i + 1}: ${f.type} at [${f.x}%, ${f.y}%]`);
@@ -2148,10 +2205,22 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
       }
     }
 
-    return { verified, confidence, details, gutterVerified: gutterVerification.verified };
+    return {
+      verified,
+      confidence,
+      details,
+      gutterVerified: gutterVerification.verified,
+      unexpectedTypes: typeVerification.unexpectedTypes,
+    };
   } catch (error) {
     console.warn('[Manual Mode] Verification failed (non-blocking):', error);
-    return { verified: false, confidence: 0, details: `Verification error: ${error}`, gutterVerified: false };
+    return {
+      verified: false,
+      confidence: 0,
+      details: `Verification error: ${error}`,
+      gutterVerified: false,
+      unexpectedTypes: [],
+    };
   }
 }
 
@@ -2217,34 +2286,46 @@ REQUIREMENTS:
 function buildGutterCorrectionPrompt(
   basePrompt: string,
   placements: SpatialFixturePlacement[],
-  gutterLines?: GutterLine[]
+  gutterLines?: GutterLine[],
+  unexpectedTypes: string[] = []
 ): string {
   const gutterPlacements = placements
     .filter(p => p.fixtureType === 'gutter')
     .sort((a, b) => a.horizontalPosition - b.horizontalPosition);
 
-  if (gutterPlacements.length === 0) return basePrompt;
+  if (gutterPlacements.length === 0 && unexpectedTypes.length === 0) return basePrompt;
 
   let correction = '\n\n=== CORRECTION PASS: GUTTER PLACEMENT LOCK ===\n';
-  correction += 'The previous output failed gutter placement verification. Fix gutter placement exactly without changing architecture.\n';
+  correction += 'The previous output failed verification. Fix fixture compliance exactly without changing architecture.\n';
   correction += 'MANDATORY RULES:\n';
-  correction += '- Every gutter fixture must sit ON the gutter line (not roof shingles, not soffit underside, not wall face).\n';
-  correction += '- Every gutter fixture beam must point UPWARD only.\n';
   correction += '- Keep exact fixture count and preserve all non-light pixels.\n';
   correction += '- Do not add or remove any fixture type.\n';
-  correction += 'EXPECTED GUTTER FIXTURES (exact coordinates):\n';
-  gutterPlacements.forEach((p, i) => {
-    correction += `- GUTTER ${i + 1}: [${p.horizontalPosition.toFixed(2)}%, ${p.verticalPosition.toFixed(2)}%]\n`;
-  });
-
-  if (gutterLines && gutterLines.length > 0) {
-    correction += 'REFERENCE GUTTER LINES:\n';
-    gutterLines.forEach((line, i) => {
-      correction += `- LINE ${i + 1}: [${line.startX.toFixed(2)}%, ${line.startY.toFixed(2)}%] -> [${line.endX.toFixed(2)}%, ${line.endY.toFixed(2)}%]\n`;
+  if (unexpectedTypes.length > 0) {
+    correction += 'REMOVE UNEXPECTED FIXTURE TYPES:\n';
+    unexpectedTypes.forEach(type => {
+      correction += `- Remove ALL ${type.toUpperCase()} fixtures and light effects.\n`;
     });
+    if (unexpectedTypes.includes('soffit')) {
+      correction += '- Soffits/eaves must be pitch black with zero downlighting.\n';
+    }
   }
+  if (gutterPlacements.length > 0) {
+    correction += '- Every gutter fixture must sit ON the gutter line (not roof shingles, not soffit underside, not wall face).\n';
+    correction += '- Every gutter fixture beam must point UPWARD only.\n';
+    correction += 'EXPECTED GUTTER FIXTURES (exact coordinates):\n';
+    gutterPlacements.forEach((p, i) => {
+      correction += `- GUTTER ${i + 1}: [${p.horizontalPosition.toFixed(2)}%, ${p.verticalPosition.toFixed(2)}%]\n`;
+    });
 
-  correction += 'FINAL CHECK: All gutter fixtures must be within 4% of expected coordinates and remain on the gutter line.\n';
+    if (gutterLines && gutterLines.length > 0) {
+      correction += 'REFERENCE GUTTER LINES:\n';
+      gutterLines.forEach((line, i) => {
+        correction += `- LINE ${i + 1}: [${line.startX.toFixed(2)}%, ${line.startY.toFixed(2)}%] -> [${line.endX.toFixed(2)}%, ${line.endY.toFixed(2)}%]\n`;
+      });
+    }
+    correction += 'FINAL CHECK: All gutter fixtures must be within 4% of expected coordinates and remain on the gutter line.\n';
+  }
+  correction += 'FINAL CHECK: Output must match selected fixture types only and contain zero unselected fixture types.\n';
   return basePrompt + correction;
 }
 
@@ -2312,7 +2393,7 @@ export const generateManualScene = async (
   if (hasGradients) {
     console.log(`[Manual Mode] Painting directional light gradients for ${normalizedGuideFixtures.fixtures!.length} fixtures...`);
     gradientImage = await paintLightGradients(
-      nightBase,
+      imageBase64,
       normalizedGuideFixtures.fixtures!,
       imageMimeType,
       gutterLines
@@ -2382,14 +2463,20 @@ export const generateManualScene = async (
   console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
 
   const hasGutterFixtures = normalizedSpatialMap.placements.some(p => p.fixtureType === 'gutter');
-  if (hasGutterFixtures && !verification.verified) {
+  const shouldRetryVerificationFailure = !verification.verified &&
+    (hasGutterFixtures || verification.unexpectedTypes.length > 0);
+
+  if (shouldRetryVerificationFailure) {
     for (let attempt = 1; attempt <= MAX_GUTTER_RETRY_ATTEMPTS; attempt++) {
-      console.warn(`[Manual Mode] Gutter verification failed, running correction retry ${attempt}/${MAX_GUTTER_RETRY_ATTEMPTS}...`);
+      console.warn(
+        `[Manual Mode] Verification failed (unexpected: ${verification.unexpectedTypes.join(', ') || 'none'}), running correction retry ${attempt}/${MAX_GUTTER_RETRY_ATTEMPTS}...`
+      );
       onStageUpdate?.('placing');
       const correctionPrompt = buildGutterCorrectionPrompt(
         deepThinkResult.prompt,
         normalizedSpatialMap.placements,
-        gutterLines
+        gutterLines,
+        verification.unexpectedTypes
       );
       const retryResult = await executeGeneration(
         nightBase,
@@ -2409,7 +2496,11 @@ export const generateManualScene = async (
         gutterLines
       );
 
-      if (retryVerification.verified || retryVerification.confidence >= verification.confidence) {
+      if (
+        retryVerification.verified ||
+        retryVerification.unexpectedTypes.length < verification.unexpectedTypes.length ||
+        retryVerification.confidence >= verification.confidence
+      ) {
         result = retryResult;
         verification = retryVerification;
       }
