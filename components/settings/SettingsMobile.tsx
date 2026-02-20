@@ -4,7 +4,7 @@ import {
   User, Palette, Bell, DollarSign, Package, Lightbulb, CreditCard,
   HelpCircle, LogOut, Loader2, Upload, Check, Moon,
   Mail, MessageCircle, Sparkles, Volume2, VolumeX, ExternalLink, Plus, Trash2,
-  X, ChevronRight, Download, FileJson, Clock, Target, MapPin, Users, UserPlus, BellRing
+  X, ChevronRight, Download, FileJson, Clock, Target, MapPin, Users, UserPlus, BellRing, BarChart3
 } from 'lucide-react';
 import { useSuccessToast, useErrorToast } from '../Toast';
 import { ToggleRow } from './ui/SettingsToggle';
@@ -21,6 +21,7 @@ import { TeamSection } from './TeamSection';
 import { useOrganization } from '../../hooks/useOrganization';
 import { InventoryView } from '../InventoryView';
 import { DunningSection } from './sections';
+import { LightingQaSection } from './sections/LightingQaSection';
 
 // Menu item button component
 const MenuButton: React.FC<{
@@ -266,6 +267,14 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
           title="Lighting Defaults"
           description="Color temp & beam angle"
           onClick={() => setActiveModal('lighting')}
+        />
+
+        {/* Lighting QA */}
+        <MenuButton
+          icon={BarChart3}
+          title="Lighting QA"
+          description="Batch realism + placement scoring"
+          onClick={() => setActiveModal('lighting-qa')}
         />
 
         {/* Follow-ups */}
@@ -1305,6 +1314,15 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
         title="Payment Reminders"
       >
         <DunningSection />
+      </FullScreenModal>
+
+      {/* Lighting QA Modal */}
+      <FullScreenModal
+        isOpen={activeModal === 'lighting-qa'}
+        onClose={() => setActiveModal(null)}
+        title="Lighting QA"
+      >
+        <LightingQaSection />
       </FullScreenModal>
 
       {/* Locations Modal */}

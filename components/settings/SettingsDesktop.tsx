@@ -21,6 +21,7 @@ import {
   DunningSection,
   SubscriptionSection,
   AnalyticsSection,
+  LightingQaSection,
   SupportSection,
   ReportsSection
 } from './sections';
@@ -122,6 +123,9 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
     payoutsEnabled?: boolean;
   }>({ connected: false, status: null });
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  const sectionTitle: string = activeSection === 'lighting-qa'
+    ? 'Lighting QA'
+    : activeSection.replace(/-/g, ' ');
 
   // Fetch Stripe Connect status on mount
   useEffect(() => {
@@ -190,7 +194,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
         {/* Header */}
         <div className="sticky top-0 z-20 bg-[#050505]/90 backdrop-blur-xl border-b border-white/5">
           <div className="flex items-center justify-between px-8 py-5">
-            <h1 className="text-2xl font-bold text-white capitalize">{activeSection}</h1>
+            <h1 className="text-2xl font-bold text-white capitalize">{sectionTitle}</h1>
             <div className="flex items-center gap-3">
               {onSaveSettings && (
                 <motion.button
@@ -209,7 +213,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className={`p-8 pb-24 ${activeSection === 'analytics' ? 'max-w-7xl' : 'max-w-3xl'}`}>
+        <div className={`p-8 pb-24 ${(activeSection === 'analytics' || activeSection === 'lighting-qa') ? 'max-w-7xl' : 'max-w-3xl'}`}>
           <AnimatePresence mode="wait">
             {/* Profile Section */}
             {activeSection === 'profile' && profile && (
@@ -296,6 +300,11 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
                 beamAngle={beamAngle}
                 onBeamAngleChange={onBeamAngleChange}
               />
+            )}
+
+            {/* Lighting QA Section */}
+            {activeSection === 'lighting-qa' && (
+              <LightingQaSection />
             )}
 
             {/* Follow-ups Section */}

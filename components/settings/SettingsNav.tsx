@@ -13,6 +13,7 @@ export type SettingsSection =
   | 'catalog'
   | 'inventory'
   | 'lighting'
+  | 'lighting-qa'
   | 'followups'
   | 'dunning'
   | 'goals'
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { id: 'catalog', label: 'Catalog', icon: Package, group: 'Business' },
   { id: 'inventory', label: 'Inventory', icon: Warehouse, group: 'Business' },
   { id: 'lighting', label: 'Lighting', icon: Lightbulb, group: 'Business' },
+  { id: 'lighting-qa', label: 'Lighting QA', icon: BarChart3, group: 'Business' },
   { id: 'followups', label: 'Follow-ups', icon: Clock, group: 'Business' },
   { id: 'dunning', label: 'Reminders', icon: BellRing, group: 'Business' },
   { id: 'goals', label: 'Goals', icon: Target, group: 'Business' },
