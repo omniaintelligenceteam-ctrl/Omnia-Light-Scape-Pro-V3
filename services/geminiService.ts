@@ -1641,7 +1641,7 @@ export async function deepThinkGeneratePrompt(
   return withRetry(async () => {
     const response = await withTimeout(
       ai.models.generateContent({
-        model: ANALYSIS_MODEL_NAME, // gemini-3-pro-preview
+        model: ANALYSIS_MODEL_NAME, // gemini-3.1-pro-preview
         contents: { parts: imageParts },
         config: {
           thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
@@ -1867,7 +1867,7 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
 {"count": <number>, "fixtures": [{"type": "<type>", "x": <number>, "y": <number>}], "confidence": <0-100>}`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: ANALYSIS_MODEL_NAME,
       contents: {
         parts: [
           { inlineData: { data: generatedImageBase64, mimeType: imageMimeType } },
