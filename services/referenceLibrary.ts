@@ -16,64 +16,64 @@ type GeminiPart = { inlineData: { data: string; mimeType: string } } | { text: s
 
 export interface FixtureReference {
   type: string;
-  goodImage: string | null;
-  badImage: string | null;
+  goodImages: string[];
+  badImages: string[];
   goodDescription: string;
   badDescription: string;
 }
 
 /**
  * Manifest of reference images per fixture type.
- * Set goodImage/badImage to the filename in public/references/ when you have examples.
- * Leave as null if no example exists yet for that type.
+ * Add filenames to goodImages/badImages arrays for each type.
+ * Leave arrays empty if no examples exist yet for that type.
  */
 export const FIXTURE_REFERENCES: FixtureReference[] = [
   {
     type: 'UP',
-    goodImage: null,
-    badImage: null,
+    goodImages: [],
+    badImages: [],
     goodDescription: 'Ground-mounted fixture casting a warm beam upward along the wall surface, illuminating architectural features from below',
     badDescription: 'Light mounted on the wall instead of ground, or beam going sideways/down instead of upward',
   },
   {
     type: 'GUTTER',
-    goodImage: null,
-    badImage: null,
+    goodImages: ['gutter_good_01.png', 'gutter_good_02.png'],
+    badImages: ['gutter_bad_01.png', 'gutter_bad_02.png'],
     goodDescription: 'Small light sitting inside the gutter channel, warm beam aimed upward along the wall and roofline edge',
-    badDescription: 'Light placed on the wall surface or under the soffit instead of inside the gutter trough',
+    badDescription: 'Light placed on the wall surface or under the soffit instead of inside the gutter trough, or beam shining DOWNWARD instead of upward',
   },
   {
     type: 'PATH',
-    goodImage: null,
-    badImage: null,
+    goodImages: [],
+    badImages: [],
     goodDescription: 'Low bollard-style fixture standing on the ground beside a walkway, casting a soft downward pool of light on the path surface',
     badDescription: 'Light floating above the ground or placed in garden beds instead of along the path edge',
   },
   {
     type: 'WELL',
-    goodImage: null,
-    badImage: null,
+    goodImages: [],
+    badImages: [],
     goodDescription: 'In-ground well light flush with soil surface, beam aimed upward into tree canopy creating dramatic uplighting through branches',
     badDescription: 'Light mounted on the tree trunk or placed above ground instead of recessed flush into the soil',
   },
   {
     type: 'HARDSCAPE',
-    goodImage: null,
-    badImage: null,
+    goodImages: [],
+    badImages: [],
     goodDescription: 'Small linear light tucked under a step tread or hardscape ledge, casting a subtle wash downward onto the riser face below',
     badDescription: 'Light placed on top of the step or mounted on a vertical surface instead of under the tread overhang',
   },
   {
     type: 'SOFFIT',
-    goodImage: null,
-    badImage: null,
+    goodImages: [],
+    badImages: [],
     goodDescription: 'Recessed downlight in the soffit/overhang, beam aimed straight down illuminating the area below the eave',
     badDescription: 'Light mounted on the wall face or pointing upward instead of recessed in the soffit pointing down',
   },
   {
     type: 'COREDRILL',
-    goodImage: null,
-    badImage: null,
+    goodImages: [],
+    badImages: [],
     goodDescription: 'Flush-mounted light drilled into concrete/hardscape surface, small circular beam aimed upward from the ground plane',
     badDescription: 'Light sitting on top of concrete instead of flush-recessed, or confused with a standard uplight',
   },
@@ -81,6 +81,14 @@ export const FIXTURE_REFERENCES: FixtureReference[] = [
 
 // Cache loaded images to avoid re-fetching during a session
 const imageCache = new Map<string, string>();
+
+/** Infer MIME type from filename extension */
+function getMimeType(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  return 'image/jpeg';
+}
 
 /**
  * Get references that match the selected fixture types.
@@ -94,7 +102,7 @@ export function getReferencesForTypes(types: string[]): FixtureReference[] {
     ref => normalizedTypes.includes(ref.type)
   );
 
-  // Cap at 5 types (10 images max)
+  // Cap at 5 types
   return matched.slice(0, 5);
 }
 
@@ -146,18 +154,20 @@ export async function buildReferenceParts(types: string[]): Promise<GeminiPart[]
   });
 
   for (const ref of refs) {
-    // Good example
-    if (ref.goodImage) {
-      try {
-        const goodBase64 = await loadReferenceImage(ref.goodImage);
-        parts.push({
-          text: `### ${ref.type} LIGHT — CORRECT\n${ref.goodDescription}:\n`,
-        });
-        parts.push({
-          inlineData: { data: goodBase64, mimeType: 'image/jpeg' },
-        });
-      } catch (err) {
-        console.warn(`[ReferenceLibrary] Failed to load good image for ${ref.type}:`, err);
+    // Good examples
+    if (ref.goodImages.length > 0) {
+      parts.push({
+        text: `### ${ref.type} LIGHT — CORRECT\n${ref.goodDescription}:\n`,
+      });
+      for (const img of ref.goodImages) {
+        try {
+          const base64 = await loadReferenceImage(img);
+          parts.push({
+            inlineData: { data: base64, mimeType: getMimeType(img) },
+          });
+        } catch (err) {
+          console.warn(`[ReferenceLibrary] Failed to load good image ${img} for ${ref.type}:`, err);
+        }
       }
     } else if (ref.goodDescription) {
       parts.push({
@@ -165,18 +175,20 @@ export async function buildReferenceParts(types: string[]): Promise<GeminiPart[]
       });
     }
 
-    // Bad example
-    if (ref.badImage) {
-      try {
-        const badBase64 = await loadReferenceImage(ref.badImage);
-        parts.push({
-          text: `### ${ref.type} LIGHT — INCORRECT (DO NOT do this)\n${ref.badDescription}:\n`,
-        });
-        parts.push({
-          inlineData: { data: badBase64, mimeType: 'image/jpeg' },
-        });
-      } catch (err) {
-        console.warn(`[ReferenceLibrary] Failed to load bad image for ${ref.type}:`, err);
+    // Bad examples
+    if (ref.badImages.length > 0) {
+      parts.push({
+        text: `### ${ref.type} LIGHT — INCORRECT (DO NOT do this)\n${ref.badDescription}:\n`,
+      });
+      for (const img of ref.badImages) {
+        try {
+          const base64 = await loadReferenceImage(img);
+          parts.push({
+            inlineData: { data: base64, mimeType: getMimeType(img) },
+          });
+        } catch (err) {
+          console.warn(`[ReferenceLibrary] Failed to load bad image ${img} for ${ref.type}:`, err);
+        }
       }
     } else if (ref.badDescription) {
       parts.push({
