@@ -155,7 +155,8 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
   techniciansLoading = false,
   onCreateTechnician,
   onUpdateTechnician,
-  onDeleteTechnician
+  onDeleteTechnician,
+  qaRecentGenerations = []
 }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [showAIChat, setShowAIChat] = useState(false);
@@ -1322,7 +1323,7 @@ export const SettingsMobile: React.FC<SettingsViewProps> = ({
         onClose={() => setActiveModal(null)}
         title="Lighting QA"
       >
-        <LightingQaSection />
+        <LightingQaSection recentGenerations={qaRecentGenerations} />
       </FullScreenModal>
 
       {/* Locations Modal */}

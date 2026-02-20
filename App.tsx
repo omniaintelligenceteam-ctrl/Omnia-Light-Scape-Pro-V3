@@ -70,7 +70,7 @@ import { analyzeWithClaude } from './services/claudeService';
 // IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal, Crosshair } from 'lucide-react';
 import { FIXTURE_TYPES, VISIBLE_FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis, SpatialFixturePlacement } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -450,6 +450,9 @@ const App: React.FC = () => {
     id: string;
     image: string;
     timestamp: number;
+    placementMode?: 'auto' | 'manual';
+    expectedPlacements?: SpatialFixturePlacement[];
+    gutterLines?: GutterLine[];
     settings?: {
       selectedFixtures: string[];
       fixtureSubOptions: Record<string, string[]>;
@@ -2008,6 +2011,9 @@ const App: React.FC = () => {
         id: Date.now().toString(),
         image: result,
         timestamp: Date.now(),
+        placementMode: isManualMode ? 'manual' : 'auto',
+        expectedPlacements: isManualMode ? manualSpatialMap?.placements : undefined,
+        gutterLines: isManualMode && manualGutterLines.length > 0 ? manualGutterLines : undefined,
         settings: {
           selectedFixtures: selectedFixtures,
           fixtureSubOptions: { ...fixtureSubOptions },
@@ -2079,11 +2085,19 @@ const App: React.FC = () => {
         // Trigger loading screen celebration FIRST (before hiding loading)
         setShowLoadingCelebration(true);
 
+        const isManualRegeneration = placementMode === 'manual' && manualFixtures.length > 0;
+        const manualRegenerationSpatialMap = isManualRegeneration
+          ? convertFixturesToSpatialMap(manualFixtures)
+          : undefined;
+
         // Add to history with settings
         setGenerationHistory(prev => [...prev, {
           id: Date.now().toString(),
           image: result,
           timestamp: Date.now(),
+          placementMode: isManualRegeneration ? 'manual' : 'auto',
+          expectedPlacements: isManualRegeneration ? manualRegenerationSpatialMap?.placements : undefined,
+          gutterLines: isManualRegeneration && manualGutterLines.length > 0 ? manualGutterLines : undefined,
           settings: {
             selectedFixtures: selectedFixtures,
             fixtureSubOptions: { ...fixtureSubOptions },
@@ -8028,6 +8042,19 @@ Notes: ${invoice.notes || 'N/A'}
                   setViewProjectId(projectId);
                   setShowProjectDetailModal(true);
                 }}
+                qaRecentGenerations={generationHistory
+                  .slice()
+                  .sort((a, b) => b.timestamp - a.timestamp)
+                  .slice(0, 12)
+                  .map((entry) => ({
+                    id: entry.id,
+                    image: entry.image,
+                    timestamp: entry.timestamp,
+                    placementMode: entry.placementMode,
+                    expectedPlacements: entry.expectedPlacements,
+                    gutterLines: entry.gutterLines,
+                    requirePlacement: (entry.expectedPlacements?.length ?? 0) > 0,
+                  }))}
              />
              </motion.div>
           )}

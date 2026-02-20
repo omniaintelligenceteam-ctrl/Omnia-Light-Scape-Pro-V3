@@ -1,4 +1,15 @@
-import { CompanyProfile, FixturePricing, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences, CustomPricingItem, BusinessGoal, Location, Technician } from '../../types';
+import { CompanyProfile, FixturePricing, FixtureCatalogItem, AccentColor, FontSize, NotificationPreferences, CustomPricingItem, BusinessGoal, Location, Technician, SpatialFixturePlacement } from '../../types';
+import type { GutterLine } from '../../types/fixtures';
+
+export interface QaRecentGeneration {
+  id: string;
+  image: string;
+  timestamp: number;
+  placementMode?: 'auto' | 'manual';
+  expectedPlacements?: SpatialFixturePlacement[];
+  gutterLines?: GutterLine[];
+  requirePlacement?: boolean;
+}
 
 export interface SubscriptionInfo {
   hasActiveSubscription: boolean;
@@ -128,4 +139,6 @@ export interface SettingsViewProps {
   teamPerformanceData?: any;
   capacityPlanningData?: any;
   onViewProject?: (projectId: string) => void;
+  // Lighting QA context
+  qaRecentGenerations?: QaRecentGeneration[];
 }

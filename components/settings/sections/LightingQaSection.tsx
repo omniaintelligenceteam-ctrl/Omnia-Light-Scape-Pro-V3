@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, RefreshCw, Download, Upload, Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { SettingsCard } from '../ui/SettingsCard';
+import type { QaRecentGeneration } from '../types';
 import {
   runLightingEvaluationBatch,
   lightingEvaluationResultsToCsv,
@@ -25,6 +26,7 @@ const DEFAULT_TEMPLATE: LightingEvaluationCase[] = [
     gutterLines: []
   }
 ];
+const MAX_RECENT_CASES = 6;
 
 function parseCasesJson(raw: string): LightingEvaluationCase[] {
   const parsed = JSON.parse(raw) as unknown;
@@ -78,7 +80,28 @@ function downloadTextFile(fileName: string, content: string, mimeType: string): 
   URL.revokeObjectURL(url);
 }
 
-export const LightingQaSection: React.FC = () => {
+function buildRecentCases(recentGenerations: QaRecentGeneration[]): LightingEvaluationCase[] {
+  return recentGenerations.slice(0, MAX_RECENT_CASES).map((entry, index) => ({
+    id: `recent-${index + 1}-${entry.id}`,
+    generatedImage: entry.image,
+    expectedPlacements: entry.expectedPlacements,
+    gutterLines: entry.gutterLines,
+    requirePlacement: typeof entry.requirePlacement === 'boolean'
+      ? entry.requirePlacement
+      : ((entry.expectedPlacements?.length ?? 0) > 0),
+    meta: {
+      source: 'generation_history',
+      timestamp: entry.timestamp,
+      placementMode: entry.placementMode || 'auto',
+    },
+  }));
+}
+
+interface LightingQaSectionProps {
+  recentGenerations?: QaRecentGeneration[];
+}
+
+export const LightingQaSection: React.FC<LightingQaSectionProps> = ({ recentGenerations = [] }) => {
   const [casesJson, setCasesJson] = useState<string>(() => JSON.stringify(DEFAULT_TEMPLATE, null, 2));
   const [minCompositeScore, setMinCompositeScore] = useState<number>(85);
   const [isRunning, setIsRunning] = useState(false);
@@ -87,20 +110,13 @@ export const LightingQaSection: React.FC = () => {
   const [result, setResult] = useState<LightingEvaluationBatchResult | null>(null);
 
   const templateJson = useMemo(() => JSON.stringify(DEFAULT_TEMPLATE, null, 2), []);
+  const availableRecentCount = recentGenerations.length;
+  const recentEvaluableCount = Math.min(availableRecentCount, MAX_RECENT_CASES);
 
-  const handleRun = async () => {
+  const runBatch = async (cases: LightingEvaluationCase[]) => {
     setError(null);
     setResult(null);
     setProgress(null);
-
-    let cases: LightingEvaluationCase[];
-    try {
-      cases = parseCasesJson(casesJson);
-    } catch (parseError) {
-      setError(parseError instanceof Error ? parseError.message : 'Invalid JSON input.');
-      return;
-    }
-
     setIsRunning(true);
     try {
       const batch = await runLightingEvaluationBatch(cases, {
@@ -113,6 +129,26 @@ export const LightingQaSection: React.FC = () => {
     } finally {
       setIsRunning(false);
     }
+  };
+
+  const handleRun = async () => {
+    let cases: LightingEvaluationCase[];
+    try {
+      cases = parseCasesJson(casesJson);
+    } catch (parseError) {
+      setError(parseError instanceof Error ? parseError.message : 'Invalid JSON input.');
+      return;
+    }
+    await runBatch(cases);
+  };
+
+  const handleRunRecent = async () => {
+    if (recentGenerations.length === 0) {
+      setError('No recent generation history is available yet. Generate a scene first, then run QA.');
+      return;
+    }
+    const recentCases = buildRecentCases(recentGenerations);
+    await runBatch(recentCases);
   };
 
   const handleLoadTemplate = () => {
@@ -175,6 +211,25 @@ export const LightingQaSection: React.FC = () => {
         Batch-evaluate generated lighting renders for placement fidelity, artifact leakage, and photoreal quality.
         Target pass rate: 85%+ before production rollout.
       </p>
+
+      <SettingsCard className="p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-white">One-Click Recent QA</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Uses up to {MAX_RECENT_CASES} latest renders from this session ({availableRecentCount} available).
+            </p>
+          </div>
+          <button
+            onClick={handleRunRecent}
+            disabled={isRunning || recentEvaluableCount === 0}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/90 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            {isRunning ? 'Running Recent...' : `Run Recent (${recentEvaluableCount})`}
+          </button>
+        </div>
+      </SettingsCard>
 
       <SettingsCard className="p-6 space-y-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -355,4 +410,3 @@ export const LightingQaSection: React.FC = () => {
     </motion.div>
   );
 };
-

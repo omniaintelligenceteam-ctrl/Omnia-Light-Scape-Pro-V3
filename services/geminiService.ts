@@ -2143,43 +2143,460 @@ function mapPipelineTypeToCategory(fixtureType: string): LightFixture['type'] | 
   }
 }
 
+interface AutoPlacementSeedPoint {
+  x: number;
+  y: number;
+  description: string;
+  target: string;
+}
+
+interface ExplicitAutoCountTarget {
+  fixtureType: string;
+  subOption: string;
+  desiredCount: number;
+}
+
+function normalizeAutoSubOption(fixtureType: string, subOption?: string): string {
+  if (fixtureType === 'gutter') return 'gutterUpLights';
+  const normalized = (subOption || '').trim();
+  return normalized || 'general';
+}
+
+function getAutoPlacementGroupKey(fixtureType: string, subOption: string): string {
+  return `${fixtureType}::${subOption}`;
+}
+
+function getDefaultAutoYForFixture(fixtureType: string): number {
+  switch (fixtureType) {
+    case 'gutter':
+      return 42;
+    case 'soffit':
+      return 32;
+    case 'up':
+      return 72;
+    case 'path':
+      return 84;
+    case 'well':
+      return 82;
+    case 'hardscape':
+      return 76;
+    case 'coredrill':
+      return 85;
+    default:
+      return 70;
+  }
+}
+
+function average(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function buildEvenlySpacedAutoSeedPoints(
+  count: number,
+  fixtureType: string,
+  minX: number = 10,
+  maxX: number = 90,
+  fallbackY?: number
+): AutoPlacementSeedPoint[] {
+  if (count <= 0) return [];
+  const y = clampPercent(typeof fallbackY === 'number' ? fallbackY : getDefaultAutoYForFixture(fixtureType));
+  const safeMinX = clampPercent(Math.min(minX, maxX));
+  const safeMaxX = clampPercent(Math.max(minX, maxX));
+  const span = Math.max(1, safeMaxX - safeMinX);
+
+  return Array.from({ length: count }, (_, idx) => {
+    const t = (idx + 1) / (count + 1);
+    const x = clampPercent(safeMinX + span * t);
+    return {
+      x: Number(x.toFixed(3)),
+      y: Number(y.toFixed(3)),
+      description: `${fixtureType} auto placement`,
+      target: `${fixtureType} target`,
+    };
+  });
+}
+
+function buildAutoSeedPointsForCount(
+  rawPoints: AutoPlacementSeedPoint[],
+  desiredCount: number,
+  fixtureType: string
+): AutoPlacementSeedPoint[] {
+  if (desiredCount <= 0) return [];
+
+  const points = rawPoints
+    .map(point => ({
+      x: Number(clampPercent(point.x).toFixed(3)),
+      y: Number(clampPercent(point.y).toFixed(3)),
+      description: point.description || `${fixtureType} auto placement`,
+      target: point.target || `${fixtureType} target`,
+    }))
+    .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
+    .sort((a, b) => a.x - b.x);
+
+  if (points.length === 0) {
+    return buildEvenlySpacedAutoSeedPoints(desiredCount, fixtureType);
+  }
+  if (points.length >= desiredCount) {
+    return points.slice(0, desiredCount);
+  }
+
+  const defaultY = average(points.map(point => point.y)) || getDefaultAutoYForFixture(fixtureType);
+  let minX = points[0].x;
+  let maxX = points[points.length - 1].x;
+  if (maxX - minX < 8) {
+    minX = clampPercent(minX - 15);
+    maxX = clampPercent(maxX + 15);
+  }
+  if (maxX - minX < 6) {
+    minX = 10;
+    maxX = 90;
+  }
+
+  const existing = points.slice();
+  const additionsNeeded = desiredCount - existing.length;
+  const supplemental = buildEvenlySpacedAutoSeedPoints(
+    additionsNeeded,
+    fixtureType,
+    minX,
+    maxX,
+    defaultY
+  );
+
+  const merged = [...existing];
+  for (const candidate of supplemental) {
+    const tooClose = merged.some(
+      point => Math.abs(point.x - candidate.x) < 1.2 && Math.abs(point.y - candidate.y) < 1.2
+    );
+    if (!tooClose) {
+      merged.push(candidate);
+      continue;
+    }
+
+    const nudged = {
+      ...candidate,
+      x: Number(clampPercent(candidate.x + 1.6).toFixed(3)),
+    };
+    merged.push(nudged);
+  }
+
+  if (merged.length < desiredCount) {
+    const fallback = buildEvenlySpacedAutoSeedPoints(
+      desiredCount - merged.length,
+      fixtureType,
+      12,
+      88,
+      defaultY
+    );
+    merged.push(...fallback);
+  }
+
+  return merged
+    .sort((a, b) => a.x - b.x)
+    .slice(0, desiredCount);
+}
+
+function buildExplicitAutoCountTargets(
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>
+): ExplicitAutoCountTarget[] {
+  const targets: ExplicitAutoCountTarget[] = [];
+  const seen = new Set<string>();
+
+  selectedFixtures.forEach(fixtureType => {
+    const configuredSubOptions = fixtureSubOptions[fixtureType] || [];
+    const subOptions = configuredSubOptions.length > 0
+      ? configuredSubOptions
+      : (fixtureType === 'gutter' ? ['gutterUpLights'] : []);
+
+    subOptions.forEach(rawSubOption => {
+      const normalizedSubOption = normalizeAutoSubOption(fixtureType, rawSubOption);
+      const countValue = fixtureCounts[rawSubOption] ?? fixtureCounts[normalizedSubOption];
+      if (typeof countValue !== 'number' || !Number.isFinite(countValue)) return;
+
+      const desiredCount = Math.max(0, Math.round(countValue));
+      const key = getAutoPlacementGroupKey(fixtureType, normalizedSubOption);
+      if (seen.has(key)) return;
+      seen.add(key);
+      targets.push({ fixtureType, subOption: normalizedSubOption, desiredCount });
+    });
+  });
+
+  return targets;
+}
+
+function reconcileAutoPlacementsToExplicitCounts(
+  spatialMap: SpatialMap,
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
+  skipFixtureTypes: Set<string> = new Set()
+): { spatialMap: SpatialMap; adjustments: string[] } {
+  const targets = buildExplicitAutoCountTargets(selectedFixtures, fixtureSubOptions, fixtureCounts)
+    .filter(target => !skipFixtureTypes.has(target.fixtureType));
+  if (targets.length === 0) {
+    return { spatialMap, adjustments: [] };
+  }
+
+  let placements = [...spatialMap.placements];
+  const adjustments: string[] = [];
+
+  targets.forEach(target => {
+    const matches = placements.filter(
+      placement => placement.fixtureType === target.fixtureType && placement.subOption === target.subOption
+    );
+
+    if (matches.length === target.desiredCount) return;
+
+    if (matches.length > target.desiredCount) {
+      let kept = 0;
+      placements = placements.filter(placement => {
+        if (placement.fixtureType !== target.fixtureType || placement.subOption !== target.subOption) {
+          return true;
+        }
+        kept += 1;
+        return kept <= target.desiredCount;
+      });
+      adjustments.push(
+        `${target.fixtureType}/${target.subOption}: trimmed ${matches.length} -> ${target.desiredCount}`
+      );
+      return;
+    }
+
+    const missing = target.desiredCount - matches.length;
+    const seedPointsFromMatches: AutoPlacementSeedPoint[] = matches.map(match => ({
+      x: match.horizontalPosition,
+      y: match.verticalPosition,
+      description: match.description,
+      target: match.anchor,
+    }));
+    const seedPointsFromType: AutoPlacementSeedPoint[] = placements
+      .filter(placement => placement.fixtureType === target.fixtureType)
+      .map(placement => ({
+        x: placement.horizontalPosition,
+        y: placement.verticalPosition,
+        description: placement.description,
+        target: placement.anchor,
+      }));
+    const seedPoints = seedPointsFromMatches.length > 0 ? seedPointsFromMatches : seedPointsFromType;
+    const candidatePoints = buildAutoSeedPointsForCount(
+      seedPoints,
+      target.desiredCount,
+      target.fixtureType
+    );
+
+    const occupied = matches.map(match => ({
+      x: match.horizontalPosition,
+      y: match.verticalPosition,
+    }));
+    const additions: SpatialFixturePlacement[] = [];
+
+    for (const candidate of candidatePoints) {
+      if (additions.length >= missing) break;
+      const tooCloseToOccupied = [...occupied, ...additions.map(add => ({
+        x: add.horizontalPosition,
+        y: add.verticalPosition,
+      }))].some(
+        point => Math.abs(point.x - candidate.x) < 1.1 && Math.abs(point.y - candidate.y) < 1.1
+      );
+      if (tooCloseToOccupied) continue;
+
+      additions.push({
+        id: `auto_reconcile_${target.fixtureType}_${target.subOption}_${matches.length + additions.length + 1}`,
+        fixtureType: target.fixtureType,
+        subOption: target.subOption,
+        horizontalPosition: candidate.x,
+        verticalPosition: candidate.y,
+        anchor: `auto_reconcile_${target.fixtureType}_${target.subOption}`,
+        description: candidate.description || `${target.fixtureType} auto reconciliation`,
+      });
+    }
+
+    while (additions.length < missing) {
+      const idx = matches.length + additions.length + 1;
+      const fallbackPoint = buildEvenlySpacedAutoSeedPoints(
+        1,
+        target.fixtureType,
+        10 + (idx % 5),
+        90 - (idx % 5),
+        seedPoints.length > 0 ? average(seedPoints.map(point => point.y)) : undefined
+      )[0];
+      additions.push({
+        id: `auto_reconcile_${target.fixtureType}_${target.subOption}_${idx}`,
+        fixtureType: target.fixtureType,
+        subOption: target.subOption,
+        horizontalPosition: fallbackPoint.x,
+        verticalPosition: fallbackPoint.y,
+        anchor: `auto_reconcile_${target.fixtureType}_${target.subOption}`,
+        description: `${target.fixtureType} auto reconciliation`,
+      });
+    }
+
+    placements = [...placements, ...additions];
+    adjustments.push(
+      `${target.fixtureType}/${target.subOption}: filled ${matches.length} -> ${target.desiredCount}`
+    );
+  });
+
+  return {
+    spatialMap: { ...spatialMap, placements },
+    adjustments,
+  };
+}
+
+function deriveFallbackAutoGutterLines(
+  spatialMap: SpatialMap,
+  maxLines: number
+): GutterLine[] {
+  const boundedMaxLines = Math.max(1, Math.min(10, maxLines));
+  const gutterPlacements = spatialMap.placements.filter(placement => placement.fixtureType === 'gutter');
+  const candidatePoints = gutterPlacements.length > 0
+    ? gutterPlacements.map(placement => ({
+        x: placement.gutterLineX ?? placement.horizontalPosition,
+        y: placement.gutterLineY ?? placement.verticalPosition,
+      }))
+    : spatialMap.placements
+        .filter(placement => placement.fixtureType === 'soffit' || placement.verticalPosition <= 55)
+        .map(placement => ({
+          x: placement.horizontalPosition,
+          y: placement.verticalPosition,
+        }));
+
+  if (candidatePoints.length === 0) {
+    return [{
+      id: 'auto_gutter_fallback_1',
+      startX: 12,
+      startY: 42,
+      endX: 88,
+      endY: 42,
+      mountDepthPercent: DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT,
+    }];
+  }
+
+  const sortedByY = candidatePoints
+    .map(point => ({ x: clampPercent(point.x), y: clampPercent(point.y) }))
+    .sort((a, b) => a.y - b.y);
+
+  const clusters: Array<{ points: Array<{ x: number; y: number }>; avgY: number }> = [];
+  const clusterTolerance = 4.5;
+  for (const point of sortedByY) {
+    const cluster = clusters.find(item => Math.abs(item.avgY - point.y) <= clusterTolerance);
+    if (cluster) {
+      cluster.points.push(point);
+      cluster.avgY = average(cluster.points.map(p => p.y));
+    } else {
+      clusters.push({ points: [point], avgY: point.y });
+    }
+  }
+
+  return clusters
+    .sort((a, b) => b.points.length - a.points.length || a.avgY - b.avgY)
+    .slice(0, boundedMaxLines)
+    .map((cluster, index) => {
+      const xs = cluster.points.map(point => point.x).sort((a, b) => a - b);
+      const rawMinX = xs[0];
+      const rawMaxX = xs[xs.length - 1];
+      let minX = rawMinX;
+      let maxX = rawMaxX;
+
+      if (maxX - minX < 25) {
+        minX = clampPercent(minX - 15);
+        maxX = clampPercent(maxX + 15);
+      }
+      if (maxX - minX < 12) {
+        minX = 12;
+        maxX = 88;
+      }
+
+      const avgY = clampPercent(cluster.avgY);
+      return {
+        id: `auto_gutter_fallback_${index + 1}`,
+        startX: Number(minX.toFixed(3)),
+        startY: Number(avgY.toFixed(3)),
+        endX: Number(maxX.toFixed(3)),
+        endY: Number(avgY.toFixed(3)),
+        mountDepthPercent: DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT,
+      };
+    });
+}
+
 function buildAutoSpatialMapFromSuggestions(
   suggestions: SuggestedFixture[],
   selectedFixtures: string[],
   fixtureCounts: Record<string, number | null>
 ): SpatialMap {
-  const placements: SpatialFixturePlacement[] = [];
+  const grouped = new Map<string, {
+    fixtureType: string;
+    subOption: string;
+    priority: number;
+    points: AutoPlacementSeedPoint[];
+    suggestedCount: number;
+  }>();
 
   suggestions
     .slice()
     .sort((a, b) => a.priority - b.priority)
-    .forEach((suggestion, suggestionIdx) => {
+    .forEach(suggestion => {
       const fixtureType = sanitizeFixtureType(suggestion.fixtureType);
       if (!fixtureType || !selectedFixtures.includes(fixtureType)) return;
 
+      const normalizedSubOption = normalizeAutoSubOption(fixtureType, suggestion.subOption);
+      const key = getAutoPlacementGroupKey(fixtureType, normalizedSubOption);
+      const existing = grouped.get(key);
+      const group = existing || {
+        fixtureType,
+        subOption: normalizedSubOption,
+        priority: suggestion.priority,
+        points: [] as AutoPlacementSeedPoint[],
+        suggestedCount: 0,
+      };
+
+      group.priority = Math.min(group.priority, suggestion.priority);
       const positions = Array.isArray(suggestion.positions) ? suggestion.positions : [];
-      if (positions.length === 0) return;
+      if (positions.length > 0) {
+        positions.forEach(position => {
+          group.points.push({
+            x: position.xPercent,
+            y: position.yPercent,
+            description: position.description || `${fixtureType} auto placement`,
+            target: position.target || `${fixtureType} target`,
+          });
+        });
+      }
+      if (Number.isFinite(suggestion.count)) {
+        group.suggestedCount += Math.max(0, Math.round(suggestion.count));
+      }
 
-      const explicitSubCount = fixtureCounts[suggestion.subOption];
-      const desiredCount =
-        typeof explicitSubCount === 'number'
-          ? Math.max(0, Math.round(explicitSubCount))
-          : Math.max(1, Math.min(positions.length, Math.round(suggestion.count || positions.length)));
-      const boundedCount = Math.min(positions.length, desiredCount);
-      const normalizedSubOption =
-        fixtureType === 'gutter'
-          ? 'gutterUpLights'
-          : (suggestion.subOption || 'general');
+      grouped.set(key, group);
+    });
 
-      positions.slice(0, boundedCount).forEach((pos, idx) => {
+  const placements: SpatialFixturePlacement[] = [];
+  [...grouped.values()]
+    .sort((a, b) => a.priority - b.priority || a.fixtureType.localeCompare(b.fixtureType))
+    .forEach((group, groupIdx) => {
+      const explicitCount = fixtureCounts[group.subOption];
+      if (
+        typeof explicitCount !== 'number' &&
+        group.points.length === 0 &&
+        group.suggestedCount <= 0
+      ) {
+        return;
+      }
+      const desiredCount = typeof explicitCount === 'number'
+        ? Math.max(0, Math.round(explicitCount))
+        : Math.max(1, Math.round(group.suggestedCount || group.points.length || 1));
+
+      const points = buildAutoSeedPointsForCount(group.points, desiredCount, group.fixtureType);
+      points.forEach((point, idx) => {
         placements.push({
-          id: `auto_${fixtureType}_${normalizedSubOption}_${suggestionIdx + 1}_${idx + 1}`,
-          fixtureType,
-          subOption: normalizedSubOption,
-          horizontalPosition: clampPercent(pos.xPercent),
-          verticalPosition: clampPercent(pos.yPercent),
-          anchor: `auto_${fixtureType}_${idx + 1}`,
-          description: pos.description || pos.target || `${fixtureType} auto placement`,
+          id: `auto_${group.fixtureType}_${group.subOption}_${groupIdx + 1}_${idx + 1}`,
+          fixtureType: group.fixtureType,
+          subOption: group.subOption,
+          horizontalPosition: point.x,
+          verticalPosition: point.y,
+          anchor: `auto_${group.fixtureType}_${idx + 1}`,
+          description: point.description || point.target || `${group.fixtureType} auto placement`,
         });
       });
     });
@@ -2224,16 +2641,27 @@ function ensureAutoGutterRailPlacements(
 ): SpatialMap {
   if (!gutterLines || gutterLines.length === 0) return spatialMap;
 
-  const existingGutters = spatialMap.placements.filter(p => p.fixtureType === 'gutter');
-  if (existingGutters.length > 0) return spatialMap;
+  const otherPlacements = spatialMap.placements.filter(placement => placement.fixtureType !== 'gutter');
+  const existingGutters = spatialMap.placements
+    .filter(placement => placement.fixtureType === 'gutter')
+    .sort((a, b) => a.horizontalPosition - b.horizontalPosition);
 
   const requestedCount = fixtureCounts['gutterUpLights'];
   const desiredCount = typeof requestedCount === 'number'
-    ? Math.max(1, Math.min(12, Math.round(requestedCount)))
-    : Math.max(2, Math.min(6, gutterLines.length * 2));
+    ? Math.max(0, Math.round(requestedCount))
+    : Math.max(existingGutters.length, Math.max(2, Math.min(6, gutterLines.length * 2)));
+  const retainedGutters = existingGutters.slice(0, desiredCount);
+  const missingCount = Math.max(0, desiredCount - retainedGutters.length);
+  if (missingCount === 0) {
+    return {
+      ...spatialMap,
+      placements: [...otherPlacements, ...retainedGutters],
+    };
+  }
+
   const lineCount = gutterLines.length;
-  const basePerLine = Math.floor(desiredCount / lineCount);
-  let remainder = desiredCount % lineCount;
+  const basePerLine = Math.floor(missingCount / lineCount);
+  let remainder = missingCount % lineCount;
   const generated: SpatialFixturePlacement[] = [];
 
   gutterLines.forEach((line, lineIndex) => {
@@ -2249,7 +2677,7 @@ function ensureAutoGutterRailPlacements(
       const mounted = applyGutterMountDepth(lineX, lineY, line, depth);
 
       generated.push({
-        id: `auto_gutter_rail_${lineIndex + 1}_${i + 1}`,
+        id: `auto_gutter_rail_${lineIndex + 1}_${retainedGutters.length + generated.length + 1}`,
         fixtureType: 'gutter',
         subOption: 'gutterUpLights',
         horizontalPosition: Number(mounted.mountX.toFixed(3)),
@@ -2267,7 +2695,7 @@ function ensureAutoGutterRailPlacements(
   if (generated.length === 0) return spatialMap;
   return {
     ...spatialMap,
-    placements: [...spatialMap.placements, ...generated],
+    placements: [...otherPlacements, ...retainedGutters, ...generated],
   };
 }
 
@@ -3788,20 +4216,50 @@ export const generateNightSceneEnhanced = async (
         }
       }
 
-      if (selectedFixtures.includes('gutter') && autoSpatialMap && autoGutterLines && autoGutterLines.length > 0) {
-        const withRailFallback = ensureAutoGutterRailPlacements(autoSpatialMap, autoGutterLines, fixtureCounts);
-        const generatedCount = withRailFallback.placements.length - autoSpatialMap.placements.length;
-        autoSpatialMap = withRailFallback;
-        if (generatedCount > 0) {
-          console.log(`[Enhanced Mode] Added ${generatedCount} auto gutter placement(s) from detected rails.`);
+      if (selectedFixtures.includes('gutter') && autoSpatialMap) {
+        if (!autoGutterLines || autoGutterLines.length === 0) {
+          autoGutterLines = deriveFallbackAutoGutterLines(autoSpatialMap, MAX_AUTO_GUTTER_LINES);
+          if (autoGutterLines.length > 0) {
+            console.warn(
+              `[Enhanced Mode] Using ${autoGutterLines.length} fallback gutter rail(s) derived from auto placements.`
+            );
+          }
+        }
+
+        if (autoGutterLines && autoGutterLines.length > 0) {
+          const gutterCountBefore = autoSpatialMap.placements.filter(p => p.fixtureType === 'gutter').length;
+          autoSpatialMap = ensureAutoGutterRailPlacements(autoSpatialMap, autoGutterLines, fixtureCounts);
+          const gutterCountAfter = autoSpatialMap.placements.filter(p => p.fixtureType === 'gutter').length;
+          if (gutterCountAfter !== gutterCountBefore) {
+            console.log(
+              `[Enhanced Mode] Reconciled auto gutter placements to ${gutterCountAfter} fixture(s) on gutter rails.`
+            );
+          }
+
+          if (autoSpatialMap.placements.length > 0) {
+            const normalized = normalizeGutterPlacements(autoSpatialMap, autoGutterLines);
+            autoSpatialMap = normalized.spatialMap;
+            if (normalized.snappedCount > 0) {
+              console.log(`[Enhanced Mode] Snapped ${normalized.snappedCount} auto gutter fixture(s) onto detected gutter rails.`);
+            }
+          }
         }
       }
 
-      if (autoSpatialMap.placements.length > 0 && autoGutterLines && autoGutterLines.length > 0) {
-        const normalized = normalizeGutterPlacements(autoSpatialMap, autoGutterLines);
-        autoSpatialMap = normalized.spatialMap;
-        if (normalized.snappedCount > 0) {
-          console.log(`[Enhanced Mode] Snapped ${normalized.snappedCount} auto gutter fixture(s) onto detected gutter rails.`);
+      if (autoSpatialMap) {
+        const skipFixtureTypes = selectedFixtures.includes('gutter')
+          ? new Set<string>(['gutter'])
+          : new Set<string>();
+        const reconciled = reconcileAutoPlacementsToExplicitCounts(
+          autoSpatialMap,
+          selectedFixtures,
+          fixtureSubOptions,
+          fixtureCounts,
+          skipFixtureTypes
+        );
+        autoSpatialMap = reconciled.spatialMap;
+        if (reconciled.adjustments.length > 0) {
+          console.log('[Enhanced Mode] Auto count reconciliation:', reconciled.adjustments.join(' | '));
         }
       }
 

@@ -109,7 +109,8 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   pipelineForecastData,
   teamPerformanceData,
   capacityPlanningData,
-  onViewProject
+  onViewProject,
+  qaRecentGenerations = []
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const { isOwner, isAdmin } = useOrganization();
@@ -304,7 +305,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
 
             {/* Lighting QA Section */}
             {activeSection === 'lighting-qa' && (
-              <LightingQaSection />
+              <LightingQaSection recentGenerations={qaRecentGenerations} />
             )}
 
             {/* Follow-ups Section */}
