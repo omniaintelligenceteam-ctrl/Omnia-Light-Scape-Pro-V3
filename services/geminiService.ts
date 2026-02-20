@@ -204,8 +204,8 @@ function buildPreferenceContext(preferences: UserPreferences | null | undefined)
   return contextLines.join('\n');
 }
 
-// Analysis model - Gemini 3 Pro with Deep Think for property analysis
-const ANALYSIS_MODEL_NAME = 'gemini-3-pro-preview';
+// Analysis model - Gemini 3.1 Pro with Deep Think for property analysis
+const ANALYSIS_MODEL_NAME = 'gemini-3.1-pro-preview';
 const ANALYSIS_TIMEOUT_MS = 120000; // 120 seconds for Deep Think analysis
 
 /**

@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import type { LightFixture } from "../types/fixtures";
 
 const NANO_BANANA_MODEL = 'gemini-3-pro-image-preview'; // Nano Banana 2 Pro
-const DEEPTHINK_MODEL = 'gemini-3-pro-preview'; // For analysis
+const DEEPTHINK_MODEL = 'gemini-3.1-pro-preview'; // For analysis
 
 const API_TIMEOUT_MS = 120000;
 

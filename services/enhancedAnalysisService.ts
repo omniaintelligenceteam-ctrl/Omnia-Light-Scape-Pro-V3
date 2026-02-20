@@ -15,8 +15,8 @@ import type {
   SPACING_BY_FACADE_WIDTH
 } from "../src/types/houseAnalysis";
 
-// Use Gemini 3 Pro for best analysis
-const ANALYSIS_MODEL = 'gemini-3-pro-preview';
+// Use Gemini 3.1 Pro for best analysis
+const ANALYSIS_MODEL = 'gemini-3.1-pro-preview';
 const ANALYSIS_TIMEOUT_MS = 90000; // 90 seconds for comprehensive analysis
 
 /**
