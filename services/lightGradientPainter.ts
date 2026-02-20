@@ -731,11 +731,7 @@ export async function paintLightGradients(
         // 1. Draw original image (scaled to fit canvas)
         ctx.drawImage(img, 0, 0, w, h);
 
-        // 2. Darken to ~40% so gradients are subtle hints, not bold shapes
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 3. Paint directional gradients with screen blending
+        // 2. Paint directional gradients with screen blending (no darkening needed — night base is already dark)
         paintGradientsToCanvas(ctx, fixtures, canvas.width, canvas.height);
 
         // 3.5. Draw gutter lines (under markers, over gradients)
@@ -755,7 +751,7 @@ export async function paintLightGradients(
         }
 
         // 6. Export as base64 without data URI prefix
-        const dataUrl = canvas.toDataURL(mimeType, 0.92);
+        const dataUrl = canvas.toDataURL(mimeType, 0.95);
         resolve(dataUrl.split(',')[1]);
       } catch (err) {
         reject(err);

@@ -91,7 +91,7 @@ export function getReferencesForTypes(types: string[]): FixtureReference[] {
   const normalizedTypes = types.map(t => t.toUpperCase());
 
   const matched = FIXTURE_REFERENCES.filter(
-    ref => normalizedTypes.includes(ref.type) && (ref.goodImage || ref.badImage)
+    ref => normalizedTypes.includes(ref.type)
   );
 
   // Cap at 5 types (10 images max)
@@ -159,6 +159,10 @@ export async function buildReferenceParts(types: string[]): Promise<GeminiPart[]
       } catch (err) {
         console.warn(`[ReferenceLibrary] Failed to load good image for ${ref.type}:`, err);
       }
+    } else if (ref.goodDescription) {
+      parts.push({
+        text: `### ${ref.type} LIGHT — CORRECT\n${ref.goodDescription}\n\n`,
+      });
     }
 
     // Bad example
@@ -174,6 +178,10 @@ export async function buildReferenceParts(types: string[]): Promise<GeminiPart[]
       } catch (err) {
         console.warn(`[ReferenceLibrary] Failed to load bad image for ${ref.type}:`, err);
       }
+    } else if (ref.badDescription) {
+      parts.push({
+        text: `### ${ref.type} LIGHT — INCORRECT (DO NOT do this)\n${ref.badDescription}\n\n`,
+      });
     }
   }
 

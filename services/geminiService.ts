@@ -581,7 +581,7 @@ async function resizeImageBase64(
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL(mimeType, 0.90).split(',')[1]);
+      resolve(canvas.toDataURL(mimeType, 0.95).split(',')[1]);
     };
     img.onerror = () => resolve(base64);
     img.src = `data:${mimeType};base64,${base64}`;
@@ -1340,13 +1340,13 @@ export function generateNarrativePlacement(
 
   // Per-fixture "render as" micro-descriptions for type reinforcement
   const renderAsMap: Record<string, string> = {
-    up: 'small bronze uplight at wall base, beam UPWARD',
-    gutter: 'small uplight in rain gutter, beam UPWARD on wall above â€" NO downlights',
-    path: 'small bronze fixture in landscaping, 360Â° ground pool',
-    well: 'small bronze uplight at ground level, beam UPWARD at tree canopy',
-    hardscape: 'small bronze fixture under step tread, beam DOWNWARD onto riser',
-    soffit: 'small bronze recessed fixture flush in soffit, beam DOWNWARD',
-    coredrill: 'TINY flush bronze disc in concrete (~3" diameter), beam UPWARD â€” NO visible hardware',
+    up: 'small bronze uplight at wall base, beam UPWARD â€” place at EXACT marked position, shine in EXACT marked direction',
+    gutter: 'small uplight sitting IN the rain gutter at this EXACT position on the gutter line, beam UPWARD on wall directly above â€” DO NOT move from marked position, NO downlights',
+    path: 'small bronze fixture in landscaping, 360Â° ground pool â€” place at EXACT marked position',
+    well: 'small bronze uplight at ground level, beam UPWARD at tree canopy â€” place at EXACT marked position',
+    hardscape: 'small bronze fixture under step tread, beam DOWNWARD onto riser â€” place at EXACT marked position',
+    soffit: 'small bronze recessed fixture flush in soffit, beam DOWNWARD â€” place at EXACT marked position',
+    coredrill: 'TINY flush bronze disc in concrete (~3” diameter), beam UPWARD â€” place at EXACT marked position, NO visible hardware',
   };
 
   const typeLabel = fixtureType.toUpperCase();
@@ -1363,31 +1363,33 @@ export function generateNarrativePlacement(
     // Output exact x,y coordinates for precise placement
     const xCoord = p.horizontalPosition.toFixed(1);
     const yCoord = p.verticalPosition !== undefined ? p.verticalPosition.toFixed(1) : '?';
-    const gutterSuffix = fixtureType === 'gutter' ? ' ON THE GUTTER LINE at the roofline' : '';
-    const coords = `Place at [${xCoord}%, ${yCoord}%]${gutterSuffix}`;
+    const gutterSuffix = fixtureType === 'gutter' ? ' EXACTLY ON THE GUTTER LINE at this precise position â€" DO NOT move or redistribute' : '';
+    const coords = `Place at EXACTLY [${xCoord}%, ${yCoord}%]${gutterSuffix}`;
 
     // Per-fixture beam direction override when user has custom rotation
     let fixtureRenderAs = renderAs;
+    let directionNote = '';
     if (p.rotation !== undefined && hasCustomRotation(p.rotation, p.fixtureType)) {
       const dirLabel = rotationToDirectionLabel(p.rotation);
       fixtureRenderAs = fixtureRenderAs
         .replace(/beam UPWARD[^,–]*/gi, `beam ${dirLabel}`)
         .replace(/beam DOWNWARD[^,–]*/gi, `beam ${dirLabel}`);
+      directionNote = ` â€" BEAM DIRECTION: ${dirLabel} (user-specified, MUST be honored exactly)`;
     }
 
     // Per-fixture beam length notation
     let beamNote = '';
     if (p.beamLength !== undefined && Math.abs(p.beamLength - 1.0) > 0.05) {
       beamNote = p.beamLength > 1.0
-        ? ` – EXTENDED beam (${p.beamLength.toFixed(1)}x reach)`
-        : ` – SHORT beam (${p.beamLength.toFixed(1)}x reach)`;
+        ? ` â€" EXTENDED beam (${p.beamLength.toFixed(1)}x reach)`
+        : ` â€" SHORT beam (${p.beamLength.toFixed(1)}x reach)`;
     }
 
     narrative += `FIXTURE ${i + 1} (${typeLabel}): ${coords}`;
     if (p.description) {
       narrative += ` â€" ${p.description}`;
     }
-    narrative += ` â€" Render as: ${fixtureRenderAs}${beamNote}\n`;
+    narrative += ` â€" Render as: ${fixtureRenderAs}${directionNote}${beamNote}\n`;
   });
 
   // Add inter-fixture spacing when 2+ fixtures
@@ -1400,6 +1402,17 @@ export function generateNarrativePlacement(
   }
 
   narrative += `\nCOUNT CHECK: There are EXACTLY ${sorted.length} fixtures. No more, no less.\n`;
+
+  // Add position enforcement for gutter fixtures
+  if (fixtureType === 'gutter') {
+    narrative += `\nGUTTER POSITION ENFORCEMENT: Every gutter light MUST remain at its EXACT marked [X%, Y%] position on the gutter line. Do NOT redistribute, rebalance, or evenly space them. The user placed each gutter light at a specific location â€" that location is non-negotiable.\n`;
+  }
+
+  // Add direction enforcement for non-gutter fixtures with rotations
+  const rotatedFixtures = sorted.filter(p => p.rotation !== undefined && hasCustomRotation(p.rotation, p.fixtureType));
+  if (rotatedFixtures.length > 0) {
+    narrative += `\nDIRECTION ENFORCEMENT: ${rotatedFixtures.length} fixture(s) above have user-specified beam directions. Each light MUST shine in its marked direction â€" do NOT default to straight up/down.\n`;
+  }
 
   return narrative;
 }
@@ -1414,6 +1427,10 @@ export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
 
   let output = `\n## EXACT FIXTURE PLACEMENT MAP\n`;
   output += `Coordinates: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom).\n\n`;
+  output += `### CRITICAL POSITIONING RULES\n`;
+  output += `- GUTTER MOUNTED UP LIGHTS: Each gutter light MUST stay at its EXACT [X%, Y%] position on the gutter line. The user placed each one precisely â€" do NOT move, shift, redistribute, or evenly space them. Each gutter light shines UPWARD from its exact marked spot.\n`;
+  output += `- ALL OTHER FIXTURES: Each fixture MUST be rendered at its EXACT [X%, Y%] position AND its light beam MUST shine in the EXACT direction specified by its rotation. If a fixture points UP-RIGHT, the light goes UP-RIGHT. If it points LEFT, the light goes LEFT.\n`;
+  output += `- The user is a professional lighting designer. Every position and direction is intentional and non-negotiable.\n\n`;
 
   // Reference points with x,y coordinates
   if (spatialMap.features.length > 0) {
@@ -2009,7 +2026,7 @@ export const generateManualScene = async (
 
   if (hasGradients) {
     console.log(`[Manual Mode] Painting directional light gradients for ${fixtures!.length} fixtures...`);
-    gradientImage = await paintLightGradients(imageBase64, fixtures!, imageMimeType, gutterLines);
+    gradientImage = await paintLightGradients(nightBase, fixtures!, imageMimeType, gutterLines);
     console.log('[Manual Mode] Gradient map painted (includes numbered markers).');
   } else {
     console.log('[Manual Mode] Drawing fixture markers...');
@@ -2057,9 +2074,7 @@ export const generateManualScene = async (
     imageMimeType,
     deepThinkResult.prompt,
     targetRatio,
-    referenceParts.length > 0 ? referenceParts : undefined,
-    gradientImage,
-    markedImage
+    referenceParts.length > 0 ? referenceParts : undefined
   );
 
   console.log('[Pass 2] Lighting generation complete!');

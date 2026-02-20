@@ -580,16 +580,21 @@ Your prompt is the ONLY instruction the image generation AI receives. It must be
 Explain to the image AI that IMAGE 1 is the nighttime base and IMAGE 2 shows positions/directions.
 The output should look like IMAGE 1 with realistic lighting added — NO colored markers visible.
 
-### 2. FIXTURE POSITIONS
+### 2. FIXTURE POSITIONS — EXACT PLACEMENT IS MANDATORY
 For EVERY marker visible in IMAGE 2, write precise placement instructions with [X%, Y%] coordinates.
 Each marker has a color, number, and type label. Transfer ALL of them accurately.
 The spatial map data below provides the exact coordinates — use them.
 
+CRITICAL POSITIONING RULES:
+- GUTTER MOUNTED UP LIGHTS: These fixtures MUST appear at the EXACT [X%, Y%] position the user placed them on the gutter line. Do NOT move, shift, redistribute, or "even out" gutter light spacing. The user deliberately chose each gutter light position — respect it precisely. Each gutter light sits IN the rain gutter at its marked position and shines UPWARD onto the wall above.
+- ALL OTHER FIXTURES: Each fixture MUST appear at its EXACT marked [X%, Y%] position AND shine in the EXACT direction indicated by the rotation arrow. If a fixture has a rotation/direction arrow pointing UP-RIGHT, the light beam MUST go UP-RIGHT. If it points LEFT, the beam MUST go LEFT. Do NOT default all fixtures to straight-up — honor each fixture's individual beam direction.
+- ZERO TOLERANCE: Do not approximate, redistribute, rebalance, or "improve" any fixture positions. The user is a professional lighting designer — every placement is intentional.
+
 ### 3. FIXTURE TYPE DESCRIPTIONS
 For each fixture type present in the markers, include a detailed description of:
 - What the fixture looks like (or that it's invisible)
-- The beam direction (up, down, omnidirectional)
-- What the light effect should look like on walls/surfaces
+- The beam direction — use the EXACT direction from the spatial map data, not a default
+- What the light effect should look like on walls/surfaces based on the beam direction
 
 ### 4. ABSOLUTE PROHIBITIONS
 Explicitly list what must NOT appear:
@@ -597,9 +602,18 @@ Explicitly list what must NOT appear:
 - No soffit/eave downlights (unless explicitly marked as DOWN/SOFFIT)
 - No window glow, porch lights, sconces, string lights, etc.
 - Areas without markers MUST remain COMPLETELY DARK
+- Do NOT add extra lights to "fill in gaps" — dark areas are intentional
 
 ### 5. PHOTOREALISM REQUIREMENTS
-The output must look like a real photograph — soft wall washes, not geometric beams.
+The following rules are CRITICAL for achieving photorealistic output. You MUST incorporate ALL of them into your prompt, adapted to this specific property:
+
+---BEGIN MASTER RULES---
+${SYSTEM_PROMPT.masterInstruction}
+---END MASTER RULES---
+
+---BEGIN CLOSING RULES---
+${SYSTEM_PROMPT.closingReinforcement}
+---END CLOSING RULES---
 
 ### 6. COUNT ENFORCEMENT
 State the exact fixture count multiple times. Last line must be count enforcement.
@@ -607,15 +621,18 @@ State the exact fixture count multiple times. Last line must be count enforcemen
 
 ### 7. CONFUSION PREVENTION
 Include rules to prevent common mistakes:
-- GUTTER = uplight in gutter, beam UP — NEVER downlight from eaves
+- GUTTER = uplight in gutter, beam UP — NEVER downlight from eaves. Gutter lights stay at their EXACT marked position on the gutter line — do NOT move them.
 - COREDRILL = invisible flush fixture in concrete — NOT a visible brass cylinder
 - UP = small ground stake, beam UP — NOT a path light bollard
+- BEAM DIRECTION: Each fixture has a specific beam direction set by the user. A fixture pointing UP-LEFT must shine UP-LEFT, not straight up. Honor every rotation.
 
 ## IMPORTANT GUIDELINES
 - Your prompt should be 3000-8000 characters
-- TRUST THE MARKER POSITIONS — the user placed them deliberately
-- Every light MUST be within 3% of its marker position
-- Include the marker checklist: "Marker #1 → type at [X%, Y%]" for every marker
+- TRUST THE MARKER POSITIONS — the user placed them deliberately as a professional lighting designer
+- Every light MUST be within 2% of its marker position — NO exceptions
+- Gutter lights MUST be at their EXACT gutter line position — do NOT redistribute or space evenly
+- Each fixture's beam direction MUST match its rotation arrow exactly
+- Include the marker checklist: "Marker #1 → type at [X%, Y%], beam DIRECTION" for every marker
 - The last thing in your prompt should be count enforcement (recency bias)
 `
 };
@@ -699,7 +716,9 @@ export function buildFinalPrompt(
       finalPrompt += `TOTAL: ${placements.length} fixture(s)\n\n`;
     });
 
-    finalPrompt += 'CRITICAL: Place fixtures at these EXACT [X%, Y%] coordinates. Do not approximate or add extra fixtures.\n\n';
+    finalPrompt += 'CRITICAL: Place fixtures at these EXACT [X%, Y%] coordinates. Do not approximate, redistribute, or add extra fixtures.\n';
+    finalPrompt += 'GUTTER LIGHTS: Must stay at their EXACT marked position on the gutter line — do NOT move or evenly space them.\n';
+    finalPrompt += 'ALL FIXTURES: Must shine in the EXACT direction specified by their rotation — do NOT default to straight up.\n\n';
   }
 
   // 3. Add disabled fixture negative prompts
