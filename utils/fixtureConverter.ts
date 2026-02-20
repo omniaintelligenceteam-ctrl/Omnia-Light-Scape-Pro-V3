@@ -63,6 +63,8 @@ function inferSubOption(fixture: LightFixture): string {
       if (fixture.y < 50) return 'trees';
       if (fixture.y < 70) return 'windows';
       return 'siding';
+    case 'gutter':
+      return 'gutterUpLights';
     case 'path':
       return 'walkway';
     case 'soffit':

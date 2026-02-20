@@ -1773,9 +1773,132 @@ export async function executeGeneration(
  * Validates manual placements before generation.
  * Checks fixture types, coordinate ranges, and counts.
  */
+const GUTTER_LINE_TOLERANCE_PERCENT = 2.5;
+const GUTTER_VERIFICATION_TOLERANCE_PERCENT = 4.0;
+const MAX_GUTTER_RETRY_ATTEMPTS = 1;
+
+function projectPointToSegment(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): { x: number; y: number; distance: number } {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) {
+    return {
+      x: x1,
+      y: y1,
+      distance: Math.sqrt((px - x1) ** 2 + (py - y1) ** 2),
+    };
+  }
+  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const x = x1 + t * dx;
+  const y = y1 + t * dy;
+  return { x, y, distance: Math.sqrt((px - x) ** 2 + (py - y) ** 2) };
+}
+
+function findNearestGutterProjection(
+  x: number,
+  y: number,
+  gutterLines?: GutterLine[]
+): { x: number; y: number; distance: number; line: GutterLine } | null {
+  if (!gutterLines || gutterLines.length === 0) return null;
+  let best: { x: number; y: number; distance: number; line: GutterLine } | null = null;
+  for (const line of gutterLines) {
+    const projected = projectPointToSegment(
+      x,
+      y,
+      line.startX,
+      line.startY,
+      line.endX,
+      line.endY
+    );
+    if (!best || projected.distance < best.distance) {
+      best = { ...projected, line };
+    }
+  }
+  return best;
+}
+
+function normalizeGutterPlacements(
+  spatialMap: SpatialMap,
+  gutterLines?: GutterLine[]
+): { spatialMap: SpatialMap; snappedCount: number } {
+  if (!gutterLines || gutterLines.length === 0) {
+    return { spatialMap, snappedCount: 0 };
+  }
+
+  let snappedCount = 0;
+  const placements = spatialMap.placements.map(p => {
+    if (p.fixtureType !== 'gutter') return p;
+    const nearest = findNearestGutterProjection(p.horizontalPosition, p.verticalPosition, gutterLines);
+    if (!nearest) return p;
+
+    const nextX = Number(nearest.x.toFixed(3));
+    const nextY = Number(nearest.y.toFixed(3));
+    if (
+      Math.abs(nextX - p.horizontalPosition) > 0.01 ||
+      Math.abs(nextY - p.verticalPosition) > 0.01
+    ) {
+      snappedCount++;
+    }
+
+    return {
+      ...p,
+      horizontalPosition: nextX,
+      verticalPosition: nextY,
+      gutterLineId: nearest.line.id,
+      distanceToGutter: Number(nearest.distance.toFixed(3)),
+    };
+  });
+
+  return {
+    spatialMap: {
+      ...spatialMap,
+      placements,
+    },
+    snappedCount,
+  };
+}
+
+function normalizeGutterGuideFixtures(
+  fixtures: LightFixture[] | undefined,
+  gutterLines?: GutterLine[]
+): { fixtures: LightFixture[] | undefined; snappedCount: number } {
+  if (!fixtures || fixtures.length === 0 || !gutterLines || gutterLines.length === 0) {
+    return { fixtures, snappedCount: 0 };
+  }
+
+  let snappedCount = 0;
+  const normalizedFixtures = fixtures.map(fixture => {
+    if (fixture.type !== 'gutter_uplight') return fixture;
+
+    const nearest = findNearestGutterProjection(fixture.x, fixture.y, gutterLines);
+    if (!nearest) return fixture;
+
+    const nextX = Number(nearest.x.toFixed(3));
+    const nextY = Number(nearest.y.toFixed(3));
+    if (Math.abs(nextX - fixture.x) > 0.01 || Math.abs(nextY - fixture.y) > 0.01) {
+      snappedCount++;
+    }
+
+    return { ...fixture, x: nextX, y: nextY };
+  });
+
+  return { fixtures: normalizedFixtures, snappedCount };
+}
+
 const VALID_FIXTURE_TYPES = new Set(['up', 'gutter', 'path', 'well', 'hardscape', 'soffit', 'coredrill']);
 
-function validateManualPlacements(spatialMap: SpatialMap): {
+function validateManualPlacements(
+  spatialMap: SpatialMap,
+  gutterLines?: GutterLine[]
+): {
   valid: boolean;
   errors: string[];
   summary: { type: string; count: number; positions: string[] }[];
@@ -1810,7 +1933,27 @@ function validateManualPlacements(spatialMap: SpatialMap): {
       errors.push(`Fixture #${idx} (${p.fixtureType}): Y coordinate out of range: ${p.verticalPosition.toFixed(1)}% (must be 0-100)`);
     }
 
-    // C. Accumulate counts by type
+    // C. Gutter-specific validation
+    if (p.fixtureType === 'gutter') {
+      if (p.subOption && p.subOption !== 'gutterUpLights') {
+        errors.push(`Fixture #${idx} (gutter): invalid sub-option "${p.subOption}" (expected gutterUpLights)`);
+      }
+
+      if (typeof p.rotation === 'number') {
+        const normalizedRot = ((p.rotation % 360) + 360) % 360;
+        if (normalizedRot > 100 && normalizedRot < 260) {
+          errors.push(`Fixture #${idx} (gutter): beam direction appears downward (${normalizedRot.toFixed(1)}°)`);
+        }
+      }
+
+      const nearest = findNearestGutterProjection(p.horizontalPosition, p.verticalPosition, gutterLines);
+      if (gutterLines && gutterLines.length > 0 && (!nearest || nearest.distance > GUTTER_LINE_TOLERANCE_PERCENT)) {
+        const dist = nearest ? nearest.distance.toFixed(2) : 'n/a';
+        errors.push(`Fixture #${idx} (gutter): not on a gutter line (distance ${dist}%, tolerance ${GUTTER_LINE_TOLERANCE_PERCENT}%)`);
+      }
+    }
+
+    // D. Accumulate counts by type
     if (p.fixtureType) {
       const entry = countByType.get(p.fixtureType) || { count: 0, positions: [] };
       entry.count++;
@@ -1843,11 +1986,105 @@ function validateManualPlacements(spatialMap: SpatialMap): {
  * for text-only analysis to count fixtures and compare against expected.
  * Returns a verification result (does NOT retry â€” just informs).
  */
+interface DetectedFixture {
+  type: string;
+  x: number;
+  y: number;
+  direction?: string;
+}
+
+function isGutterLikeType(type: string): boolean {
+  const normalized = (type || '').toLowerCase();
+  return normalized.includes('gutter') || (normalized.includes('roof') && normalized.includes('up'));
+}
+
+function evaluateGutterVerification(
+  expectedPlacements: SpatialFixturePlacement[],
+  detectedFixtures: DetectedFixture[],
+  gutterLines?: GutterLine[]
+): { verified: boolean; details: string } {
+  const expectedGutters = expectedPlacements.filter(p => p.fixtureType === 'gutter');
+  if (expectedGutters.length === 0) {
+    return { verified: true, details: 'No gutter fixtures expected.' };
+  }
+
+  const detectedGutters = detectedFixtures.filter(f => isGutterLikeType(f.type));
+  if (detectedGutters.length < expectedGutters.length) {
+    return {
+      verified: false,
+      details: `Gutter mismatch: expected ${expectedGutters.length}, detected ${detectedGutters.length}.`,
+    };
+  }
+
+  const usedDetected = new Set<number>();
+  const matched: Array<{ expected: SpatialFixturePlacement; actual: DetectedFixture; distance: number }> = [];
+
+  for (const expected of expectedGutters) {
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < detectedGutters.length; i++) {
+      if (usedDetected.has(i)) continue;
+      const actual = detectedGutters[i];
+      const dist = Math.sqrt(
+        (expected.horizontalPosition - actual.x) ** 2 +
+        (expected.verticalPosition - actual.y) ** 2
+      );
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx === -1) {
+      return { verified: false, details: 'Unable to match all expected gutter fixtures.' };
+    }
+    usedDetected.add(bestIdx);
+    matched.push({ expected, actual: detectedGutters[bestIdx], distance: bestDist });
+  }
+
+  const maxPosDrift = Math.max(...matched.map(m => m.distance));
+  const avgPosDrift = matched.reduce((sum, m) => sum + m.distance, 0) / matched.length;
+  if (maxPosDrift > GUTTER_VERIFICATION_TOLERANCE_PERCENT) {
+    return {
+      verified: false,
+      details: `Gutter position drift too high (max ${maxPosDrift.toFixed(2)}%, avg ${avgPosDrift.toFixed(2)}%).`,
+    };
+  }
+
+  if (gutterLines && gutterLines.length > 0) {
+    const maxLineDrift = Math.max(
+      ...matched.map(m => {
+        const nearest = findNearestGutterProjection(m.actual.x, m.actual.y, gutterLines);
+        return nearest ? nearest.distance : 100;
+      })
+    );
+    if (maxLineDrift > GUTTER_VERIFICATION_TOLERANCE_PERCENT) {
+      return {
+        verified: false,
+        details: `Detected gutter fixtures are off the gutter line (max ${maxLineDrift.toFixed(2)}%).`,
+      };
+    }
+  }
+
+  const downward = matched.filter(m => (m.actual.direction || '').toLowerCase().includes('down'));
+  if (downward.length > 0) {
+    return {
+      verified: false,
+      details: `Detected ${downward.length} gutter fixture(s) with downward beam direction.`,
+    };
+  }
+
+  return {
+    verified: true,
+    details: `Gutter verified (max drift ${maxPosDrift.toFixed(2)}%, avg drift ${avgPosDrift.toFixed(2)}%).`,
+  };
+}
+
 async function verifyGeneratedImage(
   generatedImageBase64: string,
   imageMimeType: string,
-  expectedPlacements: SpatialFixturePlacement[]
-): Promise<{ verified: boolean; confidence: number; details: string }> {
+  expectedPlacements: SpatialFixturePlacement[],
+  gutterLines?: GutterLine[]
+): Promise<{ verified: boolean; confidence: number; details: string; gutterVerified: boolean }> {
   try {
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
@@ -1860,11 +2097,12 @@ Count EVERY visible light source or illuminated fixture in this image.
 For each light source found, report:
 - Type (uplight, gutter light, path light, well light, hardscape/step light, soffit downlight, core-drill light)
 - Approximate position as [X%, Y%] where 0%,0% is top-left
+- Beam direction (up, down, left, right, up-right, up-left, down-right, down-left, or unknown)
 
 EXPECTED: ${expectedCount} fixtures of types: ${expectedTypes.join(', ')}
 
 Respond in this EXACT JSON format (no markdown, no code blocks):
-{"count": <number>, "fixtures": [{"type": "<type>", "x": <number>, "y": <number>}], "confidence": <0-100>}`;
+{"count": <number>, "fixtures": [{"type": "<type>", "x": <number>, "y": <number>, "direction": "<direction|unknown>"}], "confidence": <0-100>}`;
 
     const response = await ai.models.generateContent({
       model: ANALYSIS_MODEL_NAME,
@@ -1886,31 +2124,34 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.warn('[Manual Mode] Verification: Could not parse response as JSON');
-      return { verified: false, confidence: 0, details: 'Could not parse verification response' };
+      return { verified: false, confidence: 0, details: 'Could not parse verification response', gutterVerified: false };
     }
 
-    const parsed = JSON.parse(jsonMatch[0]) as { count: number; fixtures: Array<{ type: string; x: number; y: number }>; confidence: number };
+    const parsed = JSON.parse(jsonMatch[0]) as { count: number; fixtures: DetectedFixture[]; confidence: number };
     const actualCount = parsed.count;
     const confidence = parsed.confidence || 0;
     const countMatch = actualCount === expectedCount;
+    const fixtures = Array.isArray(parsed.fixtures) ? parsed.fixtures : [];
+    const gutterVerification = evaluateGutterVerification(expectedPlacements, fixtures, gutterLines);
+    const verified = countMatch && gutterVerification.verified;
 
-    const details = `Expected ${expectedCount} fixtures, found ${actualCount}. Confidence: ${confidence}%. Types expected: [${expectedTypes.join(', ')}]`;
+    const details = `Expected ${expectedCount} fixtures, found ${actualCount}. Confidence: ${confidence}%. Types expected: [${expectedTypes.join(', ')}]. ${gutterVerification.details}`;
 
-    if (countMatch) {
-      console.log(`[Manual Mode] Verification PASSED: ${actualCount}/${expectedCount} fixtures confirmed (${confidence}% confidence)`);
+    if (verified) {
+      console.log(`[Manual Mode] Verification PASSED: ${actualCount}/${expectedCount} fixtures confirmed (${confidence}% confidence). ${gutterVerification.details}`);
     } else {
-      console.warn(`[Manual Mode] Verification WARNING: Expected ${expectedCount} fixtures but found ${actualCount} (${confidence}% confidence)`);
-      if (parsed.fixtures) {
-        parsed.fixtures.forEach((f, i) => {
+      console.warn(`[Manual Mode] Verification WARNING: Expected ${expectedCount} fixtures but found ${actualCount} (${confidence}% confidence). ${gutterVerification.details}`);
+      if (fixtures) {
+        fixtures.forEach((f, i) => {
           console.warn(`  Found fixture ${i + 1}: ${f.type} at [${f.x}%, ${f.y}%]`);
         });
       }
     }
 
-    return { verified: countMatch, confidence, details };
+    return { verified, confidence, details, gutterVerified: gutterVerification.verified };
   } catch (error) {
     console.warn('[Manual Mode] Verification failed (non-blocking):', error);
-    return { verified: false, confidence: 0, details: `Verification error: ${error}` };
+    return { verified: false, confidence: 0, details: `Verification error: ${error}`, gutterVerified: false };
   }
 }
 
@@ -1973,6 +2214,40 @@ REQUIREMENTS:
   throw new Error('Night base generation returned no image.');
 }
 
+function buildGutterCorrectionPrompt(
+  basePrompt: string,
+  placements: SpatialFixturePlacement[],
+  gutterLines?: GutterLine[]
+): string {
+  const gutterPlacements = placements
+    .filter(p => p.fixtureType === 'gutter')
+    .sort((a, b) => a.horizontalPosition - b.horizontalPosition);
+
+  if (gutterPlacements.length === 0) return basePrompt;
+
+  let correction = '\n\n=== CORRECTION PASS: GUTTER PLACEMENT LOCK ===\n';
+  correction += 'The previous output failed gutter placement verification. Fix gutter placement exactly without changing architecture.\n';
+  correction += 'MANDATORY RULES:\n';
+  correction += '- Every gutter fixture must sit ON the gutter line (not roof shingles, not soffit underside, not wall face).\n';
+  correction += '- Every gutter fixture beam must point UPWARD only.\n';
+  correction += '- Keep exact fixture count and preserve all non-light pixels.\n';
+  correction += '- Do not add or remove any fixture type.\n';
+  correction += 'EXPECTED GUTTER FIXTURES (exact coordinates):\n';
+  gutterPlacements.forEach((p, i) => {
+    correction += `- GUTTER ${i + 1}: [${p.horizontalPosition.toFixed(2)}%, ${p.verticalPosition.toFixed(2)}%]\n`;
+  });
+
+  if (gutterLines && gutterLines.length > 0) {
+    correction += 'REFERENCE GUTTER LINES:\n';
+    gutterLines.forEach((line, i) => {
+      correction += `- LINE ${i + 1}: [${line.startX.toFixed(2)}%, ${line.startY.toFixed(2)}%] -> [${line.endX.toFixed(2)}%, ${line.endY.toFixed(2)}%]\n`;
+    });
+  }
+
+  correction += 'FINAL CHECK: All gutter fixtures must be within 4% of expected coordinates and remain on the gutter line.\n';
+  return basePrompt + correction;
+}
+
 /**
  * Manual-mode generation (TWO-PASS + Deep Think).
  * Pass 1: Convert daytime to nighttime (cached via nightBaseBase64 param).
@@ -2000,8 +2275,18 @@ export const generateManualScene = async (
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
   console.log(`[Manual Mode] Night base cached: ${!!nightBaseBase64}`);
 
+  const normalized = normalizeGutterPlacements(spatialMap, gutterLines);
+  const normalizedSpatialMap = normalized.spatialMap;
+  if (normalized.snappedCount > 0) {
+    console.log(`[Manual Mode] Normalized ${normalized.snappedCount} gutter fixture(s) onto gutter lines before generation.`);
+  }
+  const normalizedGuideFixtures = normalizeGutterGuideFixtures(fixtures, gutterLines);
+  if (normalizedGuideFixtures.snappedCount > 0) {
+    console.log(`[Manual Mode] Normalized ${normalizedGuideFixtures.snappedCount} gutter guide fixture(s) for gradient hints.`);
+  }
+
   // Validate placements before spending an API call
-  const validation = validateManualPlacements(spatialMap);
+  const validation = validateManualPlacements(normalizedSpatialMap, gutterLines);
   if (!validation.valid) {
     console.error('[Manual Mode] Validation FAILED:', validation.errors);
     throw new Error(`Manual placement validation failed:\n${validation.errors.join('\n')}`);
@@ -2020,22 +2305,27 @@ export const generateManualScene = async (
   // Generate gradient/marker overlays (painted on ORIGINAL daytime image for contrast)
   onStageUpdate?.('generating');
 
-  const hasGradients = !!(fixtures && fixtures.length > 0);
+  const hasGradients = !!(normalizedGuideFixtures.fixtures && normalizedGuideFixtures.fixtures.length > 0);
   let gradientImage: string | undefined;
   let markedImage: string | undefined;
 
   if (hasGradients) {
-    console.log(`[Manual Mode] Painting directional light gradients for ${fixtures!.length} fixtures...`);
-    gradientImage = await paintLightGradients(nightBase, fixtures!, imageMimeType, gutterLines);
+    console.log(`[Manual Mode] Painting directional light gradients for ${normalizedGuideFixtures.fixtures!.length} fixtures...`);
+    gradientImage = await paintLightGradients(
+      nightBase,
+      normalizedGuideFixtures.fixtures!,
+      imageMimeType,
+      gutterLines
+    );
     console.log('[Manual Mode] Gradient map painted (includes numbered markers).');
   } else {
     console.log('[Manual Mode] Drawing fixture markers...');
-    markedImage = await drawFixtureMarkers(imageBase64, spatialMap, imageMimeType);
+    markedImage = await drawFixtureMarkers(imageBase64, normalizedSpatialMap, imageMimeType);
     console.log('[Manual Mode] Markers drawn.');
   }
 
   // Load few-shot reference examples for the selected fixture types
-  const fixtureTypes = [...new Set(spatialMap.placements.map(p => p.fixtureType))];
+  const fixtureTypes = [...new Set(normalizedSpatialMap.placements.map(p => p.fixtureType))];
   let referenceParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
   try {
     referenceParts = await buildReferenceParts(fixtureTypes);
@@ -2059,7 +2349,7 @@ export const generateManualScene = async (
     lightIntensity,
     beamAngle,
     userPreferences,
-    spatialMap,
+    normalizedSpatialMap,
     gradientImage,
     markedImage,
     true
@@ -2069,20 +2359,65 @@ export const generateManualScene = async (
   // Pass 2: Nano Banana Pro generates the lit scene
   onStageUpdate?.('placing');
   console.log('[Pass 2] Generating lit scene with Nano Banana Pro...');
-  const result = await executeGeneration(
+  let result = await executeGeneration(
     nightBase,
     imageMimeType,
     deepThinkResult.prompt,
     targetRatio,
-    referenceParts.length > 0 ? referenceParts : undefined
+    referenceParts.length > 0 ? referenceParts : undefined,
+    gradientImage,
+    markedImage
   );
 
   console.log('[Pass 2] Lighting generation complete!');
 
   // Post-generation verification (non-blocking)
   onStageUpdate?.('verifying');
-  const verification = await verifyGeneratedImage(result, imageMimeType, spatialMap.placements);
+  let verification = await verifyGeneratedImage(
+    result,
+    imageMimeType,
+    normalizedSpatialMap.placements,
+    gutterLines
+  );
   console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
+
+  const hasGutterFixtures = normalizedSpatialMap.placements.some(p => p.fixtureType === 'gutter');
+  if (hasGutterFixtures && !verification.verified) {
+    for (let attempt = 1; attempt <= MAX_GUTTER_RETRY_ATTEMPTS; attempt++) {
+      console.warn(`[Manual Mode] Gutter verification failed, running correction retry ${attempt}/${MAX_GUTTER_RETRY_ATTEMPTS}...`);
+      onStageUpdate?.('placing');
+      const correctionPrompt = buildGutterCorrectionPrompt(
+        deepThinkResult.prompt,
+        normalizedSpatialMap.placements,
+        gutterLines
+      );
+      const retryResult = await executeGeneration(
+        nightBase,
+        imageMimeType,
+        correctionPrompt,
+        targetRatio,
+        referenceParts.length > 0 ? referenceParts : undefined,
+        gradientImage,
+        markedImage
+      );
+
+      onStageUpdate?.('verifying');
+      const retryVerification = await verifyGeneratedImage(
+        retryResult,
+        imageMimeType,
+        normalizedSpatialMap.placements,
+        gutterLines
+      );
+
+      if (retryVerification.verified || retryVerification.confidence >= verification.confidence) {
+        result = retryResult;
+        verification = retryVerification;
+      }
+
+      if (verification.verified) break;
+    }
+    console.log(`[Manual Mode] Post-retry verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
+  }
 
   return { result, nightBase };
 };

@@ -324,6 +324,8 @@ export interface SpatialFixturePlacement {
   description: string;           // Human-readable: "At far LEFT corner, in landscaping bed"
   rotation?: number;             // 0-360° beam direction (0=up). Per-fixture override.
   beamLength?: number;           // 0.3-2.5 multiplier on default beam height.
+  gutterLineId?: string;         // Optional source line id when gutter fixture is snapped to a gutter line.
+  distanceToGutter?: number;     // Optional distance in % to nearest gutter line after normalization.
 }
 
 export interface SpatialMap {

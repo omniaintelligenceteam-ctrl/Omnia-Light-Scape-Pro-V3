@@ -1240,7 +1240,7 @@ CRITICAL — NO DOWNLIGHTS:
 - Do NOT create any downward-facing light from the eaves or overhangs
 - Eave undersides must stay DARK — no soffit lights, no recessed downlights
 - ALL light from these fixtures goes UPWARD onto the wall above`,
-    negativePrompt: `HARD RULE: Do NOT generate any mounted up lights at the roof edge. Dormers, gables, second story facade, and upper roofline features must remain dark. No uplighting from roof edge level.`,
+    negativePrompt: `HARD RULE: Do NOT generate any gutter-mounted up lights. Keep the 1st story gutter line dark with no fixtures in the rain gutter channel and no upward wall wash from gutter level.`,
     subOptions: [
       {
         id: 'gutterUpLights',
@@ -1259,8 +1259,8 @@ WHAT EACH FIXTURE LIGHTS (position-constrained):
 - Do NOT illuminate the whole facade — only the section above each fixture
 
 FIXTURE COUNT: Use the EXACT count from the design request. Do NOT add or remove fixtures beyond what is specified. Space 4-6 feet apart.`,
-        negativePrompt: `Do NOT place any mounted up lights at the 1st story roof edge. 2nd story features must remain dark from roof-edge-level lighting.`,
-        darkDescription: `1st story roof edge remains EMPTY - no mounted up lights, 2nd story features unlit from roof edge level.`
+        negativePrompt: `Do NOT place any gutter-mounted up lights. The 1st story gutter line must remain dark with zero fixtures in the gutter channel.`,
+        darkDescription: `1st story gutter line remains EMPTY - no gutter-mounted up lights and no upward wall illumination from gutter level.`
       }
     ]
   },
