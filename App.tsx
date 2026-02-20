@@ -1821,6 +1821,14 @@ const App: React.FC = () => {
       console.log('Counts:', fixtureCounts);
 
       let result: string;
+      let autoExpectedPlacements: SpatialFixturePlacement[] | undefined;
+      let autoExpectedGutterLines: GutterLine[] | undefined;
+      const captureAutoConstraints = (constraints: { expectedPlacements: SpatialFixturePlacement[]; gutterLines?: GutterLine[] }) => {
+        autoExpectedPlacements = constraints.expectedPlacements.length > 0 ? constraints.expectedPlacements : undefined;
+        autoExpectedGutterLines = constraints.gutterLines && constraints.gutterLines.length > 0
+          ? constraints.gutterLines
+          : undefined;
+      };
 
       // Derive fixture selections from manual placements if in manual mode
       const isManualMode = placementMode === 'manual' && manualFixtures.length > 0;
@@ -1874,7 +1882,8 @@ const App: React.FC = () => {
             beamAngle,
             targetRatio,
             userPreferences,
-            (stage) => setGenerationStage(stage as typeof generationStage)
+            (stage) => setGenerationStage(stage as typeof generationStage),
+            captureAutoConstraints
           );
         }
       }
@@ -1970,7 +1979,8 @@ const App: React.FC = () => {
             beamAngle,
             targetRatio,
             userPreferences,
-            (stage) => setGenerationStage(stage as typeof generationStage)
+            (stage) => setGenerationStage(stage as typeof generationStage),
+            captureAutoConstraints
           );
         }
       }
@@ -1988,7 +1998,8 @@ const App: React.FC = () => {
           beamAngle,
           targetRatio,
           userPreferences,
-          (stage) => setGenerationStage(stage as typeof generationStage)
+          (stage) => setGenerationStage(stage as typeof generationStage),
+          captureAutoConstraints
         );
       }
 
@@ -2012,8 +2023,10 @@ const App: React.FC = () => {
         image: result,
         timestamp: Date.now(),
         placementMode: isManualMode ? 'manual' : 'auto',
-        expectedPlacements: isManualMode ? manualSpatialMap?.placements : undefined,
-        gutterLines: isManualMode && manualGutterLines.length > 0 ? manualGutterLines : undefined,
+        expectedPlacements: isManualMode ? manualSpatialMap?.placements : autoExpectedPlacements,
+        gutterLines: isManualMode
+          ? (manualGutterLines.length > 0 ? manualGutterLines : undefined)
+          : autoExpectedGutterLines,
         settings: {
           selectedFixtures: selectedFixtures,
           fixtureSubOptions: { ...fixtureSubOptions },
@@ -2037,7 +2050,17 @@ const App: React.FC = () => {
       showToast('success', 'Night scene generated successfully!');
     } catch (err: any) {
       console.error(err);
-      const errorMessage = err.toString().toLowerCase();
+      const rawErrorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = rawErrorMessage.toLowerCase();
+      if (rawErrorMessage.includes('AUTO_PLACEMENT_UNCERTAIN:')) {
+        const userMessage = rawErrorMessage
+          .replace('AUTO_PLACEMENT_UNCERTAIN:', '')
+          .trim();
+        setError(userMessage);
+        showToast('warning', userMessage);
+        setIsLoading(false);
+        return;
+      }
       if (errorMessage.includes('403') || errorMessage.includes('permission_denied') || errorMessage.includes('permission denied')) {
         setError("Permission denied. Please check your API Key configuration.");
         showToast('error', 'Permission denied. Check your API key.');
@@ -8045,7 +8068,7 @@ Notes: ${invoice.notes || 'N/A'}
                 qaRecentGenerations={generationHistory
                   .slice()
                   .sort((a, b) => b.timestamp - a.timestamp)
-                  .slice(0, 12)
+                  .slice(0, 30)
                   .map((entry) => ({
                     id: entry.id,
                     image: entry.image,

@@ -26,7 +26,7 @@ const DEFAULT_TEMPLATE: LightingEvaluationCase[] = [
     gutterLines: []
   }
 ];
-const MAX_RECENT_CASES = 6;
+const MAX_RECENT_CASES = 30;
 
 function parseCasesJson(raw: string): LightingEvaluationCase[] {
   const parsed = JSON.parse(raw) as unknown;

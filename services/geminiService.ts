@@ -33,6 +33,7 @@ const PHOTOREAL_MIN_SCORE = 85;
 const MAX_ARTIFACT_RETRY_ATTEMPTS = 1;
 const ANNOTATION_ARTIFACT_MAX_SCORE = 8;
 const MAX_AUTO_GUTTER_LINES = 3;
+const AUTO_PLACEMENT_CONFIDENCE_MIN_SCORE = 85;
 const MODEL_GUIDE_DEBUG = String(import.meta.env.VITE_MODEL_GUIDE_DEBUG || '').toLowerCase() === 'true';
 const DEFAULT_INITIAL_CANDIDATE_COUNT = 2;
 const MAX_INITIAL_CANDIDATE_COUNT = 3;
@@ -600,6 +601,34 @@ function createSkippedPlacementVerification(details: string): PlacementVerificat
   };
 }
 
+function hasForbiddenTypeViolations(placementVerification: PlacementVerificationResult): boolean {
+  return placementVerification.unexpectedTypes.length > 0;
+}
+
+function shouldAcceptPlacementRetryCandidate(
+  current: PlacementVerificationResult,
+  next: PlacementVerificationResult
+): boolean {
+  if (current.unexpectedTypes.length === 0 && next.unexpectedTypes.length > 0) {
+    return false;
+  }
+
+  if (next.verified) return true;
+  if (next.unexpectedTypes.length < current.unexpectedTypes.length) return true;
+  if (next.unexpectedTypes.length > current.unexpectedTypes.length) return false;
+  return next.confidence >= current.confidence;
+}
+
+function isPlacementNotWorse(
+  current: PlacementVerificationResult,
+  next: PlacementVerificationResult,
+  placementVerificationEnabled: boolean
+): boolean {
+  if (!placementVerificationEnabled) return true;
+  if (current.unexpectedTypes.length === 0 && next.unexpectedTypes.length > 0) return false;
+  return next.verified || next.unexpectedTypes.length <= current.unexpectedTypes.length;
+}
+
 function getPlacementQualityScore(
   placementVerification: PlacementVerificationResult,
   placementVerificationEnabled: boolean
@@ -616,6 +645,9 @@ function getPlacementQualityScore(
     score -= 20;
   }
   score -= placementVerification.unexpectedTypes.length * 10;
+  if (hasForbiddenTypeViolations(placementVerification)) {
+    score -= 55;
+  }
   return clampScore(score);
 }
 
@@ -637,6 +669,7 @@ function computeCandidateCompositeScore(
 
   let adjusted = baseScore;
   if (placementVerificationEnabled && !placementVerification.verified) adjusted -= 10;
+  if (placementVerificationEnabled && hasForbiddenTypeViolations(placementVerification)) adjusted -= 35;
   if (!artifactCheck.passed) adjusted -= 8;
   if (!photorealPassed) adjusted -= 10;
 
@@ -649,6 +682,12 @@ function computeCandidateCompositeScore(
 
 function pickBestGenerationCandidate(candidates: GenerationCandidateEvaluation[]): GenerationCandidateEvaluation {
   return candidates.reduce((best, candidate) => {
+    const candidateHasForbidden = hasForbiddenTypeViolations(candidate.placementVerification);
+    const bestHasForbidden = hasForbiddenTypeViolations(best.placementVerification);
+    if (candidateHasForbidden !== bestHasForbidden) {
+      return candidateHasForbidden ? best : candidate;
+    }
+
     const epsilon = 0.05;
     if (candidate.compositeScore > best.compositeScore + epsilon) return candidate;
     if (candidate.compositeScore + epsilon < best.compositeScore) return best;
@@ -2521,6 +2560,180 @@ function deriveFallbackAutoGutterLines(
     });
 }
 
+interface AutoPlacementConfidenceGateResult {
+  passed: boolean;
+  score: number;
+  reasons: string[];
+  hardFails: string[];
+}
+
+function getAutoPlausibleYBand(fixtureType: string): { min: number; max: number } | null {
+  switch (fixtureType) {
+    case 'up':
+      return { min: 50, max: 99 };
+    case 'well':
+      return { min: 55, max: 99 };
+    case 'path':
+      return { min: 60, max: 99 };
+    case 'hardscape':
+      return { min: 55, max: 99 };
+    case 'coredrill':
+      return { min: 60, max: 99 };
+    case 'gutter':
+      return { min: 18, max: 62 };
+    case 'soffit':
+      return { min: 8, max: 58 };
+    default:
+      return null;
+  }
+}
+
+function evaluateAutoPlacementConfidence(
+  spatialMap: SpatialMap,
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
+  gutterLines?: GutterLine[]
+): AutoPlacementConfidenceGateResult {
+  let score = 100;
+  const reasons: string[] = [];
+  const hardFails: string[] = [];
+  const placements = spatialMap.placements || [];
+
+  if (selectedFixtures.length > 0 && placements.length === 0) {
+    hardFails.push('No auto placements were generated.');
+    score -= 100;
+  }
+
+  const allowedTypes = new Set(
+    selectedFixtures
+      .map(type => sanitizeFixtureType(type))
+      .filter((type): type is string => !!type)
+  );
+  const presentTypes = new Set(placements.map(placement => placement.fixtureType));
+  const forbiddenTypes = [...presentTypes].filter(type => !allowedTypes.has(type));
+  if (forbiddenTypes.length > 0) {
+    hardFails.push(`Forbidden fixture types in auto constraints: ${forbiddenTypes.join(', ')}`);
+    score -= 45 + Math.max(0, forbiddenTypes.length - 1) * 10;
+  }
+
+  const explicitTargets = buildExplicitAutoCountTargets(selectedFixtures, fixtureSubOptions, fixtureCounts);
+  explicitTargets.forEach(target => {
+    const actualCount = placements.filter(
+      placement => placement.fixtureType === target.fixtureType && placement.subOption === target.subOption
+    ).length;
+    if (actualCount !== target.desiredCount) {
+      hardFails.push(
+        `Count mismatch ${target.fixtureType}/${target.subOption}: expected ${target.desiredCount}, got ${actualCount}`
+      );
+      score -= 30;
+    }
+  });
+
+  let collisionCount = 0;
+  const byGroup = new Map<string, SpatialFixturePlacement[]>();
+  placements.forEach(placement => {
+    const key = getAutoPlacementGroupKey(placement.fixtureType, placement.subOption || 'general');
+    const existing = byGroup.get(key) || [];
+    existing.push(placement);
+    byGroup.set(key, existing);
+  });
+  byGroup.forEach(groupPlacements => {
+    for (let i = 0; i < groupPlacements.length; i++) {
+      for (let j = i + 1; j < groupPlacements.length; j++) {
+        const a = groupPlacements[i];
+        const b = groupPlacements[j];
+        const dist = Math.sqrt(
+          (a.horizontalPosition - b.horizontalPosition) ** 2 +
+          (a.verticalPosition - b.verticalPosition) ** 2
+        );
+        if (dist < 0.9) collisionCount++;
+      }
+    }
+  });
+  if (collisionCount > 0) {
+    reasons.push(`Detected ${collisionCount} overlapping/duplicate fixture positions.`);
+    score -= Math.min(25, collisionCount * 6);
+  }
+
+  let yBandViolations = 0;
+  placements.forEach(placement => {
+    const band = getAutoPlausibleYBand(placement.fixtureType);
+    if (!band) return;
+    if (placement.verticalPosition < band.min || placement.verticalPosition > band.max) {
+      yBandViolations++;
+    }
+  });
+  if (yBandViolations > 0) {
+    reasons.push(`Detected ${yBandViolations} fixture(s) outside plausible Y-bands for their types.`);
+    score -= Math.min(20, yBandViolations * 3);
+  }
+
+  const gutterPlacements = placements.filter(placement => placement.fixtureType === 'gutter');
+  if (gutterPlacements.length > 0) {
+    if (!gutterLines || gutterLines.length === 0) {
+      hardFails.push('Gutter fixtures exist but no gutter rails were available.');
+      score -= 35;
+    } else {
+      let offRailCount = 0;
+      let aboveLineCount = 0;
+      let depthOutOfBandCount = 0;
+
+      gutterPlacements.forEach(placement => {
+        const nearest = resolveGutterLine(placement, gutterLines);
+        if (!nearest) {
+          offRailCount++;
+          return;
+        }
+
+        if (nearest.distance > GUTTER_LINE_TOLERANCE_PERCENT + 0.5) {
+          offRailCount++;
+        }
+
+        const signedDepth = getSignedDepthFromLine(
+          placement.horizontalPosition,
+          placement.verticalPosition,
+          { x: nearest.x, y: nearest.y, line: nearest.line }
+        );
+
+        if (signedDepth < -GUTTER_ABOVE_LINE_TOLERANCE_PERCENT) {
+          aboveLineCount++;
+        }
+
+        if (
+          signedDepth < MIN_GUTTER_MOUNT_DEPTH_PERCENT - 0.2 ||
+          signedDepth > MAX_GUTTER_MOUNT_DEPTH_PERCENT + GUTTER_MOUNT_DEPTH_TOLERANCE_PERCENT
+        ) {
+          depthOutOfBandCount++;
+        }
+      });
+
+      if (offRailCount > 0) {
+        hardFails.push(`Detected ${offRailCount} gutter fixture(s) off gutter rails.`);
+        score -= 30;
+      }
+      if (aboveLineCount > 0) {
+        hardFails.push(`Detected ${aboveLineCount} gutter fixture(s) mounted above gutter trough.`);
+        score -= 30;
+      }
+      if (depthOutOfBandCount > 0) {
+        reasons.push(`Detected ${depthOutOfBandCount} gutter fixture(s) with out-of-band mount depth.`);
+        score -= Math.min(15, depthOutOfBandCount * 4);
+      }
+    }
+  }
+
+  const clampedScore = clampScore(score);
+  const passed = hardFails.length === 0 && clampedScore >= AUTO_PLACEMENT_CONFIDENCE_MIN_SCORE;
+
+  return {
+    passed,
+    score: clampedScore,
+    reasons: [...hardFails, ...reasons],
+    hardFails,
+  };
+}
+
 function buildAutoSpatialMapFromSuggestions(
   suggestions: SuggestedFixture[],
   selectedFixtures: string[],
@@ -3416,6 +3629,45 @@ function evaluateUnexpectedFixtureTypes(
   };
 }
 
+function evaluateFixtureTypeCountVerification(
+  expectedPlacements: SpatialFixturePlacement[],
+  detectedFixtures: DetectedFixture[]
+): { verified: boolean; details: string; mismatches: string[] } {
+  const expectedCounts = new Map<string, number>();
+  expectedPlacements.forEach(placement => {
+    expectedCounts.set(placement.fixtureType, (expectedCounts.get(placement.fixtureType) || 0) + 1);
+  });
+
+  const detectedCounts = new Map<string, number>();
+  detectedFixtures.forEach(fixture => {
+    const canonical = normalizeDetectedFixtureType(fixture.type);
+    if (!canonical || !expectedCounts.has(canonical)) return;
+    detectedCounts.set(canonical, (detectedCounts.get(canonical) || 0) + 1);
+  });
+
+  const mismatches: string[] = [];
+  expectedCounts.forEach((expectedCount, type) => {
+    const detectedCount = detectedCounts.get(type) || 0;
+    if (detectedCount !== expectedCount) {
+      mismatches.push(`${type}: expected ${expectedCount}, detected ${detectedCount}`);
+    }
+  });
+
+  if (mismatches.length > 0) {
+    return {
+      verified: false,
+      details: `Type count mismatches: ${mismatches.join(' | ')}`,
+      mismatches,
+    };
+  }
+
+  return {
+    verified: true,
+    details: 'Per-type fixture counts matched expected values.',
+    mismatches: [],
+  };
+}
+
 function evaluateGutterVerification(
   expectedPlacements: SpatialFixturePlacement[],
   detectedFixtures: DetectedFixture[],
@@ -3651,21 +3903,22 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
       };
     }
 
-    const parsed = JSON.parse(jsonMatch[0]) as { count: number; fixtures: DetectedFixture[]; confidence: number };
-    const actualCount = parsed.count;
+    const parsed = JSON.parse(jsonMatch[0]) as { count?: number; fixtures?: DetectedFixture[]; confidence?: number };
+    const fixtures = Array.isArray(parsed.fixtures) ? parsed.fixtures : [];
+    const actualCount = typeof parsed.count === 'number' ? parsed.count : fixtures.length;
     const confidence = parsed.confidence || 0;
     const countMatch = actualCount === expectedCount;
-    const fixtures = Array.isArray(parsed.fixtures) ? parsed.fixtures : [];
     const gutterVerification = evaluateGutterVerification(expectedPlacements, fixtures, gutterLines);
     const typeVerification = evaluateUnexpectedFixtureTypes(expectedPlacements, fixtures);
-    const verified = countMatch && gutterVerification.verified && typeVerification.verified;
+    const typeCountVerification = evaluateFixtureTypeCountVerification(expectedPlacements, fixtures);
+    const verified = countMatch && gutterVerification.verified && typeVerification.verified && typeCountVerification.verified;
 
-    const details = `Expected ${expectedCount} fixtures, found ${actualCount}. Confidence: ${confidence}%. Types expected: [${expectedTypes.join(', ')}]. ${gutterVerification.details} ${typeVerification.details}`;
+    const details = `Expected ${expectedCount} fixtures, found ${actualCount}. Confidence: ${confidence}%. Types expected: [${expectedTypes.join(', ')}]. ${typeCountVerification.details} ${gutterVerification.details} ${typeVerification.details}`;
 
     if (verified) {
-      console.log(`[Manual Mode] Verification PASSED: ${actualCount}/${expectedCount} fixtures confirmed (${confidence}% confidence). ${gutterVerification.details} ${typeVerification.details}`);
+      console.log(`[Manual Mode] Verification PASSED: ${actualCount}/${expectedCount} fixtures confirmed (${confidence}% confidence). ${typeCountVerification.details} ${gutterVerification.details} ${typeVerification.details}`);
     } else {
-      console.warn(`[Manual Mode] Verification WARNING: Expected ${expectedCount} fixtures but found ${actualCount} (${confidence}% confidence). ${gutterVerification.details} ${typeVerification.details}`);
+      console.warn(`[Manual Mode] Verification WARNING: Expected ${expectedCount} fixtures but found ${actualCount} (${confidence}% confidence). ${typeCountVerification.details} ${gutterVerification.details} ${typeVerification.details}`);
       if (fixtures) {
         fixtures.forEach((f, i) => {
           console.warn(`  Found fixture ${i + 1}: ${f.type} at [${f.x}%, ${f.y}%]`);
@@ -4000,11 +4253,7 @@ export const generateManualScene = async (
         gutterLines
       );
 
-      if (
-        retryVerification.verified ||
-        retryVerification.unexpectedTypes.length < verification.unexpectedTypes.length ||
-        retryVerification.confidence >= verification.confidence
-      ) {
+      if (shouldAcceptPlacementRetryCandidate(verification, retryVerification)) {
         result = retryResult;
         verification = retryVerification;
         artifactCheckStale = true;
@@ -4053,9 +4302,7 @@ export const generateManualScene = async (
       );
       const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
 
-      const placementNotWorse =
-        retryVerification.verified ||
-        retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      const placementNotWorse = isPlacementNotWorse(verification, retryVerification, true);
       if (
         (retryArtifactCheck.passed && placementNotWorse) ||
         retryArtifactCheck.score < artifactCheck.score
@@ -4119,9 +4366,7 @@ export const generateManualScene = async (
       );
       const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
 
-      const placementNotWorse =
-        retryVerification.verified ||
-        retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      const placementNotWorse = isPlacementNotWorse(verification, retryVerification, true);
       const artifactNotWorse =
         retryArtifactCheck.passed ||
         retryArtifactCheck.score <= artifactCheck.score;
@@ -4132,7 +4377,7 @@ export const generateManualScene = async (
         retryPhotorealCheck.score * 0.7 + retryHeuristicPhotorealCheck.score * 0.3;
       if (
         ((retryPhotorealPassed && placementNotWorse && artifactNotWorse)) ||
-        (retryCompositePhotorealScore > currentCompositePhotorealScore && artifactNotWorse)
+        (retryCompositePhotorealScore > currentCompositePhotorealScore && placementNotWorse && artifactNotWorse)
       ) {
         result = retryResult;
         verification = retryVerification;
@@ -4168,7 +4413,11 @@ export const generateNightSceneEnhanced = async (
   beamAngle: number,
   targetRatio: string,
   userPreferences?: UserPreferences | null,
-  onStageUpdate?: (stage: string) => void
+  onStageUpdate?: (stage: string) => void,
+  onAutoConstraintsResolved?: (constraints: {
+    expectedPlacements: SpatialFixturePlacement[];
+    gutterLines?: GutterLine[];
+  }) => void
 ): Promise<string> => {
   console.log('[Enhanced Mode] Starting 2-stage Deep Think pipeline...');
 
@@ -4263,6 +4512,27 @@ export const generateNightSceneEnhanced = async (
         }
       }
 
+      if (autoSpatialMap && autoSpatialMap.placements.length > 0) {
+        const gate = evaluateAutoPlacementConfidence(
+          autoSpatialMap,
+          selectedFixtures,
+          fixtureSubOptions,
+          fixtureCounts,
+          autoGutterLines
+        );
+        console.log(
+          `[Enhanced Mode] Auto placement confidence gate: ${gate.passed ? 'PASS' : 'FAIL'} (${gate.score.toFixed(1)}).`
+        );
+        if (!gate.passed) {
+          const reasonSummary = gate.reasons.length > 0
+            ? gate.reasons.join(' | ')
+            : 'Auto placement confidence below threshold.';
+          throw new Error(
+            `AUTO_PLACEMENT_UNCERTAIN: score ${gate.score.toFixed(1)} below ${AUTO_PLACEMENT_CONFIDENCE_MIN_SCORE}. ${reasonSummary}`
+          );
+        }
+      }
+
       if (autoSpatialMap.placements.length > 0) {
         const guideFixtures = buildGuideFixturesFromSpatialMap(autoSpatialMap);
         if (guideFixtures.length > 0) {
@@ -4279,12 +4549,25 @@ export const generateNightSceneEnhanced = async (
           );
         }
       }
+
+      onAutoConstraintsResolved?.({
+        expectedPlacements: autoSpatialMap?.placements ?? [],
+        gutterLines: autoGutterLines,
+      });
     }
   } catch (autoConstraintError) {
+    const autoConstraintMessage = autoConstraintError instanceof Error
+      ? autoConstraintError.message
+      : String(autoConstraintError);
+    if (autoConstraintMessage.startsWith('AUTO_PLACEMENT_UNCERTAIN:')) {
+      throw (autoConstraintError instanceof Error ? autoConstraintError : new Error(autoConstraintMessage));
+    }
+
     console.warn('[Enhanced Mode] Auto spatial constraint build failed (falling back to prompt-only auto):', autoConstraintError);
     autoSpatialMap = undefined;
     autoGutterLines = undefined;
     autoGuideImage = undefined;
+    onAutoConstraintsResolved?.({ expectedPlacements: [], gutterLines: undefined });
   }
 
   // Stage 1: Deep Think analyzes property and writes the complete generation prompt
@@ -4399,11 +4682,7 @@ export const generateNightSceneEnhanced = async (
         autoGutterLines
       );
 
-      if (
-        retryVerification.verified ||
-        retryVerification.unexpectedTypes.length < verification.unexpectedTypes.length ||
-        retryVerification.confidence >= verification.confidence
-      ) {
+      if (shouldAcceptPlacementRetryCandidate(verification, retryVerification)) {
         result = retryResult;
         verification = retryVerification;
         artifactCheckStale = true;
@@ -4449,10 +4728,11 @@ export const generateNightSceneEnhanced = async (
         : verification;
       const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
 
-      const placementNotWorse =
-        !placementVerificationEnabled ||
-        retryVerification.verified ||
-        retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      const placementNotWorse = isPlacementNotWorse(
+        verification,
+        retryVerification,
+        placementVerificationEnabled
+      );
       if (
         (retryArtifactCheck.passed && placementNotWorse) ||
         retryArtifactCheck.score < artifactCheck.score
@@ -4506,10 +4786,11 @@ export const generateNightSceneEnhanced = async (
         imageMimeType
       );
       const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
-      const placementNotWorse =
-        !placementVerificationEnabled ||
-        retryVerification.verified ||
-        retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      const placementNotWorse = isPlacementNotWorse(
+        verification,
+        retryVerification,
+        placementVerificationEnabled
+      );
       const artifactNotWorse =
         retryArtifactCheck.passed ||
         retryArtifactCheck.score <= artifactCheck.score;
