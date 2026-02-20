@@ -27,6 +27,8 @@ const MODEL_NAME = 'gemini-3-pro-image-preview';
 
 // Timeout for API calls (2 minutes)
 const API_TIMEOUT_MS = 120000;
+const MAX_PHOTOREAL_RETRY_ATTEMPTS = 1;
+const PHOTOREAL_MIN_SCORE = 85;
 
 // Non-selected fixture types, including soffit, are explicitly forbidden in prompt assembly.
 
@@ -152,6 +154,123 @@ async function withRetry<T>(
   }
 
   throw lastError;
+}
+
+interface PhotorealismVerificationResult {
+  passed: boolean;
+  score: number;
+  details: string;
+  issues: string[];
+}
+
+function extractBase64Data(imageOrDataUri: string): string {
+  const commaIndex = imageOrDataUri.indexOf(',');
+  return commaIndex >= 0 ? imageOrDataUri.slice(commaIndex + 1) : imageOrDataUri;
+}
+
+function extractMimeType(imageOrDataUri: string, fallback: string): string {
+  if (!imageOrDataUri.startsWith('data:')) return fallback;
+  const mimeMatch = imageOrDataUri.match(/^data:(.*?);base64,/);
+  return mimeMatch?.[1] || fallback;
+}
+
+function buildPhotorealismLockAddendum(): string {
+  return `
+
+=== PHOTOREALISM LOCK (NON-NEGOTIABLE) ===
+- Sky must be true black (#000000 to #0A0A0A) with ONE realistic full moon.
+- Preserve natural inverse-square falloff (brightest mid-wall, not at fixture base).
+- Use conical beams with soft feathered edges (no hard geometric light shapes).
+- Maintain visible dark gaps between adjacent fixtures (no uniform wall wash).
+- Preserve architecture/materials pixel-accurately; no invented structures or fake texture.
+- Keep warm amber residential tone (2700K-3000K) unless explicitly overridden by user.
+- If any requirement conflicts, prioritize photorealism and physical light behavior.
+`;
+}
+
+function buildPhotorealismCorrectionPrompt(
+  basePrompt: string,
+  issues: string[]
+): string {
+  const issueList = issues.length > 0
+    ? issues.map((issue, idx) => `${idx + 1}. ${issue}`).join('\n')
+    : '1. Output looked synthetic/flat and lacked realistic light behavior.';
+
+  return `${basePrompt}
+
+=== PHOTOREALISM CORRECTION PASS ===
+The previous output failed realism checks. Correct ONLY the lighting realism while preserving placement/count.
+Address these issues:
+${issueList}
+
+MANDATORY FIXES:
+- Restore deep black sky with one realistic moon only.
+- Reintroduce conical beams, feathered edges, and inverse-square falloff.
+- Reinstate dark gaps between fixtures; avoid flat/uniform washes.
+- Preserve original architecture and material texture fidelity.
+- Keep warm residential amber tone.
+`;
+}
+
+async function verifyPhotorealism(
+  generatedImageBase64: string,
+  imageMimeType: string
+): Promise<PhotorealismVerificationResult> {
+  try {
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+    const prompt = `Evaluate this nighttime architectural lighting image for PHOTOREALISM.
+
+Score realism from 0-100 using this checklist:
+1) Sky is pure black (#000000 to #0A0A0A) with one realistic full moon
+2) Warm amber residential lighting (2700K-3000K feel)
+3) Inverse-square falloff (no base hot-spot dominance, natural attenuation)
+4) Distinct dark gaps between fixture pools (not uniform wall wash)
+5) Soft feathered beam edges + conical spread (not geometric/hard-edged beams)
+6) Original architecture/materials preserved and believable texture revelation
+
+Respond in exact JSON (no markdown):
+{"score": <0-100>, "passed": <true|false>, "issues": ["<issue1>", "<issue2>"]}`;
+
+    const response = await ai.models.generateContent({
+      model: ANALYSIS_MODEL_NAME,
+      contents: {
+        parts: [
+          { inlineData: { data: generatedImageBase64, mimeType: imageMimeType } },
+          { text: prompt },
+        ],
+      },
+      config: { temperature: 0.1 },
+    });
+
+    const text = response.text?.trim() || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return {
+        passed: false,
+        score: 0,
+        details: 'Photoreal verification parse failed.',
+        issues: ['Unable to parse photorealism analysis response.'],
+      };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as {
+      score?: number;
+      passed?: boolean;
+      issues?: string[];
+    };
+    const score = typeof parsed.score === 'number' ? parsed.score : 0;
+    const issues = Array.isArray(parsed.issues) ? parsed.issues : [];
+    const passed = parsed.passed === true || (score >= PHOTOREAL_MIN_SCORE && issues.length === 0);
+    const details = `Photoreal score ${score}/100. ${issues.length > 0 ? `Issues: ${issues.join(' | ')}` : 'No major realism issues detected.'}`;
+    return { passed, score, details, issues };
+  } catch (error) {
+    return {
+      passed: false,
+      score: 0,
+      details: `Photoreal verification error: ${error}`,
+      issues: ['Verification service error.'],
+    };
+  }
 }
 
 /**
@@ -1040,8 +1159,10 @@ ${preferenceContext}
     } else if (resizedMarked) {
       imageParts.push({ inlineData: { data: resizedMarked, mimeType: imageMimeType } });
     }
-    // rawPromptMode: send userInstructions directly, skip auto-mode system prompt wrapper
-    imageParts.push({ text: rawPromptMode ? userInstructions : systemPrompt });
+    // rawPromptMode: send userInstructions directly, skip auto-mode system prompt wrapper.
+    // Always append photorealism lock so quality constraints remain explicit.
+    const finalPromptText = `${rawPromptMode ? userInstructions : systemPrompt}\n${buildPhotorealismLockAddendum()}`;
+    imageParts.push({ text: finalPromptText });
 
     const generatePromise = ai.models.generateContent({
       model: MODEL_NAME,
@@ -1243,6 +1364,7 @@ export const generateNightSceneDirect = async (
   if (preferenceContext) {
     prompt = preferenceContext + '\n\n' + prompt;
   }
+  prompt += `\n${buildPhotorealismLockAddendum()}`;
 
   console.log('=== DIRECT GENERATION MODE ===');
   console.log('Selected fixtures:', selectedFixtures);
@@ -1251,63 +1373,91 @@ export const generateNightSceneDirect = async (
   console.log('Prompt length:', prompt.length, 'characters');
 
   try {
-    const generatePromise = ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data: imageBase64,
-              mimeType: imageMimeType,
+    const runDirectGeneration = async (promptText: string): Promise<string> => {
+      const generatePromise = ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: imageBase64,
+                mimeType: imageMimeType,
+              },
             },
-          },
-          {
-            text: prompt,
-          },
-        ],
-      },
-      config: {
-        temperature: 0.1,
-        imageConfig: {
-          imageSize: "2K",
-          aspectRatio: aspectRatio,
+            {
+              text: promptText,
+            },
+          ],
         },
-        safetySettings: [
-          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        ],
-      },
-    });
+        config: {
+          temperature: 0.1,
+          imageConfig: {
+            imageSize: "2K",
+            aspectRatio: aspectRatio,
+          },
+          safetySettings: [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          ],
+        },
+      });
 
-    // Wrap with timeout
-    const response = await withTimeout(
-      generatePromise,
-      API_TIMEOUT_MS,
-      'Direct generation timed out. Please try again.'
-    );
+      const response = await withTimeout(
+        generatePromise,
+        API_TIMEOUT_MS,
+        'Direct generation timed out. Please try again.'
+      );
 
-    if (response.candidates && response.candidates.length > 0) {
-      const candidate = response.candidates[0];
+      if (response.candidates && response.candidates.length > 0) {
+        const candidate = response.candidates[0];
 
-      if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-        console.warn(`Direct generation stopped with reason: ${candidate.finishReason}`);
-      }
+        if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+          console.warn(`Direct generation stopped with reason: ${candidate.finishReason}`);
+        }
 
-      if (candidate.content && candidate.content.parts) {
-        for (const part of candidate.content.parts) {
-          if (part.inlineData && part.inlineData.data) {
-            const base64Data = part.inlineData.data;
-            const mimeType = part.inlineData.mimeType || 'image/png';
-            console.log('âœ“ Direct generation successful');
-            return `data:${mimeType};base64,${base64Data}`;
+        if (candidate.content && candidate.content.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.inlineData && part.inlineData.data) {
+              const base64Data = part.inlineData.data;
+              const detectedMimeType = part.inlineData.mimeType || 'image/png';
+              return `data:${detectedMimeType};base64,${base64Data}`;
+            }
           }
         }
       }
+
+      throw new Error("Direct generation returned no image. Try the full pipeline mode.");
+    };
+
+    let result = await runDirectGeneration(prompt);
+    let photorealCheck = await verifyPhotorealism(
+      extractBase64Data(result),
+      extractMimeType(result, imageMimeType)
+    );
+    console.log(`[Direct Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
+
+    if (!photorealCheck.passed) {
+      for (let attempt = 1; attempt <= MAX_PHOTOREAL_RETRY_ATTEMPTS; attempt++) {
+        const correctionPrompt = buildPhotorealismCorrectionPrompt(prompt, photorealCheck.issues);
+        const retryResult = await runDirectGeneration(correctionPrompt);
+        const retryPhotoreal = await verifyPhotorealism(
+          extractBase64Data(retryResult),
+          extractMimeType(retryResult, imageMimeType)
+        );
+
+        if (retryPhotoreal.passed || retryPhotoreal.score >= photorealCheck.score) {
+          result = retryResult;
+          photorealCheck = retryPhotoreal;
+        }
+
+        if (photorealCheck.passed) break;
+      }
     }
 
-    throw new Error("Direct generation returned no image. Try the full pipeline mode.");
+    console.log('✓ Direct generation successful');
+    return result;
   } catch (error) {
     console.error("Direct Generation Error:", error);
     throw error;
@@ -2436,6 +2586,7 @@ export const generateManualScene = async (
     true
   );
   console.log(`[Manual Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
+  const lockedPrompt = `${deepThinkResult.prompt}\n${buildPhotorealismLockAddendum()}`;
 
   // Pass 2: Nano Banana Pro generates the lit scene
   onStageUpdate?.('placing');
@@ -2443,7 +2594,7 @@ export const generateManualScene = async (
   let result = await executeGeneration(
     nightBase,
     imageMimeType,
-    deepThinkResult.prompt,
+    lockedPrompt,
     targetRatio,
     referenceParts.length > 0 ? referenceParts : undefined,
     gradientImage,
@@ -2473,7 +2624,7 @@ export const generateManualScene = async (
       );
       onStageUpdate?.('placing');
       const correctionPrompt = buildGutterCorrectionPrompt(
-        deepThinkResult.prompt,
+        lockedPrompt,
         normalizedSpatialMap.placements,
         gutterLines,
         verification.unexpectedTypes
@@ -2508,6 +2659,57 @@ export const generateManualScene = async (
       if (verification.verified) break;
     }
     console.log(`[Manual Mode] Post-retry verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
+  }
+
+  onStageUpdate?.('verifying');
+  let photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
+  console.log(`[Manual Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
+
+  if (!photorealCheck.passed) {
+    for (let attempt = 1; attempt <= MAX_PHOTOREAL_RETRY_ATTEMPTS; attempt++) {
+      console.warn(`[Manual Mode] Photorealism failed, running correction retry ${attempt}/${MAX_PHOTOREAL_RETRY_ATTEMPTS}...`);
+      onStageUpdate?.('placing');
+      const baseCorrectionPrompt = buildGutterCorrectionPrompt(
+        lockedPrompt,
+        normalizedSpatialMap.placements,
+        gutterLines,
+        verification.unexpectedTypes
+      );
+      const correctionPrompt = buildPhotorealismCorrectionPrompt(baseCorrectionPrompt, photorealCheck.issues);
+      const retryResult = await executeGeneration(
+        nightBase,
+        imageMimeType,
+        correctionPrompt,
+        targetRatio,
+        referenceParts.length > 0 ? referenceParts : undefined,
+        gradientImage,
+        markedImage
+      );
+
+      onStageUpdate?.('verifying');
+      const retryVerification = await verifyGeneratedImage(
+        retryResult,
+        imageMimeType,
+        normalizedSpatialMap.placements,
+        gutterLines
+      );
+      const retryPhotorealCheck = await verifyPhotorealism(extractBase64Data(retryResult), imageMimeType);
+
+      const placementNotWorse =
+        retryVerification.verified ||
+        retryVerification.unexpectedTypes.length <= verification.unexpectedTypes.length;
+      if (
+        (retryPhotorealCheck.passed && placementNotWorse) ||
+        retryPhotorealCheck.score > photorealCheck.score
+      ) {
+        result = retryResult;
+        verification = retryVerification;
+        photorealCheck = retryPhotorealCheck;
+      }
+
+      if (photorealCheck.passed) break;
+    }
+    console.log(`[Manual Mode] Post-photoreal retry: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
   }
 
   return { result, nightBase };
@@ -2551,16 +2753,43 @@ export const generateNightSceneEnhanced = async (
   if (deepThinkResult.fixtureBreakdown) {
     console.log('[Enhanced Mode] Fixture breakdown:', deepThinkResult.fixtureBreakdown);
   }
+  const lockedPrompt = `${deepThinkResult.prompt}\n${buildPhotorealismLockAddendum()}`;
 
   // Stage 2: Nano Banana Pro generates the image using Deep Think's prompt
   onStageUpdate?.('generating');
   console.log('[Enhanced Mode] Stage 2: Generating image with Nano Banana Pro...');
-  const result = await executeGeneration(
+  let result = await executeGeneration(
     imageBase64,
     imageMimeType,
-    deepThinkResult.prompt,
+    lockedPrompt,
     targetRatio
   );
+
+  onStageUpdate?.('validating');
+  let photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
+  console.log(`[Enhanced Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
+
+  if (!photorealCheck.passed) {
+    for (let attempt = 1; attempt <= MAX_PHOTOREAL_RETRY_ATTEMPTS; attempt++) {
+      console.warn(`[Enhanced Mode] Photorealism failed, running correction retry ${attempt}/${MAX_PHOTOREAL_RETRY_ATTEMPTS}...`);
+      onStageUpdate?.('generating');
+      const correctionPrompt = buildPhotorealismCorrectionPrompt(lockedPrompt, photorealCheck.issues);
+      const retryResult = await executeGeneration(
+        imageBase64,
+        imageMimeType,
+        correctionPrompt,
+        targetRatio
+      );
+
+      onStageUpdate?.('validating');
+      const retryPhotorealCheck = await verifyPhotorealism(extractBase64Data(retryResult), imageMimeType);
+      if (retryPhotorealCheck.passed || retryPhotorealCheck.score >= photorealCheck.score) {
+        result = retryResult;
+        photorealCheck = retryPhotorealCheck;
+      }
+      if (photorealCheck.passed) break;
+    }
+  }
 
   console.log('[Enhanced Mode] Generation complete!');
   return result;
