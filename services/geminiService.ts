@@ -16,14 +16,7 @@ import {
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
-import {
-  drawFixtureMarkers,
-  CLEAN_MODEL_MARKER_OPTIONS,
-  renderFixtureGlows,
-  type GlowRenderOptions
-} from "./canvasNightService";
 import { buildReferenceParts } from "./referenceLibrary";
-import { paintLightGradients, CLEAN_MODEL_GUIDE_OPTIONS } from "./lightGradientPainter";
 import type { LightFixture, GutterLine } from "../types/fixtures";
 import { rotationToDirectionLabel, hasCustomRotation } from "../utils/fixtureConverter";
 import { suggestGutterLines } from "./gutterDetectionService";
@@ -39,17 +32,8 @@ const MAX_ARTIFACT_RETRY_ATTEMPTS = 1;
 const ANNOTATION_ARTIFACT_MAX_SCORE = 8;
 const MAX_AUTO_GUTTER_LINES = 3;
 const AUTO_PLACEMENT_CONFIDENCE_MIN_SCORE = 85;
-const MODEL_GUIDE_DEBUG = String(import.meta.env.VITE_MODEL_GUIDE_DEBUG || '').toLowerCase() === 'true';
 const DEFAULT_INITIAL_CANDIDATE_COUNT = 2;
 const MAX_INITIAL_CANDIDATE_COUNT = 3;
-const DEFAULT_MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT = 1;
-const MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT = (() => {
-  const raw = Number(import.meta.env.VITE_MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT);
-  if (!Number.isFinite(raw)) return DEFAULT_MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT;
-  return Math.max(1, Math.min(MAX_INITIAL_CANDIDATE_COUNT, Math.round(raw)));
-})();
-const MANUAL_HYBRID_SEED_ENABLED = String(import.meta.env.VITE_MANUAL_HYBRID_SEED_ENABLED || 'true').toLowerCase() !== 'false';
-const MANUAL_HYBRID_FAST_PATH_ENABLED = String(import.meta.env.VITE_MANUAL_HYBRID_FAST_PATH_ENABLED || 'true').toLowerCase() !== 'false';
 const INITIAL_CANDIDATE_COUNT = (() => {
   const raw = Number(import.meta.env.VITE_INITIAL_CANDIDATE_COUNT);
   if (!Number.isFinite(raw)) return DEFAULT_INITIAL_CANDIDATE_COUNT;
@@ -1267,10 +1251,10 @@ export const generateNightScene = async (
   beamAngle: number = 30,
   colorTemperaturePrompt: string = "Use Soft White (3000K) for all lights.",
   userPreferences?: UserPreferences | null,
-  markedImageBase64?: string,
+  _markedImageBase64?: string,
   rawPromptMode?: boolean,
   prefixParts?: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }>,
-  gradientImageBase64?: string
+  _gradientImageBase64?: string
 ): Promise<string> => {
 
   // Initialization: The API key is obtained from environment variable
@@ -1691,26 +1675,14 @@ ${preferenceContext}
   try {
     // Resize images to max 2048px before sending to Gemini to avoid timeouts
     const resizedImage = await resizeImageBase64(imageBase64, imageMimeType);
-    const resizedGradient = gradientImageBase64
-      ? await resizeImageBase64(gradientImageBase64, imageMimeType)
-      : undefined;
-    const resizedMarked = markedImageBase64
-      ? await resizeImageBase64(markedImageBase64, imageMimeType)
-      : undefined;
 
-    // Build parts array â€” send both clean + marked images for manual placement mode
+    // Build parts array
     const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
     // Inject reference examples (few-shot) before user images if provided
     if (prefixParts && prefixParts.length > 0) {
       imageParts.push(...prefixParts);
     }
     imageParts.push({ inlineData: { data: resizedImage, mimeType: imageMimeType } });
-    // Prefer gradient image (includes markers) over markers-only
-    if (resizedGradient) {
-      imageParts.push({ inlineData: { data: resizedGradient, mimeType: imageMimeType } });
-    } else if (resizedMarked) {
-      imageParts.push({ inlineData: { data: resizedMarked, mimeType: imageMimeType } });
-    }
     // rawPromptMode: send userInstructions directly, skip auto-mode system prompt wrapper.
     // Always append photorealism lock so quality constraints remain explicit.
     const finalPromptText = `${rawPromptMode ? userInstructions : systemPrompt}\n${buildPhotorealismLockAddendum()}`;
@@ -2174,27 +2146,6 @@ function sanitizeFixtureType(type: string): string | null {
   if (normalized === 'downlight') return 'soffit';
   if (normalized === 'steplight') return 'hardscape';
   return null;
-}
-
-function mapPipelineTypeToCategory(fixtureType: string): LightFixture['type'] | null {
-  switch (fixtureType) {
-    case 'up':
-      return 'uplight';
-    case 'gutter':
-      return 'gutter_uplight';
-    case 'path':
-      return 'path_light';
-    case 'well':
-      return 'well_light';
-    case 'hardscape':
-      return 'step_light';
-    case 'soffit':
-      return 'downlight';
-    case 'coredrill':
-      return 'coredrill';
-    default:
-      return null;
-  }
 }
 
 interface AutoPlacementSeedPoint {
@@ -2832,36 +2783,6 @@ function buildAutoSpatialMapFromSuggestions(
   return { features: [], placements };
 }
 
-function buildGuideFixturesFromSpatialMap(spatialMap: SpatialMap): LightFixture[] {
-  return spatialMap.placements
-    .map((placement, index) => {
-      const category = mapPipelineTypeToCategory(placement.fixtureType);
-      if (!category) return null;
-
-      const fixture: LightFixture = {
-        id: `auto_guide_${placement.id || index}`,
-        type: category,
-        x: placement.horizontalPosition,
-        y: placement.verticalPosition,
-        intensity: 0.8,
-        colorTemp: 3000,
-        beamAngle: placement.fixtureType === 'path' ? 120 : 35,
-        rotation: placement.rotation,
-        beamLength: placement.beamLength,
-      };
-
-      if (placement.fixtureType === 'gutter') {
-        fixture.gutterLineId = placement.gutterLineId;
-        fixture.gutterLineX = placement.gutterLineX;
-        fixture.gutterLineY = placement.gutterLineY;
-        fixture.gutterMountDepthPercent = placement.gutterMountDepthPercent;
-      }
-
-      return fixture;
-    })
-    .filter((fixture): fixture is LightFixture => !!fixture);
-}
-
 function ensureAutoGutterRailPlacements(
   spatialMap: SpatialMap,
   gutterLines: GutterLine[] | undefined,
@@ -3055,8 +2976,6 @@ export async function deepThinkGeneratePrompt(
   beamAngle: number,
   userPreferences?: UserPreferences | null,
   spatialMap?: SpatialMap,
-  gradientImageBase64?: string,
-  markedImageBase64?: string,
   isManualMode?: boolean
 ): Promise<DeepThinkOutput> {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
@@ -3097,13 +3016,6 @@ export async function deepThinkGeneratePrompt(
   // Build image parts
   const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
   imageParts.push({ inlineData: { data: imageBase64, mimeType: imageMimeType } });
-
-  // For manual mode: include gradient/marker image so Deep Think can see positions
-  if (gradientImageBase64) {
-    imageParts.push({ inlineData: { data: gradientImageBase64, mimeType: imageMimeType } });
-  } else if (markedImageBase64) {
-    imageParts.push({ inlineData: { data: markedImageBase64, mimeType: imageMimeType } });
-  }
 
   imageParts.push({ text: deepThinkPrompt });
 
@@ -3159,20 +3071,12 @@ export async function executeGeneration(
   imageMimeType: string,
   generationPrompt: string,
   aspectRatio?: string,
-  prefixParts?: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }>,
-  gradientImageBase64?: string,
-  markedImageBase64?: string
+  prefixParts?: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }>
 ): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
   // Resize images to prevent timeouts
   const resizedImage = await resizeImageBase64(imageBase64, imageMimeType);
-  const resizedGradient = gradientImageBase64
-    ? await resizeImageBase64(gradientImageBase64, imageMimeType)
-    : undefined;
-  const resizedMarked = markedImageBase64
-    ? await resizeImageBase64(markedImageBase64, imageMimeType)
-    : undefined;
 
   // Build parts array
   const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
@@ -3184,13 +3088,6 @@ export async function executeGeneration(
 
   // Base image
   imageParts.push({ inlineData: { data: resizedImage, mimeType: imageMimeType } });
-
-  // Gradient or marker image
-  if (resizedGradient) {
-    imageParts.push({ inlineData: { data: resizedGradient, mimeType: imageMimeType } });
-  } else if (resizedMarked) {
-    imageParts.push({ inlineData: { data: resizedMarked, mimeType: imageMimeType } });
-  }
 
   // The prompt from Deep Think
   imageParts.push({ text: generationPrompt });
@@ -3430,67 +3327,6 @@ function normalizeGutterPlacements(
     },
     snappedCount,
   };
-}
-
-function normalizeGutterGuideFixtures(
-  fixtures: LightFixture[] | undefined,
-  gutterLines?: GutterLine[]
-): { fixtures: LightFixture[] | undefined; snappedCount: number } {
-  if (!fixtures || fixtures.length === 0 || !gutterLines || gutterLines.length === 0) {
-    return { fixtures, snappedCount: 0 };
-  }
-
-  let snappedCount = 0;
-  const normalizedFixtures = fixtures.map(fixture => {
-    if (fixture.type !== 'gutter_uplight') return fixture;
-
-    const nearest = fixture.gutterLineId
-      ? (() => {
-          const explicitLine = gutterLines.find(line => line.id === fixture.gutterLineId);
-          if (!explicitLine) return null;
-          const projected = projectPointToSegment(
-            fixture.x,
-            fixture.y,
-            explicitLine.startX,
-            explicitLine.startY,
-            explicitLine.endX,
-            explicitLine.endY
-          );
-          return { ...projected, line: explicitLine };
-        })()
-      : findNearestGutterProjection(fixture.x, fixture.y, gutterLines);
-    if (!nearest) return fixture;
-
-    const preferredLineX = typeof fixture.gutterLineX === 'number' ? fixture.gutterLineX : nearest.x;
-    const preferredLineY = typeof fixture.gutterLineY === 'number' ? fixture.gutterLineY : nearest.y;
-    const lineProjection = projectPointToSegment(
-      preferredLineX,
-      preferredLineY,
-      nearest.line.startX,
-      nearest.line.startY,
-      nearest.line.endX,
-      nearest.line.endY
-    );
-    const requestedDepth = resolveRequestedGutterDepth(fixture.gutterMountDepthPercent, nearest.line);
-    const mounted = applyGutterMountDepth(lineProjection.x, lineProjection.y, nearest.line, requestedDepth);
-    const nextX = Number(mounted.mountX.toFixed(3));
-    const nextY = Number(mounted.mountY.toFixed(3));
-    if (Math.abs(nextX - fixture.x) > 0.01 || Math.abs(nextY - fixture.y) > 0.01) {
-      snappedCount++;
-    }
-
-    return {
-      ...fixture,
-      x: nextX,
-      y: nextY,
-      gutterLineId: nearest.line.id,
-      gutterLineX: Number(lineProjection.x.toFixed(3)),
-      gutterLineY: Number(lineProjection.y.toFixed(3)),
-      gutterMountDepthPercent: Number(mounted.appliedDepth.toFixed(3)),
-    };
-  });
-
-  return { fixtures: normalizedFixtures, snappedCount };
 }
 
 const VALID_FIXTURE_TYPES = new Set(['up', 'gutter', 'path', 'well', 'hardscape', 'soffit', 'coredrill']);
@@ -3913,96 +3749,6 @@ REQUIREMENTS:
   throw new Error('Night base generation returned no image.');
 }
 
-function buildManualHybridGlowOptions(
-  lightIntensity: number,
-  beamAngle: number
-): GlowRenderOptions {
-  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-  const normalizedIntensity = clamp(lightIntensity / 100, 0, 1);
-  const normalizedBeam = clamp((beamAngle - 15) / 45, 0, 1);
-  const intensityScale = 0.45 + normalizedIntensity * 0.45;
-  const widthScale = 0.7 + normalizedBeam * 0.5;
-  const heightScale = 1.15 - normalizedBeam * 0.35;
-
-  return {
-    intensityScale,
-    beamAngleDeg: clamp(beamAngle, 10, 120),
-    widthScale,
-    heightScale,
-  };
-}
-
-function buildManualHybridRefinementPrompt(basePrompt: string): string {
-  return `${basePrompt}
-
-=== HYBRID PIPELINE LOCK (HIGHEST PRIORITY) ===
-You are refining a deterministic fixture pre-composite:
-- The first image already contains the exact fixture anchor points and beam directions.
-- DO NOT move fixtures, DO NOT remove fixtures, DO NOT add extra fixtures, DO NOT shift beam headings.
-- Keep every fixture coordinate and rotation exactly as-is.
-- Improve only photoreal blending: material interaction, falloff softness, hotspot shaping, subtle bounce.
-- Keep output photographic and physically plausible: no exaggerated volumetric cones, no synthetic beam triangles.
-- Preserve architecture and composition pixel-for-pixel.
-- Remove all guide artifacts, labels, and UI traces.
-`;
-}
-
-function buildManualHybridFastPrompt(
-  spatialMap: SpatialMap,
-  colorTemperaturePrompt: string,
-  lightIntensity: number,
-  beamAngle: number,
-  modificationRequest?: string
-): string {
-  const allowedTypes = [...new Set(spatialMap.placements.map(p => p.fixtureType))];
-  const canonicalTypes = ['up', 'gutter', 'path', 'well', 'hardscape', 'soffit', 'coredrill'];
-  const forbiddenTypes = canonicalTypes.filter(type => !allowedTypes.includes(type));
-  const fixtureCount = spatialMap.placements.length;
-  const prohibitSoffit = forbiddenTypes.includes('soffit');
-  const modificationSection = modificationRequest?.trim()
-    ? `\n\nCRITICAL MODIFICATION REQUEST: ${modificationRequest.trim()}\nApply the change without moving any fixture coordinate or beam direction.\n`
-    : '';
-
-  return `
-You are editing a pre-composited nighttime image where fixture anchor points and beam origins are already intentionally placed.
-
-PRIMARY GOAL:
-- Preserve exact placement accuracy and improve only realism quality.
-
-HARD GEOMETRY LOCK (NON-NEGOTIABLE):
-- Keep EXACTLY ${fixtureCount} fixtures.
-- Do NOT add any new lights, remove lights, duplicate lights, or rebalance spacing.
-- Do NOT move fixture origins or shift beam headings.
-- Keep each light source anchored to its existing pixel location.
-- Preserve architecture and framing pixel-for-pixel.
-
-REALISM TARGET (MATCH HIGH-END RESIDENTIAL NIGHT PHOTOGRAPHY):
-- Subtle, believable wall grazing and surface interaction.
-- Natural inverse-square falloff.
-- Soft transitions, no harsh synthetic cone triangles.
-- Minimal atmospheric haze only very near fixture sources.
-- Keep unlit zones truly dark and clean.
-
-FIXTURE ALLOWLIST:
-- Allowed fixture types: ${allowedTypes.join(', ') || 'none'}
-- Forbidden fixture types: ${forbiddenTypes.join(', ') || 'none'}
-${prohibitSoffit ? '- Absolutely NO soffit/eave downlights anywhere in the image.' : ''}
-
-LIGHTING PARAMETERS:
-- ${colorTemperaturePrompt}
-- ${getIntensityDescription(lightIntensity)}
-- ${getBeamAngleDescription(beamAngle)}
-
-${formatSpatialMapForPrompt(spatialMap)}
-${modificationSection}
-${buildPhotorealismLockAddendum()}
-
-FINAL ENFORCEMENT:
-- Output must contain EXACTLY ${fixtureCount} fixtures and zero extras.
-- If any forbidden fixture type appears, remove it before finalizing.
-`;
-}
-
 function buildGutterCorrectionPrompt(
   basePrompt: string,
   placements: SpatialFixturePlacement[],
@@ -4081,7 +3827,7 @@ export const generateManualScene = async (
   _targetRatio: string,
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
-  fixtures?: LightFixture[],
+  _fixtures?: LightFixture[],
   nightBaseBase64?: string,
   gutterLines?: GutterLine[],
   modificationRequest?: string
@@ -4094,10 +3840,6 @@ export const generateManualScene = async (
   const normalizedSpatialMap = normalized.spatialMap;
   if (normalized.snappedCount > 0) {
     console.log(`[Manual Mode] Normalized ${normalized.snappedCount} gutter fixture(s) onto gutter lines before generation.`);
-  }
-  const normalizedGuideFixtures = normalizeGutterGuideFixtures(fixtures, gutterLines);
-  if (normalizedGuideFixtures.snappedCount > 0) {
-    console.log(`[Manual Mode] Normalized ${normalizedGuideFixtures.snappedCount} gutter guide fixture(s) for gradient hints.`);
   }
 
   // Validate placements before spending an API call
@@ -4120,74 +3862,10 @@ export const generateManualScene = async (
     nightBase = await generateNightBase(imageBase64, imageMimeType, manualAspectRatio);
   }
 
-  const canUseFastHybridPath = MANUAL_HYBRID_FAST_PATH_ENABLED &&
-    MANUAL_HYBRID_SEED_ENABLED &&
-    normalizedSpatialMap.placements.length > 0;
-
-  if (canUseFastHybridPath) {
-    try {
-      onStageUpdate?.('placing');
-      const hybridGlowOptions = buildManualHybridGlowOptions(lightIntensity, beamAngle);
-      const deterministicSeed = await renderFixtureGlows(
-        nightBase,
-        normalizedSpatialMap,
-        imageMimeType,
-        hybridGlowOptions
-      );
-      const fastPrompt = buildManualHybridFastPrompt(
-        normalizedSpatialMap,
-        colorTemperaturePrompt,
-        lightIntensity,
-        beamAngle,
-        modificationRequest
-      );
-
-      console.log('[Manual Mode] Fast hybrid path active (single-pass realism refinement from deterministic placement seed).');
-      const fastResult = await executeGeneration(
-        deterministicSeed,
-        imageMimeType,
-        fastPrompt,
-        manualAspectRatio
-      );
-      return { result: fastResult, nightBase };
-    } catch (fastPathError) {
-      console.warn('[Manual Mode] Fast hybrid path failed, falling back to full Deep Think pipeline:', fastPathError);
-    }
-  }
-
-  // Generate gradient/marker overlays using the same composition that pass-2 will edit.
-  // This avoids coordinate drift between guide image and base image.
+  // Pure Gemini pipeline for manual mode:
+  // - Gemini 3.1 Pro analyzes the photo + explicit spatial coordinates.
+  // - Gemini image model generates lighting effects (no canvas seeding/compositing).
   onStageUpdate?.('generating');
-
-  const hasGradients = !!(normalizedGuideFixtures.fixtures && normalizedGuideFixtures.fixtures.length > 0);
-  let gradientImage: string | undefined;
-  let markedImage: string | undefined;
-  const guideSourceImage = nightBase;
-  const guideSourceMimeType = imageMimeType;
-
-  if (hasGradients) {
-    console.log(`[Manual Mode] Painting directional light gradients for ${normalizedGuideFixtures.fixtures!.length} fixtures...`);
-    const guideOptions = MODEL_GUIDE_DEBUG ? undefined : CLEAN_MODEL_GUIDE_OPTIONS;
-    gradientImage = await paintLightGradients(
-      guideSourceImage,
-      normalizedGuideFixtures.fixtures!,
-      guideSourceMimeType,
-      gutterLines,
-      guideOptions
-    );
-    console.log(`[Manual Mode] ${MODEL_GUIDE_DEBUG ? 'Debug' : 'Clean'} gradient guide map painted.`);
-  } else {
-    console.log('[Manual Mode] Drawing fixture markers...');
-    const markerOptions = MODEL_GUIDE_DEBUG ? undefined : CLEAN_MODEL_MARKER_OPTIONS;
-    markedImage = await drawFixtureMarkers(
-      guideSourceImage,
-      normalizedSpatialMap,
-      guideSourceMimeType,
-      markerOptions
-    );
-    console.log(`[Manual Mode] ${MODEL_GUIDE_DEBUG ? 'Debug' : 'Clean'} marker guide map drawn.`);
-  }
-
   // Load few-shot reference examples for the selected fixture types
   const fixtureTypes = [...new Set(normalizedSpatialMap.placements.map(p => p.fixtureType))];
   let referenceParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
@@ -4200,7 +3878,7 @@ export const generateManualScene = async (
     console.warn('[Manual Mode] Reference loading failed (non-blocking):', err);
   }
 
-  // Deep Think: Analyze gradient/marker image + spatial map, write the complete prompt
+  // Deep Think: Analyze the nighttime base photo + spatial map and write the complete prompt
   onStageUpdate?.('analyzing');
   console.log('[Manual Mode] Deep Think analyzing placements + writing prompt...');
   const deepThinkResult = await deepThinkGeneratePrompt(
@@ -4214,8 +3892,6 @@ export const generateManualScene = async (
     beamAngle,
     userPreferences,
     normalizedSpatialMap,
-    gradientImage,
-    markedImage,
     true
   );
   console.log(`[Manual Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
@@ -4225,36 +3901,14 @@ export const generateManualScene = async (
   const lockedPrompt = `${deepThinkResult.prompt}${modificationSection}\n${buildPhotorealismLockAddendum()}`;
   let generationBaseImage = nightBase;
   let generationBasePrompt = lockedPrompt;
-  let hybridSeedApplied = false;
-
-  if (MANUAL_HYBRID_SEED_ENABLED && normalizedSpatialMap.placements.length > 0) {
-    try {
-      const hybridGlowOptions = buildManualHybridGlowOptions(lightIntensity, beamAngle);
-      generationBaseImage = await renderFixtureGlows(
-        nightBase,
-        normalizedSpatialMap,
-        imageMimeType,
-        hybridGlowOptions
-      );
-      generationBasePrompt = buildManualHybridRefinementPrompt(lockedPrompt);
-      hybridSeedApplied = true;
-      console.log('[Manual Mode] Hybrid deterministic seed generated (exact placement lock + realism refinement).');
-    } catch (seedError) {
-      generationBaseImage = nightBase;
-      generationBasePrompt = lockedPrompt;
-      hybridSeedApplied = false;
-      console.warn('[Manual Mode] Hybrid deterministic seed failed, falling back to night base prompt-only pass:', seedError);
-    }
-  }
+  console.log('[Manual Mode] Gemini-only generation active (no canvas seed/composite).');
 
   // Pass 2: Nano Banana Pro generates the lit scene
   onStageUpdate?.('placing');
   console.log('[Pass 2] Generating lit scene with Nano Banana Pro...');
   const manualPlacementVerificationEnabled = normalizedSpatialMap.placements.length > 0;
   const manualPlacementSkipDetails = 'Placement verification skipped (no manual spatial constraints).';
-  const initialCandidateCount = hybridSeedApplied
-    ? MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT
-    : INITIAL_CANDIDATE_COUNT;
+  const initialCandidateCount = INITIAL_CANDIDATE_COUNT;
   const bestInitialCandidate = await generateAndRankInitialCandidates(
     'Manual Mode',
     initialCandidateCount,
@@ -4263,9 +3917,7 @@ export const generateManualScene = async (
       imageMimeType,
       generationBasePrompt,
       manualAspectRatio,
-      referenceParts.length > 0 ? referenceParts : undefined,
-      gradientImage,
-      markedImage
+      referenceParts.length > 0 ? referenceParts : undefined
     ),
     (candidateResult) => evaluateGenerationCandidate(
       candidateResult,
@@ -4311,9 +3963,7 @@ export const generateManualScene = async (
         imageMimeType,
         correctionPrompt,
         manualAspectRatio,
-        referenceParts.length > 0 ? referenceParts : undefined,
-        gradientImage,
-        markedImage
+        referenceParts.length > 0 ? referenceParts : undefined
       );
 
       onStageUpdate?.('verifying');
@@ -4359,9 +4009,7 @@ export const generateManualScene = async (
         imageMimeType,
         correctionPrompt,
         manualAspectRatio,
-        referenceParts.length > 0 ? referenceParts : undefined,
-        gradientImage,
-        markedImage
+        referenceParts.length > 0 ? referenceParts : undefined
       );
 
       onStageUpdate?.('verifying');
@@ -4418,9 +4066,7 @@ export const generateManualScene = async (
         imageMimeType,
         correctionPrompt,
         manualAspectRatio,
-        referenceParts.length > 0 ? referenceParts : undefined,
-        gradientImage,
-        markedImage
+        referenceParts.length > 0 ? referenceParts : undefined
       );
 
       onStageUpdate?.('verifying');
@@ -4496,7 +4142,6 @@ export const generateNightSceneEnhanced = async (
   onStageUpdate?.('analyzing');
   let autoSpatialMap: SpatialMap | undefined;
   let autoGutterLines: GutterLine[] | undefined;
-  let autoGuideImage: string | undefined;
 
   try {
     if (selectedFixtures.length > 0) {
@@ -4604,23 +4249,6 @@ export const generateNightSceneEnhanced = async (
         }
       }
 
-      if (autoSpatialMap.placements.length > 0) {
-        const guideFixtures = buildGuideFixturesFromSpatialMap(autoSpatialMap);
-        if (guideFixtures.length > 0) {
-          const guideOptions = MODEL_GUIDE_DEBUG ? undefined : CLEAN_MODEL_GUIDE_OPTIONS;
-          autoGuideImage = await paintLightGradients(
-            imageBase64,
-            guideFixtures,
-            imageMimeType,
-            autoGutterLines,
-            guideOptions
-          );
-          console.log(
-            `[Enhanced Mode] ${MODEL_GUIDE_DEBUG ? 'Debug' : 'Clean'} auto guide map generated (${guideFixtures.length} fixtures).`
-          );
-        }
-      }
-
       onAutoConstraintsResolved?.({
         expectedPlacements: autoSpatialMap?.placements ?? [],
         gutterLines: autoGutterLines,
@@ -4637,7 +4265,6 @@ export const generateNightSceneEnhanced = async (
     console.warn('[Enhanced Mode] Auto spatial constraint build failed (falling back to prompt-only auto):', autoConstraintError);
     autoSpatialMap = undefined;
     autoGutterLines = undefined;
-    autoGuideImage = undefined;
     onAutoConstraintsResolved?.({ expectedPlacements: [], gutterLines: undefined });
   }
 
@@ -4665,8 +4292,6 @@ export const generateNightSceneEnhanced = async (
     beamAngle,
     userPreferences,
     autoSpatialMap,
-    autoGuideImage,
-    undefined,
     false
   );
   console.log(`[Enhanced Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
@@ -4694,10 +4319,7 @@ export const generateNightSceneEnhanced = async (
       baseNightImage,
       imageMimeType,
       lockedPrompt,
-      targetRatio,
-      undefined,
-      autoGuideImage,
-      undefined
+      targetRatio
     ),
     (candidateResult) => evaluateGenerationCandidate(
       candidateResult,
@@ -4739,10 +4361,7 @@ export const generateNightSceneEnhanced = async (
         baseNightImage,
         imageMimeType,
         correctionPrompt,
-        targetRatio,
-        undefined,
-        autoGuideImage,
-        undefined
+        targetRatio
       );
 
       onStageUpdate?.('validating');
@@ -4787,10 +4406,7 @@ export const generateNightSceneEnhanced = async (
         baseNightImage,
         imageMimeType,
         correctionPrompt,
-        targetRatio,
-        undefined,
-        autoGuideImage,
-        undefined
+        targetRatio
       );
 
       onStageUpdate?.('validating');
@@ -4841,10 +4457,7 @@ export const generateNightSceneEnhanced = async (
         baseNightImage,
         imageMimeType,
         correctionPrompt,
-        targetRatio,
-        undefined,
-        autoGuideImage,
-        undefined
+        targetRatio
       );
 
       onStageUpdate?.('validating');
