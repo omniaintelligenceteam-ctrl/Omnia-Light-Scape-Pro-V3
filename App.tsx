@@ -1806,7 +1806,7 @@ const App: React.FC = () => {
                          p += "- ONLY light dormers that are VISIBLE in the original daytime photo\n";
                          p += "- Remember: You are FORBIDDEN from adding architectural features. If no dormers exist, no dormer lights.\n";
                      }
-                     p += "\n\nGENERAL SAFETY: Lights must shine UP from the gutter line. Do not shine down.";
+                     p += "\n\nGENERAL SAFETY: Treat each gutter light as a user-defined RAIL-MOUNTED uplight. Keep it at its exact marked coordinate and honor its exact beam direction (rotation).";
                  }
 
                  if (ft.id === 'soffit') {

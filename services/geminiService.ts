@@ -2021,7 +2021,7 @@ export function generateNarrativePlacement(
   // Per-fixture "render as" micro-descriptions for type reinforcement
   const renderAsMap: Record<string, string> = {
     up: 'small bronze uplight at wall base, beam UPWARD â€” place at EXACT marked position, shine in EXACT marked direction',
-    gutter: 'small uplight seated INSIDE the rain gutter trough at this EXACT mount position (slightly below gutter edge), beam UPWARD on wall directly above â€” DO NOT move from marked position, NO downlights',
+    gutter: 'small line-mounted uplight on the USER-DRAWN RAIL at this EXACT mount position â€” place at EXACT marked position and shine in EXACT marked direction',
     path: 'small bronze fixture in landscaping, 360Â° ground pool â€” place at EXACT marked position',
     well: 'small bronze uplight at ground level, beam UPWARD at tree canopy â€” place at EXACT marked position',
     hardscape: 'small bronze fixture under step tread, beam DOWNWARD onto riser â€” place at EXACT marked position',
@@ -2043,13 +2043,13 @@ export function generateNarrativePlacement(
     // Output exact x,y coordinates for precise placement
     const xCoord = p.horizontalPosition.toFixed(1);
     const yCoord = p.verticalPosition !== undefined ? p.verticalPosition.toFixed(1) : '?';
-    const gutterSuffix = fixtureType === 'gutter' ? ' EXACTLY IN THE GUTTER TROUGH at this precise mount position (slightly below gutter edge) â€" DO NOT move or redistribute' : '';
+    const gutterSuffix = fixtureType === 'gutter' ? ' EXACTLY on the USER-DRAWN RAIL at this precise mount position â€" DO NOT move or redistribute' : '';
     const coords = `Place at EXACTLY [${xCoord}%, ${yCoord}%]${gutterSuffix}`;
     const gutterLineHint = fixtureType === 'gutter' && typeof p.gutterLineX === 'number' && typeof p.gutterLineY === 'number'
-      ? ` (gutter line anchor [${p.gutterLineX.toFixed(1)}%, ${p.gutterLineY.toFixed(1)}%])`
+      ? ` (rail anchor [${p.gutterLineX.toFixed(1)}%, ${p.gutterLineY.toFixed(1)}%])`
       : '';
     const gutterDepthHint = fixtureType === 'gutter' && typeof p.gutterMountDepthPercent === 'number'
-      ? ` (mount depth ${p.gutterMountDepthPercent.toFixed(1)}% below line)`
+      ? ` (mount offset ${p.gutterMountDepthPercent.toFixed(1)}% from rail)`
       : '';
 
     // Per-fixture beam direction override when user has custom rotation
@@ -2089,9 +2089,9 @@ export function generateNarrativePlacement(
 
   narrative += `\nCOUNT CHECK: There are EXACTLY ${sorted.length} fixtures. No more, no less.\n`;
 
-  // Add position enforcement for gutter fixtures
+  // Add position enforcement for line-mounted (gutter type) fixtures
   if (fixtureType === 'gutter') {
-    narrative += `\nGUTTER POSITION ENFORCEMENT: Every gutter light MUST remain at its EXACT marked [X%, Y%] mount position INSIDE the gutter trough (slightly below edge). Do NOT redistribute, rebalance, or evenly space them. The user placed each gutter light at a specific location â€" that location is non-negotiable.\n`;
+    narrative += `\nRAIL POSITION ENFORCEMENT: Every line-mounted light MUST remain at its EXACT marked [X%, Y%] mount position on the USER-DRAWN rail. Do NOT redistribute, rebalance, or evenly space them. The user placed each light at a specific location â€" that location is non-negotiable.\n`;
   }
 
   // Add direction enforcement for non-gutter fixtures with rotations
@@ -2114,8 +2114,8 @@ export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
   let output = `\n## EXACT FIXTURE PLACEMENT MAP\n`;
   output += `Coordinates: x=0% (far left) to x=100% (far right), y=0% (top) to y=100% (bottom).\n\n`;
   output += `### CRITICAL POSITIONING RULES\n`;
-  output += `- GUTTER MOUNTED UP LIGHTS: Each gutter light MUST stay at its EXACT [X%, Y%] mount position inside the gutter trough (slightly below gutter edge). Do NOT move, shift, redistribute, or evenly space them. Each gutter light shines UPWARD from its exact marked spot.\n`;
-  output += `- ALL OTHER FIXTURES: Each fixture MUST be rendered at its EXACT [X%, Y%] position AND its light beam MUST shine in the EXACT direction specified by its rotation. If a fixture points UP-RIGHT, the light goes UP-RIGHT. If it points LEFT, the light goes LEFT.\n`;
+  output += `- LINE-MOUNTED UP LIGHTS (fixtureType=gutter): Treat these as USER-DRAWN RAIL fixtures, not literal roof gutters. They may be anywhere in the image. Each one MUST stay at its EXACT [X%, Y%] coordinate and on its user rail anchor if provided.\n`;
+  output += `- ALL FIXTURES: Each fixture MUST be rendered at its EXACT [X%, Y%] position AND its light beam MUST shine in the EXACT direction specified by its rotation. If a fixture points UP-RIGHT, the light goes UP-RIGHT. If it points LEFT, the light goes LEFT.\n`;
   output += `- The user is a professional lighting designer. Every position and direction is intentional and non-negotiable.\n\n`;
 
   // Reference points with x,y coordinates
@@ -3072,6 +3072,14 @@ export async function deepThinkGeneratePrompt(
   if (input.spatialMapContext) {
     deepThinkPrompt += '\n\n## SPATIAL MAP DATA (exact coordinates for each fixture)\n' + input.spatialMapContext;
   }
+  if (isManualMode && spatialMap?.placements.some(p => p.fixtureType === 'gutter')) {
+    deepThinkPrompt += `\n\n## MANUAL RAIL OVERRIDE (HIGHEST PRIORITY)\n`;
+    deepThinkPrompt += `- For this request, fixtureType="gutter" means USER-DEFINED LINE-MOUNTED UPLIGHT.\n`;
+    deepThinkPrompt += `- These lights are NOT restricted to roof gutters and may be anywhere in the image.\n`;
+    deepThinkPrompt += `- Keep every line-mounted light at its EXACT [X%, Y%] coordinate.\n`;
+    deepThinkPrompt += `- Beam direction MUST follow each fixture's exact rotation value.\n`;
+    deepThinkPrompt += `- Do not reinterpret, relocate, rebalance, or "improve" any line-mounted placement.\n`;
+  }
 
   // Build image parts
   const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
@@ -3518,17 +3526,10 @@ function validateManualPlacements(
         errors.push(`Fixture #${idx} (gutter): invalid sub-option "${p.subOption}" (expected gutterUpLights)`);
       }
 
-      if (typeof p.rotation === 'number') {
-        const normalizedRot = ((p.rotation % 360) + 360) % 360;
-        if (normalizedRot > 100 && normalizedRot < 260) {
-          errors.push(`Fixture #${idx} (gutter): beam direction appears downward (${normalizedRot.toFixed(1)}°)`);
-        }
-      }
-
       const nearest = findNearestGutterProjection(p.horizontalPosition, p.verticalPosition, gutterLines);
       if (gutterLines && gutterLines.length > 0 && (!nearest || nearest.distance > GUTTER_LINE_TOLERANCE_PERCENT)) {
         const dist = nearest ? nearest.distance.toFixed(2) : 'n/a';
-        errors.push(`Fixture #${idx} (gutter): not on a gutter line (distance ${dist}%, tolerance ${GUTTER_LINE_TOLERANCE_PERCENT}%)`);
+        errors.push(`Fixture #${idx} (gutter): not on a user-defined rail (distance ${dist}%, tolerance ${GUTTER_LINE_TOLERANCE_PERCENT}%)`);
       }
     }
 
@@ -3684,7 +3685,7 @@ function evaluateGutterVerification(
   if (detectedGutters.length < expectedGutters.length) {
     return {
       verified: false,
-      details: `Gutter mismatch: expected ${expectedGutters.length}, detected ${detectedGutters.length}.`,
+      details: `Line-mounted fixture mismatch: expected ${expectedGutters.length}, detected ${detectedGutters.length}.`,
     };
   }
 
@@ -3718,7 +3719,7 @@ function evaluateGutterVerification(
   if (maxPosDrift > GUTTER_VERIFICATION_TOLERANCE_PERCENT) {
     return {
       verified: false,
-      details: `Gutter position drift too high (max ${maxPosDrift.toFixed(2)}%, avg ${avgPosDrift.toFixed(2)}%).`,
+      details: `Line-mounted fixture position drift too high (max ${maxPosDrift.toFixed(2)}%, avg ${avgPosDrift.toFixed(2)}%).`,
     };
   }
 
@@ -3732,121 +3733,14 @@ function evaluateGutterVerification(
     if (maxLineDrift > GUTTER_VERIFICATION_TOLERANCE_PERCENT) {
       return {
         verified: false,
-        details: `Detected gutter fixtures are off the gutter line (max ${maxLineDrift.toFixed(2)}%).`,
+        details: `Detected line-mounted fixtures are off the user-defined rail (max ${maxLineDrift.toFixed(2)}%).`,
       };
     }
-
-    const mountDepthChecks = matched.map(m => {
-      const expectedLineProjection = resolveGutterLine(m.expected, gutterLines);
-      if (!expectedLineProjection) {
-        return {
-          valid: false,
-          reason: 'Unable to resolve expected gutter line for mount-depth verification.',
-          expectedDepth: DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT,
-          actualDepth: 0,
-          depthDelta: Infinity,
-        };
-      }
-
-      const expectedDepthFromPlacement =
-        typeof m.expected.gutterMountDepthPercent === 'number'
-          ? m.expected.gutterMountDepthPercent
-          : getSignedDepthFromLine(
-              m.expected.horizontalPosition,
-              m.expected.verticalPosition,
-              expectedLineProjection
-            );
-
-      const fallbackDepth = resolveRequestedGutterDepth(undefined, expectedLineProjection.line);
-      const expectedDepth = Math.max(
-        MIN_GUTTER_MOUNT_DEPTH_PERCENT,
-        Math.min(
-          MAX_GUTTER_MOUNT_DEPTH_PERCENT,
-          expectedDepthFromPlacement > 0 ? expectedDepthFromPlacement : fallbackDepth
-        )
-      );
-
-      const actualProjection = projectPointToSegment(
-        m.actual.x,
-        m.actual.y,
-        expectedLineProjection.line.startX,
-        expectedLineProjection.line.startY,
-        expectedLineProjection.line.endX,
-        expectedLineProjection.line.endY
-      );
-      const actualDepth = getSignedDepthFromLine(m.actual.x, m.actual.y, {
-        x: actualProjection.x,
-        y: actualProjection.y,
-        line: expectedLineProjection.line,
-      });
-
-      return {
-        valid: true,
-        reason: '',
-        expectedDepth,
-        actualDepth,
-        depthDelta: Math.abs(actualDepth - expectedDepth),
-      };
-    });
-
-    const invalidDepthResolution = mountDepthChecks.find(check => !check.valid);
-    if (invalidDepthResolution) {
-      return {
-        verified: false,
-        details: invalidDepthResolution.reason,
-      };
-    }
-
-    const aboveLineCount = mountDepthChecks.filter(
-      check => check.actualDepth < -GUTTER_ABOVE_LINE_TOLERANCE_PERCENT
-    ).length;
-    if (aboveLineCount > 0) {
-      return {
-        verified: false,
-        details: `Detected ${aboveLineCount} gutter fixture(s) above gutter trough (roof-edge mount).`,
-      };
-    }
-
-    const shallowCount = mountDepthChecks.filter(
-      check => check.actualDepth < MIN_GUTTER_MOUNT_DEPTH_PERCENT
-    ).length;
-    if (shallowCount > 0) {
-      return {
-        verified: false,
-        details: `Detected ${shallowCount} gutter fixture(s) too shallow (not seated in gutter trough).`,
-      };
-    }
-
-    const tooDeepCount = mountDepthChecks.filter(
-      check => check.actualDepth > MAX_GUTTER_MOUNT_DEPTH_PERCENT + GUTTER_MOUNT_DEPTH_TOLERANCE_PERCENT
-    ).length;
-    if (tooDeepCount > 0) {
-      return {
-        verified: false,
-        details: `Detected ${tooDeepCount} gutter fixture(s) too far below gutter trough.`,
-      };
-    }
-
-    const maxDepthDelta = Math.max(...mountDepthChecks.map(check => check.depthDelta));
-    if (maxDepthDelta > GUTTER_MOUNT_DEPTH_TOLERANCE_PERCENT) {
-      return {
-        verified: false,
-        details: `Gutter mount-depth mismatch (max depth delta ${maxDepthDelta.toFixed(2)}%).`,
-      };
-    }
-  }
-
-  const downward = matched.filter(m => (m.actual.direction || '').toLowerCase().includes('down'));
-  if (downward.length > 0) {
-    return {
-      verified: false,
-      details: `Detected ${downward.length} gutter fixture(s) with downward beam direction.`,
-    };
   }
 
   return {
     verified: true,
-    details: `Gutter verified (max drift ${maxPosDrift.toFixed(2)}%, avg drift ${avgPosDrift.toFixed(2)}%).`,
+    details: `Line-mounted fixtures verified (max drift ${maxPosDrift.toFixed(2)}%, avg drift ${avgPosDrift.toFixed(2)}%).`,
   };
 }
 
@@ -3869,7 +3763,7 @@ For each light source found, report:
 - Type (uplight, gutter light, path light, well light, hardscape/step light, soffit downlight, core-drill light)
 - Approximate position as [X%, Y%] where 0%,0% is top-left
 - Beam direction (up, down, left, right, up-right, up-left, down-right, down-left, or unknown)
-- For gutter classification: label as "gutter light" ONLY if the source sits inside the gutter trough slightly below roof edge (not on shingles, not on soffit underside).
+- For gutter classification: label as "gutter light" for user-defined line-mounted uplights (they are not restricted to roof edges and may appear anywhere in the image).
 
 EXPECTED: ${expectedCount} fixtures of types: ${expectedTypes.join(', ')}
 
@@ -4018,7 +3912,7 @@ function buildGutterCorrectionPrompt(
 
   if (gutterPlacements.length === 0 && unexpectedTypes.length === 0) return basePrompt;
 
-  let correction = '\n\n=== CORRECTION PASS: GUTTER PLACEMENT LOCK ===\n';
+  let correction = '\n\n=== CORRECTION PASS: LINE-MOUNTED PLACEMENT LOCK ===\n';
   correction += 'The previous output failed verification. Fix fixture compliance exactly without changing architecture.\n';
   correction += 'MANDATORY RULES:\n';
   correction += '- Keep exact fixture count and preserve all non-light pixels.\n';
@@ -4034,30 +3928,32 @@ function buildGutterCorrectionPrompt(
     }
   }
   if (gutterPlacements.length > 0) {
-    correction += '- Every gutter fixture must sit INSIDE the gutter trough at mount depth (not roof shingles, not soffit underside, not wall face).\n';
-    correction += `- Mount each source slightly below the gutter edge (target depth ~${DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT.toFixed(1)}% in screen space).\n`;
-    correction += '- Every gutter fixture beam must point UPWARD only.\n';
-    correction += 'EXPECTED GUTTER FIXTURES (exact coordinates):\n';
+    correction += '- Treat fixtureType=gutter as USER-DEFINED LINE-MOUNTED uplights (not literal roof gutters).\n';
+    correction += '- They may appear anywhere in the image where the user drew rails.\n';
+    correction += '- Keep EACH fixture at its exact coordinate and honor its exact beam direction (rotation).\n';
+    correction += 'EXPECTED LINE-MOUNTED FIXTURES (exact coordinates):\n';
     gutterPlacements.forEach((p, i) => {
       const lineInfo =
         typeof p.gutterLineX === 'number' && typeof p.gutterLineY === 'number'
-          ? `, line=[${p.gutterLineX.toFixed(2)}%, ${p.gutterLineY.toFixed(2)}%]`
+          ? `, rail=[${p.gutterLineX.toFixed(2)}%, ${p.gutterLineY.toFixed(2)}%]`
           : '';
       const depthInfo =
         typeof p.gutterMountDepthPercent === 'number'
-          ? `, depth=${p.gutterMountDepthPercent.toFixed(2)}%`
+          ? `, offset=${p.gutterMountDepthPercent.toFixed(2)}%`
           : '';
-      correction += `- GUTTER ${i + 1}: mount=[${p.horizontalPosition.toFixed(2)}%, ${p.verticalPosition.toFixed(2)}%]${lineInfo}${depthInfo}\n`;
+      const rotationInfo = typeof p.rotation === 'number'
+        ? `, rotation=${(((p.rotation % 360) + 360) % 360).toFixed(1)}°`
+        : '';
+      correction += `- RAIL LIGHT ${i + 1}: mount=[${p.horizontalPosition.toFixed(2)}%, ${p.verticalPosition.toFixed(2)}%]${lineInfo}${depthInfo}${rotationInfo}\n`;
     });
 
     if (gutterLines && gutterLines.length > 0) {
-      correction += 'REFERENCE GUTTER LINES:\n';
+      correction += 'REFERENCE USER-DRAWN RAILS:\n';
       gutterLines.forEach((line, i) => {
-        const depth = resolveRequestedGutterDepth(undefined, line);
-        correction += `- LINE ${i + 1}: [${line.startX.toFixed(2)}%, ${line.startY.toFixed(2)}%] -> [${line.endX.toFixed(2)}%, ${line.endY.toFixed(2)}%], depth=${depth.toFixed(2)}%\n`;
+        correction += `- RAIL ${i + 1}: [${line.startX.toFixed(2)}%, ${line.startY.toFixed(2)}%] -> [${line.endX.toFixed(2)}%, ${line.endY.toFixed(2)}%]\n`;
       });
     }
-    correction += 'FINAL CHECK: All gutter fixtures must remain within 4% of expected mount coordinates and stay inside the gutter trough depth band.\n';
+    correction += 'FINAL CHECK: All line-mounted fixtures must remain within 4% of expected mount coordinates.\n';
   }
   correction += 'FINAL CHECK: Output must match selected fixture types only and contain zero unselected fixture types.\n';
   return basePrompt + correction;
