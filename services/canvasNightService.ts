@@ -343,6 +343,19 @@ interface GlowConfig {
   intensity: number;
   /** Extra light pool on the surface below */
   pool: boolean;
+  /** Default beam direction in user-space degrees (0=up, 90=right, 180=down). */
+  defaultRotation: number;
+}
+
+export interface GlowRenderOptions {
+  /** Global multiplier for fixture brightness. */
+  intensityScale?: number;
+  /** User-selected beam angle in degrees (typically 15-60). */
+  beamAngleDeg?: number;
+  /** Explicit width multiplier override for beam spread. */
+  widthScale?: number;
+  /** Explicit height multiplier override for beam reach. */
+  heightScale?: number;
 }
 
 const GLOW_CONFIGS: Record<string, GlowConfig> = {
@@ -353,6 +366,7 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     offsetY: -0.10,           // shifts glow upward
     intensity: 0.85,
     pool: false,
+    defaultRotation: 0,
   },
   soffit: {
     color: [255, 225, 170],   // warm downlight
@@ -361,6 +375,7 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     offsetY: 0.06,            // shifts glow downward
     intensity: 0.75,
     pool: true,
+    defaultRotation: 180,
   },
   path: {
     color: [255, 230, 180],   // warm path light
@@ -369,6 +384,7 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     offsetY: 0,
     intensity: 0.80,
     pool: true,
+    defaultRotation: 180,
   },
   well: {
     color: [255, 215, 140],   // warm well
@@ -377,6 +393,7 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     offsetY: -0.08,
     intensity: 0.80,
     pool: false,
+    defaultRotation: 0,
   },
   gutter: {
     color: [255, 220, 150],   // warm white (same as up)
@@ -385,6 +402,7 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     offsetY: -0.10,           // shifts glow UPWARD (same as up)
     intensity: 0.80,
     pool: false,
+    defaultRotation: 0,
   },
   hardscape: {
     color: [255, 225, 165],   // warm step
@@ -393,6 +411,7 @@ const GLOW_CONFIGS: Record<string, GlowConfig> = {
     offsetY: 0,
     intensity: 0.70,
     pool: true,
+    defaultRotation: 180,
   },
 };
 
@@ -403,6 +422,7 @@ const DEFAULT_GLOW: GlowConfig = {
   offsetY: 0,
   intensity: 0.75,
   pool: false,
+  defaultRotation: 0,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -421,7 +441,8 @@ const DEFAULT_GLOW: GlowConfig = {
 export async function renderFixtureGlows(
   nightBase64: string,
   spatialMap: SpatialMap,
-  mimeType: string = 'image/jpeg'
+  mimeType: string = 'image/jpeg',
+  options?: GlowRenderOptions
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -442,7 +463,7 @@ export async function renderFixtureGlows(
 
         // Render each fixture glow
         for (const placement of spatialMap.placements) {
-          drawFixtureGlow(ctx, placement, img.width, img.height);
+          drawFixtureGlow(ctx, placement, img.width, img.height, options);
         }
 
         const dataUrl = canvas.toDataURL(mimeType, 0.92);
@@ -465,30 +486,59 @@ function drawFixtureGlow(
   ctx: CanvasRenderingContext2D,
   placement: SpatialFixturePlacement,
   imgW: number,
-  imgH: number
+  imgH: number,
+  options?: GlowRenderOptions
 ): void {
   const config = GLOW_CONFIGS[placement.fixtureType] || DEFAULT_GLOW;
   const [r, g, b] = config.color;
 
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  const beamAngle = typeof options?.beamAngleDeg === 'number' ? options.beamAngleDeg : undefined;
+  const normalizedBeam = beamAngle !== undefined
+    ? clamp((beamAngle - 15) / 45, 0, 1)
+    : 0.5;
+  const beamWidthScaleFromAngle = beamAngle !== undefined
+    ? 0.7 + normalizedBeam * 0.95
+    : 1;
+  const beamHeightScaleFromAngle = beamAngle !== undefined
+    ? 1.25 - normalizedBeam * 0.45
+    : 1;
+  const widthScale = clamp((options?.widthScale ?? 1) * beamWidthScaleFromAngle, 0.4, 2.4);
+  const heightScale = clamp((options?.heightScale ?? 1) * beamHeightScaleFromAngle, 0.35, 2.8);
+  const beamLengthScale = clamp(placement.beamLength ?? 1, 0.3, 2.5);
+  const intensityScale = clamp(options?.intensityScale ?? 1, 0.35, 1.9);
+  const resolvedIntensity = clamp(config.intensity * intensityScale, 0.15, 1);
+
   // Position in pixels
   const cx = (placement.horizontalPosition / 100) * imgW;
   const cy = (placement.verticalPosition / 100) * imgH;
-  const offsetPx = config.offsetY * imgH;
+  const defaultRotation = config.defaultRotation;
+  const resolvedRotation = typeof placement.rotation === 'number'
+    ? ((placement.rotation % 360) + 360) % 360
+    : defaultRotation;
+  const directionRad = (resolvedRotation - 90) * Math.PI / 180;
+  const rotationRad = resolvedRotation * Math.PI / 180;
+  const dirX = Math.cos(directionRad);
+  const dirY = Math.sin(directionRad);
+
+  const offsetMagnitude = Math.abs(config.offsetY) * imgH;
+  const glowCx = cx + dirX * offsetMagnitude;
+  const glowCy = cy + dirY * offsetMagnitude;
 
   // Glow radii in pixels
-  const rx = config.radiusX * imgW;
-  const ry = config.radiusY * imgH;
+  const rx = Math.max(2, config.radiusX * imgW * widthScale);
+  const ry = Math.max(2, config.radiusY * imgH * beamLengthScale * heightScale);
 
   ctx.save();
 
   // === 1. Outer ambient glow (large, soft, subtle) ===
   ctx.globalCompositeOperation = 'screen';
   const outerGrad = ctx.createRadialGradient(
-    cx, cy + offsetPx, 0,
-    cx, cy + offsetPx, Math.max(rx, ry) * 2.5
+    glowCx, glowCy, 0,
+    glowCx, glowCy, Math.max(rx, ry) * 2.5
   );
-  outerGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${config.intensity * 0.25})`);
-  outerGrad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${config.intensity * 0.10})`);
+  outerGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${resolvedIntensity * 0.25})`);
+  outerGrad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${resolvedIntensity * 0.10})`);
   outerGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = outerGrad;
   ctx.fillRect(0, 0, imgW, imgH);
@@ -496,27 +546,29 @@ function drawFixtureGlow(
   // === 2. Main directional glow (elliptical) ===
   ctx.globalCompositeOperation = 'screen';
   ctx.save();
-  ctx.translate(cx, cy + offsetPx);
-  ctx.scale(1, ry / rx); // stretch vertically for uplights/downlights
+  ctx.translate(glowCx, glowCy);
+  ctx.rotate(rotationRad);
+  ctx.scale(1, ry / rx);
 
-  const mainGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, rx * 1.5);
-  mainGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${config.intensity * 0.7})`);
-  mainGrad.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${config.intensity * 0.4})`);
-  mainGrad.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${config.intensity * 0.1})`);
+  const forwardBias = rx * 0.28;
+  const mainGrad = ctx.createRadialGradient(0, -forwardBias, 0, 0, -forwardBias, rx * 1.6);
+  mainGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${resolvedIntensity * 0.75})`);
+  mainGrad.addColorStop(0.35, `rgba(${r}, ${g}, ${b}, ${resolvedIntensity * 0.42})`);
+  mainGrad.addColorStop(0.72, `rgba(${r}, ${g}, ${b}, ${resolvedIntensity * 0.12})`);
   mainGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = mainGrad;
   ctx.beginPath();
-  ctx.arc(0, 0, rx * 1.5, 0, Math.PI * 2);
+  ctx.arc(0, 0, rx * 1.6, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
 
   // === 3. Bright light source dot (small, intense white core) ===
   ctx.globalCompositeOperation = 'screen';
-  const coreSize = Math.max(rx * 0.15, 4);
+  const coreSize = Math.max(rx * 0.15, 3.5);
   const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreSize);
-  coreGrad.addColorStop(0, `rgba(255, 255, 240, ${config.intensity})`);
-  coreGrad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${config.intensity * 0.6})`);
+  coreGrad.addColorStop(0, `rgba(255, 255, 240, ${resolvedIntensity})`);
+  coreGrad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${resolvedIntensity * 0.6})`);
   coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = coreGrad;
   ctx.beginPath();
@@ -525,18 +577,21 @@ function drawFixtureGlow(
 
   // === 4. Light pool on surface below (for path lights, soffits, hardscape) ===
   if (config.pool) {
-    const poolY = cy + Math.abs(offsetPx) + ry * 0.5;
+    const poolDistance = Math.max(ry * 0.55, rx * 0.45);
+    const poolX = cx + dirX * poolDistance;
+    const poolY = cy + dirY * poolDistance;
     const poolRx = rx * 1.2;
     const poolRy = ry * 0.3;
 
     ctx.globalCompositeOperation = 'screen';
     ctx.save();
-    ctx.translate(cx, poolY);
+    ctx.translate(poolX, poolY);
+    ctx.rotate(rotationRad);
     ctx.scale(1, poolRy / poolRx);
 
     const poolGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, poolRx);
-    poolGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${config.intensity * 0.35})`);
-    poolGrad.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${config.intensity * 0.10})`);
+    poolGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${resolvedIntensity * 0.35})`);
+    poolGrad.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${resolvedIntensity * 0.10})`);
     poolGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = poolGrad;
     ctx.beginPath();

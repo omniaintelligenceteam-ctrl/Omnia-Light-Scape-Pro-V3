@@ -16,7 +16,12 @@ import {
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
-import { drawFixtureMarkers, CLEAN_MODEL_MARKER_OPTIONS } from "./canvasNightService";
+import {
+  drawFixtureMarkers,
+  CLEAN_MODEL_MARKER_OPTIONS,
+  renderFixtureGlows,
+  type GlowRenderOptions
+} from "./canvasNightService";
 import { buildReferenceParts } from "./referenceLibrary";
 import { paintLightGradients, CLEAN_MODEL_GUIDE_OPTIONS } from "./lightGradientPainter";
 import type { LightFixture, GutterLine } from "../types/fixtures";
@@ -37,6 +42,13 @@ const AUTO_PLACEMENT_CONFIDENCE_MIN_SCORE = 85;
 const MODEL_GUIDE_DEBUG = String(import.meta.env.VITE_MODEL_GUIDE_DEBUG || '').toLowerCase() === 'true';
 const DEFAULT_INITIAL_CANDIDATE_COUNT = 2;
 const MAX_INITIAL_CANDIDATE_COUNT = 3;
+const DEFAULT_MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT = 1;
+const MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT = (() => {
+  const raw = Number(import.meta.env.VITE_MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT);
+  if (!Number.isFinite(raw)) return DEFAULT_MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT;
+  return Math.max(1, Math.min(MAX_INITIAL_CANDIDATE_COUNT, Math.round(raw)));
+})();
+const MANUAL_HYBRID_SEED_ENABLED = String(import.meta.env.VITE_MANUAL_HYBRID_SEED_ENABLED || 'true').toLowerCase() !== 'false';
 const INITIAL_CANDIDATE_COUNT = (() => {
   const raw = Number(import.meta.env.VITE_INITIAL_CANDIDATE_COUNT);
   if (!Number.isFinite(raw)) return DEFAULT_INITIAL_CANDIDATE_COUNT;
@@ -3900,6 +3912,34 @@ REQUIREMENTS:
   throw new Error('Night base generation returned no image.');
 }
 
+function buildManualHybridGlowOptions(
+  lightIntensity: number,
+  beamAngle: number
+): GlowRenderOptions {
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  const normalizedIntensity = clamp(lightIntensity / 100, 0, 1);
+  const intensityScale = 0.65 + normalizedIntensity * 0.75;
+
+  return {
+    intensityScale,
+    beamAngleDeg: clamp(beamAngle, 10, 120),
+  };
+}
+
+function buildManualHybridRefinementPrompt(basePrompt: string): string {
+  return `${basePrompt}
+
+=== HYBRID PIPELINE LOCK (HIGHEST PRIORITY) ===
+You are refining a deterministic fixture pre-composite:
+- The first image already contains the exact fixture anchor points and beam directions.
+- DO NOT move fixtures, DO NOT remove fixtures, DO NOT add extra fixtures, DO NOT shift beam headings.
+- Keep every fixture coordinate and rotation exactly as-is.
+- Improve only photoreal blending: material interaction, falloff softness, hotspot shaping, subtle bounce.
+- Preserve architecture and composition pixel-for-pixel.
+- Remove all guide artifacts, labels, and UI traces.
+`;
+}
+
 function buildGutterCorrectionPrompt(
   basePrompt: string,
   placements: SpatialFixturePlacement[],
@@ -4085,20 +4125,45 @@ export const generateManualScene = async (
     ? `\n\nCRITICAL MODIFICATION REQUEST: ${modificationRequest.trim()}\nKeep all fixture coordinates and beam directions exactly as specified above while applying this change.\n`
     : '';
   const lockedPrompt = `${deepThinkResult.prompt}${modificationSection}\n${buildPhotorealismLockAddendum()}`;
+  let generationBaseImage = nightBase;
+  let generationBasePrompt = lockedPrompt;
+  let hybridSeedApplied = false;
+
+  if (MANUAL_HYBRID_SEED_ENABLED && normalizedSpatialMap.placements.length > 0) {
+    try {
+      const hybridGlowOptions = buildManualHybridGlowOptions(lightIntensity, beamAngle);
+      generationBaseImage = await renderFixtureGlows(
+        nightBase,
+        normalizedSpatialMap,
+        imageMimeType,
+        hybridGlowOptions
+      );
+      generationBasePrompt = buildManualHybridRefinementPrompt(lockedPrompt);
+      hybridSeedApplied = true;
+      console.log('[Manual Mode] Hybrid deterministic seed generated (exact placement lock + realism refinement).');
+    } catch (seedError) {
+      generationBaseImage = nightBase;
+      generationBasePrompt = lockedPrompt;
+      hybridSeedApplied = false;
+      console.warn('[Manual Mode] Hybrid deterministic seed failed, falling back to night base prompt-only pass:', seedError);
+    }
+  }
 
   // Pass 2: Nano Banana Pro generates the lit scene
   onStageUpdate?.('placing');
   console.log('[Pass 2] Generating lit scene with Nano Banana Pro...');
   const manualPlacementVerificationEnabled = normalizedSpatialMap.placements.length > 0;
   const manualPlacementSkipDetails = 'Placement verification skipped (no manual spatial constraints).';
-  const initialCandidateCount = INITIAL_CANDIDATE_COUNT;
+  const initialCandidateCount = hybridSeedApplied
+    ? MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT
+    : INITIAL_CANDIDATE_COUNT;
   const bestInitialCandidate = await generateAndRankInitialCandidates(
     'Manual Mode',
     initialCandidateCount,
     () => executeGeneration(
-      nightBase,
+      generationBaseImage,
       imageMimeType,
-      lockedPrompt,
+      generationBasePrompt,
       manualAspectRatio,
       referenceParts.length > 0 ? referenceParts : undefined,
       gradientImage,
@@ -4138,13 +4203,13 @@ export const generateManualScene = async (
       );
       onStageUpdate?.('placing');
       const correctionPrompt = buildGutterCorrectionPrompt(
-        lockedPrompt,
+        generationBasePrompt,
         normalizedSpatialMap.placements,
         gutterLines,
         verification.unexpectedTypes
       );
       const retryResult = await executeGeneration(
-        nightBase,
+        generationBaseImage,
         imageMimeType,
         correctionPrompt,
         manualAspectRatio,
@@ -4185,14 +4250,14 @@ export const generateManualScene = async (
       console.warn(`[Manual Mode] Annotation artifacts detected, running cleanup retry ${attempt}/${MAX_ARTIFACT_RETRY_ATTEMPTS}...`);
       onStageUpdate?.('placing');
       const baseCorrectionPrompt = buildGutterCorrectionPrompt(
-        lockedPrompt,
+        generationBasePrompt,
         normalizedSpatialMap.placements,
         gutterLines,
         verification.unexpectedTypes
       );
       const correctionPrompt = buildArtifactCorrectionPrompt(baseCorrectionPrompt, artifactCheck.issues);
       const retryResult = await executeGeneration(
-        nightBase,
+        generationBaseImage,
         imageMimeType,
         correctionPrompt,
         manualAspectRatio,
@@ -4243,7 +4308,7 @@ export const generateManualScene = async (
       console.warn(`[Manual Mode] Photorealism failed, running correction retry ${attempt}/${MAX_PHOTOREAL_RETRY_ATTEMPTS}...`);
       onStageUpdate?.('placing');
       const baseCorrectionPrompt = buildGutterCorrectionPrompt(
-        lockedPrompt,
+        generationBasePrompt,
         normalizedSpatialMap.placements,
         gutterLines,
         verification.unexpectedTypes
@@ -4251,7 +4316,7 @@ export const generateManualScene = async (
       const combinedIssues = [...new Set([...photorealCheck.issues, ...heuristicPhotorealCheck.issues])];
       const correctionPrompt = buildPhotorealismCorrectionPrompt(baseCorrectionPrompt, combinedIssues);
       const retryResult = await executeGeneration(
-        nightBase,
+        generationBaseImage,
         imageMimeType,
         correctionPrompt,
         manualAspectRatio,
