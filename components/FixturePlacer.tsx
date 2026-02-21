@@ -144,6 +144,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isTouchPanning, setIsTouchPanning] = useState(false);
+  const prevActiveFixtureTypeRef = useRef<FixtureCategory | null>(activeFixtureType);
   const pinchRef = useRef<{
     distance: number;
     zoom: number;
@@ -333,6 +334,19 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       setGhostPosition(null);
     }
   }, [activeFixtureType, readOnly, isDrawingGutter]);
+
+  useEffect(() => {
+    const previousType = prevActiveFixtureTypeRef.current;
+    const nextType = activeFixtureType;
+
+    if (nextType === 'gutter_uplight') {
+      setShowAdvancedToolbar(true);
+    } else if (previousType === 'gutter_uplight' && !!nextType && nextType !== 'gutter_uplight') {
+      setShowAdvancedToolbar(false);
+    }
+
+    prevActiveFixtureTypeRef.current = nextType;
+  }, [activeFixtureType]);
 
   // Convert screen coords to image-relative percentage
   const toImageCoords = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {

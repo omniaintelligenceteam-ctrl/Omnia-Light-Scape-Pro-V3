@@ -1310,6 +1310,12 @@ const App: React.FC = () => {
   };
 
   const handleImageSelect = (selectedFile: File) => {
+    // Explicitly preserve manual placement state across image swaps.
+    // Coordinates are normalized (0-100), so they can be reused on the next image.
+    const carriedFixtures = manualFixtures.map(fixture => ({ ...fixture }));
+    const carriedGutterLines = manualGutterLines.map(line => ({ ...line }));
+    const carriedTool = activeManualFixtureType;
+
     setFile(selectedFile);
     setPreviewUrl(getPreviewUrl(selectedFile));
     setGeneratedImage(null);
@@ -1320,6 +1326,17 @@ const App: React.FC = () => {
     setShowFeedback(false);
     setIsLiked(false);
     setIsFullScreen(false);
+
+    if (carriedFixtures.length > 0 || carriedGutterLines.length > 0) {
+      setPlacementMode('manual');
+      setManualFixtures(carriedFixtures);
+      setManualGutterLines(carriedGutterLines);
+      setActiveManualFixtureType(carriedTool);
+      showToast(
+        'info',
+        `Carried over ${carriedFixtures.length} fixture${carriedFixtures.length === 1 ? '' : 's'} and ${carriedGutterLines.length} gutter line${carriedGutterLines.length === 1 ? '' : 's'}`
+      );
+    }
   };
 
   const handleClear = () => {
@@ -5713,7 +5730,7 @@ Notes: ${invoice.notes || 'N/A'}
                     </div>
 
                     {placementMode === 'manual' && file && (
-                        <div className="fixed left-3 right-3 bottom-[74px] md:bottom-8 z-40">
+                        <div className="fixed left-3 right-3 bottom-[118px] md:bottom-8 z-[60]">
                             <div className="rounded-2xl border border-[#F6B45A]/30 bg-[#0b0b0b]/95 backdrop-blur-xl px-3 py-2.5 shadow-2xl shadow-black/60">
                                 <div className="flex items-center justify-between gap-2 mb-2">
                                     <div className="flex items-center gap-2 min-w-0">
