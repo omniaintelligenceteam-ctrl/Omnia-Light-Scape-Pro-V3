@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paintbrush, FolderOpen, FolderClosed, Settings, Sparkles, Calendar, CalendarCheck, ClipboardList } from 'lucide-react';
+import { Paintbrush, FolderOpen, FolderClosed, Settings, Calendar, CalendarCheck, ClipboardList, Sparkles } from 'lucide-react';
 import { useOrganization } from '../hooks/useOrganization';
 import { OrganizationRole, RolePermissions } from '../types';
 
@@ -44,7 +44,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   // Define all menu items with their access requirements
   const allMenuItems: MenuItem[] = [
     { id: 'editor', label: 'Editor', icon: Paintbrush, requiredPermission: 'canCreateProjects' },
-    { id: 'manual-placement', label: 'AI Placement', icon: Sparkles, requiredPermission: 'canCreateProjects' },
     { id: 'projects', label: 'Projects', icon: FolderOpen }, // All roles can see (filtered view)
     { id: 'schedule', label: 'Schedule', icon: Calendar }, // All roles can see (filtered view)
     { id: 'settings', label: 'Settings', icon: Settings }, // All roles can see (role-filtered content)

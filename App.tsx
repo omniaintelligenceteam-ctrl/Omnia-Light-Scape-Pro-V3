@@ -12,7 +12,6 @@ import AuthWrapper from './components/AuthWrapper';
 // InventoryView - currently unused, can re-enable when needed
 // import { InventoryView } from './components/InventoryView';
 import { ScheduleView } from './components/ScheduleView';
-import { ManualPlacementGenerator } from './components/ManualPlacementGenerator';
 // BOMView - currently unused, can re-enable when needed
 // import { BOMView } from './components/BOMView';
 import { Pricing } from './components/Pricing';
@@ -95,6 +94,29 @@ const parsePromptForQuantities = (text: string): Record<string, number> => {
     });
 
     return counts;
+};
+
+const SUPPORTED_IMAGE_ASPECT_RATIOS: Array<{ id: "16:9" | "4:3" | "1:1" | "3:4" | "9:16"; value: number }> = [
+  { id: '16:9', value: 16 / 9 },
+  { id: '4:3', value: 4 / 3 },
+  { id: '1:1', value: 1 },
+  { id: '3:4', value: 3 / 4 },
+  { id: '9:16', value: 9 / 16 },
+];
+
+const getClosestSupportedAspectRatio = (ratio: number): "16:9" | "4:3" | "1:1" | "3:4" | "9:16" => {
+  let closest = SUPPORTED_IMAGE_ASPECT_RATIOS[0];
+  let smallestDiff = Math.abs(ratio - closest.value);
+
+  for (const candidate of SUPPORTED_IMAGE_ASPECT_RATIOS.slice(1)) {
+    const diff = Math.abs(ratio - candidate.value);
+    if (diff < smallestDiff) {
+      closest = candidate;
+      smallestDiff = diff;
+    }
+  }
+
+  return closest.id;
 };
 
 // Estimate fixture counts based on selected sub-options
@@ -475,6 +497,10 @@ const App: React.FC = () => {
   
   // Before/After Comparison State
   const [showComparison, setShowComparison] = useState<boolean>(false);
+  const [showQaOverlay, setShowQaOverlay] = useState<boolean>(false);
+  const resultViewportRef = useRef<HTMLDivElement>(null);
+  const [resultViewportSize, setResultViewportSize] = useState({ width: 0, height: 0 });
+  const [generatedImageAspect, setGeneratedImageAspect] = useState<number>(16 / 10);
 
   // Feedback State
   const [lastUsedPrompt, setLastUsedPrompt] = useState<string>('');
@@ -780,6 +806,33 @@ const App: React.FC = () => {
     img.onload = () => setImageNaturalAspect(img.naturalWidth / img.naturalHeight);
     img.src = previewUrl;
   }, [previewUrl]);
+
+  useEffect(() => {
+    if (!generatedImage) return;
+    const img = new window.Image();
+    img.onload = () => setGeneratedImageAspect(img.naturalWidth / img.naturalHeight);
+    img.src = generatedImage;
+  }, [generatedImage]);
+
+  useEffect(() => {
+    if (!resultViewportRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setResultViewportSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    observer.observe(resultViewportRef.current);
+    return () => observer.disconnect();
+  }, [generatedImage, showComparison]);
+
+  useEffect(() => {
+    if (!generatedImage || showComparison) {
+      setShowQaOverlay(false);
+    }
+  }, [generatedImage, showComparison]);
 
   // Helper function to save feedback to the API
   const saveFeedback = async (
@@ -1260,6 +1313,7 @@ const App: React.FC = () => {
     setFile(selectedFile);
     setPreviewUrl(getPreviewUrl(selectedFile));
     setGeneratedImage(null);
+    setShowQaOverlay(false);
     setNightBaseCache(null);
     setGenerationHistory([]); // Clear history on new photo
     setError(null);
@@ -1272,6 +1326,7 @@ const App: React.FC = () => {
     setFile(null);
     setPreviewUrl(null);
     setGeneratedImage(null);
+    setShowQaOverlay(false);
     setNightBaseCache(null);
     setGenerationHistory([]); // Clear history on clear
     setPrompt('');
@@ -1288,6 +1343,7 @@ const App: React.FC = () => {
 
   const handleCloseResult = () => {
     setGeneratedImage(null);
+    setShowQaOverlay(false);
     setShowFeedback(false);
     setFeedbackText('');
     setIsLiked(false);
@@ -1800,12 +1856,8 @@ const App: React.FC = () => {
         img.src = previewUrl;
         await img.decode();
         const ratio = img.width / img.height;
-        // Select closest supported ratio to avoid cropping
-        if (ratio >= 1.5) targetRatio = "16:9";
-        else if (ratio >= 1.15) targetRatio = "4:3";
-        else if (ratio >= 0.85) targetRatio = "1:1";
-        else if (ratio >= 0.65) targetRatio = "3:4";
-        else targetRatio = "9:16";
+        // Select the mathematically closest supported ratio.
+        targetRatio = getClosestSupportedAspectRatio(ratio);
         
     } catch {
         // Aspect ratio detection failed, use default 1:1
@@ -1833,9 +1885,10 @@ const App: React.FC = () => {
       // Derive fixture selections from manual placements if in manual mode
       const isManualMode = placementMode === 'manual' && manualFixtures.length > 0;
       const manualSpatialMap = isManualMode ? convertFixturesToSpatialMap(manualFixtures) : undefined;
-      const effectiveFixtures = isManualMode ? deriveSelections(manualFixtures).selectedFixtures : selectedFixtures;
-      const effectiveSubOptions = isManualMode ? deriveSelections(manualFixtures).fixtureSubOptions : fixtureSubOptions;
-      const effectiveCounts = isManualMode ? deriveSelections(manualFixtures).fixtureCounts : fixtureCounts;
+      const manualSelections = isManualMode ? deriveSelections(manualFixtures) : null;
+      const effectiveFixtures = manualSelections ? manualSelections.selectedFixtures : selectedFixtures;
+      const effectiveSubOptions = manualSelections ? manualSelections.fixtureSubOptions : fixtureSubOptions;
+      const effectiveCounts = manualSelections ? manualSelections.fixtureCounts : fixtureCounts;
 
       // === ENHANCED MODE: Gemini Pro 3 Only (Claude Quality, Lower Cost) ===
       if (generationMode === 'enhanced') {
@@ -2097,21 +2150,59 @@ const App: React.FC = () => {
 
     try {
         const base64 = await fileToBase64(file);
-        // Construct a refinement prompt
-        const refinementPrompt = `${lastUsedPrompt}\n\nCRITICAL MODIFICATION REQUEST: ${feedbackText}\n\nRe-generate the night scene keeping the original design but applying the modification request.`;
-
-        // Using Nano Banana Pro (best model) for regeneration
-        const result = await generateNightScene(base64, refinementPrompt, file.type, "1:1", lightIntensity, beamAngle, colorPrompt, userPreferences);
-
-        setGeneratedImage(result);
-
-        // Trigger loading screen celebration FIRST (before hiding loading)
-        setShowLoadingCelebration(true);
+        let targetRatio: "16:9" | "4:3" | "1:1" | "3:4" | "9:16" = "1:1";
+        if (previewUrl) {
+          try {
+            const ratioImg = new Image();
+            ratioImg.src = previewUrl;
+            await ratioImg.decode();
+            targetRatio = getClosestSupportedAspectRatio(ratioImg.width / ratioImg.height);
+          } catch {
+            // Keep default ratio on decode failure
+          }
+        }
 
         const isManualRegeneration = placementMode === 'manual' && manualFixtures.length > 0;
         const manualRegenerationSpatialMap = isManualRegeneration
           ? convertFixturesToSpatialMap(manualFixtures)
           : undefined;
+
+        let result: string;
+        if (isManualRegeneration && manualRegenerationSpatialMap) {
+          const manualSelections = deriveSelections(manualFixtures);
+          const manualResult = await generateManualScene(
+            base64,
+            file.type,
+            manualRegenerationSpatialMap,
+            manualSelections.selectedFixtures,
+            manualSelections.fixtureSubOptions,
+            manualSelections.fixtureCounts,
+            colorPrompt,
+            lightIntensity,
+            beamAngle,
+            targetRatio,
+            userPreferences,
+            (stage) => setGenerationStage(stage as typeof generationStage),
+            manualFixtures,
+            nightBaseCache ?? undefined,
+            manualGutterLines.length > 0 ? manualGutterLines : undefined,
+            feedbackText
+          );
+          result = manualResult.result;
+          setNightBaseCache(manualResult.nightBase);
+        } else {
+          // Construct a refinement prompt
+          const refinementPrompt = `${lastUsedPrompt}\n\nCRITICAL MODIFICATION REQUEST: ${feedbackText}\n\nRe-generate the night scene keeping the original design but applying the modification request.`;
+          // Using Nano Banana Pro (best model) for regeneration
+          result = await generateNightScene(base64, refinementPrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt, userPreferences);
+        }
+
+        setGenerationStage('idle');
+
+        setGeneratedImage(result);
+
+        // Trigger loading screen celebration FIRST (before hiding loading)
+        setShowLoadingCelebration(true);
 
         // Add to history with settings
         setGenerationHistory(prev => [...prev, {
@@ -2149,6 +2240,7 @@ const App: React.FC = () => {
     } catch (err: any) {
         console.error(err);
         const errorMessage = err.toString().toLowerCase();
+        setGenerationStage('idle');
         if (errorMessage.includes('403') || errorMessage.includes('permission_denied')) {
             setError("Permission denied. Please check your API Key configuration.");
             showToast('error', 'Permission denied. Check your API key.');
@@ -3338,6 +3430,69 @@ Notes: ${invoice.notes || 'N/A'}
       [filteredProjectsByLocation, searchTerm, pipelineStatusFilter, role, user?.id]
   );
 
+  const categoryToPipelineType = useMemo(() => {
+    return Object.entries(PIPELINE_TYPE_TO_CATEGORY).reduce((acc, [pipelineType, category]) => {
+      if (!acc[category]) {
+        acc[category] = pipelineType;
+      }
+      return acc;
+    }, {} as Record<string, string>);
+  }, []);
+
+  const manualCountsByPipelineType = useMemo(() => {
+    return manualFixtures.reduce((acc, fixture) => {
+      const pipelineType = categoryToPipelineType[fixture.type] ?? fixture.type;
+      acc[pipelineType] = (acc[pipelineType] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [manualFixtures, categoryToPipelineType]);
+
+  const selectionStepComplete = placementMode === 'manual'
+    ? manualFixtures.length > 0
+    : selectedFixtures.length > 0 || prompt.trim().length > 0;
+
+  const canGenerateInCurrentMode = !!file && (
+    placementMode === 'manual'
+      ? manualFixtures.length > 0
+      : (selectedFixtures.length > 0 || prompt.trim().length > 0)
+  );
+  const activeManualToolLabel = useMemo(
+    () => VISIBLE_FIXTURE_TYPES.find(ft => ft.id === activeManualFixtureType)?.label || 'None',
+    [activeManualFixtureType]
+  );
+
+  const currentGenerationEntry = useMemo(
+    () => generationHistory.find(entry => entry.image === generatedImage) || null,
+    [generationHistory, generatedImage]
+  );
+  const qaPlacements = currentGenerationEntry?.expectedPlacements || [];
+  const qaGutterLines = currentGenerationEntry?.gutterLines || [];
+  const hasQaData = qaPlacements.length > 0 || qaGutterLines.length > 0;
+  const qaOverlayBounds = useMemo(() => {
+    if (resultViewportSize.width === 0 || resultViewportSize.height === 0) {
+      return { offsetX: 0, offsetY: 0, width: resultViewportSize.width || 1, height: resultViewportSize.height || 1 };
+    }
+    const containerAspect = resultViewportSize.width / resultViewportSize.height;
+    if (containerAspect > generatedImageAspect) {
+      const height = resultViewportSize.height;
+      const width = resultViewportSize.height * generatedImageAspect;
+      return {
+        offsetX: (resultViewportSize.width - width) / 2,
+        offsetY: 0,
+        width,
+        height,
+      };
+    }
+    const width = resultViewportSize.width;
+    const height = resultViewportSize.width / generatedImageAspect;
+    return {
+      offsetX: 0,
+      offsetY: (resultViewportSize.height - height) / 2,
+      width,
+      height,
+    };
+  }, [resultViewportSize.width, resultViewportSize.height, generatedImageAspect]);
+
   // Authentication is now handled by AuthWrapper
 
   // 2. Show Loading State while checking API Key
@@ -3778,6 +3933,7 @@ Notes: ${invoice.notes || 'N/A'}
 
                     {/* Main Image - with swipe gesture support */}
                     <div
+                        ref={resultViewportRef}
                         className="flex-1 relative flex items-center justify-center bg-[#030303] overflow-hidden group"
                         onTouchStart={handleTouchStart}
                         onTouchEnd={handleTouchEnd}
@@ -3801,6 +3957,63 @@ Notes: ${invoice.notes || 'N/A'}
                                 className="w-full h-full object-contain cursor-zoom-in transition-transform duration-500 group-hover:scale-[1.02]"
                                 onClick={() => setIsFullScreen(true)}
                             />
+                        )}
+
+                        {!showComparison && showQaOverlay && hasQaData && (
+                            <div
+                                className="absolute pointer-events-none"
+                                style={{
+                                    left: qaOverlayBounds.offsetX,
+                                    top: qaOverlayBounds.offsetY,
+                                    width: qaOverlayBounds.width,
+                                    height: qaOverlayBounds.height,
+                                }}
+                            >
+                                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    {qaGutterLines.map((line) => (
+                                        <g key={`qa-line-${line.id}`}>
+                                            <line
+                                                x1={line.startX}
+                                                y1={line.startY}
+                                                x2={line.endX}
+                                                y2={line.endY}
+                                                stroke="#FCD34D"
+                                                strokeWidth={0.55}
+                                                strokeDasharray="2 1.4"
+                                                opacity={0.85}
+                                            />
+                                        </g>
+                                    ))}
+                                    {qaPlacements.map((placement) => {
+                                        const color = PIPELINE_MARKER_COLOR[placement.fixtureType] || '#F6B45A';
+                                        return (
+                                            <g key={`qa-placement-${placement.id}`}>
+                                                <circle
+                                                    cx={placement.horizontalPosition}
+                                                    cy={placement.verticalPosition}
+                                                    r={1.1}
+                                                    fill={color}
+                                                    stroke="white"
+                                                    strokeWidth={0.25}
+                                                    opacity={0.95}
+                                                />
+                                                <circle
+                                                    cx={placement.horizontalPosition}
+                                                    cy={placement.verticalPosition}
+                                                    r={2.2}
+                                                    fill="none"
+                                                    stroke={color}
+                                                    strokeWidth={0.2}
+                                                    opacity={0.8}
+                                                />
+                                            </g>
+                                        );
+                                    })}
+                                </svg>
+                                <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-black/70 border border-[#F6B45A]/40 text-[10px] font-semibold text-[#F6B45A] uppercase tracking-wide">
+                                    QA Overlay
+                                </div>
+                            </div>
                         )}
 
                         {/* Subtle vignette - only show when not in comparison mode */}
@@ -4017,6 +4230,19 @@ Notes: ${invoice.notes || 'N/A'}
                                 >
                                     <SplitSquareHorizontal className="w-3 h-3" />
                                     Before / After
+                                </button>
+                            )}
+                            {hasQaData && !showComparison && (
+                                <button
+                                    onClick={() => setShowQaOverlay(prev => !prev)}
+                                    className={`flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                        showQaOverlay
+                                            ? 'bg-[#F6B45A]/20 text-[#F6B45A] border border-[#F6B45A]/30'
+                                            : 'bg-black/40 hover:bg-black/60 text-white/50 hover:text-white'
+                                    }`}
+                                >
+                                    <Crosshair className="w-3 h-3" />
+                                    QA Overlay
                                 </button>
                             )}
                             <button 
@@ -4739,13 +4965,38 @@ Notes: ${invoice.notes || 'N/A'}
                 ) : (
                 <motion.div
                     key="editor-input"
-                    className="flex flex-col gap-5 md:gap-8 pb-4 md:pb-0"
+                    className={`flex flex-col gap-5 md:gap-8 ${placementMode === 'manual' ? 'pb-28 md:pb-12' : 'pb-4 md:pb-0'}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.4 }}
                 >
-                    
+                    <div className="grid grid-cols-3 gap-2 md:gap-3 mb-1">
+                        {[
+                            { id: 1, label: 'Upload', done: !!file, hint: file ? 'Ready' : 'Add photo' },
+                            { id: 2, label: placementMode === 'manual' ? 'Place Lights' : 'Choose Lights', done: selectionStepComplete, hint: selectionStepComplete ? 'Configured' : 'Select fixtures' },
+                            { id: 3, label: 'Generate', done: canGenerateInCurrentMode && !isLoading, hint: canGenerateInCurrentMode ? 'Ready to run' : 'Complete steps' },
+                        ].map((step) => (
+                            <div
+                                key={`editor-step-${step.id}`}
+                                className={`rounded-xl border px-3 py-2 md:px-4 md:py-3 transition-colors ${
+                                    step.done
+                                        ? 'border-[#F6B45A]/35 bg-[#F6B45A]/10'
+                                        : 'border-white/10 bg-white/[0.03]'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] md:text-xs font-semibold text-gray-400 uppercase tracking-wider">Step {step.id}</span>
+                                    {step.done && <CheckCircle2 className="w-3.5 h-3.5 text-[#F6B45A]" />}
+                                </div>
+                                <p className={`text-xs md:text-sm font-semibold mt-1 ${step.done ? 'text-white' : 'text-gray-300'}`}>
+                                    {step.label}
+                                </p>
+                                <p className="text-[10px] text-gray-500 mt-0.5">{step.hint}</p>
+                            </div>
+                        ))}
+                    </div>
+
                     {/* Image Upload Area */}
                     <div className="relative">
                         <ImageUpload
@@ -4753,6 +5004,7 @@ Notes: ${invoice.notes || 'N/A'}
                           previewUrl={previewUrl}
                           onImageSelect={handleImageSelect}
                           onClear={handleClear}
+                          imageNaturalAspect={imageNaturalAspect}
                         />
 
                         {/* Manual placement click overlay */}
@@ -4768,7 +5020,8 @@ Notes: ${invoice.notes || 'N/A'}
                             markerColors={FIXTURE_MARKER_COLOR}
                             cursorColor={activeManualFixtureType ? (PIPELINE_MARKER_COLOR[activeManualFixtureType] || '#FF0000') : undefined}
                             imageNaturalAspect={imageNaturalAspect}
-                            containerClassName="absolute top-0 left-0 right-0 aspect-[16/10] md:aspect-[16/9] z-10 rounded-2xl overflow-hidden"
+                            containerClassName="absolute top-0 left-0 right-0 z-10 rounded-2xl overflow-hidden"
+                            containerStyle={{ aspectRatio: `${imageNaturalAspect}` }}
                           />
                         )}
                     </div>
@@ -4824,39 +5077,6 @@ Notes: ${invoice.notes || 'N/A'}
                                         </button>
                                     </div>
                                 )}
-                                {/* Manual Placement Mode: Summary bar */}
-                                {placementMode === 'manual' && manualFixtures.length > 0 && (
-                                    <div className="bg-[#0d0d0d] rounded-xl border border-white/10 p-3">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-semibold text-white">
-                                                {manualFixtures.length} fixture{manualFixtures.length !== 1 ? 's' : ''} placed
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                {Object.entries(
-                                                    manualFixtures.reduce((acc, f) => {
-                                                        acc[f.type] = (acc[f.type] || 0) + 1;
-                                                        return acc;
-                                                    }, {} as Record<string, number>)
-                                                ).map(([type, count]) => (
-                                                    <span key={type} className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-gray-400">{count}x {type.replace('_', ' ')}</span>
-                                                ))}
-                                                <button
-                                                    onClick={() => fixturePlacerRef.current?.undo()}
-                                                    className="text-gray-400 hover:text-white text-[10px] flex items-center gap-1 ml-1"
-                                                >
-                                                    <Undo2 className="w-3 h-3" /> Undo
-                                                </button>
-                                                <button
-                                                    onClick={() => fixturePlacerRef.current?.clearAll()}
-                                                    className="text-red-400 hover:text-red-300 text-[10px] ml-1"
-                                                >
-                                                    Clear All
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Auto Placement Mode: Presets */}
                                 {placementMode === 'auto' && (
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -4903,7 +5123,7 @@ Notes: ${invoice.notes || 'N/A'}
                             </div>
 
                             {/* Fixture Grid - Premium minimal buttons (shown in both auto & manual modes) */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                                 {VISIBLE_FIXTURE_TYPES.map((ft) => {
                                     const isManual = placementMode === 'manual';
                                     // Auto mode: multi-select toggle
@@ -4913,15 +5133,10 @@ Notes: ${invoice.notes || 'N/A'}
                                     const isHighlighted = isManual ? isActiveManual : isSelectedAuto;
 
                                     // Count of placed fixtures of this type in manual mode
-                                    const manualCount = isManual
-                                      ? manualFixtures.filter(f => {
-                                          const pipelineId = Object.entries(PIPELINE_TYPE_TO_CATEGORY).find(([, cat]) => cat === f.type)?.[0];
-                                          return pipelineId === ft.id;
-                                        }).length
+                                    const manualCount = isManual ? (manualCountsByPipelineType[ft.id] || 0) : 0;
+                                    const autoCount = !isManual
+                                      ? ((fixtureSubOptions[ft.id] || []).length || (isSelectedAuto ? 1 : 0))
                                       : 0;
-
-                                    const subOpts = fixtureSubOptions[ft.id];
-                                    const hasSubOpts = !isManual && subOpts && subOpts.length > 0;
 
                                     return (
                                         <motion.button
@@ -4934,10 +5149,10 @@ Notes: ${invoice.notes || 'N/A'}
                                                 toggleFixture(ft.id);
                                               }
                                             }}
-                                            className={`group relative overflow-visible rounded-xl transition-all duration-300 ${
+                                            className={`group relative overflow-visible rounded-2xl min-h-[64px] md:min-h-[78px] transition-all duration-300 ${
                                                 isHighlighted
                                                     ? 'bg-[#F6B45A]'
-                                                    : 'bg-[#0d0d0d] hover:bg-[#F6B45A]/10 active:bg-[#F6B45A]'
+                                                    : 'bg-[#0d0d0d] hover:bg-[#F6B45A]/10 active:bg-[#F6B45A]/20'
                                             }`}
                                             initial={false}
                                             animate={{
@@ -4969,7 +5184,7 @@ Notes: ${invoice.notes || 'N/A'}
                                             </AnimatePresence>
 
                                             {/* Border with hover color change */}
-                                            <div className={`absolute inset-0 rounded-xl border transition-all duration-200 ${
+                                            <div className={`absolute inset-0 rounded-2xl border transition-all duration-200 ${
                                                 isHighlighted
                                                     ? 'border-[#F6B45A]'
                                                     : 'border-white/10 group-hover:border-[#F6B45A]/50 group-active:border-[#F6B45A]'
@@ -5006,63 +5221,49 @@ Notes: ${invoice.notes || 'N/A'}
                                             </AnimatePresence>
 
                                             {/* Content */}
-                                            <div className="relative z-10 flex items-center justify-center gap-1.5 py-2 px-3 md:py-3 md:px-5">
-                                                {/* Label with hover color change */}
-                                                <span className={`text-xs md:text-sm font-semibold tracking-wide transition-colors duration-200 whitespace-nowrap ${
-                                                    isHighlighted
-                                                        ? 'text-black'
-                                                        : 'text-gray-400 group-hover:text-[#F6B45A] group-active:text-black'
-                                                }`}>
-                                                    {ft.label}
-                                                </span>
-
-                                                {/* Manual mode: count badge */}
-                                                {isManual && manualCount > 0 && (
-                                                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                            <div className="relative z-10 flex items-center justify-between gap-2 py-3 px-3 md:py-4 md:px-4">
+                                                <div className="flex flex-col items-start">
+                                                    <span className={`text-sm md:text-base font-semibold tracking-wide transition-colors duration-200 whitespace-nowrap ${
                                                         isHighlighted
-                                                            ? 'bg-black/15 text-black/70'
-                                                            : 'bg-white/10 text-gray-500'
+                                                            ? 'text-black'
+                                                            : 'text-gray-300 group-hover:text-[#F6B45A] group-active:text-black'
                                                     }`}>
-                                                        {manualCount}
+                                                        {ft.label}
                                                     </span>
-                                                )}
+                                                    <span className={`text-[10px] font-medium ${
+                                                        isHighlighted ? 'text-black/75' : 'text-gray-500 group-hover:text-[#F6B45A]/80'
+                                                    }`}>
+                                                        {isManual
+                                                            ? `${manualCount} placed`
+                                                            : `${autoCount} configured`
+                                                        }
+                                                    </span>
+                                                </div>
 
-                                                {/* Auto mode: Sub-options indicator */}
-                                                <AnimatePresence mode="wait">
-                                                    {hasSubOpts && (
-                                                        <motion.span
-                                                            key="subopts-badge"
-                                                            initial={{ opacity: 0, scale: 0.8, width: 0 }}
-                                                            animate={{ opacity: 1, scale: 1, width: 'auto' }}
-                                                            exit={{ opacity: 0, scale: 0.8, width: 0 }}
-                                                            transition={{ duration: 0.15, ease: 'easeOut' }}
-                                                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-colors duration-200 ${
-                                                                isHighlighted
-                                                                    ? 'bg-black/15 text-black/70'
-                                                                    : 'bg-white/10 text-gray-500 group-hover:bg-[#F6B45A]/20 group-hover:text-[#F6B45A]'
-                                                            }`}
-                                                        >
-                                                            +{subOpts.length}
-                                                        </motion.span>
-                                                    )}
-                                                </AnimatePresence>
-
-                                                {/* Icon: Crosshair in manual mode, Checkmark in auto mode */}
-                                                <AnimatePresence>
-                                                    {isHighlighted && (
-                                                        <motion.div
-                                                            initial={{ scale: 0, opacity: 0, rotate: -180 }}
-                                                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                                                            exit={{ scale: 0, opacity: 0 }}
-                                                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                                                        >
-                                                            {isManual
-                                                              ? <Crosshair className="w-4 h-4 text-black" strokeWidth={2.5} />
-                                                              : <Check className="w-4 h-4 text-black" strokeWidth={2.5} />
-                                                            }
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-[11px] font-bold min-w-[24px] px-1.5 py-1 rounded-full text-center ${
+                                                        isHighlighted
+                                                            ? 'bg-black/20 text-black'
+                                                            : 'bg-white/10 text-gray-300'
+                                                    }`}>
+                                                        {isManual ? manualCount : autoCount}
+                                                    </span>
+                                                    <AnimatePresence>
+                                                        {isHighlighted && (
+                                                            <motion.div
+                                                                initial={{ scale: 0, opacity: 0, rotate: -180 }}
+                                                                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                                                exit={{ scale: 0, opacity: 0 }}
+                                                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                                            >
+                                                                {isManual
+                                                                  ? <Crosshair className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                                                  : <Check className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                                                }
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
                                             </div>
                                         </motion.button>
                                     );
@@ -5249,6 +5450,7 @@ Notes: ${invoice.notes || 'N/A'}
                         </div>
 
                         {/* ✨ HERO Generate Button - The Core Action */}
+                        {placementMode !== 'manual' && (
                         <motion.button
                             data-tour="generate"
                             onClick={(e) => {
@@ -5261,12 +5463,12 @@ Notes: ${invoice.notes || 'N/A'}
                                 setTimeout(() => setShowRipple(false), 600);
                                 handleGenerate();
                             }}
-                            disabled={!file || (placementMode === 'manual' ? manualFixtures.length === 0 : (selectedFixtures.length === 0 && !prompt)) || isLoading}
+                            disabled={!file || (selectedFixtures.length === 0 && !prompt) || isLoading}
                             aria-label={isLoading ? 'Generating lighting design, please wait' : generationComplete ? 'Generation complete' : 'Generate lighting scene design'}
                             aria-busy={isLoading}
                             className="relative w-full overflow-hidden rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group mt-2 order-1 md:order-3"
-                            whileHover={!(!file || (placementMode === 'manual' ? manualFixtures.length === 0 : (selectedFixtures.length === 0 && !prompt)) || isLoading) ? { scale: 1.02, y: -4 } : {}}
-                            whileTap={!(!file || (placementMode === 'manual' ? manualFixtures.length === 0 : (selectedFixtures.length === 0 && !prompt)) || isLoading) ? { scale: 0.97 } : {}}
+                            whileHover={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 1.02, y: -4 } : {}}
+                            whileTap={!(!file || (selectedFixtures.length === 0 && !prompt) || isLoading) ? { scale: 0.97 } : {}}
                         >
                             {/* === IDLE STATE: Ambient Glow Pulse === */}
                             <motion.div
@@ -5506,35 +5708,60 @@ Notes: ${invoice.notes || 'N/A'}
                             {/* Border highlight */}
                             <div className="absolute inset-0 rounded-2xl border border-white/40 pointer-events-none" />
                         </motion.button>
+                        )}
                         </div>
                     </div>
+
+                    {placementMode === 'manual' && file && (
+                        <div className="fixed left-3 right-3 bottom-[74px] md:bottom-8 z-40">
+                            <div className="rounded-2xl border border-[#F6B45A]/30 bg-[#0b0b0b]/95 backdrop-blur-xl px-3 py-2.5 shadow-2xl shadow-black/60">
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-[10px] uppercase tracking-wider text-gray-500">Active</span>
+                                        <span className="text-xs font-semibold text-white truncate">{activeManualToolLabel}</span>
+                                    </div>
+                                    <span className="text-[11px] font-semibold text-[#F6B45A]">
+                                        {manualFixtures.length} placed
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+                                    {Object.entries(manualCountsByPipelineType)
+                                        .filter(([, count]) => count > 0)
+                                        .map(([type, count]) => (
+                                            <span key={`manual-chip-${type}`} className="text-[10px] whitespace-nowrap px-2 py-1 rounded-full bg-white/5 text-gray-300 border border-white/10">
+                                                {type}: {count}
+                                            </span>
+                                        ))}
+                                </div>
+                                <div className="mt-2.5 grid grid-cols-3 gap-2">
+                                    <button
+                                        onClick={() => fixturePlacerRef.current?.undo()}
+                                        className="py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-200 hover:bg-white/10 transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        <Undo2 className="w-3.5 h-3.5" />
+                                        Undo
+                                    </button>
+                                    <button
+                                        onClick={() => fixturePlacerRef.current?.clearAll()}
+                                        className="py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 hover:bg-red-500/20 transition-colors"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        onClick={handleGenerate}
+                                        disabled={!canGenerateInCurrentMode || isLoading}
+                                        className="py-2 rounded-xl bg-[#F6B45A] text-black text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ffc67a] transition-colors"
+                                    >
+                                        {isLoading ? 'Generating...' : 'Generate'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </motion.div>
                 )}
                 </AnimatePresence>
                 )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* TAB: MANUAL PLACEMENT (AI Placement) */}
-          {activeTab === 'manual-placement' && (
-            <motion.div
-              key="manual-placement"
-              initial={{ x: tabDirection * 100 + '%' }}
-              animate={{ x: 0 }}
-              exit={{ x: tabDirection * -100 + '%' }}
-              transition={{ type: 'spring', stiffness: 700, damping: 45 }}
-              className="absolute inset-0 h-full overflow-y-auto overflow-x-hidden bg-[#050505] pb-24 md:pb-20"
-            >
-              <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(246, 180, 90, 0.05) 0%, transparent 50%)' }}></div>
-              <div className="fixed inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-              
-              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
-                <ManualPlacementGenerator
-                  onGenerated={(result) => {
-                    showToast(`Generated night scene with ${result.fixtures.length} fixtures`, 'success');
-                  }}
-                />
               </div>
             </motion.div>
           )}

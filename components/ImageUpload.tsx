@@ -84,6 +84,7 @@ interface ImageUploadProps {
   previewUrl: string | null;
   onImageSelect: (file: File) => void;
   onClear: () => void;
+  imageNaturalAspect?: number;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -91,6 +92,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   previewUrl,
   onImageSelect,
   onClear,
+  imageNaturalAspect = 16 / 10,
 }) => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -229,7 +231,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
         {/* Image container with premium styling */}
-        <div className="relative aspect-[16/10] md:aspect-[16/9] bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50">
+        <div
+          className="relative bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50"
+          style={{ aspectRatio: `${imageNaturalAspect}` }}
+        >
           <img
             src={previewUrl}
             alt="Selected photo"

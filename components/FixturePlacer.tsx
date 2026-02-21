@@ -2,7 +2,7 @@ import React, { useRef, useState, useCallback, useEffect, useMemo, useImperative
 import {
   Trash2, Lock, Unlock,
   Grid, RotateCcw, Download, Crosshair, Layers, Copy, Clipboard, Undo2, Redo2, Eye, EyeOff, Wand2,
-  Minus, Plus, ZoomIn,
+  Minus, Plus, ZoomIn, SlidersHorizontal, ChevronDown, ChevronUp, Move, Info, X,
 } from 'lucide-react';
 import {
   LightFixture,
@@ -87,6 +87,7 @@ export interface FixturePlacerProps {
   cursorColor?: string;
   imageNaturalAspect?: number;
   containerClassName?: string;
+  containerStyle?: React.CSSProperties;
   readOnly?: boolean;
 }
 
@@ -99,6 +100,9 @@ export interface FixturePlacerHandle {
 }
 
 const MAX_HISTORY = 50;
+const TIPS_STORAGE_KEY = 'omnia_fixture_placer_tips_dismissed';
+const MIN_VIEWPORT_ZOOM = 1;
+const MAX_VIEWPORT_ZOOM = 3;
 
 export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>(({
   imageUrl,
@@ -111,6 +115,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   cursorColor,
   imageNaturalAspect = 16 / 10,
   containerClassName,
+  containerStyle,
   readOnly = false,
 }, ref) => {
   // Refs
@@ -130,6 +135,29 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [showGradientPreview, setShowGradientPreview] = useState(false);
   const [isAutoDetectingGutter, setIsAutoDetectingGutter] = useState(false);
+  const [showAdvancedToolbar, setShowAdvancedToolbar] = useState(false);
+  const [ghostPosition, setGhostPosition] = useState<{ x: number; y: number } | null>(null);
+  const [showTips, setShowTips] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem(TIPS_STORAGE_KEY) !== '1';
+  });
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isTouchPanning, setIsTouchPanning] = useState(false);
+  const pinchRef = useRef<{
+    distance: number;
+    zoom: number;
+    centerX: number;
+    centerY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
+  const touchPanRef = useRef<{
+    startX: number;
+    startY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
 
   // -- Gutter Line State (prop-driven or internal) --
   const [gutterLinesInternal, setGutterLinesInternal] = useState<GutterLine[]>([]);
@@ -255,12 +283,70 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     return () => observer.disconnect();
   }, []);
 
+  const clampPan = useCallback((x: number, y: number, zoom = zoomLevel) => {
+    if (zoom <= 1 || containerSize.width === 0 || containerSize.height === 0) {
+      return { x: 0, y: 0 };
+    }
+    const maxX = (containerSize.width * (zoom - 1)) / 2;
+    const maxY = (containerSize.height * (zoom - 1)) / 2;
+    return {
+      x: Math.max(-maxX, Math.min(maxX, x)),
+      y: Math.max(-maxY, Math.min(maxY, y)),
+    };
+  }, [containerSize.width, containerSize.height, zoomLevel]);
+
+  const dismissTips = useCallback(() => {
+    setShowTips(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(TIPS_STORAGE_KEY, '1');
+    }
+  }, []);
+
+  const resetViewport = useCallback(() => {
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+    setIsTouchPanning(false);
+    pinchRef.current = null;
+    touchPanRef.current = null;
+  }, []);
+
+  const stepZoom = useCallback((direction: 'in' | 'out') => {
+    setZoomLevel(prev => {
+      const delta = direction === 'in' ? 0.25 : -0.25;
+      const next = Math.max(MIN_VIEWPORT_ZOOM, Math.min(MAX_VIEWPORT_ZOOM, Number((prev + delta).toFixed(2))));
+      if (next <= 1) {
+        setPanOffset({ x: 0, y: 0 });
+      } else {
+        setPanOffset(current => clampPan(current.x, current.y, next));
+      }
+      return next;
+    });
+  }, [clampPan]);
+
+  useEffect(() => {
+    setGhostPosition(null);
+    resetViewport();
+  }, [imageUrl, resetViewport]);
+
+  useEffect(() => {
+    if (!activeFixtureType || readOnly || isDrawingGutter) {
+      setGhostPosition(null);
+    }
+  }, [activeFixtureType, readOnly, isDrawingGutter]);
+
   // Convert screen coords to image-relative percentage
   const toImageCoords = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return null;
-    let x = ((clientX - rect.left - imageBounds.offsetX) / imageBounds.width) * 100;
-    let y = ((clientY - rect.top - imageBounds.offsetY) / imageBounds.height) * 100;
+    const screenX = clientX - rect.left;
+    const screenY = clientY - rect.top;
+    const centerX = containerSize.width / 2;
+    const centerY = containerSize.height / 2;
+    const baseX = ((screenX - panOffset.x - centerX) / zoomLevel) + centerX;
+    const baseY = ((screenY - panOffset.y - centerY) / zoomLevel) + centerY;
+
+    let x = ((baseX - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((baseY - imageBounds.offsetY) / imageBounds.height) * 100;
     if (x < -2 || x > 102 || y < -2 || y > 102) return null;
     x = Math.max(0, Math.min(100, x));
     y = Math.max(0, Math.min(100, y));
@@ -269,20 +355,25 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       y = Math.round(y / gridSize) * gridSize;
     }
     return { x, y };
-  }, [imageBounds, snapToGrid, gridSize]);
+  }, [imageBounds, snapToGrid, gridSize, panOffset.x, panOffset.y, zoomLevel, containerSize.width, containerSize.height]);
 
   const toImageCoordsRaw = useCallback((clientX: number, clientY: number): { x: number; y: number; screenX: number; screenY: number } | null => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return null;
     const screenX = clientX - rect.left;
     const screenY = clientY - rect.top;
-    let x = ((clientX - rect.left - imageBounds.offsetX) / imageBounds.width) * 100;
-    let y = ((clientY - rect.top - imageBounds.offsetY) / imageBounds.height) * 100;
+    const centerX = containerSize.width / 2;
+    const centerY = containerSize.height / 2;
+    const baseX = ((screenX - panOffset.x - centerX) / zoomLevel) + centerX;
+    const baseY = ((screenY - panOffset.y - centerY) / zoomLevel) + centerY;
+
+    let x = ((baseX - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((baseY - imageBounds.offsetY) / imageBounds.height) * 100;
     if (x < -2 || x > 102 || y < -2 || y > 102) return null;
     x = Math.max(0, Math.min(100, x));
     y = Math.max(0, Math.min(100, y));
     return { x, y, screenX, screenY };
-  }, [imageBounds]);
+  }, [imageBounds, panOffset.x, panOffset.y, zoomLevel, containerSize.width, containerSize.height]);
 
   const getLineDepthPercent = useCallback((line: GutterLine): number => {
     const rawDepth = line.mountDepthPercent ?? DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT;
@@ -601,17 +692,21 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     if (!rect) return null;
     const sx = clientX - rect.left;
     const sy = clientY - rect.top;
+    const centerX = containerSize.width / 2;
+    const centerY = containerSize.height / 2;
     let nearest: { fixture: LightFixture; dist: number } | null = null;
     for (const f of fixtures) {
-      const fx = imageBounds.offsetX + (f.x / 100) * imageBounds.width;
-      const fy = imageBounds.offsetY + (f.y / 100) * imageBounds.height;
+      const baseFx = imageBounds.offsetX + (f.x / 100) * imageBounds.width;
+      const baseFy = imageBounds.offsetY + (f.y / 100) * imageBounds.height;
+      const fx = ((baseFx - centerX) * zoomLevel) + centerX + panOffset.x;
+      const fy = ((baseFy - centerY) * zoomLevel) + centerY + panOffset.y;
       const dist = Math.sqrt(Math.pow(sx - fx, 2) + Math.pow(sy - fy, 2));
       if (dist < radius && (!nearest || dist < nearest.dist)) {
         nearest = { fixture: f, dist };
       }
     }
     return nearest?.fixture ?? null;
-  }, [fixtures, imageBounds]);
+  }, [fixtures, imageBounds, containerSize.width, containerSize.height, zoomLevel, panOffset.x, panOffset.y]);
 
   // -- Mouse Handlers --
 
@@ -638,24 +733,37 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       setSelectedId(fixture.id);
       const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
-        const fx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
-        const fy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+        const centerX = containerSize.width / 2;
+        const centerY = containerSize.height / 2;
+        const baseFx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+        const baseFy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+        const fx = ((baseFx - centerX) * zoomLevel) + centerX + panOffset.x;
+        const fy = ((baseFy - centerY) * zoomLevel) + centerY + panOffset.y;
         dragOffsetRef.current = { x: e.clientX - rect.left - fx, y: e.clientY - rect.top - fy };
       }
       triggerHaptic('light');
     }
-  }, [readOnly, findFixtureAtScreen, imageBounds, isDrawingGutter, toImageCoords, updateGutterLensFromClient]);
+  }, [readOnly, findFixtureAtScreen, imageBounds, isDrawingGutter, toImageCoords, updateGutterLensFromClient, containerSize.width, containerSize.height, zoomLevel, panOffset.x, panOffset.y]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     updateGutterLensFromClient(e.clientX, e.clientY);
+    if (activeFixtureType && !readOnly && !isDragging && !isDraggingBeam && !isDrawingGutter) {
+      setGhostPosition(toImageCoords(e.clientX, e.clientY));
+    } else if (!activeFixtureType || isDragging || isDraggingBeam || isDrawingGutter) {
+      setGhostPosition(null);
+    }
     // Beam drag: update rotation + length
     if (isDraggingBeam && selectedId) {
       const fixture = fixtures.find(f => f.id === selectedId);
       if (!fixture) return;
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const fx = rect.left + imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
-      const fy = rect.top + imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+      const centerX = containerSize.width / 2;
+      const centerY = containerSize.height / 2;
+      const baseFx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+      const baseFy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+      const fx = rect.left + (((baseFx - centerX) * zoomLevel) + centerX + panOffset.x);
+      const fy = rect.top + (((baseFy - centerY) * zoomLevel) + centerY + panOffset.y);
       const dx = e.clientX - fx;
       const dy = e.clientY - fy;
       const angle = ((Math.atan2(dx, -dy) * 180 / Math.PI) + 360) % 360;
@@ -678,8 +786,14 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     if (!isDragging || !selectedId || readOnly) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    let x = ((e.clientX - rect.left - dragOffsetRef.current.x - imageBounds.offsetX) / imageBounds.width) * 100;
-    let y = ((e.clientY - rect.top - dragOffsetRef.current.y - imageBounds.offsetY) / imageBounds.height) * 100;
+    const centerX = containerSize.width / 2;
+    const centerY = containerSize.height / 2;
+    const screenX = e.clientX - rect.left - dragOffsetRef.current.x;
+    const screenY = e.clientY - rect.top - dragOffsetRef.current.y;
+    const baseX = ((screenX - panOffset.x - centerX) / zoomLevel) + centerX;
+    const baseY = ((screenY - panOffset.y - centerY) / zoomLevel) + centerY;
+    let x = ((baseX - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((baseY - imageBounds.offsetY) / imageBounds.height) * 100;
     x = Math.max(0, Math.min(100, x));
     y = Math.max(0, Math.min(100, y));
     if (snapToGrid) {
@@ -717,7 +831,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     });
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
-  }, [isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap, applyGutterSnapToFixture, updateGutterLensFromClient]);
+  }, [activeFixtureType, readOnly, isDragging, isDraggingBeam, selectedId, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap, applyGutterSnapToFixture, updateGutterLensFromClient, containerSize.width, containerSize.height, zoomLevel, panOffset.x, panOffset.y]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     // Beam drag end
@@ -820,7 +934,28 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   // -- Touch Handlers --
 
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (readOnly || e.touches.length !== 1) return;
+    if (readOnly) return;
+    if (e.touches.length === 2) {
+      const [t1, t2] = [e.touches[0], e.touches[1]];
+      const centerX = (t1.clientX + t2.clientX) / 2;
+      const centerY = (t1.clientY + t2.clientY) / 2;
+      const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      pinchRef.current = {
+        distance,
+        zoom: zoomLevel,
+        centerX,
+        centerY,
+        panX: panOffset.x,
+        panY: panOffset.y,
+      };
+      setIsTouchPanning(false);
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      return;
+    }
+    if (e.touches.length !== 1) return;
     const touch = e.touches[0];
     updateGutterLensFromClient(touch.clientX, touch.clientY);
 
@@ -832,6 +967,17 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     }
 
     const fixture = findFixtureAtScreen(touch.clientX, touch.clientY);
+
+    if (!fixture && !activeFixtureType && !isDrawingGutter && zoomLevel > 1) {
+      setIsTouchPanning(true);
+      touchPanRef.current = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        panX: panOffset.x,
+        panY: panOffset.y,
+      };
+      return;
+    }
 
     touchStartRef.current = {
       x: touch.clientX,
@@ -847,8 +993,12 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
         setIsDragging(true);
         const rect = containerRef.current?.getBoundingClientRect();
         if (rect) {
-          const fx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
-          const fy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+          const centerX = containerSize.width / 2;
+          const centerY = containerSize.height / 2;
+          const baseFx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+          const baseFy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+          const fx = ((baseFx - centerX) * zoomLevel) + centerX + panOffset.x;
+          const fy = ((baseFy - centerY) * zoomLevel) + centerY + panOffset.y;
           dragOffsetRef.current = { x: touch.clientX - rect.left - fx, y: touch.clientY - rect.top - fy };
         }
         // Long-press to delete (500ms)
@@ -862,13 +1012,45 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       }
       triggerHaptic('light');
     }
-  }, [readOnly, findFixtureAtScreen, imageBounds, fixtures, pushToHistory, isDrawingGutter, toImageCoords, updateGutterLensFromClient]);
+  }, [readOnly, zoomLevel, panOffset.x, panOffset.y, findFixtureAtScreen, activeFixtureType, imageBounds, fixtures, pushToHistory, isDrawingGutter, toImageCoords, updateGutterLensFromClient, containerSize.width, containerSize.height]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      const [t1, t2] = [e.touches[0], e.touches[1]];
+      const centerX = (t1.clientX + t2.clientX) / 2;
+      const centerY = (t1.clientY + t2.clientY) / 2;
+      const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const rawZoom = pinchRef.current.zoom * (distance / Math.max(1, pinchRef.current.distance));
+      const nextZoom = Math.max(MIN_VIEWPORT_ZOOM, Math.min(MAX_VIEWPORT_ZOOM, Number(rawZoom.toFixed(2))));
+      const deltaX = centerX - pinchRef.current.centerX;
+      const deltaY = centerY - pinchRef.current.centerY;
+      const nextPan = clampPan(
+        pinchRef.current.panX + deltaX,
+        pinchRef.current.panY + deltaY,
+        nextZoom
+      );
+      setZoomLevel(nextZoom);
+      setPanOffset(nextPan);
+      return;
+    }
+
     const movingTouch = e.touches[0];
     if (movingTouch) {
       updateGutterLensFromClient(movingTouch.clientX, movingTouch.clientY);
     }
+
+    if (isTouchPanning && movingTouch && touchPanRef.current) {
+      const deltaX = movingTouch.clientX - touchPanRef.current.startX;
+      const deltaY = movingTouch.clientY - touchPanRef.current.startY;
+      const nextPan = clampPan(
+        touchPanRef.current.panX + deltaX,
+        touchPanRef.current.panY + deltaY,
+        zoomLevel
+      );
+      setPanOffset(nextPan);
+      return;
+    }
+
     // Cancel long-press on movement
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
@@ -881,8 +1063,12 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       if (!fixture || !touch) return;
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const fx = rect.left + imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
-      const fy = rect.top + imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+      const centerX = containerSize.width / 2;
+      const centerY = containerSize.height / 2;
+      const baseFx = imageBounds.offsetX + (fixture.x / 100) * imageBounds.width;
+      const baseFy = imageBounds.offsetY + (fixture.y / 100) * imageBounds.height;
+      const fx = rect.left + (((baseFx - centerX) * zoomLevel) + centerX + panOffset.x);
+      const fy = rect.top + (((baseFy - centerY) * zoomLevel) + centerY + panOffset.y);
       const dx = touch.clientX - fx;
       const dy = touch.clientY - fy;
       const angle = ((Math.atan2(dx, -dy) * 180 / Math.PI) + 360) % 360;
@@ -907,8 +1093,14 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     const touch = e.touches[0];
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    let x = ((touch.clientX - rect.left - dragOffsetRef.current.x - imageBounds.offsetX) / imageBounds.width) * 100;
-    let y = ((touch.clientY - rect.top - dragOffsetRef.current.y - imageBounds.offsetY) / imageBounds.height) * 100;
+    const centerX = containerSize.width / 2;
+    const centerY = containerSize.height / 2;
+    const screenX = touch.clientX - rect.left - dragOffsetRef.current.x;
+    const screenY = touch.clientY - rect.top - dragOffsetRef.current.y;
+    const baseX = ((screenX - panOffset.x - centerX) / zoomLevel) + centerX;
+    const baseY = ((screenY - panOffset.y - centerY) / zoomLevel) + centerY;
+    let x = ((baseX - imageBounds.offsetX) / imageBounds.width) * 100;
+    let y = ((baseY - imageBounds.offsetY) / imageBounds.height) * 100;
     x = Math.max(0, Math.min(100, x));
     y = Math.max(0, Math.min(100, y));
     if (snapToGrid) {
@@ -944,13 +1136,25 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     });
     prevFixturesRef.current = updated;
     onFixturesChange(updated);
-  }, [isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap, applyGutterSnapToFixture, updateGutterLensFromClient]);
+  }, [clampPan, zoomLevel, isTouchPanning, isDragging, isDraggingBeam, selectedId, readOnly, snapToGrid, gridSize, imageBounds, fixtures, onFixturesChange, isDrawingGutter, gutterDrawStart, toImageCoords, snapToGutter, gutterLines, findNearestGutterSnap, applyGutterSnapToFixture, updateGutterLensFromClient, containerSize.width, containerSize.height, panOffset.x, panOffset.y]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     setGutterLensState(prev => prev.visible ? { ...prev, visible: false } : prev);
+    if (e.touches.length < 2) {
+      pinchRef.current = null;
+    }
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+    }
+
+    if (isTouchPanning) {
+      if (e.touches.length === 0) {
+        setIsTouchPanning(false);
+        touchPanRef.current = null;
+      }
+      touchStartRef.current = null;
+      return;
     }
 
     // Beam drag end (touch)
@@ -1051,7 +1255,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
       }
     }
     touchStartRef.current = null;
-  }, [isDragging, isDraggingBeam, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, addGutterLine, snapToGutter, findNearestGutterSnap, gutterLines.length, applyGutterSnapToFixture]);
+  }, [isTouchPanning, isDragging, isDraggingBeam, activeFixtureType, readOnly, fixtures, toImageCoords, pushToHistory, isDrawingGutter, gutterDrawStart, addGutterLine, snapToGutter, findNearestGutterSnap, gutterLines.length, applyGutterSnapToFixture]);
 
   // -- Toolbar Actions --
 
@@ -1217,236 +1421,262 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
     imageUrl,
   ]);
 
+  const viewportTransformStyle = useMemo<React.CSSProperties>(() => ({
+    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+    transformOrigin: 'center center',
+  }), [panOffset.x, panOffset.y, zoomLevel]);
+
   return (
-    <div className={containerClassName || 'relative w-full h-full'}>
+    <div className={containerClassName || 'relative w-full h-full'} style={containerStyle}>
       {/* Floating Toolbar */}
       {!readOnly && (
-        <div className="absolute top-2 left-2 right-2 z-20 flex items-center gap-1.5 p-1.5 bg-[#0d0d0d]/90 backdrop-blur border border-white/10 rounded-xl overflow-x-auto">
-          {/* Grid toggle */}
-          <button
-            onClick={() => setShowGrid(prev => !prev)}
-            className={`p-1.5 rounded-lg transition-all ${showGrid ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-            title="Toggle Grid (G)"
-          >
-            <Grid size={16} />
-          </button>
-
-          {/* Snap to grid */}
-          <button
-            onClick={() => setSnapToGrid(prev => !prev)}
-            className={`p-1.5 rounded-lg transition-all ${snapToGrid ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-            title="Snap to Grid"
-          >
-            <Crosshair size={16} />
-          </button>
-
-          {/* Gradient preview toggle */}
-          <button
-            onClick={() => setShowGradientPreview(prev => !prev)}
-            className={`p-1.5 rounded-lg transition-all ${showGradientPreview ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-            title="Preview Light Gradients"
-          >
-            {showGradientPreview ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-
-          <div className="w-px h-5 bg-white/10 flex-shrink-0" />
-
-          {/* Auto-detect Gutter Lines */}
-          <button
-            onClick={autoDetectGutterLines}
-            disabled={isAutoDetectingGutter}
-            className={`p-1.5 rounded-lg transition-all ${
-              isAutoDetectingGutter
-                ? 'bg-amber-500/80 text-black'
-                : 'text-gray-400 hover:text-amber-300 hover:bg-white/5'
-            } disabled:opacity-70 disabled:cursor-wait`}
-            title={isAutoDetectingGutter ? 'Detecting gutter lines...' : 'Auto-Detect Gutter Lines'}
-          >
-            <Wand2 size={16} className={isAutoDetectingGutter ? 'animate-spin' : ''} />
-          </button>
-
-          {/* Mark Gutter Line */}
-          <button
-            onClick={() => {
-              if (gutterLines.length >= MAX_GUTTER_LINES && !isDrawingGutter) { triggerHaptic('heavy'); return; }
-              setIsDrawingGutter(prev => !prev);
-              if (!isDrawingGutter) { setSelectedId(null); setGutterDrawStart(null); setGutterDrawEnd(null); }
-            }}
-            className={`p-1.5 rounded-lg transition-all relative ${
-              gutterLines.length >= MAX_GUTTER_LINES && !isDrawingGutter
-                ? 'text-gray-600 cursor-not-allowed opacity-50'
-                : isDrawingGutter
-                  ? 'bg-amber-500 text-black ring-2 ring-amber-300'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-            title={gutterLines.length >= MAX_GUTTER_LINES ? `Max ${MAX_GUTTER_LINES} gutter lines reached` : `Mark Gutter Line (${gutterLines.length}/${MAX_GUTTER_LINES})`}
-          >
-            <Minus size={16} />
-            {gutterLines.length > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-black text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                {gutterLines.length}
-              </span>
-            )}
-          </button>
-
-          {/* Snap to Gutter toggle */}
-          {gutterLines.length > 0 && (
+        <div className="absolute top-2 left-2 right-2 z-30 flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 p-1.5 bg-[#0d0d0d]/90 backdrop-blur border border-white/10 rounded-xl overflow-x-auto">
             <button
-              onClick={() => setSnapToGutter(prev => !prev)}
-              className={`p-1.5 rounded-lg transition-all ${
-                snapToGutter ? 'bg-amber-500/80 text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-              title={`Snap to Gutter (${gutterLines.length} line${gutterLines.length > 1 ? 's' : ''})`}
+              onClick={() => setShowGrid(prev => !prev)}
+              className={`p-1.5 rounded-lg transition-all ${showGrid ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              title="Toggle Grid (G)"
+            >
+              <Grid size={16} />
+            </button>
+            <button
+              onClick={() => setSnapToGrid(prev => !prev)}
+              className={`p-1.5 rounded-lg transition-all ${snapToGrid ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              title="Snap to Grid"
             >
               <Crosshair size={16} />
             </button>
-          )}
+            <button
+              onClick={() => setShowGradientPreview(prev => !prev)}
+              className={`p-1.5 rounded-lg transition-all ${showGradientPreview ? 'bg-[#F6B45A] text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              title="Preview Light Gradients"
+            >
+              {showGradientPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
 
-          {/* Gutter precision zoom lens */}
-          {gutterLines.length > 0 && (
-            <>
+            <div className="w-px h-5 bg-white/10 flex-shrink-0" />
+
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 size={16} />
+            </button>
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 size={16} />
+            </button>
+
+            <div className="w-px h-5 bg-white/10 flex-shrink-0" />
+
+            <button
+              onClick={() => stepZoom('out')}
+              disabled={zoomLevel <= MIN_VIEWPORT_ZOOM}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Zoom Out"
+            >
+              <Minus size={14} />
+            </button>
+            <button
+              onClick={() => stepZoom('in')}
+              disabled={zoomLevel >= MAX_VIEWPORT_ZOOM}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Zoom In"
+            >
+              <Plus size={14} />
+            </button>
+            <button
+              onClick={resetViewport}
+              className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${zoomLevel > 1 ? 'text-amber-300 bg-white/10 hover:bg-white/20' : 'text-gray-500 bg-white/5'}`}
+              title="Reset Viewport"
+            >
+              {zoomLevel.toFixed(2)}x
+            </button>
+
+            <button
+              onClick={() => setShowAdvancedToolbar(prev => !prev)}
+              className={`ml-auto px-2 py-1 rounded-lg text-[10px] font-semibold transition-all flex items-center gap-1 ${showAdvancedToolbar ? 'bg-[#F6B45A] text-black' : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'}`}
+              title="Advanced Tools"
+            >
+              <SlidersHorizontal size={13} />
+              Advanced
+              {showAdvancedToolbar ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 flex-shrink-0 pl-2">
+              <Layers size={12} />
+              <span>{fixtures.length}</span>
+            </div>
+          </div>
+
+          {showAdvancedToolbar && (
+            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-[#0d0d0d]/90 backdrop-blur border border-white/10 rounded-xl">
               <button
-                onClick={() => setGutterZoomEnabled(prev => !prev)}
+                onClick={autoDetectGutterLines}
+                disabled={isAutoDetectingGutter}
                 className={`p-1.5 rounded-lg transition-all ${
-                  gutterZoomEnabled ? 'bg-amber-500/80 text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  isAutoDetectingGutter
+                    ? 'bg-amber-500/80 text-black'
+                    : 'text-gray-400 hover:text-amber-300 hover:bg-white/5'
+                } disabled:opacity-70 disabled:cursor-wait`}
+                title={isAutoDetectingGutter ? 'Detecting gutter lines...' : 'Auto-Detect Gutter Lines'}
+              >
+                <Wand2 size={16} className={isAutoDetectingGutter ? 'animate-spin' : ''} />
+              </button>
+              <button
+                onClick={() => {
+                  if (gutterLines.length >= MAX_GUTTER_LINES && !isDrawingGutter) { triggerHaptic('heavy'); return; }
+                  setIsDrawingGutter(prev => !prev);
+                  if (!isDrawingGutter) { setSelectedId(null); setGutterDrawStart(null); setGutterDrawEnd(null); }
+                }}
+                className={`p-1.5 rounded-lg transition-all relative ${
+                  gutterLines.length >= MAX_GUTTER_LINES && !isDrawingGutter
+                    ? 'text-gray-600 cursor-not-allowed opacity-50'
+                    : isDrawingGutter
+                      ? 'bg-amber-500 text-black ring-2 ring-amber-300'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
-                title={`Gutter Zoom Lens (${gutterZoomEnabled ? 'ON' : 'OFF'})`}
+                title={gutterLines.length >= MAX_GUTTER_LINES ? `Max ${MAX_GUTTER_LINES} gutter lines reached` : `Draw Gutter Line (${gutterLines.length}/${MAX_GUTTER_LINES})`}
               >
-                <ZoomIn size={16} />
+                <Move size={16} />
               </button>
-              {gutterZoomEnabled && (
-                <button
-                  onClick={cycleGutterZoomFactor}
-                  className="px-2 py-1 rounded-lg text-[10px] font-semibold text-amber-300 bg-white/5 hover:bg-white/10 transition-all"
-                  title="Cycle zoom factor (2x/3x/4x)"
-                >
-                  {gutterZoomFactor}x
-                </button>
+              {gutterLines.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setSnapToGutter(prev => !prev)}
+                    className={`p-1.5 rounded-lg transition-all ${snapToGutter ? 'bg-amber-500/80 text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    title={`Snap to Gutter (${gutterLines.length})`}
+                  >
+                    <Crosshair size={16} />
+                  </button>
+                  <button
+                    onClick={() => setGutterZoomEnabled(prev => !prev)}
+                    className={`p-1.5 rounded-lg transition-all ${gutterZoomEnabled ? 'bg-amber-500/80 text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    title={`Gutter Lens (${gutterZoomEnabled ? 'ON' : 'OFF'})`}
+                  >
+                    <ZoomIn size={16} />
+                  </button>
+                  {gutterZoomEnabled && (
+                    <button
+                      onClick={cycleGutterZoomFactor}
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold text-amber-300 bg-white/5 hover:bg-white/10 transition-all"
+                      title="Cycle lens zoom factor"
+                    >
+                      {gutterZoomFactor}x
+                    </button>
+                  )}
+                  <button
+                    onClick={clearAllGutterLines}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
+                    title={`Clear ${gutterLines.length} gutter line${gutterLines.length > 1 ? 's' : ''}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </>
               )}
-            </>
-          )}
 
-          {/* Per-line mount depth nudge */}
-          {selectedGutterLine && (
-            <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-white/5 border border-white/10">
+              {selectedGutterLine && (
+                <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-white/5 border border-white/10">
+                  <button
+                    onClick={cycleSelectedGutterLine}
+                    className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-amber-300 hover:bg-white/10 transition-all"
+                    title="Select gutter line"
+                  >
+                    L{selectedGutterLineIndex + 1}
+                  </button>
+                  <button
+                    onClick={() => nudgeSelectedGutterLineDepth(-GUTTER_DEPTH_NUDGE_STEP_PERCENT)}
+                    className="p-1 rounded text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+                    title="Nudge mount depth shallower"
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <span className="text-[10px] text-amber-300 font-medium w-12 text-center">
+                    {getLineDepthPercent(selectedGutterLine).toFixed(2)}%
+                  </span>
+                  <button
+                    onClick={() => nudgeSelectedGutterLineDepth(GUTTER_DEPTH_NUDGE_STEP_PERCENT)}
+                    className="p-1 rounded text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+                    title="Nudge mount depth deeper"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+              )}
+
+              {selectedFixture && (
+                <>
+                  <button
+                    onClick={duplicateSelected}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                    title="Duplicate (Ctrl+D)"
+                  >
+                    <Copy size={16} />
+                  </button>
+                  <button
+                    onClick={toggleLock}
+                    className={`p-1.5 rounded-lg transition-all ${selectedFixture.locked ? 'text-[#F6B45A]' : 'text-gray-400 hover:text-[#F6B45A] hover:bg-white/5'}`}
+                    title="Lock / Unlock"
+                  >
+                    {selectedFixture.locked ? <Lock size={16} /> : <Unlock size={16} />}
+                  </button>
+                  <button
+                    onClick={deleteSelected}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
+                    title="Delete Selected"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </>
+              )}
+
               <button
-                onClick={cycleSelectedGutterLine}
-                className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-amber-300 hover:bg-white/10 transition-all"
-                title="Select gutter line"
+                onClick={handleImport}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                title="Import from Clipboard"
               >
-                L{selectedGutterLineIndex + 1}
+                <Clipboard size={16} />
               </button>
               <button
-                onClick={() => nudgeSelectedGutterLineDepth(-GUTTER_DEPTH_NUDGE_STEP_PERCENT)}
-                className="p-1 rounded text-gray-300 hover:text-white hover:bg-white/10 transition-all"
-                title="Nudge mount depth shallower"
+                onClick={handleExport}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                title="Export to Clipboard"
               >
-                <Minus size={12} />
+                <Download size={16} />
               </button>
-              <span className="text-[10px] text-amber-300 font-medium w-12 text-center">
-                {getLineDepthPercent(selectedGutterLine).toFixed(2)}%
-              </span>
               <button
-                onClick={() => nudgeSelectedGutterLineDepth(GUTTER_DEPTH_NUDGE_STEP_PERCENT)}
-                className="p-1 rounded text-gray-300 hover:text-white hover:bg-white/10 transition-all"
-                title="Nudge mount depth deeper"
+                onClick={clearAll}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
+                title="Clear All Fixtures"
               >
-                <Plus size={12} />
+                <RotateCcw size={16} />
               </button>
             </div>
           )}
 
-          {/* Clear Gutter Lines */}
-          {gutterLines.length > 0 && (
-            <button
-              onClick={clearAllGutterLines}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
-              title={`Clear ${gutterLines.length} gutter line${gutterLines.length > 1 ? 's' : ''}`}
-            >
-              <Trash2 size={12} />
-            </button>
+          {showTips && (
+            <div className="bg-[#121212]/95 border border-[#F6B45A]/25 rounded-xl p-2.5 text-[11px] text-gray-300 flex items-start gap-2">
+              <Info size={14} className="text-[#F6B45A] mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-white">Placement tips</p>
+                <p className="text-gray-400">
+                  Tap to place. Drag markers to refine. Use two fingers to zoom and pan for tighter alignment.
+                </p>
+              </div>
+              <button
+                onClick={dismissTips}
+                className="p-1 rounded-md text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+                title="Dismiss tips"
+              >
+                <X size={13} />
+              </button>
+            </div>
           )}
-
-          <div className="w-px h-5 bg-white/10 flex-shrink-0" />
-
-          {/* Selected fixture actions (contextual) */}
-          {selectedFixture && (
-            <>
-              <button
-                onClick={duplicateSelected}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-                title="Duplicate (Ctrl+D)"
-              >
-                <Copy size={16} />
-              </button>
-              <button
-                onClick={toggleLock}
-                className={`p-1.5 rounded-lg transition-all ${selectedFixture.locked ? 'text-[#F6B45A]' : 'text-gray-400 hover:text-[#F6B45A] hover:bg-white/5'}`}
-                title="Lock/Unlock (Ctrl+L)"
-              >
-                {selectedFixture.locked ? <Lock size={16} /> : <Unlock size={16} />}
-              </button>
-              <button
-                onClick={deleteSelected}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
-                title="Delete (Del)"
-              >
-                <Trash2 size={16} />
-              </button>
-              <div className="w-px h-5 bg-white/10 flex-shrink-0" />
-            </>
-          )}
-
-          {/* Import/Export */}
-          <button
-            onClick={handleImport}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-            title="Import from Clipboard"
-          >
-            <Clipboard size={16} />
-          </button>
-          <button
-            onClick={handleExport}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-            title="Export to Clipboard"
-          >
-            <Download size={16} />
-          </button>
-
-          <div className="w-px h-5 bg-white/10 flex-shrink-0" />
-
-          {/* Undo/Redo */}
-          <button
-            onClick={undo}
-            disabled={!canUndo}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 size={16} />
-          </button>
-          <button
-            onClick={redo}
-            disabled={!canRedo}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            <Redo2 size={16} />
-          </button>
-
-          {/* Clear All */}
-          <button
-            onClick={clearAll}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
-            title="Clear All"
-          >
-            <RotateCcw size={16} />
-          </button>
-
-          {/* Fixture count (right-aligned) */}
-          <div className="ml-auto flex items-center gap-1.5 text-[10px] text-gray-500 flex-shrink-0">
-            <Layers size={12} />
-            <span>{fixtures.length}</span>
-          </div>
         </div>
       )}
 
@@ -1462,6 +1692,7 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           if (isDragging) { pushToHistory(fixtures); setIsDragging(false); }
           if (isDrawingGutter && gutterDrawStart) { setGutterDrawStart(null); setGutterDrawEnd(null); }
           setGutterLensState(prev => prev.visible ? { ...prev, visible: false } : prev);
+          setGhostPosition(null);
         }}
         onContextMenu={handleRightClick}
         onTouchStart={handleTouchStart}
@@ -1482,179 +1713,217 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
           </div>
         )}
 
-        {/* Grid Overlay */}
-        {showGrid && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
-              `,
-              backgroundSize: `${gridSize}% ${gridSize}%`,
-            }}
-          />
-        )}
+        <div className="absolute inset-0" style={viewportTransformStyle}>
+          {zoomLevel > 1 && (
+            <img
+              src={imageUrl}
+              alt=""
+              className="absolute pointer-events-none select-none"
+              style={{
+                left: imageBounds.offsetX,
+                top: imageBounds.offsetY,
+                width: imageBounds.width,
+                height: imageBounds.height,
+                objectFit: 'fill',
+                opacity: 1,
+              }}
+              draggable={false}
+            />
+          )}
 
-        {/* Gutter Lines SVG Overlay */}
-        {(gutterLines.length > 0 || (isDrawingGutter && gutterDrawStart && gutterDrawEnd)) && (
-          <svg
-            className="absolute pointer-events-none"
-            style={{
-              left: imageBounds.offsetX,
-              top: imageBounds.offsetY,
-              width: imageBounds.width,
-              height: imageBounds.height,
-              zIndex: 5,
-            }}
-            viewBox={`0 0 ${imageBounds.width} ${imageBounds.height}`}
-          >
-            {/* Saved gutter lines */}
-            {gutterLines.map((line, idx) => {
-              const x1 = (line.startX / 100) * imageBounds.width;
-              const y1 = (line.startY / 100) * imageBounds.height;
-              const x2 = (line.endX / 100) * imageBounds.width;
-              const y2 = (line.endY / 100) * imageBounds.height;
-              const mx = (x1 + x2) / 2;
-              const my = (y1 + y2) / 2;
-              const isSelectedLine = line.id === selectedGutterLineId;
-              return (
-                <g key={line.id}>
-                  <line
-                    className="pointer-events-auto cursor-pointer"
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke="transparent"
-                    strokeWidth={18}
-                    onMouseDown={(evt) => { evt.stopPropagation(); evt.preventDefault(); setSelectedGutterLineId(line.id); }}
-                    onTouchStart={(evt) => { evt.stopPropagation(); evt.preventDefault(); setSelectedGutterLineId(line.id); }}
-                  />
-                  <line
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke={isSelectedLine ? '#FCD34D' : '#F59E0B'}
-                    strokeWidth={isSelectedLine ? 4 : 3}
-                    strokeDasharray="8 4"
-                    opacity={isSelectedLine ? 1 : 0.8}
-                  />
-                  <circle cx={x1} cy={y1} r={5} fill="#F59E0B" stroke="white" strokeWidth={1.5} />
-                  <circle cx={x2} cy={y2} r={5} fill="#F59E0B" stroke="white" strokeWidth={1.5} />
-                  {/* Line number label */}
-                  <g>
-                    <circle cx={x1 + 12} cy={y1 - 12} r={9} fill={isSelectedLine ? '#FCD34D' : '#F59E0B'} stroke="white" strokeWidth={1} />
-                    <text x={x1 + 12} y={y1 - 8} textAnchor="middle" fontSize={11} fontWeight="bold" fill="black">{idx + 1}</text>
-                  </g>
-                  {/* Delete button at midpoint */}
-                  <g
-                    className="pointer-events-auto cursor-pointer"
-                    onMouseDown={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
-                    onMouseUp={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
-                    onTouchStart={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
-                    onTouchMove={(evt) => { evt.stopPropagation(); }}
-                    onClick={(evt) => { evt.stopPropagation(); evt.preventDefault(); deleteGutterLine(line.id); }}
-                    onTouchEnd={(evt) => { evt.stopPropagation(); evt.preventDefault(); deleteGutterLine(line.id); }}
-                  >
-                    <circle cx={mx} cy={my} r={14} fill="#1f1f1f" stroke="#EF4444" strokeWidth={2} opacity={0.95} />
-                    <line x1={mx - 5} y1={my - 5} x2={mx + 5} y2={my + 5} stroke="#EF4444" strokeWidth={2.5} />
-                    <line x1={mx + 5} y1={my - 5} x2={mx - 5} y2={my + 5} stroke="#EF4444" strokeWidth={2.5} />
-                  </g>
-                </g>
-              );
-            })}
-            {/* Live preview line during drawing */}
-            {isDrawingGutter && gutterDrawStart && gutterDrawEnd && (
-              <line
-                x1={(gutterDrawStart.x / 100) * imageBounds.width}
-                y1={(gutterDrawStart.y / 100) * imageBounds.height}
-                x2={(gutterDrawEnd.x / 100) * imageBounds.width}
-                y2={(gutterDrawEnd.y / 100) * imageBounds.height}
-                stroke="#F59E0B" strokeWidth={3} strokeDasharray="4 4" opacity={0.5}
-              />
-            )}
-          </svg>
-        )}
-
-        {/* Gradient Preview Overlay */}
-        <GradientPreview
-          fixtures={fixtures}
-          containerWidth={imageBounds.width}
-          containerHeight={imageBounds.height}
-          visible={showGradientPreview}
-        />
-
-        {/* Fixture Markers */}
-        {fixtures.map(fixture => {
-          const isSelected = fixture.id === selectedId;
-          const preset = getFixturePreset(fixture.type);
-          const hexColor = markerColors[fixture.type] || '#FF0000';
-          const defaults = UI_BEAM_DEFAULTS[fixture.type];
-          const rotation = fixture.rotation ?? defaults.defaultRotation;
-          const beamLen = fixture.beamLength ?? 1.0;
-          const beamH = defaults.height * beamLen;
-          const beamW = defaults.width * beamLen;
-          const rotRad = (rotation * Math.PI) / 180;
-
-          return (
+          {/* Grid Overlay */}
+          {showGrid && (
             <div
-              key={fixture.id}
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: `
+                  linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
+                `,
+                backgroundSize: `${gridSize}% ${gridSize}%`,
+              }}
+            />
+          )}
+
+          {/* Gutter Lines SVG Overlay */}
+          {(gutterLines.length > 0 || (isDrawingGutter && gutterDrawStart && gutterDrawEnd)) && (
+            <svg
               className="absolute pointer-events-none"
               style={{
-                left: imageBounds.offsetX + (fixture.x / 100) * imageBounds.width,
-                top: imageBounds.offsetY + (fixture.y / 100) * imageBounds.height,
-                zIndex: isSelected ? 100 : 10,
+                left: imageBounds.offsetX,
+                top: imageBounds.offsetY,
+                width: imageBounds.width,
+                height: imageBounds.height,
+                zIndex: 5,
+              }}
+              viewBox={`0 0 ${imageBounds.width} ${imageBounds.height}`}
+            >
+              {/* Saved gutter lines */}
+              {gutterLines.map((line, idx) => {
+                const x1 = (line.startX / 100) * imageBounds.width;
+                const y1 = (line.startY / 100) * imageBounds.height;
+                const x2 = (line.endX / 100) * imageBounds.width;
+                const y2 = (line.endY / 100) * imageBounds.height;
+                const mx = (x1 + x2) / 2;
+                const my = (y1 + y2) / 2;
+                const isSelectedLine = line.id === selectedGutterLineId;
+                return (
+                  <g key={line.id}>
+                    <line
+                      className="pointer-events-auto cursor-pointer"
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke="transparent"
+                      strokeWidth={18}
+                      onMouseDown={(evt) => { evt.stopPropagation(); evt.preventDefault(); setSelectedGutterLineId(line.id); }}
+                      onTouchStart={(evt) => { evt.stopPropagation(); evt.preventDefault(); setSelectedGutterLineId(line.id); }}
+                    />
+                    <line
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke={isSelectedLine ? '#FCD34D' : '#F59E0B'}
+                      strokeWidth={isSelectedLine ? 4 : 3}
+                      strokeDasharray="8 4"
+                      opacity={isSelectedLine ? 1 : 0.8}
+                    />
+                    <circle cx={x1} cy={y1} r={5} fill="#F59E0B" stroke="white" strokeWidth={1.5} />
+                    <circle cx={x2} cy={y2} r={5} fill="#F59E0B" stroke="white" strokeWidth={1.5} />
+                    <g>
+                      <circle cx={x1 + 12} cy={y1 - 12} r={9} fill={isSelectedLine ? '#FCD34D' : '#F59E0B'} stroke="white" strokeWidth={1} />
+                      <text x={x1 + 12} y={y1 - 8} textAnchor="middle" fontSize={11} fontWeight="bold" fill="black">{idx + 1}</text>
+                    </g>
+                    <g
+                      className="pointer-events-auto cursor-pointer"
+                      onMouseDown={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
+                      onMouseUp={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
+                      onTouchStart={(evt) => { evt.stopPropagation(); evt.preventDefault(); }}
+                      onTouchMove={(evt) => { evt.stopPropagation(); }}
+                      onClick={(evt) => { evt.stopPropagation(); evt.preventDefault(); deleteGutterLine(line.id); }}
+                      onTouchEnd={(evt) => { evt.stopPropagation(); evt.preventDefault(); deleteGutterLine(line.id); }}
+                    >
+                      <circle cx={mx} cy={my} r={14} fill="#1f1f1f" stroke="#EF4444" strokeWidth={2} opacity={0.95} />
+                      <line x1={mx - 5} y1={my - 5} x2={mx + 5} y2={my + 5} stroke="#EF4444" strokeWidth={2.5} />
+                      <line x1={mx + 5} y1={my - 5} x2={mx - 5} y2={my + 5} stroke="#EF4444" strokeWidth={2.5} />
+                    </g>
+                  </g>
+                );
+              })}
+              {isDrawingGutter && gutterDrawStart && gutterDrawEnd && (
+                <line
+                  x1={(gutterDrawStart.x / 100) * imageBounds.width}
+                  y1={(gutterDrawStart.y / 100) * imageBounds.height}
+                  x2={(gutterDrawEnd.x / 100) * imageBounds.width}
+                  y2={(gutterDrawEnd.y / 100) * imageBounds.height}
+                  stroke="#F59E0B" strokeWidth={3} strokeDasharray="4 4" opacity={0.5}
+                />
+              )}
+            </svg>
+          )}
+
+          <GradientPreview
+            fixtures={fixtures}
+            containerWidth={imageBounds.width}
+            containerHeight={imageBounds.height}
+            visible={showGradientPreview}
+          />
+
+          {/* Ghost marker preview for active fixture type */}
+          {activeFixtureType && ghostPosition && !isDrawingGutter && (
+            <div
+              className="absolute pointer-events-none z-[80]"
+              style={{
+                left: imageBounds.offsetX + (ghostPosition.x / 100) * imageBounds.width,
+                top: imageBounds.offsetY + (ghostPosition.y / 100) * imageBounds.height,
               }}
             >
-              {/* Beam cone (all fixture types) */}
               <div
-                className="absolute pointer-events-none"
+                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed animate-pulse"
                 style={{
-                  width: beamW,
-                  height: beamH,
-                  left: -beamW / 2,
-                  top: -beamH,
-                  transformOrigin: 'center bottom',
-                  transform: `rotate(${rotation}deg)`,
-                  background: `linear-gradient(to top, ${hexColor}90 0%, ${hexColor}40 40%, transparent 100%)`,
-                  clipPath: 'polygon(30% 100%, 0% 0%, 100% 0%, 70% 100%)',
-                  filter: 'blur(3px)',
+                  width: 22,
+                  height: 22,
+                  borderColor: markerColors[activeFixtureType] || '#F6B45A',
+                  boxShadow: `0 0 12px ${(markerColors[activeFixtureType] || '#F6B45A')}80`,
                 }}
               />
+              <div
+                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+                style={{
+                  width: 8,
+                  height: 8,
+                  background: markerColors[activeFixtureType] || '#F6B45A',
+                }}
+              />
+            </div>
+          )}
 
-              {/* Fixture marker */}
-              {fixture.type === 'gutter_uplight' ? (
-                <>
-                  {/* Gutter icon: upward arrow + horizontal bar */}
-                  <div className="absolute flex flex-col items-center" style={{ left: -16, top: -23 }}>
-                    <div style={{
-                      width: 0, height: 0,
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderBottom: `8px solid ${hexColor}`,
-                    }} />
-                    <div style={{ width: 2, height: 10, backgroundColor: 'white' }} />
-                    <div
-                      className={`flex items-center justify-center rounded-sm border-2 transition-transform ${
-                        isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
-                      } ${fixture.locked ? 'opacity-60' : ''}`}
-                      style={{
-                        width: 32, height: 10,
-                        backgroundColor: hexColor,
-                        borderColor: 'white',
-                        boxShadow: `0 0 12px ${hexColor}B3`,
-                      }}
-                    />
-                  </div>
-                  {fixture.locked && (
-                    <Lock size={7} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* Core dot */}
+          {/* Fixture Markers */}
+          {fixtures.map(fixture => {
+            const isSelected = fixture.id === selectedId;
+            const preset = getFixturePreset(fixture.type);
+            const hexColor = markerColors[fixture.type] || '#FF0000';
+            const defaults = UI_BEAM_DEFAULTS[fixture.type];
+            const rotation = fixture.rotation ?? defaults.defaultRotation;
+            const beamLen = fixture.beamLength ?? 1.0;
+            const beamH = defaults.height * beamLen;
+            const beamW = defaults.width * beamLen;
+            const rotRad = (rotation * Math.PI) / 180;
+
+            return (
+              <div
+                key={fixture.id}
+                className="absolute pointer-events-none"
+                style={{
+                  left: imageBounds.offsetX + (fixture.x / 100) * imageBounds.width,
+                  top: imageBounds.offsetY + (fixture.y / 100) * imageBounds.height,
+                  zIndex: isSelected ? 100 : 10,
+                }}
+              >
+                <div
+                  className="absolute pointer-events-none"
+                  style={{
+                    width: beamW,
+                    height: beamH,
+                    left: -beamW / 2,
+                    top: -beamH,
+                    transformOrigin: 'center bottom',
+                    transform: `rotate(${rotation}deg)`,
+                    background: `linear-gradient(to top, ${hexColor}90 0%, ${hexColor}40 40%, transparent 100%)`,
+                    clipPath: 'polygon(30% 100%, 0% 0%, 100% 0%, 70% 100%)',
+                    filter: 'blur(3px)',
+                  }}
+                />
+
+                {fixture.type === 'gutter_uplight' ? (
+                  <>
+                    <div className="absolute flex flex-col items-center" style={{ left: -16, top: -23 }}>
+                      <div style={{
+                        width: 0, height: 0,
+                        borderLeft: '6px solid transparent',
+                        borderRight: '6px solid transparent',
+                        borderBottom: `8px solid ${hexColor}`,
+                      }} />
+                      <div style={{ width: 2, height: 10, backgroundColor: 'white' }} />
+                      <div
+                        className={`flex items-center justify-center rounded-sm border-2 transition-transform ${
+                          isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
+                        } ${fixture.locked ? 'opacity-60' : ''}`}
+                        style={{
+                          width: 32, height: 10,
+                          backgroundColor: hexColor,
+                          borderColor: 'white',
+                          boxShadow: `0 0 12px ${hexColor}B3`,
+                        }}
+                      />
+                    </div>
+                    {fixture.locked && (
+                      <Lock size={7} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
+                    )}
+                  </>
+                ) : (
                   <div
                     className={`absolute flex items-center justify-center w-5 h-5 rounded-full border-2 transition-transform ${
                       isSelected ? 'ring-2 ring-[#F6B45A] ring-offset-1 ring-offset-transparent scale-125' : ''
@@ -1672,38 +1941,37 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
                       <Lock size={7} className="absolute -top-1.5 -right-1.5 text-[#F6B45A] bg-black/60 rounded-full p-0.5" />
                     )}
                   </div>
-                </>
-              )}
+                )}
 
-              {/* Beam drag handle (only when selected) */}
-              {isSelected && !fixture.locked && !readOnly && (
-                <div
-                  className="absolute rounded-full cursor-grab active:cursor-grabbing"
-                  style={{
-                    width: 14,
-                    height: 14,
-                    left: Math.sin(rotRad) * beamH - 7,
-                    top: -Math.cos(rotRad) * beamH - 7,
-                    backgroundColor: 'white',
-                    border: '2px solid #F6B45A',
-                    boxShadow: '0 0 6px rgba(0,0,0,0.5)',
-                    pointerEvents: 'auto',
-                    zIndex: 200,
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setIsDraggingBeam(true);
-                  }}
-                  onTouchStart={(e) => {
-                    e.stopPropagation();
-                    setIsDraggingBeam(true);
-                  }}
-                />
-              )}
-            </div>
-          );
-        })}
+                {isSelected && !fixture.locked && !readOnly && (
+                  <div
+                    className="absolute rounded-full cursor-grab active:cursor-grabbing"
+                    style={{
+                      width: 14,
+                      height: 14,
+                      left: Math.sin(rotRad) * beamH - 7,
+                      top: -Math.cos(rotRad) * beamH - 7,
+                      backgroundColor: 'white',
+                      border: '2px solid #F6B45A',
+                      boxShadow: '0 0 6px rgba(0,0,0,0.5)',
+                      pointerEvents: 'auto',
+                      zIndex: 200,
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setIsDraggingBeam(true);
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                      setIsDraggingBeam(true);
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Active tool indicator */}
         {isDrawingGutter && !readOnly && (

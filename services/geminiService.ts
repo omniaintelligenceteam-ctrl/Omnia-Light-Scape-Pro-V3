@@ -1238,11 +1238,18 @@ async function resizeImageBase64(
   });
 }
 
+function buildImageConfig(aspectRatio?: string): { imageSize: "2K"; aspectRatio?: string } {
+  if (aspectRatio && aspectRatio.trim().length > 0) {
+    return { imageSize: "2K", aspectRatio };
+  }
+  return { imageSize: "2K" };
+}
+
 export const generateNightScene = async (
   imageBase64: string,
   userInstructions: string,
   imageMimeType: string = 'image/jpeg',
-  aspectRatio: string = '1:1',
+  aspectRatio?: string,
   lightIntensity: number = 45,
   beamAngle: number = 30,
   colorTemperaturePrompt: string = "Use Soft White (3000K) for all lights.",
@@ -1703,10 +1710,7 @@ ${preferenceContext}
       },
       config: {
         temperature: 0.1,
-        imageConfig: {
-            imageSize: "2K",
-            aspectRatio: aspectRatio,
-        },
+        imageConfig: buildImageConfig(aspectRatio),
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -1876,7 +1880,7 @@ export const generateNightSceneDirect = async (
   colorTemperaturePrompt: string,
   lightIntensity: number,
   beamAngle: number,
-  aspectRatio: string = '1:1',
+  aspectRatio?: string,
   userPreferences?: UserPreferences | null
 ): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
@@ -1923,10 +1927,7 @@ export const generateNightSceneDirect = async (
         },
         config: {
           temperature: 0.1,
-          imageConfig: {
-            imageSize: "2K",
-            aspectRatio: aspectRatio,
-          },
+          imageConfig: buildImageConfig(aspectRatio),
           safetySettings: [
             { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
             { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -2128,10 +2129,11 @@ export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
     output += '\n';
   }
 
-  // Group placements by fixtureType and subOption
+  // Group placements by fixtureType and subOption.
+  // Use a delimiter that won't collide with subOption ids like "garage_sides".
   const groups = new Map<string, SpatialFixturePlacement[]>();
   spatialMap.placements.forEach(p => {
-    const key = `${p.fixtureType}_${p.subOption}`;
+    const key = `${p.fixtureType}::${p.subOption || ''}`;
     if (!groups.has(key)) {
       groups.set(key, []);
     }
@@ -2140,7 +2142,7 @@ export function formatSpatialMapForPrompt(spatialMap: SpatialMap): string {
 
   // Generate narrative for each group
   groups.forEach((placements, key) => {
-    const [fixtureType, subOption] = key.split('_');
+    const [fixtureType, subOption] = key.split('::');
     output += generateNarrativePlacement({ ...spatialMap, placements }, fixtureType, subOption);
     output += '\n';
   });
@@ -3135,7 +3137,7 @@ export async function executeGeneration(
   imageBase64: string,
   imageMimeType: string,
   generationPrompt: string,
-  aspectRatio: string,
+  aspectRatio?: string,
   prefixParts?: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }>,
   gradientImageBase64?: string,
   markedImageBase64?: string
@@ -3181,7 +3183,7 @@ export async function executeGeneration(
       config: {
         temperature: 0.1,
         responseModalities: ['TEXT', 'IMAGE'],
-        imageConfig: { imageSize: '2K', aspectRatio },
+        imageConfig: buildImageConfig(aspectRatio),
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -3952,7 +3954,7 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
 export async function generateNightBase(
   imageBase64: string,
   imageMimeType: string,
-  aspectRatio: string
+  aspectRatio?: string
 ): Promise<string> {
   console.log('[Pass 1] Generating nighttime base (no lights)...');
 
@@ -3980,7 +3982,7 @@ REQUIREMENTS:
       ]},
       config: {
         temperature: 0.1,
-        imageConfig: { imageSize: "2K", aspectRatio },
+        imageConfig: buildImageConfig(aspectRatio),
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -4077,12 +4079,13 @@ export const generateManualScene = async (
   colorTemperaturePrompt: string,
   lightIntensity: number,
   beamAngle: number,
-  targetRatio: string,
+  _targetRatio: string,
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
   fixtures?: LightFixture[],
   nightBaseBase64?: string,
-  gutterLines?: GutterLine[]
+  gutterLines?: GutterLine[],
+  modificationRequest?: string
 ): Promise<{ result: string; nightBase: string }> => {
   console.log('[Manual Mode] Starting Deep Think manual generation...');
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
@@ -4106,29 +4109,35 @@ export const generateManualScene = async (
   }
 
   // Pass 1: Nighttime conversion (cached)
+  // Manual mode must preserve the source composition used for placement coordinates.
+  // Forcing a preset aspect ratio (e.g. 4:3 or 16:9) can crop/reframe and shift fixtures.
+  const manualAspectRatio: string | undefined = undefined;
   let nightBase: string;
   if (nightBaseBase64) {
     console.log('[Pass 1] Using cached nighttime base.');
     nightBase = nightBaseBase64;
   } else {
     onStageUpdate?.('converting');
-    nightBase = await generateNightBase(imageBase64, imageMimeType, targetRatio);
+    nightBase = await generateNightBase(imageBase64, imageMimeType, manualAspectRatio);
   }
 
-  // Generate gradient/marker overlays (painted on ORIGINAL daytime image for contrast)
+  // Generate gradient/marker overlays using the same composition that pass-2 will edit.
+  // This avoids coordinate drift between guide image and base image.
   onStageUpdate?.('generating');
 
   const hasGradients = !!(normalizedGuideFixtures.fixtures && normalizedGuideFixtures.fixtures.length > 0);
   let gradientImage: string | undefined;
   let markedImage: string | undefined;
+  const guideSourceImage = nightBase;
+  const guideSourceMimeType = imageMimeType;
 
   if (hasGradients) {
     console.log(`[Manual Mode] Painting directional light gradients for ${normalizedGuideFixtures.fixtures!.length} fixtures...`);
     const guideOptions = MODEL_GUIDE_DEBUG ? undefined : CLEAN_MODEL_GUIDE_OPTIONS;
     gradientImage = await paintLightGradients(
-      imageBase64,
+      guideSourceImage,
       normalizedGuideFixtures.fixtures!,
-      imageMimeType,
+      guideSourceMimeType,
       gutterLines,
       guideOptions
     );
@@ -4137,9 +4146,9 @@ export const generateManualScene = async (
     console.log('[Manual Mode] Drawing fixture markers...');
     const markerOptions = MODEL_GUIDE_DEBUG ? undefined : CLEAN_MODEL_MARKER_OPTIONS;
     markedImage = await drawFixtureMarkers(
-      imageBase64,
+      guideSourceImage,
       normalizedSpatialMap,
-      imageMimeType,
+      guideSourceMimeType,
       markerOptions
     );
     console.log(`[Manual Mode] ${MODEL_GUIDE_DEBUG ? 'Debug' : 'Clean'} marker guide map drawn.`);
@@ -4176,7 +4185,10 @@ export const generateManualScene = async (
     true
   );
   console.log(`[Manual Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
-  const lockedPrompt = `${deepThinkResult.prompt}\n${buildPhotorealismLockAddendum()}`;
+  const modificationSection = modificationRequest?.trim()
+    ? `\n\nCRITICAL MODIFICATION REQUEST: ${modificationRequest.trim()}\nKeep all fixture coordinates and beam directions exactly as specified above while applying this change.\n`
+    : '';
+  const lockedPrompt = `${deepThinkResult.prompt}${modificationSection}\n${buildPhotorealismLockAddendum()}`;
 
   // Pass 2: Nano Banana Pro generates the lit scene
   onStageUpdate?.('placing');
@@ -4191,7 +4203,7 @@ export const generateManualScene = async (
       nightBase,
       imageMimeType,
       lockedPrompt,
-      targetRatio,
+      manualAspectRatio,
       referenceParts.length > 0 ? referenceParts : undefined,
       gradientImage,
       markedImage
@@ -4239,7 +4251,7 @@ export const generateManualScene = async (
         nightBase,
         imageMimeType,
         correctionPrompt,
-        targetRatio,
+        manualAspectRatio,
         referenceParts.length > 0 ? referenceParts : undefined,
         gradientImage,
         markedImage
@@ -4287,7 +4299,7 @@ export const generateManualScene = async (
         nightBase,
         imageMimeType,
         correctionPrompt,
-        targetRatio,
+        manualAspectRatio,
         referenceParts.length > 0 ? referenceParts : undefined,
         gradientImage,
         markedImage
@@ -4346,7 +4358,7 @@ export const generateManualScene = async (
         nightBase,
         imageMimeType,
         correctionPrompt,
-        targetRatio,
+        manualAspectRatio,
         referenceParts.length > 0 ? referenceParts : undefined,
         gradientImage,
         markedImage
