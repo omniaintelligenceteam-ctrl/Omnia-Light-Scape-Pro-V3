@@ -5732,12 +5732,19 @@ Notes: ${invoice.notes || 'N/A'}
                     {placementMode === 'manual' && file && (
                         <div className="fixed left-3 right-3 bottom-[118px] md:bottom-8 z-[60]">
                             <div className="rounded-2xl border border-[#F6B45A]/30 bg-[#0b0b0b]/95 backdrop-blur-xl px-3 py-2.5 shadow-2xl shadow-black/60">
-                                <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-2">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <span className="text-[10px] uppercase tracking-wider text-gray-500">Active</span>
                                         <span className="text-xs font-semibold text-white truncate">{activeManualToolLabel}</span>
                                     </div>
-                                    <span className="text-[11px] font-semibold text-[#F6B45A]">
+                                    <button
+                                        onClick={handleGenerate}
+                                        disabled={!canGenerateInCurrentMode || isLoading}
+                                        className="px-4 py-1.5 rounded-xl bg-[#F6B45A] text-black text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ffc67a] transition-colors whitespace-nowrap"
+                                    >
+                                        {isLoading ? 'Generating...' : 'Generate'}
+                                    </button>
+                                    <span className="text-[11px] font-semibold text-[#F6B45A] text-right">
                                         {manualFixtures.length} placed
                                     </span>
                                 </div>
@@ -5750,7 +5757,7 @@ Notes: ${invoice.notes || 'N/A'}
                                             </span>
                                         ))}
                                 </div>
-                                <div className="mt-2.5 grid grid-cols-3 gap-2">
+                                <div className="mt-2.5 grid grid-cols-2 gap-2">
                                     <button
                                         onClick={() => fixturePlacerRef.current?.undo()}
                                         className="py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-200 hover:bg-white/10 transition-colors flex items-center justify-center gap-1"
@@ -5763,13 +5770,6 @@ Notes: ${invoice.notes || 'N/A'}
                                         className="py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 hover:bg-red-500/20 transition-colors"
                                     >
                                         Clear
-                                    </button>
-                                    <button
-                                        onClick={handleGenerate}
-                                        disabled={!canGenerateInCurrentMode || isLoading}
-                                        className="py-2 rounded-xl bg-[#F6B45A] text-black text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ffc67a] transition-colors"
-                                    >
-                                        {isLoading ? 'Generating...' : 'Generate'}
                                     </button>
                                 </div>
                             </div>
