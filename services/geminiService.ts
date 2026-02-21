@@ -49,6 +49,7 @@ const MANUAL_HYBRID_INITIAL_CANDIDATE_COUNT = (() => {
   return Math.max(1, Math.min(MAX_INITIAL_CANDIDATE_COUNT, Math.round(raw)));
 })();
 const MANUAL_HYBRID_SEED_ENABLED = String(import.meta.env.VITE_MANUAL_HYBRID_SEED_ENABLED || 'true').toLowerCase() !== 'false';
+const MANUAL_HYBRID_FAST_PATH_ENABLED = String(import.meta.env.VITE_MANUAL_HYBRID_FAST_PATH_ENABLED || 'true').toLowerCase() !== 'false';
 const INITIAL_CANDIDATE_COUNT = (() => {
   const raw = Number(import.meta.env.VITE_INITIAL_CANDIDATE_COUNT);
   if (!Number.isFinite(raw)) return DEFAULT_INITIAL_CANDIDATE_COUNT;
@@ -3918,11 +3919,16 @@ function buildManualHybridGlowOptions(
 ): GlowRenderOptions {
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
   const normalizedIntensity = clamp(lightIntensity / 100, 0, 1);
-  const intensityScale = 0.65 + normalizedIntensity * 0.75;
+  const normalizedBeam = clamp((beamAngle - 15) / 45, 0, 1);
+  const intensityScale = 0.45 + normalizedIntensity * 0.45;
+  const widthScale = 0.7 + normalizedBeam * 0.5;
+  const heightScale = 1.15 - normalizedBeam * 0.35;
 
   return {
     intensityScale,
     beamAngleDeg: clamp(beamAngle, 10, 120),
+    widthScale,
+    heightScale,
   };
 }
 
@@ -3935,8 +3941,65 @@ You are refining a deterministic fixture pre-composite:
 - DO NOT move fixtures, DO NOT remove fixtures, DO NOT add extra fixtures, DO NOT shift beam headings.
 - Keep every fixture coordinate and rotation exactly as-is.
 - Improve only photoreal blending: material interaction, falloff softness, hotspot shaping, subtle bounce.
+- Keep output photographic and physically plausible: no exaggerated volumetric cones, no synthetic beam triangles.
 - Preserve architecture and composition pixel-for-pixel.
 - Remove all guide artifacts, labels, and UI traces.
+`;
+}
+
+function buildManualHybridFastPrompt(
+  spatialMap: SpatialMap,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number,
+  modificationRequest?: string
+): string {
+  const allowedTypes = [...new Set(spatialMap.placements.map(p => p.fixtureType))];
+  const canonicalTypes = ['up', 'gutter', 'path', 'well', 'hardscape', 'soffit', 'coredrill'];
+  const forbiddenTypes = canonicalTypes.filter(type => !allowedTypes.includes(type));
+  const fixtureCount = spatialMap.placements.length;
+  const prohibitSoffit = forbiddenTypes.includes('soffit');
+  const modificationSection = modificationRequest?.trim()
+    ? `\n\nCRITICAL MODIFICATION REQUEST: ${modificationRequest.trim()}\nApply the change without moving any fixture coordinate or beam direction.\n`
+    : '';
+
+  return `
+You are editing a pre-composited nighttime image where fixture anchor points and beam origins are already intentionally placed.
+
+PRIMARY GOAL:
+- Preserve exact placement accuracy and improve only realism quality.
+
+HARD GEOMETRY LOCK (NON-NEGOTIABLE):
+- Keep EXACTLY ${fixtureCount} fixtures.
+- Do NOT add any new lights, remove lights, duplicate lights, or rebalance spacing.
+- Do NOT move fixture origins or shift beam headings.
+- Keep each light source anchored to its existing pixel location.
+- Preserve architecture and framing pixel-for-pixel.
+
+REALISM TARGET (MATCH HIGH-END RESIDENTIAL NIGHT PHOTOGRAPHY):
+- Subtle, believable wall grazing and surface interaction.
+- Natural inverse-square falloff.
+- Soft transitions, no harsh synthetic cone triangles.
+- Minimal atmospheric haze only very near fixture sources.
+- Keep unlit zones truly dark and clean.
+
+FIXTURE ALLOWLIST:
+- Allowed fixture types: ${allowedTypes.join(', ') || 'none'}
+- Forbidden fixture types: ${forbiddenTypes.join(', ') || 'none'}
+${prohibitSoffit ? '- Absolutely NO soffit/eave downlights anywhere in the image.' : ''}
+
+LIGHTING PARAMETERS:
+- ${colorTemperaturePrompt}
+- ${getIntensityDescription(lightIntensity)}
+- ${getBeamAngleDescription(beamAngle)}
+
+${formatSpatialMapForPrompt(spatialMap)}
+${modificationSection}
+${buildPhotorealismLockAddendum()}
+
+FINAL ENFORCEMENT:
+- Output must contain EXACTLY ${fixtureCount} fixtures and zero extras.
+- If any forbidden fixture type appears, remove it before finalizing.
 `;
 }
 
@@ -4055,6 +4118,41 @@ export const generateManualScene = async (
   } else {
     onStageUpdate?.('converting');
     nightBase = await generateNightBase(imageBase64, imageMimeType, manualAspectRatio);
+  }
+
+  const canUseFastHybridPath = MANUAL_HYBRID_FAST_PATH_ENABLED &&
+    MANUAL_HYBRID_SEED_ENABLED &&
+    normalizedSpatialMap.placements.length > 0;
+
+  if (canUseFastHybridPath) {
+    try {
+      onStageUpdate?.('placing');
+      const hybridGlowOptions = buildManualHybridGlowOptions(lightIntensity, beamAngle);
+      const deterministicSeed = await renderFixtureGlows(
+        nightBase,
+        normalizedSpatialMap,
+        imageMimeType,
+        hybridGlowOptions
+      );
+      const fastPrompt = buildManualHybridFastPrompt(
+        normalizedSpatialMap,
+        colorTemperaturePrompt,
+        lightIntensity,
+        beamAngle,
+        modificationRequest
+      );
+
+      console.log('[Manual Mode] Fast hybrid path active (single-pass realism refinement from deterministic placement seed).');
+      const fastResult = await executeGeneration(
+        deterministicSeed,
+        imageMimeType,
+        fastPrompt,
+        manualAspectRatio
+      );
+      return { result: fastResult, nightBase };
+    } catch (fastPathError) {
+      console.warn('[Manual Mode] Fast hybrid path failed, falling back to full Deep Think pipeline:', fastPathError);
+    }
   }
 
   // Generate gradient/marker overlays using the same composition that pass-2 will edit.
