@@ -4814,6 +4814,10 @@ export const generateNightSceneEnhanced = async (
     }
   }
 
+  if (placementVerificationEnabled && !verification.verified) {
+    throw new Error(`AUTO_PLACEMENT_UNCERTAIN: Final placement verification failed. ${verification.details}`);
+  }
+
   console.log('[Enhanced Mode] Generation complete!');
   return result;
 };
