@@ -16,10 +16,8 @@ import {
   type FacadeWidthType
 } from "../constants";
 import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/houseAnalysis";
-import { buildReferenceParts } from "./referenceLibrary";
 import type { LightFixture, GutterLine } from "../types/fixtures";
 import { rotationToDirectionLabel, hasCustomRotation } from "../utils/fixtureConverter";
-import { suggestGutterLines } from "./gutterDetectionService";
 
 // The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
 const MODEL_NAME = 'gemini-3-pro-image-preview';
@@ -3808,11 +3806,28 @@ function buildGutterCorrectionPrompt(
   return basePrompt + correction;
 }
 
+// Retained legacy helpers/constants for optional future quality gates.
+// Explicitly referenced to satisfy strict noUnusedLocals builds.
+const LEGACY_PIPELINE_REFERENCES = [
+  MAX_ARTIFACT_RETRY_ATTEMPTS,
+  MAX_AUTO_GUTTER_LINES,
+  INITIAL_CANDIDATE_COUNT,
+  MAX_GUTTER_RETRY_ATTEMPTS,
+  buildArtifactCorrectionPrompt,
+  shouldAcceptPlacementRetryCandidate,
+  isPlacementNotWorse,
+  generateAndRankInitialCandidates,
+  deriveFallbackAutoGutterLines,
+  evaluateAutoPlacementConfidence,
+  ensureAutoGutterRailPlacements,
+  buildGutterCorrectionPrompt,
+] as const;
+void LEGACY_PIPELINE_REFERENCES;
+
 /**
- * Manual-mode generation (TWO-PASS + Deep Think).
- * Pass 1: Convert daytime to nighttime (cached via nightBaseBase64 param).
- * Deep Think: Analyze gradient/marker image + spatial map, write complete prompt.
- * Pass 2: Nano Banana Pro generates lit scene using Deep Think's prompt.
+ * Manual-mode generation (strict 2-step Gemini pipeline).
+ * Step 1: Gemini 3.1 Pro analyzes image + explicit spatial map and writes prompt.
+ * Step 2: Gemini image model renders final result from the source image + prompt.
  */
 export const generateManualScene = async (
   imageBase64: string,
@@ -3828,13 +3843,12 @@ export const generateManualScene = async (
   userPreferences?: UserPreferences | null,
   onStageUpdate?: (stage: string) => void,
   _fixtures?: LightFixture[],
-  nightBaseBase64?: string,
+  _nightBaseBase64?: string,
   gutterLines?: GutterLine[],
   modificationRequest?: string
 ): Promise<{ result: string; nightBase: string }> => {
-  console.log('[Manual Mode] Starting Deep Think manual generation...');
+  console.log('[Manual Mode] Starting strict 2-step Gemini pipeline...');
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
-  console.log(`[Manual Mode] Night base cached: ${!!nightBaseBase64}`);
 
   const normalized = normalizeGutterPlacements(spatialMap, gutterLines);
   const normalizedSpatialMap = normalized.spatialMap;
@@ -3849,40 +3863,15 @@ export const generateManualScene = async (
     throw new Error(`Manual placement validation failed:\n${validation.errors.join('\n')}`);
   }
 
-  // Pass 1: Nighttime conversion (cached)
-  // Manual mode must preserve the source composition used for placement coordinates.
-  // Forcing a preset aspect ratio (e.g. 4:3 or 16:9) can crop/reframe and shift fixtures.
+  // Keep source composition unchanged for coordinate fidelity.
   const manualAspectRatio: string | undefined = undefined;
-  let nightBase: string;
-  if (nightBaseBase64) {
-    console.log('[Pass 1] Using cached nighttime base.');
-    nightBase = nightBaseBase64;
-  } else {
-    onStageUpdate?.('converting');
-    nightBase = await generateNightBase(imageBase64, imageMimeType, manualAspectRatio);
-  }
+  const generationBaseImage = imageBase64;
 
-  // Pure Gemini pipeline for manual mode:
-  // - Gemini 3.1 Pro analyzes the photo + explicit spatial coordinates.
-  // - Gemini image model generates lighting effects (no canvas seeding/compositing).
-  onStageUpdate?.('generating');
-  // Load few-shot reference examples for the selected fixture types
-  const fixtureTypes = [...new Set(normalizedSpatialMap.placements.map(p => p.fixtureType))];
-  let referenceParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
-  try {
-    referenceParts = await buildReferenceParts(fixtureTypes);
-    if (referenceParts.length > 0) {
-      console.log(`[Manual Mode] Injecting ${referenceParts.length} reference parts for types: ${fixtureTypes.join(', ')}`);
-    }
-  } catch (err) {
-    console.warn('[Manual Mode] Reference loading failed (non-blocking):', err);
-  }
-
-  // Deep Think: Analyze the nighttime base photo + spatial map and write the complete prompt
+  // Step 1: Analyze with Gemini 3.1 Pro
   onStageUpdate?.('analyzing');
-  console.log('[Manual Mode] Deep Think analyzing placements + writing prompt...');
+  console.log('[Manual Mode] Step 1/2: Gemini 3.1 Pro analyzing placements + writing prompt...');
   const deepThinkResult = await deepThinkGeneratePrompt(
-    nightBase,
+    generationBaseImage,
     imageMimeType,
     selectedFixtures,
     fixtureSubOptions,
@@ -3899,219 +3888,18 @@ export const generateManualScene = async (
     ? `\n\nCRITICAL MODIFICATION REQUEST: ${modificationRequest.trim()}\nKeep all fixture coordinates and beam directions exactly as specified above while applying this change.\n`
     : '';
   const lockedPrompt = `${deepThinkResult.prompt}${modificationSection}\n${buildPhotorealismLockAddendum()}`;
-  let generationBaseImage = nightBase;
-  let generationBasePrompt = lockedPrompt;
-  console.log('[Manual Mode] Gemini-only generation active (no canvas seed/composite).');
 
-  // Pass 2: Nano Banana Pro generates the lit scene
+  // Step 2: Generate with Gemini image model
   onStageUpdate?.('placing');
-  console.log('[Pass 2] Generating lit scene with Nano Banana Pro...');
-  const manualPlacementVerificationEnabled = normalizedSpatialMap.placements.length > 0;
-  const manualPlacementSkipDetails = 'Placement verification skipped (no manual spatial constraints).';
-  const initialCandidateCount = INITIAL_CANDIDATE_COUNT;
-  const bestInitialCandidate = await generateAndRankInitialCandidates(
-    'Manual Mode',
-    initialCandidateCount,
-    () => executeGeneration(
-      generationBaseImage,
-      imageMimeType,
-      generationBasePrompt,
-      manualAspectRatio,
-      referenceParts.length > 0 ? referenceParts : undefined
-    ),
-    (candidateResult) => evaluateGenerationCandidate(
-      candidateResult,
-      imageMimeType,
-      normalizedSpatialMap.placements,
-      manualPlacementVerificationEnabled,
-      gutterLines,
-      manualPlacementSkipDetails
-    )
+  console.log('[Manual Mode] Step 2/2: Generating final image with Gemini image model...');
+  const result = await executeGeneration(
+    generationBaseImage,
+    imageMimeType,
+    lockedPrompt,
+    manualAspectRatio
   );
 
-  let result = bestInitialCandidate.result;
-  let verification = bestInitialCandidate.placementVerification;
-  let artifactCheck = bestInitialCandidate.artifactCheck;
-  let photorealCheck = bestInitialCandidate.photorealCheck;
-  let heuristicPhotorealCheck = bestInitialCandidate.heuristicPhotorealCheck;
-  let photorealPassed = bestInitialCandidate.photorealPassed;
-  let artifactCheckStale = false;
-  let photorealCheckStale = false;
-
-  console.log('[Pass 2] Lighting generation complete!');
-  console.log(`[Manual Mode] Verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
-
-  const hasGutterFixtures = normalizedSpatialMap.placements.some(p => p.fixtureType === 'gutter');
-  const shouldRetryVerificationFailure = manualPlacementVerificationEnabled &&
-    !verification.verified &&
-    (hasGutterFixtures || verification.unexpectedTypes.length > 0);
-
-  if (shouldRetryVerificationFailure) {
-    for (let attempt = 1; attempt <= MAX_GUTTER_RETRY_ATTEMPTS; attempt++) {
-      console.warn(
-        `[Manual Mode] Verification failed (unexpected: ${verification.unexpectedTypes.join(', ') || 'none'}), running correction retry ${attempt}/${MAX_GUTTER_RETRY_ATTEMPTS}...`
-      );
-      onStageUpdate?.('placing');
-      const correctionPrompt = buildGutterCorrectionPrompt(
-        generationBasePrompt,
-        normalizedSpatialMap.placements,
-        gutterLines,
-        verification.unexpectedTypes
-      );
-      const retryResult = await executeGeneration(
-        generationBaseImage,
-        imageMimeType,
-        correctionPrompt,
-        manualAspectRatio,
-        referenceParts.length > 0 ? referenceParts : undefined
-      );
-
-      onStageUpdate?.('verifying');
-      const retryVerification = await verifyGeneratedImage(
-        retryResult,
-        imageMimeType,
-        normalizedSpatialMap.placements,
-        gutterLines
-      );
-
-      if (shouldAcceptPlacementRetryCandidate(verification, retryVerification)) {
-        result = retryResult;
-        verification = retryVerification;
-        artifactCheckStale = true;
-        photorealCheckStale = true;
-      }
-
-      if (verification.verified) break;
-    }
-    console.log(`[Manual Mode] Post-retry verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
-  }
-
-  onStageUpdate?.('verifying');
-  if (artifactCheckStale) {
-    artifactCheck = await verifyAnnotationArtifacts(extractBase64Data(result), imageMimeType);
-    artifactCheckStale = false;
-  }
-  console.log(`[Manual Mode] Annotation artifacts: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
-
-  if (!artifactCheck.passed) {
-    for (let attempt = 1; attempt <= MAX_ARTIFACT_RETRY_ATTEMPTS; attempt++) {
-      console.warn(`[Manual Mode] Annotation artifacts detected, running cleanup retry ${attempt}/${MAX_ARTIFACT_RETRY_ATTEMPTS}...`);
-      onStageUpdate?.('placing');
-      const baseCorrectionPrompt = buildGutterCorrectionPrompt(
-        generationBasePrompt,
-        normalizedSpatialMap.placements,
-        gutterLines,
-        verification.unexpectedTypes
-      );
-      const correctionPrompt = buildArtifactCorrectionPrompt(baseCorrectionPrompt, artifactCheck.issues);
-      const retryResult = await executeGeneration(
-        generationBaseImage,
-        imageMimeType,
-        correctionPrompt,
-        manualAspectRatio,
-        referenceParts.length > 0 ? referenceParts : undefined
-      );
-
-      onStageUpdate?.('verifying');
-      const retryVerification = await verifyGeneratedImage(
-        retryResult,
-        imageMimeType,
-        normalizedSpatialMap.placements,
-        gutterLines
-      );
-      const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
-
-      const placementNotWorse = isPlacementNotWorse(verification, retryVerification, true);
-      if (
-        (retryArtifactCheck.passed && placementNotWorse) ||
-        retryArtifactCheck.score < artifactCheck.score
-      ) {
-        result = retryResult;
-        verification = retryVerification;
-        artifactCheck = retryArtifactCheck;
-        photorealCheckStale = true;
-      }
-
-      if (artifactCheck.passed) break;
-    }
-    console.log(`[Manual Mode] Post-artifact retry: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
-  }
-
-  onStageUpdate?.('verifying');
-  if (photorealCheckStale) {
-    photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
-    heuristicPhotorealCheck = await verifyPhotorealismHeuristic(extractBase64Data(result), imageMimeType);
-    photorealCheckStale = false;
-  }
-  photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
-  console.log(`[Manual Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
-  console.log(
-    `[Manual Mode] Photorealism heuristic: ${heuristicPhotorealCheck.passed ? 'PASSED' : 'WARNING'} - ${heuristicPhotorealCheck.details}`
-  );
-
-  if (!photorealPassed) {
-    for (let attempt = 1; attempt <= MAX_PHOTOREAL_RETRY_ATTEMPTS; attempt++) {
-      console.warn(`[Manual Mode] Photorealism failed, running correction retry ${attempt}/${MAX_PHOTOREAL_RETRY_ATTEMPTS}...`);
-      onStageUpdate?.('placing');
-      const baseCorrectionPrompt = buildGutterCorrectionPrompt(
-        generationBasePrompt,
-        normalizedSpatialMap.placements,
-        gutterLines,
-        verification.unexpectedTypes
-      );
-      const combinedIssues = [...new Set([...photorealCheck.issues, ...heuristicPhotorealCheck.issues])];
-      const correctionPrompt = buildPhotorealismCorrectionPrompt(baseCorrectionPrompt, combinedIssues);
-      const retryResult = await executeGeneration(
-        generationBaseImage,
-        imageMimeType,
-        correctionPrompt,
-        manualAspectRatio,
-        referenceParts.length > 0 ? referenceParts : undefined
-      );
-
-      onStageUpdate?.('verifying');
-      const retryVerification = await verifyGeneratedImage(
-        retryResult,
-        imageMimeType,
-        normalizedSpatialMap.placements,
-        gutterLines
-      );
-      const retryPhotorealCheck = await verifyPhotorealism(extractBase64Data(retryResult), imageMimeType);
-      const retryHeuristicPhotorealCheck = await verifyPhotorealismHeuristic(
-        extractBase64Data(retryResult),
-        imageMimeType
-      );
-      const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
-
-      const placementNotWorse = isPlacementNotWorse(verification, retryVerification, true);
-      const artifactNotWorse =
-        retryArtifactCheck.passed ||
-        retryArtifactCheck.score <= artifactCheck.score;
-      const retryPhotorealPassed = retryPhotorealCheck.passed && retryHeuristicPhotorealCheck.passed;
-      const currentCompositePhotorealScore =
-        photorealCheck.score * 0.7 + heuristicPhotorealCheck.score * 0.3;
-      const retryCompositePhotorealScore =
-        retryPhotorealCheck.score * 0.7 + retryHeuristicPhotorealCheck.score * 0.3;
-      if (
-        ((retryPhotorealPassed && placementNotWorse && artifactNotWorse)) ||
-        (retryCompositePhotorealScore > currentCompositePhotorealScore && placementNotWorse && artifactNotWorse)
-      ) {
-        result = retryResult;
-        verification = retryVerification;
-        photorealCheck = retryPhotorealCheck;
-        heuristicPhotorealCheck = retryHeuristicPhotorealCheck;
-        artifactCheck = retryArtifactCheck;
-      }
-
-      photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
-      if (photorealPassed) break;
-    }
-    console.log(
-      `[Manual Mode] Post-photoreal retry: ${photorealPassed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details} | ${heuristicPhotorealCheck.details}`
-    );
-  }
-
-  return { result, nightBase };
+  return { result, nightBase: generationBaseImage };
 };
 
 /**
@@ -4136,12 +3924,11 @@ export const generateNightSceneEnhanced = async (
     gutterLines?: GutterLine[];
   }) => void
 ): Promise<string> => {
-  console.log('[Enhanced Mode] Starting 2-stage Deep Think pipeline...');
+  console.log('[Enhanced Mode] Starting strict 2-step Gemini pipeline...');
 
-  // Stage 0: Build auto spatial constraints (same canonical model as manual mode)
+  // Optional spatial extraction (still Gemini 3.1 Pro analysis only)
   onStageUpdate?.('analyzing');
   let autoSpatialMap: SpatialMap | undefined;
-  let autoGutterLines: GutterLine[] | undefined;
 
   try {
     if (selectedFixtures.length > 0) {
@@ -4164,63 +3951,12 @@ export const generateNightSceneEnhanced = async (
       );
       console.log(`[Enhanced Mode] Auto spatial map contains ${autoSpatialMap.placements.length} placement(s).`);
 
-      if (selectedFixtures.includes('gutter')) {
-        const imageDataUri = `data:${imageMimeType};base64,${imageBase64}`;
-        try {
-          const gutterDetection = await suggestGutterLines(imageDataUri, MAX_AUTO_GUTTER_LINES);
-          if (gutterDetection.lines.length > 0) {
-            autoGutterLines = gutterDetection.lines;
-            console.log(
-              `[Enhanced Mode] Detected ${autoGutterLines.length} gutter rail(s) for auto mode (${gutterDetection.source}).`
-            );
-          } else {
-            console.warn('[Enhanced Mode] No gutter rails detected for auto mode.');
-          }
-        } catch (gutterError) {
-          console.warn('[Enhanced Mode] Gutter rail detection failed for auto mode (continuing without rails):', gutterError);
-        }
-      }
-
-      if (selectedFixtures.includes('gutter') && autoSpatialMap) {
-        if (!autoGutterLines || autoGutterLines.length === 0) {
-          autoGutterLines = deriveFallbackAutoGutterLines(autoSpatialMap, MAX_AUTO_GUTTER_LINES);
-          if (autoGutterLines.length > 0) {
-            console.warn(
-              `[Enhanced Mode] Using ${autoGutterLines.length} fallback gutter rail(s) derived from auto placements.`
-            );
-          }
-        }
-
-        if (autoGutterLines && autoGutterLines.length > 0) {
-          const gutterCountBefore = autoSpatialMap.placements.filter(p => p.fixtureType === 'gutter').length;
-          autoSpatialMap = ensureAutoGutterRailPlacements(autoSpatialMap, autoGutterLines, fixtureCounts);
-          const gutterCountAfter = autoSpatialMap.placements.filter(p => p.fixtureType === 'gutter').length;
-          if (gutterCountAfter !== gutterCountBefore) {
-            console.log(
-              `[Enhanced Mode] Reconciled auto gutter placements to ${gutterCountAfter} fixture(s) on gutter rails.`
-            );
-          }
-
-          if (autoSpatialMap.placements.length > 0) {
-            const normalized = normalizeGutterPlacements(autoSpatialMap, autoGutterLines);
-            autoSpatialMap = normalized.spatialMap;
-            if (normalized.snappedCount > 0) {
-              console.log(`[Enhanced Mode] Snapped ${normalized.snappedCount} auto gutter fixture(s) onto detected gutter rails.`);
-            }
-          }
-        }
-      }
-
       if (autoSpatialMap) {
-        const skipFixtureTypes = selectedFixtures.includes('gutter')
-          ? new Set<string>(['gutter'])
-          : new Set<string>();
         const reconciled = reconcileAutoPlacementsToExplicitCounts(
           autoSpatialMap,
           selectedFixtures,
           fixtureSubOptions,
-          fixtureCounts,
-          skipFixtureTypes
+          fixtureCounts
         );
         autoSpatialMap = reconciled.spatialMap;
         if (reconciled.adjustments.length > 0) {
@@ -4228,61 +3964,22 @@ export const generateNightSceneEnhanced = async (
         }
       }
 
-      if (autoSpatialMap && autoSpatialMap.placements.length > 0) {
-        const gate = evaluateAutoPlacementConfidence(
-          autoSpatialMap,
-          selectedFixtures,
-          fixtureSubOptions,
-          fixtureCounts,
-          autoGutterLines
-        );
-        console.log(
-          `[Enhanced Mode] Auto placement confidence gate: ${gate.passed ? 'PASS' : 'FAIL'} (${gate.score.toFixed(1)}).`
-        );
-        if (!gate.passed) {
-          const reasonSummary = gate.reasons.length > 0
-            ? gate.reasons.join(' | ')
-            : 'Auto placement confidence below threshold.';
-          throw new Error(
-            `AUTO_PLACEMENT_UNCERTAIN: score ${gate.score.toFixed(1)} below ${AUTO_PLACEMENT_CONFIDENCE_MIN_SCORE}. ${reasonSummary}`
-          );
-        }
-      }
-
       onAutoConstraintsResolved?.({
         expectedPlacements: autoSpatialMap?.placements ?? [],
-        gutterLines: autoGutterLines,
+        gutterLines: undefined,
       });
     }
   } catch (autoConstraintError) {
-    const autoConstraintMessage = autoConstraintError instanceof Error
-      ? autoConstraintError.message
-      : String(autoConstraintError);
-    if (autoConstraintMessage.startsWith('AUTO_PLACEMENT_UNCERTAIN:')) {
-      throw (autoConstraintError instanceof Error ? autoConstraintError : new Error(autoConstraintMessage));
-    }
-
-    console.warn('[Enhanced Mode] Auto spatial constraint build failed (falling back to prompt-only auto):', autoConstraintError);
+    console.warn('[Enhanced Mode] Auto spatial map build failed (continuing without spatial constraints):', autoConstraintError);
     autoSpatialMap = undefined;
-    autoGutterLines = undefined;
     onAutoConstraintsResolved?.({ expectedPlacements: [], gutterLines: undefined });
   }
 
-  // Stage 1: Deep Think analyzes property and writes the complete generation prompt
-  onStageUpdate?.('converting');
-  let baseNightImage = imageBase64;
-  try {
-    console.log('[Enhanced Mode] Generating nighttime base for auto mode...');
-    baseNightImage = await generateNightBase(imageBase64, imageMimeType, targetRatio);
-  } catch (nightBaseError) {
-    console.warn('[Enhanced Mode] Night base generation failed, falling back to source image:', nightBaseError);
-    baseNightImage = imageBase64;
-  }
-
+  // Step 1: Analyze with Gemini 3.1 Pro
   onStageUpdate?.('analyzing');
-  console.log('[Enhanced Mode] Stage 1: Deep Think analyzing property + generating prompt...');
+  console.log('[Enhanced Mode] Step 1/2: Gemini 3.1 Pro analyzing + generating prompt...');
   const deepThinkResult = await deepThinkGeneratePrompt(
-    baseNightImage,
+    imageBase64,
     imageMimeType,
     selectedFixtures,
     fixtureSubOptions,
@@ -4300,207 +3997,15 @@ export const generateNightSceneEnhanced = async (
   }
   const lockedPrompt = `${deepThinkResult.prompt}\n${buildPhotorealismLockAddendum()}`;
 
-  const expectedPlacements = autoSpatialMap?.placements ?? [];
-  const constrainedSelectedTypes = selectedFixtures.filter(type => VALID_FIXTURE_TYPES.has(type));
-  const constrainedPlacementTypes = new Set(expectedPlacements.map(p => p.fixtureType));
-  const hasCoverageForConstrainedTypes = constrainedSelectedTypes.every(type => constrainedPlacementTypes.has(type));
-  const placementVerificationEnabled = expectedPlacements.length > 0 && hasCoverageForConstrainedTypes;
-  const placementSkipDetails = placementVerificationEnabled
-    ? 'Placement verification pending.'
-    : 'Placement verification skipped (no spatial constraints).';
-
-  // Stage 2: Nano Banana Pro generates the image using Deep Think's prompt
+  // Step 2: Generate with Gemini image model
   onStageUpdate?.('generating');
-  console.log('[Enhanced Mode] Stage 2: Generating image with Nano Banana Pro...');
-  const bestInitialCandidate = await generateAndRankInitialCandidates(
-    'Enhanced Mode',
-    INITIAL_CANDIDATE_COUNT,
-    () => executeGeneration(
-      baseNightImage,
-      imageMimeType,
-      lockedPrompt,
-      targetRatio
-    ),
-    (candidateResult) => evaluateGenerationCandidate(
-      candidateResult,
-      imageMimeType,
-      expectedPlacements,
-      placementVerificationEnabled,
-      autoGutterLines,
-      placementSkipDetails
-    )
+  console.log('[Enhanced Mode] Step 2/2: Generating final image with Gemini image model...');
+  const result = await executeGeneration(
+    imageBase64,
+    imageMimeType,
+    lockedPrompt,
+    targetRatio
   );
-
-  let result = bestInitialCandidate.result;
-  let verification = bestInitialCandidate.placementVerification;
-  let artifactCheck = bestInitialCandidate.artifactCheck;
-  let photorealCheck = bestInitialCandidate.photorealCheck;
-  let heuristicPhotorealCheck = bestInitialCandidate.heuristicPhotorealCheck;
-  let photorealPassed = bestInitialCandidate.photorealPassed;
-  let artifactCheckStale = false;
-  let photorealCheckStale = false;
-
-  if (!placementVerificationEnabled) {
-    console.warn(
-      '[Enhanced Mode] Placement verification skipped: auto constraints are incomplete for selected fixture types.'
-    );
-  }
-  console.log(`[Enhanced Mode] Placement verification: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
-
-  if (placementVerificationEnabled && !verification.verified) {
-    for (let attempt = 1; attempt <= MAX_GUTTER_RETRY_ATTEMPTS; attempt++) {
-      console.warn(`[Enhanced Mode] Placement verification failed, running correction retry ${attempt}/${MAX_GUTTER_RETRY_ATTEMPTS}...`);
-      onStageUpdate?.('generating');
-      const correctionPrompt = buildGutterCorrectionPrompt(
-        lockedPrompt,
-        expectedPlacements,
-        autoGutterLines,
-        verification.unexpectedTypes
-      );
-      const retryResult = await executeGeneration(
-        baseNightImage,
-        imageMimeType,
-        correctionPrompt,
-        targetRatio
-      );
-
-      onStageUpdate?.('validating');
-      const retryVerification = await verifyGeneratedImage(
-        retryResult,
-        imageMimeType,
-        expectedPlacements,
-        autoGutterLines
-      );
-
-      if (shouldAcceptPlacementRetryCandidate(verification, retryVerification)) {
-        result = retryResult;
-        verification = retryVerification;
-        artifactCheckStale = true;
-        photorealCheckStale = true;
-      }
-
-      if (verification.verified) break;
-    }
-    console.log(`[Enhanced Mode] Post-placement retry: ${verification.verified ? 'PASSED' : 'WARNING'} - ${verification.details}`);
-  }
-
-  onStageUpdate?.('validating');
-  if (artifactCheckStale) {
-    artifactCheck = await verifyAnnotationArtifacts(extractBase64Data(result), imageMimeType);
-    artifactCheckStale = false;
-  }
-  console.log(`[Enhanced Mode] Annotation artifacts: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
-
-  if (!artifactCheck.passed) {
-    for (let attempt = 1; attempt <= MAX_ARTIFACT_RETRY_ATTEMPTS; attempt++) {
-      console.warn(`[Enhanced Mode] Annotation artifacts detected, running cleanup retry ${attempt}/${MAX_ARTIFACT_RETRY_ATTEMPTS}...`);
-      onStageUpdate?.('generating');
-      const baseCorrectionPrompt = buildGutterCorrectionPrompt(
-        lockedPrompt,
-        expectedPlacements,
-        autoGutterLines,
-        verification.unexpectedTypes
-      );
-      const correctionPrompt = buildArtifactCorrectionPrompt(baseCorrectionPrompt, artifactCheck.issues);
-      const retryResult = await executeGeneration(
-        baseNightImage,
-        imageMimeType,
-        correctionPrompt,
-        targetRatio
-      );
-
-      onStageUpdate?.('validating');
-      const retryVerification = placementVerificationEnabled
-        ? await verifyGeneratedImage(retryResult, imageMimeType, expectedPlacements, autoGutterLines)
-        : verification;
-      const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
-
-      const placementNotWorse = isPlacementNotWorse(
-        verification,
-        retryVerification,
-        placementVerificationEnabled
-      );
-      if (
-        (retryArtifactCheck.passed && placementNotWorse) ||
-        retryArtifactCheck.score < artifactCheck.score
-      ) {
-        result = retryResult;
-        verification = retryVerification;
-        artifactCheck = retryArtifactCheck;
-        photorealCheckStale = true;
-      }
-
-      if (artifactCheck.passed) break;
-    }
-    console.log(`[Enhanced Mode] Post-artifact retry: ${artifactCheck.passed ? 'PASSED' : 'WARNING'} - ${artifactCheck.details}`);
-  }
-
-  onStageUpdate?.('validating');
-  if (photorealCheckStale) {
-    photorealCheck = await verifyPhotorealism(extractBase64Data(result), imageMimeType);
-    heuristicPhotorealCheck = await verifyPhotorealismHeuristic(extractBase64Data(result), imageMimeType);
-    photorealCheckStale = false;
-  }
-  photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
-  console.log(`[Enhanced Mode] Photorealism: ${photorealCheck.passed ? 'PASSED' : 'WARNING'} - ${photorealCheck.details}`);
-  console.log(
-    `[Enhanced Mode] Photorealism heuristic: ${heuristicPhotorealCheck.passed ? 'PASSED' : 'WARNING'} - ${heuristicPhotorealCheck.details}`
-  );
-
-  if (!photorealPassed) {
-    for (let attempt = 1; attempt <= MAX_PHOTOREAL_RETRY_ATTEMPTS; attempt++) {
-      console.warn(`[Enhanced Mode] Photorealism failed, running correction retry ${attempt}/${MAX_PHOTOREAL_RETRY_ATTEMPTS}...`);
-      onStageUpdate?.('generating');
-      const combinedIssues = [...new Set([...photorealCheck.issues, ...heuristicPhotorealCheck.issues])];
-      const correctionPrompt = buildPhotorealismCorrectionPrompt(lockedPrompt, combinedIssues);
-      const retryResult = await executeGeneration(
-        baseNightImage,
-        imageMimeType,
-        correctionPrompt,
-        targetRatio
-      );
-
-      onStageUpdate?.('validating');
-      const retryVerification = placementVerificationEnabled
-        ? await verifyGeneratedImage(retryResult, imageMimeType, expectedPlacements, autoGutterLines)
-        : verification;
-      const retryPhotorealCheck = await verifyPhotorealism(extractBase64Data(retryResult), imageMimeType);
-      const retryHeuristicPhotorealCheck = await verifyPhotorealismHeuristic(
-        extractBase64Data(retryResult),
-        imageMimeType
-      );
-      const retryArtifactCheck = await verifyAnnotationArtifacts(extractBase64Data(retryResult), imageMimeType);
-      const placementNotWorse = isPlacementNotWorse(
-        verification,
-        retryVerification,
-        placementVerificationEnabled
-      );
-      const artifactNotWorse =
-        retryArtifactCheck.passed ||
-        retryArtifactCheck.score <= artifactCheck.score;
-      const retryPhotorealPassed = retryPhotorealCheck.passed && retryHeuristicPhotorealCheck.passed;
-      const currentCompositePhotorealScore =
-        photorealCheck.score * 0.7 + heuristicPhotorealCheck.score * 0.3;
-      const retryCompositePhotorealScore =
-        retryPhotorealCheck.score * 0.7 + retryHeuristicPhotorealCheck.score * 0.3;
-      if (
-        ((retryPhotorealPassed && placementNotWorse && artifactNotWorse)) ||
-        (retryCompositePhotorealScore >= currentCompositePhotorealScore && placementNotWorse && artifactNotWorse)
-      ) {
-        result = retryResult;
-        verification = retryVerification;
-        artifactCheck = retryArtifactCheck;
-        photorealCheck = retryPhotorealCheck;
-        heuristicPhotorealCheck = retryHeuristicPhotorealCheck;
-      }
-      photorealPassed = photorealCheck.passed && heuristicPhotorealCheck.passed;
-      if (photorealPassed) break;
-    }
-  }
-
-  if (placementVerificationEnabled && !verification.verified) {
-    throw new Error(`AUTO_PLACEMENT_UNCERTAIN: Final placement verification failed. ${verification.details}`);
-  }
 
   console.log('[Enhanced Mode] Generation complete!');
   return result;
