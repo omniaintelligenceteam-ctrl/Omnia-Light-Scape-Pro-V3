@@ -1906,6 +1906,26 @@ const App: React.FC = () => {
       const effectiveFixtures = manualSelections ? manualSelections.selectedFixtures : selectedFixtures;
       const effectiveSubOptions = manualSelections ? manualSelections.fixtureSubOptions : fixtureSubOptions;
       const effectiveCounts = manualSelections ? manualSelections.fixtureCounts : fixtureCounts;
+      const autoPlacementNoteLines = effectiveFixtures.flatMap(fixtureId => {
+        const fixture = FIXTURE_TYPES.find(f => f.id === fixtureId);
+        if (!fixture) return [];
+
+        const selectedSubOpts = effectiveSubOptions[fixtureId] || [];
+        return selectedSubOpts.flatMap(subOptId => {
+          const note = (fixturePlacementNotes[subOptId] || '').trim();
+          if (!note) return [];
+          const subOptLabel = fixture.subOptions?.find(s => s.id === subOptId)?.label || subOptId;
+          return [`- ${fixture.label} / ${subOptLabel}: ${note}`];
+        });
+      });
+      const autoInstructionNotes = [
+        autoPlacementNoteLines.length > 0
+          ? `PLACEMENT NOTES (NON-NEGOTIABLE):\n${autoPlacementNoteLines.join('\n')}`
+          : '',
+        prompt?.trim()
+          ? `ADDITIONAL USER NOTES:\n${prompt.trim()}`
+          : '',
+      ].filter(Boolean).join('\n\n');
 
       // === ENHANCED MODE: Gemini Pro 3 Only (Claude Quality, Lower Cost) ===
       if (generationMode === 'enhanced') {
@@ -1953,7 +1973,8 @@ const App: React.FC = () => {
             targetRatio,
             userPreferences,
             (stage) => setGenerationStage(stage as typeof generationStage),
-            captureAutoConstraints
+            captureAutoConstraints,
+            autoInstructionNotes || undefined
           );
         }
       }
@@ -2050,7 +2071,8 @@ const App: React.FC = () => {
             targetRatio,
             userPreferences,
             (stage) => setGenerationStage(stage as typeof generationStage),
-            captureAutoConstraints
+            captureAutoConstraints,
+            autoInstructionNotes || undefined
           );
         }
       }
@@ -2069,7 +2091,8 @@ const App: React.FC = () => {
           targetRatio,
           userPreferences,
           (stage) => setGenerationStage(stage as typeof generationStage),
-          captureAutoConstraints
+          captureAutoConstraints,
+          autoInstructionNotes || undefined
         );
       }
 

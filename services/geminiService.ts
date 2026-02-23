@@ -2383,6 +2383,12 @@ function reconcileAutoPlacementsToExplicitCounts(
         target: placement.anchor,
       }));
     const seedPoints = seedPointsFromMatches.length > 0 ? seedPointsFromMatches : seedPointsFromType;
+    if (seedPoints.length === 0) {
+      adjustments.push(
+        `${target.fixtureType}/${target.subOption}: missing anchor points for explicit count ${target.desiredCount}`
+      );
+      return;
+    }
     const candidatePoints = buildAutoSeedPointsForCount(
       seedPoints,
       target.desiredCount,
@@ -2753,14 +2759,21 @@ function buildAutoSpatialMapFromSuggestions(
     .sort((a, b) => a.priority - b.priority || a.fixtureType.localeCompare(b.fixtureType))
     .forEach((group, groupIdx) => {
       const explicitCount = fixtureCounts[group.subOption];
+      const hasExplicitCount = typeof explicitCount === 'number' && Number.isFinite(explicitCount);
       if (
-        typeof explicitCount !== 'number' &&
+        !hasExplicitCount &&
         group.points.length === 0 &&
         group.suggestedCount <= 0
       ) {
         return;
       }
-      const desiredCount = typeof explicitCount === 'number'
+      if (hasExplicitCount && group.points.length === 0) {
+        // No confident anchor points for an explicit user count.
+        // Skip blind placement so confidence gate can fail fast instead of guessing.
+        return;
+      }
+
+      const desiredCount = hasExplicitCount
         ? Math.max(0, Math.round(explicitCount))
         : Math.max(1, Math.round(group.suggestedCount || group.points.length || 1));
 
@@ -2974,7 +2987,8 @@ export async function deepThinkGeneratePrompt(
   beamAngle: number,
   userPreferences?: UserPreferences | null,
   spatialMap?: SpatialMap,
-  isManualMode?: boolean
+  isManualMode?: boolean,
+  userInstructionNotes?: string
 ): Promise<DeepThinkOutput> {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
@@ -3001,6 +3015,13 @@ export async function deepThinkGeneratePrompt(
   }
   if (input.spatialMapContext) {
     deepThinkPrompt += '\n\n## SPATIAL MAP DATA (exact coordinates for each fixture)\n' + input.spatialMapContext;
+  }
+  const trimmedUserInstructionNotes = userInstructionNotes?.trim();
+  if (trimmedUserInstructionNotes) {
+    deepThinkPrompt += '\n\n## USER DIRECTIVES (HIGHEST PRIORITY)\n';
+    deepThinkPrompt += '- Follow these directives exactly for fixture placement scope and count.\n';
+    deepThinkPrompt += '- Do not broaden placement beyond these directives.\n';
+    deepThinkPrompt += trimmedUserInstructionNotes;
   }
   if (isManualMode && spatialMap?.placements.some(p => p.fixtureType === 'gutter')) {
     deepThinkPrompt += `\n\n## MANUAL RAIL OVERRIDE (HIGHEST PRIORITY)\n`;
@@ -3806,6 +3827,52 @@ function buildGutterCorrectionPrompt(
   return basePrompt + correction;
 }
 
+function buildStrictPlacementCorrectionPrompt(
+  basePrompt: string,
+  expectedPlacements: SpatialFixturePlacement[],
+  verificationDetails: string,
+  userInstructionNotes?: string
+): string {
+  if (expectedPlacements.length === 0) return basePrompt;
+
+  const countsByGroup = new Map<string, number>();
+  expectedPlacements.forEach(placement => {
+    const key = `${placement.fixtureType}/${placement.subOption || 'general'}`;
+    countsByGroup.set(key, (countsByGroup.get(key) || 0) + 1);
+  });
+
+  let correction = '\n\n=== STRICT PLACEMENT CORRECTION PASS (HARD LOCK) ===\n';
+  correction += 'The previous output failed strict placement verification. Correct placement/count compliance exactly.\n';
+  correction += `VERIFICATION FINDINGS: ${verificationDetails}\n`;
+  correction += 'MANDATORY RULES:\n';
+  correction += '- Use ONLY fixture types/sub-options listed below.\n';
+  correction += '- Honor EXACT per-group counts. Do not add extras to "balance" the composition.\n';
+  correction += '- Keep all fixtures at the exact coordinates provided in the placement map.\n';
+  correction += '- If uncertain about a target area, omit that fixture instead of relocating it.\n';
+  correction += '- All non-allowed surfaces must remain dark.\n';
+  correction += 'EXACT EXPECTED COUNTS:\n';
+  [...countsByGroup.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([group, count]) => {
+      correction += `- ${group.toUpperCase()}: EXACTLY ${count}\n`;
+    });
+
+  const mapContext = formatSpatialMapForPrompt({ features: [], placements: expectedPlacements });
+  if (mapContext) {
+    correction += '\nEXACT PLACEMENT MAP (SOURCE OF TRUTH):\n';
+    correction += `${mapContext}\n`;
+  }
+
+  const trimmedUserNotes = userInstructionNotes?.trim();
+  if (trimmedUserNotes) {
+    correction += '\nUSER-SPECIFIED PLACEMENT DIRECTIVES (HIGHEST PRIORITY):\n';
+    correction += `${trimmedUserNotes}\n`;
+  }
+
+  correction += 'FINAL CHECK: Output must satisfy both coordinate lock and count lock before finishing.\n';
+  return basePrompt + correction;
+}
+
 // Retained legacy helpers/constants for optional future quality gates.
 // Explicitly referenced to satisfy strict noUnusedLocals builds.
 const LEGACY_PIPELINE_REFERENCES = [
@@ -3922,13 +3989,15 @@ export const generateNightSceneEnhanced = async (
   onAutoConstraintsResolved?: (constraints: {
     expectedPlacements: SpatialFixturePlacement[];
     gutterLines?: GutterLine[];
-  }) => void
+  }) => void,
+  userInstructionNotes?: string
 ): Promise<string> => {
   console.log('[Enhanced Mode] Starting strict 2-step Gemini pipeline...');
 
   // Optional spatial extraction (still Gemini 3.1 Pro analysis only)
   onStageUpdate?.('analyzing');
   let autoSpatialMap: SpatialMap | undefined;
+  let autoGutterLines: GutterLine[] | undefined;
 
   try {
     if (selectedFixtures.length > 0) {
@@ -3964,15 +4033,36 @@ export const generateNightSceneEnhanced = async (
         }
       }
 
+      if (autoSpatialMap?.placements.some(placement => placement.fixtureType === 'gutter')) {
+        autoGutterLines = deriveFallbackAutoGutterLines(autoSpatialMap, MAX_AUTO_GUTTER_LINES);
+        autoSpatialMap = ensureAutoGutterRailPlacements(autoSpatialMap, autoGutterLines, fixtureCounts);
+      }
+
+      if (autoSpatialMap) {
+        const confidenceGate = evaluateAutoPlacementConfidence(
+          autoSpatialMap,
+          selectedFixtures,
+          fixtureSubOptions,
+          fixtureCounts,
+          autoGutterLines
+        );
+        if (!confidenceGate.passed) {
+          const reason = confidenceGate.reasons.length > 0
+            ? confidenceGate.reasons.join(' | ')
+            : `Auto placement confidence score ${confidenceGate.score} below required threshold.`;
+          throw new Error(`AUTO_PLACEMENT_UNCERTAIN: Unable to lock auto-placement confidently. ${reason}`);
+        }
+      }
+
       onAutoConstraintsResolved?.({
         expectedPlacements: autoSpatialMap?.placements ?? [],
-        gutterLines: undefined,
+        gutterLines: autoGutterLines,
       });
     }
   } catch (autoConstraintError) {
-    console.warn('[Enhanced Mode] Auto spatial map build failed (continuing without spatial constraints):', autoConstraintError);
-    autoSpatialMap = undefined;
+    console.warn('[Enhanced Mode] Auto spatial map build failed:', autoConstraintError);
     onAutoConstraintsResolved?.({ expectedPlacements: [], gutterLines: undefined });
+    throw autoConstraintError;
   }
 
   // Step 1: Analyze with Gemini 3.1 Pro
@@ -3989,7 +4079,8 @@ export const generateNightSceneEnhanced = async (
     beamAngle,
     userPreferences,
     autoSpatialMap,
-    false
+    false,
+    userInstructionNotes
   );
   console.log(`[Enhanced Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
   if (deepThinkResult.fixtureBreakdown) {
@@ -4000,12 +4091,63 @@ export const generateNightSceneEnhanced = async (
   // Step 2: Generate with Gemini image model
   onStageUpdate?.('generating');
   console.log('[Enhanced Mode] Step 2/2: Generating final image with Gemini image model...');
-  const result = await executeGeneration(
+  let result = await executeGeneration(
     imageBase64,
     imageMimeType,
     lockedPrompt,
     targetRatio
   );
+
+  const expectedPlacements = autoSpatialMap?.placements ?? [];
+  if (expectedPlacements.length > 0) {
+    const initialVerification = await verifyGeneratedImage(
+      result,
+      extractMimeType(result, imageMimeType),
+      expectedPlacements,
+      autoGutterLines
+    );
+
+    if (!initialVerification.verified) {
+      console.warn('[Enhanced Mode] Placement verification failed (initial render):', initialVerification.details);
+      const correctionBase = buildGutterCorrectionPrompt(
+        lockedPrompt,
+        expectedPlacements,
+        autoGutterLines,
+        initialVerification.unexpectedTypes
+      );
+      const correctionPrompt = buildStrictPlacementCorrectionPrompt(
+        correctionBase,
+        expectedPlacements,
+        initialVerification.details,
+        userInstructionNotes
+      );
+
+      const retryResult = await executeGeneration(
+        imageBase64,
+        imageMimeType,
+        correctionPrompt,
+        targetRatio
+      );
+      const retryVerification = await verifyGeneratedImage(
+        retryResult,
+        extractMimeType(retryResult, imageMimeType),
+        expectedPlacements,
+        autoGutterLines
+      );
+
+      const acceptRetry = shouldAcceptPlacementRetryCandidate(initialVerification, retryVerification);
+      if (acceptRetry) {
+        result = retryResult;
+      }
+
+      const finalVerification = acceptRetry ? retryVerification : initialVerification;
+      if (!finalVerification.verified) {
+        throw new Error(
+          `AUTO_PLACEMENT_UNCERTAIN: Strict auto-placement verification failed. ${finalVerification.details}`
+        );
+      }
+    }
+  }
 
   console.log('[Enhanced Mode] Generation complete!');
   return result;
@@ -4427,10 +4569,14 @@ export function getFilteredSuggestions(
   
   return analysis.suggestedFixtures.filter(suggestion => {
     if (!selectedFixtures.includes(suggestion.fixtureType)) return false;
-    
+
+    const fixtureDef = FIXTURE_TYPES.find(ft => ft.id === suggestion.fixtureType);
     const subs = selectedSubOptions[suggestion.fixtureType];
+    if (fixtureDef?.subOptions && fixtureDef.subOptions.length > 0 && (!subs || subs.length === 0)) {
+      return false;
+    }
     if (subs && subs.length > 0 && !subs.includes(suggestion.subOption)) return false;
-    
+
     return true;
   }).sort((a, b) => a.priority - b.priority);
 }
