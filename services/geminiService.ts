@@ -2413,17 +2413,23 @@ function reconcileAutoPlacementsToExplicitCounts(
         target: placement.anchor,
       }));
     const seedPoints = seedPointsFromMatches.length > 0 ? seedPointsFromMatches : seedPointsFromType;
+    const candidatePoints = seedPoints.length > 0
+      ? buildAutoSeedPointsForCount(
+          seedPoints,
+          target.desiredCount,
+          target.fixtureType
+        )
+      : buildEvenlySpacedAutoSeedPoints(
+          target.desiredCount,
+          target.fixtureType,
+          12,
+          88
+        );
     if (seedPoints.length === 0) {
       adjustments.push(
-        `${target.fixtureType}/${target.subOption}: missing anchor points for explicit count ${target.desiredCount}`
+        `${target.fixtureType}/${target.subOption}: synthesized fallback anchor points for explicit count ${target.desiredCount}`
       );
-      return;
     }
-    const candidatePoints = buildAutoSeedPointsForCount(
-      seedPoints,
-      target.desiredCount,
-      target.fixtureType
-    );
 
     const occupied = matches.map(match => ({
       x: match.horizontalPosition,
@@ -2734,11 +2740,126 @@ function evaluateAutoPlacementConfidence(
   };
 }
 
+const AUTO_FALLBACK_COUNT_BY_TYPE: Record<string, number> = {
+  up: 4,
+  path: 5,
+  coredrill: 3,
+  gutter: 2,
+  soffit: 4,
+  hardscape: 3,
+  well: 3,
+};
+
+const AUTO_FALLBACK_COUNT_BY_SUBOPTION: Record<string, number> = {
+  siding: 6,
+  windows: 4,
+  entryway: 2,
+  columns: 3,
+  trees: 3,
+  pathway: 6,
+  driveway: 6,
+  landscaping: 4,
+  garage_sides: 2,
+  garage_door: 2,
+  sidewalks: 3,
+  walls: 3,
+  steps: 3,
+  peaks: 2,
+  statues: 2,
+  architectural: 3,
+  gutterUpLights: 2,
+};
+
+function resolveAutoFallbackCount(
+  fixtureType: string,
+  rawSubOption: string,
+  fixtureCounts: Record<string, number | null>
+): number {
+  const normalizedSubOption = normalizeAutoSubOption(fixtureType, rawSubOption);
+  const explicitCount = fixtureCounts[rawSubOption] ?? fixtureCounts[normalizedSubOption];
+  if (typeof explicitCount === 'number' && Number.isFinite(explicitCount)) {
+    return Math.max(0, Math.round(explicitCount));
+  }
+
+  const bySubOption = AUTO_FALLBACK_COUNT_BY_SUBOPTION[normalizedSubOption];
+  if (typeof bySubOption === 'number') return bySubOption;
+
+  const byType = AUTO_FALLBACK_COUNT_BY_TYPE[fixtureType];
+  if (typeof byType === 'number') return byType;
+
+  return 3;
+}
+
+function buildFallbackAutoSpatialMapFromSelections(
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>
+): SpatialMap {
+  const placements: SpatialFixturePlacement[] = [];
+  let groupIndex = 0;
+
+  selectedFixtures.forEach(rawFixtureType => {
+    const fixtureType = sanitizeFixtureType(rawFixtureType);
+    if (!fixtureType) return;
+
+    const fixtureDef = FIXTURE_TYPES.find(fixture => fixture.id === fixtureType);
+    const configuredSubOptions = fixtureSubOptions[fixtureType] || [];
+    const subOptions = fixtureDef?.subOptions && fixtureDef.subOptions.length > 0
+      ? configuredSubOptions
+      : ['general'];
+
+    if (fixtureDef?.subOptions && fixtureDef.subOptions.length > 0 && subOptions.length === 0) {
+      return;
+    }
+
+    subOptions.forEach((rawSubOption, subOptionIndex) => {
+      const normalizedSubOption = normalizeAutoSubOption(fixtureType, rawSubOption);
+      const desiredCount = resolveAutoFallbackCount(fixtureType, rawSubOption, fixtureCounts);
+      if (desiredCount <= 0) return;
+
+      const lane = (subOptionIndex % 3) - 1;
+      const tierInset = Math.floor(subOptionIndex / 3) * 4;
+      const minX = clampPercent(10 + tierInset + Math.max(0, lane * 1.5));
+      const maxX = clampPercent(90 - tierInset - Math.max(0, -lane * 1.5));
+      const fallbackY = clampPercent(getDefaultAutoYForFixture(fixtureType) + lane * 1.2);
+
+      const points = buildEvenlySpacedAutoSeedPoints(
+        desiredCount,
+        fixtureType,
+        minX,
+        maxX,
+        fallbackY
+      );
+
+      points.forEach((point, pointIndex) => {
+        placements.push({
+          id: `auto_fallback_${fixtureType}_${normalizedSubOption}_${groupIndex + 1}_${pointIndex + 1}`,
+          fixtureType,
+          subOption: normalizedSubOption,
+          horizontalPosition: point.x,
+          verticalPosition: point.y,
+          anchor: `auto_fallback_${fixtureType}_${normalizedSubOption}`,
+          description: `${fixtureType} fallback placement (${normalizedSubOption})`,
+        });
+      });
+
+      groupIndex += 1;
+    });
+  });
+
+  return { features: [], placements };
+}
+
 function buildAutoSpatialMapFromSuggestions(
   suggestions: SuggestedFixture[],
   selectedFixtures: string[],
   fixtureCounts: Record<string, number | null>
 ): SpatialMap {
+  const selectedFixtureSet = new Set(
+    selectedFixtures
+      .map(fixture => sanitizeFixtureType(fixture))
+      .filter((fixture): fixture is string => !!fixture)
+  );
   const grouped = new Map<string, {
     fixtureType: string;
     subOption: string;
@@ -2752,7 +2873,7 @@ function buildAutoSpatialMapFromSuggestions(
     .sort((a, b) => a.priority - b.priority)
     .forEach(suggestion => {
       const fixtureType = sanitizeFixtureType(suggestion.fixtureType);
-      if (!fixtureType || !selectedFixtures.includes(fixtureType)) return;
+      if (!fixtureType || !selectedFixtureSet.has(fixtureType)) return;
 
       const normalizedSubOption = normalizeAutoSubOption(fixtureType, suggestion.subOption);
       const key = getAutoPlacementGroupKey(fixtureType, normalizedSubOption);
@@ -4082,6 +4203,20 @@ export const generateNightSceneEnhanced = async (
         }
       }
 
+      if (!autoSpatialMap || autoSpatialMap.placements.length === 0) {
+        const fallbackAutoMap = buildFallbackAutoSpatialMapFromSelections(
+          selectedFixtures,
+          fixtureSubOptions,
+          fixtureCounts
+        );
+        if (fallbackAutoMap.placements.length > 0) {
+          autoSpatialMap = fallbackAutoMap;
+          console.warn(
+            `[Enhanced Mode] Falling back to deterministic auto placements (${fallbackAutoMap.placements.length} placement(s)) because analysis suggestions were insufficient.`
+          );
+        }
+      }
+
       if (autoSpatialMap?.placements.some(placement => placement.fixtureType === 'gutter')) {
         autoGutterLines = deriveFallbackAutoGutterLines(autoSpatialMap, MAX_AUTO_GUTTER_LINES);
         autoSpatialMap = ensureAutoGutterRailPlacements(autoSpatialMap, autoGutterLines, fixtureCounts);
@@ -4411,6 +4546,17 @@ Return ONLY valid JSON. No markdown code blocks.`;
             // Enrich with calculated recommendations from constants
             return enrichAnalysisWithRecommendations(analysis);
           } catch (parseError) {
+            const embeddedJsonMatch = textPart.text.match(/\{[\s\S]*\}/);
+            if (embeddedJsonMatch) {
+              try {
+                const recovered = JSON.parse(embeddedJsonMatch[0]) as EnhancedHouseAnalysis;
+                console.warn('[Enhanced Analysis] Primary JSON parse failed; recovered embedded JSON object.');
+                return enrichAnalysisWithRecommendations(recovered);
+              } catch {
+                // Continue to hard failure below.
+              }
+            }
+
             console.error('Failed to parse enhanced analysis JSON:', parseError);
             console.error('Raw response:', textPart.text);
             throw new Error('Failed to parse property analysis. Please try again.');
