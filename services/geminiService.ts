@@ -215,6 +215,42 @@ function extractMimeType(imageOrDataUri: string, fallback: string): string {
   return mimeMatch?.[1] || fallback;
 }
 
+type InlineImagePart = {
+  inlineData?: {
+    data?: string;
+    mimeType?: string;
+  };
+};
+
+function selectGeneratedImagePart(
+  parts: InlineImagePart[],
+  sourceCandidates: string[] = []
+): { data: string; mimeType: string } | null {
+  const imageParts = parts
+    .filter(part => typeof part.inlineData?.data === 'string' && part.inlineData.data.length > 0)
+    .map(part => ({
+      data: part.inlineData!.data!,
+      mimeType: part.inlineData!.mimeType || 'image/png',
+    }));
+
+  if (imageParts.length === 0) return null;
+
+  const sourceSet = new Set(sourceCandidates.filter(Boolean));
+  const nonSourceImageParts = imageParts.filter(part => !sourceSet.has(part.data));
+  const pool = nonSourceImageParts.length > 0 ? nonSourceImageParts : imageParts;
+  const selected = pool[pool.length - 1];
+
+  if (imageParts.length > 1) {
+    const matchedSourceCount = imageParts.length - nonSourceImageParts.length;
+    console.log(
+      `[ImageSelect] Received ${imageParts.length} image parts (${matchedSourceCount} matched input). ` +
+      `Using ${nonSourceImageParts.length > 0 ? 'last non-source' : 'last'} image part.`
+    );
+  }
+
+  return selected;
+}
+
 function buildPhotorealismLockAddendum(): string {
   return `
 
@@ -1721,12 +1757,9 @@ ${preferenceContext}
 
       if (candidate.content && candidate.content.parts) {
           const parts = candidate.content.parts;
-          
-          // First, try to find the image part
-          for (const part of parts) {
-            if (part.inlineData && part.inlineData.data) {
-              return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-            }
+          const selectedImage = selectGeneratedImagePart(parts, [imageBase64, resizedImage]);
+          if (selectedImage) {
+            return `data:${selectedImage.mimeType};base64,${selectedImage.data}`;
           }
           
           // If no image part found, check for text (error description from model)
@@ -1934,12 +1967,9 @@ export const generateNightSceneDirect = async (
         }
 
         if (candidate.content && candidate.content.parts) {
-          for (const part of candidate.content.parts) {
-            if (part.inlineData && part.inlineData.data) {
-              const base64Data = part.inlineData.data;
-              const detectedMimeType = part.inlineData.mimeType || 'image/png';
-              return `data:${detectedMimeType};base64,${base64Data}`;
-            }
+          const selectedImage = selectGeneratedImagePart(candidate.content.parts, [imageBase64]);
+          if (selectedImage) {
+            return `data:${selectedImage.mimeType};base64,${selectedImage.data}`;
           }
         }
       }
@@ -3071,6 +3101,19 @@ export async function deepThinkGeneratePrompt(
           if (output.analysisNotes) console.log(`[DeepThink] Notes: ${output.analysisNotes}`);
           return output;
         } catch (parseError) {
+          const embeddedJsonMatch = textPart.text.match(/\{[\s\S]*\}/);
+          if (embeddedJsonMatch) {
+            try {
+              const recovered = JSON.parse(embeddedJsonMatch[0]) as DeepThinkOutput;
+              if (typeof recovered.prompt === 'string' && recovered.prompt.trim().length > 0) {
+                console.warn('[DeepThink] Primary JSON parse failed; recovered embedded JSON object.');
+                return recovered;
+              }
+            } catch {
+              // Continue to raw-text fallback.
+            }
+          }
+
           console.warn('[DeepThink] JSON parse failed, using raw text as prompt:', parseError);
           // Fallback: treat entire text as the prompt
           return { prompt: textPart.text, analysisNotes: 'JSON parse failed, using raw text' };
@@ -3135,10 +3178,9 @@ export async function executeGeneration(
 
   // Extract image from response
   if (response.candidates?.[0]?.content?.parts) {
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData?.data) {
-        return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-      }
+    const selectedImage = selectGeneratedImagePart(response.candidates[0].content.parts, [imageBase64, resizedImage]);
+    if (selectedImage) {
+      return `data:${selectedImage.mimeType};base64,${selectedImage.data}`;
     }
     // Check for text-only response (blocked or error)
     const textPart = response.candidates[0].content.parts.find((p: { text?: string }) => p.text);
@@ -3993,6 +4035,13 @@ export const generateNightSceneEnhanced = async (
   userInstructionNotes?: string
 ): Promise<string> => {
   console.log('[Enhanced Mode] Starting strict 2-step Gemini pipeline...');
+  const hasUserSpecifiedCounts = buildExplicitAutoCountTargets(
+    selectedFixtures,
+    fixtureSubOptions,
+    fixtureCounts
+  ).length > 0;
+  const hasPlacementScopeNotes = !!userInstructionNotes?.includes('PLACEMENT NOTES (NON-NEGOTIABLE):');
+  const strictAutoLockRequired = hasUserSpecifiedCounts || hasPlacementScopeNotes;
 
   // Optional spatial extraction (still Gemini 3.1 Pro analysis only)
   onStageUpdate?.('analyzing');
@@ -4050,7 +4099,13 @@ export const generateNightSceneEnhanced = async (
           const reason = confidenceGate.reasons.length > 0
             ? confidenceGate.reasons.join(' | ')
             : `Auto placement confidence score ${confidenceGate.score} below required threshold.`;
-          throw new Error(`AUTO_PLACEMENT_UNCERTAIN: Unable to lock auto-placement confidently. ${reason}`);
+          if (strictAutoLockRequired) {
+            throw new Error(`AUTO_PLACEMENT_UNCERTAIN: Unable to lock auto-placement confidently. ${reason}`);
+          }
+          console.warn('[Enhanced Mode] Auto placement confidence below threshold, continuing with prompt-only constraints:', reason);
+          autoSpatialMap = undefined;
+          autoGutterLines = undefined;
+          onAutoConstraintsResolved?.({ expectedPlacements: [], gutterLines: undefined });
         }
       }
 
@@ -4062,7 +4117,11 @@ export const generateNightSceneEnhanced = async (
   } catch (autoConstraintError) {
     console.warn('[Enhanced Mode] Auto spatial map build failed:', autoConstraintError);
     onAutoConstraintsResolved?.({ expectedPlacements: [], gutterLines: undefined });
-    throw autoConstraintError;
+    if (strictAutoLockRequired) {
+      throw autoConstraintError;
+    }
+    autoSpatialMap = undefined;
+    autoGutterLines = undefined;
   }
 
   // Step 1: Analyze with Gemini 3.1 Pro
@@ -4142,9 +4201,12 @@ export const generateNightSceneEnhanced = async (
 
       const finalVerification = acceptRetry ? retryVerification : initialVerification;
       if (!finalVerification.verified) {
-        throw new Error(
-          `AUTO_PLACEMENT_UNCERTAIN: Strict auto-placement verification failed. ${finalVerification.details}`
-        );
+        if (strictAutoLockRequired) {
+          throw new Error(
+            `AUTO_PLACEMENT_UNCERTAIN: Strict auto-placement verification failed. ${finalVerification.details}`
+          );
+        }
+        console.warn('[Enhanced Mode] Placement verification did not fully pass; returning best candidate:', finalVerification.details);
       }
     }
   }
@@ -4557,6 +4619,154 @@ export function explainSuggestedFixture(suggestion: SuggestedFixture): string {
   return lines.join('\n');
 }
 
+function normalizeSubOptionToken(value?: string): string {
+  return (value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+const SUB_OPTION_ALIAS_BY_FIXTURE: Record<string, Record<string, string>> = {
+  up: {
+    wall: 'siding',
+    walls: 'siding',
+    facade: 'siding',
+    facades: 'siding',
+    window: 'windows',
+    windows: 'windows',
+    entry: 'entryway',
+    doorway: 'entryway',
+    door: 'entryway',
+    frontdoor: 'entryway',
+    porchentry: 'entryway',
+    column: 'columns',
+    columns: 'columns',
+    pillar: 'columns',
+    pillars: 'columns',
+    pilaster: 'columns',
+    pilasters: 'columns',
+    tree: 'trees',
+    trees: 'trees',
+    landscaping: 'trees',
+    landscape: 'trees',
+  },
+  path: {
+    walk: 'pathway',
+    walkway: 'pathway',
+    walkways: 'pathway',
+    path: 'pathway',
+    pathway: 'pathway',
+    sidewalk: 'pathway',
+    sidewalks: 'pathway',
+    drive: 'driveway',
+    driveway: 'driveway',
+    landscaping: 'landscaping',
+    landscape: 'landscaping',
+    beds: 'landscaping',
+    plantingbeds: 'landscaping',
+  },
+  coredrill: {
+    garageside: 'garage_sides',
+    garagesides: 'garage_sides',
+    garagewall: 'garage_sides',
+    garagewalls: 'garage_sides',
+    garagedoor: 'garage_door',
+    garagedoors: 'garage_door',
+    sidewalk: 'sidewalks',
+    sidewalks: 'sidewalks',
+    walkway: 'sidewalks',
+    drive: 'driveway',
+    driveway: 'driveway',
+  },
+  gutter: {
+    gutter: 'gutterUpLights',
+    gutteruplight: 'gutterUpLights',
+    gutteruplights: 'gutterUpLights',
+    dormer: 'gutterUpLights',
+    dormers: 'gutterUpLights',
+    peak: 'gutterUpLights',
+    peaks: 'gutterUpLights',
+    roofline: 'gutterUpLights',
+    secondstory: 'gutterUpLights',
+    secondstoryfacade: 'gutterUpLights',
+  },
+  soffit: {
+    window: 'windows',
+    windows: 'windows',
+    column: 'columns',
+    columns: 'columns',
+    wall: 'siding',
+    walls: 'siding',
+    siding: 'siding',
+    peak: 'peaks',
+    peaks: 'peaks',
+    gable: 'peaks',
+    gables: 'peaks',
+  },
+  hardscape: {
+    column: 'columns',
+    columns: 'columns',
+    wall: 'walls',
+    walls: 'walls',
+    retainingwall: 'walls',
+    retainingwalls: 'walls',
+    step: 'steps',
+    steps: 'steps',
+    stair: 'steps',
+    stairs: 'steps',
+  },
+  well: {
+    tree: 'trees',
+    trees: 'trees',
+    statue: 'statues',
+    statues: 'statues',
+    architectural: 'architectural',
+    architecture: 'architectural',
+    accent: 'architectural',
+  },
+};
+
+function resolveSuggestedSubOptionId(
+  fixtureType: string,
+  suggestionSubOption: string | undefined,
+  selectedSubOptions: Record<string, string[]>
+): string | null {
+  const fixtureDef = FIXTURE_TYPES.find(ft => ft.id === fixtureType);
+  const selectedForFixture = selectedSubOptions[fixtureType] || [];
+  const hasConfigurableSubOptions = !!fixtureDef?.subOptions && fixtureDef.subOptions.length > 0;
+
+  if (!hasConfigurableSubOptions) {
+    const raw = (suggestionSubOption || '').trim();
+    return raw || null;
+  }
+
+  if (selectedForFixture.length === 0) return null;
+
+  const raw = (suggestionSubOption || '').trim();
+  if (raw && selectedForFixture.includes(raw)) return raw;
+
+  const token = normalizeSubOptionToken(raw);
+  if (token) {
+    const idMatch = selectedForFixture.find(id => normalizeSubOptionToken(id) === token);
+    if (idMatch) return idMatch;
+
+    const labelMatch = fixtureDef!.subOptions
+      .filter(option => selectedForFixture.includes(option.id))
+      .find(option => normalizeSubOptionToken(option.label) === token);
+    if (labelMatch) return labelMatch.id;
+
+    const aliasTarget = SUB_OPTION_ALIAS_BY_FIXTURE[fixtureType]?.[token];
+    if (aliasTarget && selectedForFixture.includes(aliasTarget)) {
+      return aliasTarget;
+    }
+  }
+
+  if (fixtureType === 'gutter' && selectedForFixture.includes('gutterUpLights')) {
+    return 'gutterUpLights';
+  }
+
+  return selectedForFixture.length === 1 ? selectedForFixture[0] : null;
+}
+
 /**
  * Get fixture suggestions filtered by user's selections
  */
@@ -4566,17 +4776,35 @@ export function getFilteredSuggestions(
   selectedSubOptions: Record<string, string[]>
 ): SuggestedFixture[] {
   if (!analysis.suggestedFixtures) return [];
-  
-  return analysis.suggestedFixtures.filter(suggestion => {
-    if (!selectedFixtures.includes(suggestion.fixtureType)) return false;
 
-    const fixtureDef = FIXTURE_TYPES.find(ft => ft.id === suggestion.fixtureType);
-    const subs = selectedSubOptions[suggestion.fixtureType];
-    if (fixtureDef?.subOptions && fixtureDef.subOptions.length > 0 && (!subs || subs.length === 0)) {
-      return false;
-    }
-    if (subs && subs.length > 0 && !subs.includes(suggestion.subOption)) return false;
+  const selectedFixtureSet = new Set(
+    selectedFixtures
+      .map(fixture => sanitizeFixtureType(fixture))
+      .filter((fixture): fixture is string => !!fixture)
+  );
 
-    return true;
-  }).sort((a, b) => a.priority - b.priority);
+  return analysis.suggestedFixtures
+    .map(suggestion => {
+      const fixtureType = sanitizeFixtureType(suggestion.fixtureType);
+      if (!fixtureType || !selectedFixtureSet.has(fixtureType)) return null;
+
+      const fixtureDef = FIXTURE_TYPES.find(ft => ft.id === fixtureType);
+      const resolvedSubOption = resolveSuggestedSubOptionId(
+        fixtureType,
+        suggestion.subOption,
+        selectedSubOptions
+      );
+
+      if (fixtureDef?.subOptions && fixtureDef.subOptions.length > 0 && !resolvedSubOption) {
+        return null;
+      }
+
+      return {
+        ...suggestion,
+        fixtureType,
+        subOption: resolvedSubOption || suggestion.subOption,
+      };
+    })
+    .filter((suggestion): suggestion is SuggestedFixture => !!suggestion)
+    .sort((a, b) => a.priority - b.priority);
 }

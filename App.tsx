@@ -1427,11 +1427,10 @@ const App: React.FC = () => {
             });
             return prev.filter(id => id !== optId);
         } else {
-            // Selecting - initialize with default count (manual mode shows plus/minus)
-            const defaultCount = activeConfigFixture ? getDefaultCount(activeConfigFixture, optId) : 6;
+            // Selecting defaults to auto count until user explicitly switches to manual quantity.
             setPendingCounts(counts => ({
                 ...counts,
-                [optId]: defaultCount
+                [optId]: null
             }));
             return [...prev, optId];
         }
@@ -1858,6 +1857,25 @@ const App: React.FC = () => {
         setIsLoading(false);
         setError("Please select at least one lighting type or enter custom instructions.");
         return;
+    }
+
+    if (placementMode !== 'manual' && selectedFixtures.length > 0) {
+        const unconfiguredFixtures = selectedFixtures.filter((fixtureId) => {
+            const fixtureDef = FIXTURE_TYPES.find(f => f.id === fixtureId);
+            if (!fixtureDef?.subOptions || fixtureDef.subOptions.length === 0) return false;
+            return (fixtureSubOptions[fixtureId] || []).length === 0;
+        });
+
+        if (unconfiguredFixtures.length > 0) {
+            const names = unconfiguredFixtures
+                .map((fixtureId) => FIXTURE_TYPES.find(f => f.id === fixtureId)?.label || fixtureId)
+                .join(', ');
+            const message = `Configure at least one placement area for: ${names}.`;
+            setIsLoading(false);
+            setError(message);
+            showToast('warning', message);
+            return;
+        }
     }
 
     setLastUsedPrompt(activePrompt);
