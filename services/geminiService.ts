@@ -1904,6 +1904,63 @@ const buildDirectPrompt = (
   return prompt;
 };
 
+const buildDeterministicPipelinePrompt = (
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number,
+  userPreferences?: UserPreferences | null,
+  spatialMap?: SpatialMap,
+  userInstructionNotes?: string,
+  applyManualRailOverride?: boolean,
+  modificationRequest?: string
+): string => {
+  let prompt = buildDirectPrompt(
+    selectedFixtures,
+    fixtureSubOptions,
+    fixtureCounts,
+    colorTemperaturePrompt,
+    lightIntensity,
+    beamAngle
+  );
+
+  const preferenceContext = buildPreferenceContext(userPreferences);
+  if (preferenceContext) {
+    prompt = `${preferenceContext}\n\n${prompt}`;
+  }
+
+  if (spatialMap?.placements.length) {
+    prompt += '\n\n=== SPATIAL MAP DATA (EXACT COORDINATES) ===\n';
+    prompt += formatSpatialMapForPrompt(spatialMap);
+    prompt += '\nMANDATORY: Render exactly the listed fixtures at exactly listed [X%, Y%] coordinates. Do not add, remove, or move fixtures.\n';
+  }
+
+  const trimmedUserInstructionNotes = userInstructionNotes?.trim();
+  if (trimmedUserInstructionNotes) {
+    prompt += '\n\n=== USER DIRECTIVES (HIGHEST PRIORITY) ===\n';
+    prompt += '- Follow these directives exactly for fixture placement scope and count.\n';
+    prompt += '- Do not broaden placement beyond these directives.\n';
+    prompt += `${trimmedUserInstructionNotes}\n`;
+  }
+
+  if (applyManualRailOverride && spatialMap?.placements.some(p => p.fixtureType === 'gutter')) {
+    prompt += `\n\n=== MANUAL RAIL OVERRIDE (HIGHEST PRIORITY) ===\n`;
+    prompt += `- For this request, fixtureType="gutter" means USER-DEFINED LINE-MOUNTED UPLIGHT.\n`;
+    prompt += `- These lights are NOT restricted to roof gutters and may be anywhere in the image.\n`;
+    prompt += `- Keep every line-mounted light at its EXACT [X%, Y%] coordinate.\n`;
+    prompt += `- Beam direction MUST follow each fixture's exact rotation value.\n`;
+    prompt += `- Do not reinterpret, relocate, rebalance, or "improve" any line-mounted placement.\n`;
+  }
+
+  const modificationSection = modificationRequest?.trim()
+    ? `\n\nCRITICAL MODIFICATION REQUEST: ${modificationRequest.trim()}\nKeep all fixture coordinates and beam directions exactly as specified above while applying this change.\n`
+    : '';
+
+  return `${prompt}${modificationSection}\n${buildPhotorealismLockAddendum()}`;
+};
+
 /**
  * DIRECT GENERATION - Single API call, ~20-60 seconds
  * Uses Nano Banana 2's built-in "thinking" for composition
@@ -3144,57 +3201,6 @@ function buildDeepThinkInput(
   };
 }
 
-function buildStage1FallbackPrompt(
-  selectedFixtures: string[],
-  fixtureSubOptions: Record<string, string[]>,
-  fixtureCounts: Record<string, number | null>,
-  colorTemperaturePrompt: string,
-  lightIntensity: number,
-  beamAngle: number,
-  userPreferences?: UserPreferences | null,
-  spatialMap?: SpatialMap,
-  isManualMode?: boolean,
-  userInstructionNotes?: string
-): string {
-  let prompt = buildDirectPrompt(
-    selectedFixtures,
-    fixtureSubOptions,
-    fixtureCounts,
-    colorTemperaturePrompt,
-    lightIntensity,
-    beamAngle
-  );
-
-  const preferenceContext = buildPreferenceContext(userPreferences);
-  if (preferenceContext) {
-    prompt = `${preferenceContext}\n\n${prompt}`;
-  }
-
-  if (spatialMap?.placements?.length) {
-    prompt += '\n\n=== EXACT FIXTURE PLACEMENT MAP (MANDATORY) ===\n';
-    prompt += formatSpatialMapForPrompt(spatialMap);
-    prompt += '\nMANDATORY: Each listed fixture is required. Do not add fixtures. Do not remove fixtures. Do not move fixtures.\n';
-  }
-
-  const trimmedUserInstructionNotes = userInstructionNotes?.trim();
-  if (trimmedUserInstructionNotes) {
-    prompt += '\n\n=== USER DIRECTIVES (HIGHEST PRIORITY) ===\n';
-    prompt += '- Follow these directives exactly for placement scope and counts.\n';
-    prompt += '- Do not broaden placement beyond these directives.\n';
-    prompt += `${trimmedUserInstructionNotes}\n`;
-  }
-
-  if (isManualMode && spatialMap?.placements.some(p => p.fixtureType === 'gutter')) {
-    prompt += '\n\n=== MANUAL RAIL OVERRIDE (HIGHEST PRIORITY) ===\n';
-    prompt += '- fixtureType="gutter" is a user-defined line-mounted uplight and may appear anywhere in image.\n';
-    prompt += '- Keep every line-mounted light at its exact [X%, Y%] coordinate and rail anchor.\n';
-    prompt += '- Keep beam direction exactly as user rotation specifies.\n';
-    prompt += '- Do not redistribute or rebalance these placements.\n';
-  }
-
-  return prompt;
-}
-
 /**
  * Stage 1 (New Pipeline): Deep Think analyzes the property photo and writes
  * the complete generation prompt for Nano Banana 2.
@@ -3319,23 +3325,9 @@ export async function deepThinkGeneratePrompt(
     }, STAGE1_RETRY_MAX_ATTEMPTS, STAGE1_RETRY_INITIAL_DELAY_MS);
   } catch (error) {
     if (isRetryableProviderError(error)) {
-      const fallbackPrompt = buildStage1FallbackPrompt(
-        selectedFixtures,
-        fixtureSubOptions,
-        fixtureCounts,
-        colorTemperaturePrompt,
-        lightIntensity,
-        beamAngle,
-        userPreferences,
-        spatialMap,
-        isManualMode,
-        userInstructionNotes
+      throw new Error(
+        'STAGE_1_UNAVAILABLE: Gemini 3.1 Pro is temporarily overloaded (HTTP 503/UNAVAILABLE). Please retry in 15-30 seconds.'
       );
-      console.warn('[DeepThink] Stage 1 unavailable (retryable provider error). Falling back to deterministic prompt assembly.');
-      return {
-        prompt: fallbackPrompt,
-        analysisNotes: 'stage1_fallback_direct_prompt',
-      };
     }
     throw error;
   }
@@ -4152,7 +4144,7 @@ void LEGACY_PIPELINE_REFERENCES;
 
 /**
  * Manual-mode generation (strict 2-step Gemini pipeline).
- * Step 1: Gemini 3.1 Pro analyzes image + explicit spatial map and writes prompt.
+ * Step 1: Deterministic prompt assembly from user selections + spatial map.
  * Step 2: Gemini image model renders final result from the source image + prompt.
  */
 export const generateManualScene = async (
@@ -4173,7 +4165,7 @@ export const generateManualScene = async (
   gutterLines?: GutterLine[],
   modificationRequest?: string
 ): Promise<{ result: string; nightBase: string }> => {
-  console.log('[Manual Mode] Starting strict 2-step Gemini pipeline...');
+  console.log('[Manual Mode] Starting deterministic 2-step Gemini pipeline...');
   console.log(`[Manual Mode] ${spatialMap.placements.length} fixtures to render`);
 
   const normalized = normalizeGutterPlacements(spatialMap, gutterLines);
@@ -4193,12 +4185,10 @@ export const generateManualScene = async (
   const manualAspectRatio: string | undefined = undefined;
   const generationBaseImage = imageBase64;
 
-  // Step 1: Analyze with Gemini 3.1 Pro
+  // Step 1: Assemble deterministic prompt (no Deep Think call)
   onStageUpdate?.('analyzing');
-  console.log('[Manual Mode] Step 1/2: Gemini 3.1 Pro analyzing placements + writing prompt...');
-  const deepThinkResult = await deepThinkGeneratePrompt(
-    generationBaseImage,
-    imageMimeType,
+  console.log('[Manual Mode] Step 1/2: Building deterministic prompt from selections + spatial map...');
+  const lockedPrompt = buildDeterministicPipelinePrompt(
     selectedFixtures,
     fixtureSubOptions,
     fixtureCounts,
@@ -4207,13 +4197,11 @@ export const generateManualScene = async (
     beamAngle,
     userPreferences,
     normalizedSpatialMap,
-    true
+    undefined,
+    true,
+    modificationRequest
   );
-  console.log(`[Manual Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
-  const modificationSection = modificationRequest?.trim()
-    ? `\n\nCRITICAL MODIFICATION REQUEST: ${modificationRequest.trim()}\nKeep all fixture coordinates and beam directions exactly as specified above while applying this change.\n`
-    : '';
-  const lockedPrompt = `${deepThinkResult.prompt}${modificationSection}\n${buildPhotorealismLockAddendum()}`;
+  console.log(`[Manual Mode] Prompt assembled. Length: ${lockedPrompt.length} chars`);
 
   // Step 2: Generate with Gemini image model
   onStageUpdate?.('placing');
@@ -4231,7 +4219,7 @@ export const generateManualScene = async (
 /**
  * Enhanced Night Scene Generation using the fixed 2-stage pipeline
  * This replaces the Claude + Gemini hybrid mode with a Gemini-only pipeline
- * 2-Stage Pipeline: Deep Think (analysis + prompt) -> Nano Banana 2 (image generation)
+ * 2-Stage Pipeline: Deterministic prompt assembly -> Nano Banana 2 (image generation)
  */
 export const generateNightSceneEnhanced = async (
   imageBase64: string,
@@ -4251,7 +4239,7 @@ export const generateNightSceneEnhanced = async (
   }) => void,
   userInstructionNotes?: string
 ): Promise<string> => {
-  console.log('[Enhanced Mode] Starting strict 2-step Gemini pipeline...');
+  console.log('[Enhanced Mode] Starting deterministic 2-step Gemini pipeline...');
   const hasUserSpecifiedCounts = buildExplicitAutoCountTargets(
     selectedFixtures,
     fixtureSubOptions,
@@ -4360,12 +4348,10 @@ export const generateNightSceneEnhanced = async (
     autoGutterLines = undefined;
   }
 
-  // Step 1: Analyze with Gemini 3.1 Pro
+  // Step 1: Assemble deterministic prompt (no Deep Think call)
   onStageUpdate?.('analyzing');
-  console.log('[Enhanced Mode] Step 1/2: Gemini 3.1 Pro analyzing + generating prompt...');
-  const deepThinkResult = await deepThinkGeneratePrompt(
-    imageBase64,
-    imageMimeType,
+  console.log('[Enhanced Mode] Step 1/2: Building deterministic prompt from selections...');
+  const lockedPrompt = buildDeterministicPipelinePrompt(
     selectedFixtures,
     fixtureSubOptions,
     fixtureCounts,
@@ -4374,14 +4360,9 @@ export const generateNightSceneEnhanced = async (
     beamAngle,
     userPreferences,
     autoSpatialMap,
-    false,
     userInstructionNotes
   );
-  console.log(`[Enhanced Mode] Deep Think complete. Prompt length: ${deepThinkResult.prompt.length} chars`);
-  if (deepThinkResult.fixtureBreakdown) {
-    console.log('[Enhanced Mode] Fixture breakdown:', deepThinkResult.fixtureBreakdown);
-  }
-  const lockedPrompt = `${deepThinkResult.prompt}\n${buildPhotorealismLockAddendum()}`;
+  console.log(`[Enhanced Mode] Prompt assembled. Length: ${lockedPrompt.length} chars`);
 
   // Step 2: Generate with Gemini image model
   onStageUpdate?.('generating');
