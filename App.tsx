@@ -64,12 +64,11 @@ import DemoGuide from './components/DemoGuide';
 import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
-import { generateNightScene, generateNightSceneDirect, generateNightSceneEnhanced, generateManualScene } from './services/geminiService';
-import { analyzeWithClaude } from './services/claudeService';
-// IC-Light dependency removed - using Nano Banana Pro (best model) for all generations
+import { generateNightSceneEnhanced, generateManualScene } from './services/geminiService';
+// IC-Light dependency removed - using a fixed 2-stage pipeline for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal, Crosshair } from 'lucide-react';
 import { FIXTURE_TYPES, VISIBLE_FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
-import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, PropertyAnalysis, SpatialFixturePlacement } from './types';
+import { SavedProject, QuoteData, CompanyProfile, FixturePricing, BOMData, FixtureCatalogItem, InvoiceData, InvoiceLineItem, LineItem, ProjectStatus, AccentColor, FontSize, NotificationPreferences, ScheduleData, TimeSlot, CalendarEvent, EventType, RecurrencePattern, CustomPricingItem, UserPreferences, SettingsSnapshot, Client, LeadSource, SpatialFixturePlacement } from './types';
 
 // Helper to parse fixture quantities from text (custom notes)
 const parsePromptForQuantities = (text: string): Record<string, number> => {
@@ -457,14 +456,10 @@ const App: React.FC = () => {
   const [showRipple, setShowRipple] = useState<boolean>(false);
   const [statusMessageIndex, setStatusMessageIndex] = useState<number>(0);
 
-  // Auto-prompt feature: Property analysis state
-  const [, setPropertyAnalysis] = useState<PropertyAnalysis | null>(null);
+  // Generation pipeline status
   const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'planning' | 'prompting' | 'validating' | 'generating' | 'converting' | 'placing'>('idle');
 
-  // Generation mode: 'enhanced' = Gemini Pro 3 only (Claude quality, lower cost), 'hybrid' = Claude Opus 4.5 + Gemini (premium), 'direct' = Gemini only (fast)
-  const [generationMode] = useState<'enhanced' | 'hybrid' | 'direct' | 'full'>('enhanced');
-
-  // Generation always uses Nano Banana Pro (best model) - IC-Light dependency removed
+  // Generation always uses Stage 1 Gemini 3.1 Pro -> Stage 2 Nano Banana 2
   const [ripplePosition, setRipplePosition] = useState<{x: number, y: number}>({x: 50, y: 50});
 
   // Generation History for Undo with Settings
@@ -1902,7 +1897,7 @@ const App: React.FC = () => {
       const base64 = await fileToBase64(file);
       const mimeType = file.type; // Capture mime type for use in nested functions
 
-      console.log('Generation mode:', generationMode);
+      console.log('Generation pipeline: Stage 1 Gemini 3.1 Pro -> Stage 2 Nano Banana 2');
       console.log('Selected fixtures:', selectedFixtures);
       console.log('Sub-options:', fixtureSubOptions);
       console.log('Counts:', fixtureCounts);
@@ -1944,159 +1939,36 @@ const App: React.FC = () => {
           ? `ADDITIONAL USER NOTES:\n${prompt.trim()}`
           : '',
       ].filter(Boolean).join('\n\n');
+      if (isManualMode && manualSpatialMap) {
+        console.log('Using MANUAL MODE (Stage 1 Gemini 3.1 Pro -> Stage 2 Nano Banana 2)...');
+        console.log('[Manual Mode] Pre-flight check:');
+        console.log(`  Fixtures: ${manualFixtures.length}`);
+        console.log(`  Types: ${[...new Set(manualFixtures.map(f => f.type))].join(', ')}`);
+        console.log(`  Spatial map placements: ${manualSpatialMap.placements.length}`);
 
-      // === ENHANCED MODE: Gemini Pro 3 Only (Claude Quality, Lower Cost) ===
-      if (generationMode === 'enhanced') {
-        if (isManualMode && manualSpatialMap) {
-          // MANUAL MODE: Streamlined path — skip analysis, direct to generation
-          console.log('Using MANUAL MODE (streamlined, no analysis)...');
-          console.log(`[Manual Mode] Pre-flight check:`);
-          console.log(`  Fixtures: ${manualFixtures.length}`);
-          console.log(`  Types: ${[...new Set(manualFixtures.map(f => f.type))].join(', ')}`);
-          console.log(`  Spatial map placements: ${manualSpatialMap.placements.length}`);
+        const manualResult = await generateManualScene(
+          base64,
+          mimeType,
+          manualSpatialMap,
+          effectiveFixtures,
+          effectiveSubOptions,
+          effectiveCounts,
+          colorPrompt,
+          lightIntensity,
+          beamAngle,
+          targetRatio,
+          userPreferences,
+          (stage) => setGenerationStage(stage as typeof generationStage),
+          manualFixtures,
+          nightBaseCache ?? undefined,
+          manualGutterLines.length > 0 ? manualGutterLines : undefined
+        );
+        result = manualResult.result;
+        setNightBaseCache(manualResult.nightBase);
+      } else {
+        console.log('Using AUTO MODE (Stage 1 Gemini 3.1 Pro -> Stage 2 Nano Banana 2)...');
+        setGenerationStage('analyzing');
 
-          const manualResult = await generateManualScene(
-            base64,
-            mimeType,
-            manualSpatialMap,
-            effectiveFixtures,
-            effectiveSubOptions,
-            effectiveCounts,
-            colorPrompt,
-            lightIntensity,
-            beamAngle,
-            targetRatio,
-            userPreferences,
-            (stage) => setGenerationStage(stage as typeof generationStage),
-            manualFixtures,
-            nightBaseCache ?? undefined,
-            manualGutterLines.length > 0 ? manualGutterLines : undefined
-          );
-          result = manualResult.result;
-          setNightBaseCache(manualResult.nightBase);
-        } else {
-          // AUTO MODE: Full pipeline with analysis (unchanged)
-          console.log('Using ENHANCED MODE (Gemini Pro 3 only - replaces Claude)...');
-          setGenerationStage('analyzing');
-
-          result = await generateNightSceneEnhanced(
-            base64,
-            mimeType,
-            effectiveFixtures,
-            effectiveSubOptions,
-            effectiveCounts,
-            colorPrompt,
-            lightIntensity,
-            beamAngle,
-            targetRatio,
-            userPreferences,
-            (stage) => setGenerationStage(stage as typeof generationStage),
-            captureAutoConstraints,
-            autoInstructionNotes || undefined
-          );
-        }
-      }
-      // === HYBRID MODE: Claude Opus 4.5 + Nano Banana Pro (Best Quality) ===
-      else if (generationMode === 'hybrid') {
-        try {
-          console.log('Using HYBRID MODE (Claude Opus 4.5 + Nano Banana Pro)...');
-
-          // Stage 1: Claude analyzes property and crafts optimized prompt
-          setGenerationStage('analyzing');
-          const claudeResult = await analyzeWithClaude(
-            base64,
-            mimeType,
-            selectedFixtures,
-            fixtureSubOptions,
-            fixtureCounts,
-            colorPrompt,
-            lightIntensity,
-            beamAngle,
-            userPreferences
-          );
-
-          console.log('[Claude] Analysis complete:', claudeResult.reasoning);
-          setPropertyAnalysis(claudeResult.analysis);
-
-          if (generationCancelledRef.current) {
-            generationCancelledRef.current = false;
-            setGenerationStage('idle');
-            return;
-          }
-
-          // Stage 2: Nano Banana Pro generates image with Claude's optimized prompt
-          setGenerationStage('generating');
-          result = await generateNightScene(
-            base64,
-            claudeResult.optimizedPrompt + (prompt ? `\n\n# USER CUSTOM NOTES\n${prompt}` : ''),
-            mimeType,
-            targetRatio,
-            claudeResult.analysis.recommendations.optimal_intensity === 'subtle' ? 40 :
-            claudeResult.analysis.recommendations.optimal_intensity === 'moderate' ? 60 :
-            claudeResult.analysis.recommendations.optimal_intensity === 'bright' ? 80 : 100,
-            claudeResult.analysis.recommendations.optimal_beam_angle,
-            colorPrompt,
-            userPreferences
-          );
-        } catch (hybridError) {
-          console.warn('Hybrid mode failed, falling back to direct generation:', hybridError);
-          // Fall through to direct generation
-          setGenerationStage('generating');
-          result = await generateNightSceneDirect(
-            base64,
-            mimeType,
-            selectedFixtures,
-            fixtureSubOptions,
-            fixtureCounts,
-            colorPrompt,
-            lightIntensity,
-            beamAngle,
-            targetRatio,
-            userPreferences
-          );
-        }
-      }
-      // === DIRECT GENERATION MODE (Fast - Single API Call) ===
-      else if (generationMode === 'direct') {
-        console.log('Using DIRECT GENERATION MODE (Nano Banana Pro only)...');
-        setGenerationStage('generating');
-
-        try {
-          result = await generateNightSceneDirect(
-            base64,
-            mimeType,
-            selectedFixtures,
-            fixtureSubOptions,
-            fixtureCounts,
-            colorPrompt,
-            lightIntensity,
-            beamAngle,
-            targetRatio,
-            userPreferences
-          );
-        } catch (directError) {
-          // If direct generation fails, fall back to enhanced mode
-          console.warn('Direct generation failed, falling back to enhanced mode:', directError);
-          result = await generateNightSceneEnhanced(
-            base64,
-            mimeType,
-            effectiveFixtures,
-            effectiveSubOptions,
-            effectiveCounts,
-            colorPrompt,
-            lightIntensity,
-            beamAngle,
-            targetRatio,
-            userPreferences,
-            (stage) => setGenerationStage(stage as typeof generationStage),
-            captureAutoConstraints,
-            autoInstructionNotes || undefined
-          );
-        }
-      }
-      // === FALLBACK: Use Enhanced Mode ===
-      else {
-        console.log('Using ENHANCED MODE (fallback)...');
         result = await generateNightSceneEnhanced(
           base64,
           mimeType,
@@ -2249,10 +2121,28 @@ const App: React.FC = () => {
           result = manualResult.result;
           setNightBaseCache(manualResult.nightBase);
         } else {
-          // Construct a refinement prompt
-          const refinementPrompt = `${lastUsedPrompt}\n\nCRITICAL MODIFICATION REQUEST: ${feedbackText}\n\nRe-generate the night scene keeping the original design but applying the modification request.`;
-          // Using Nano Banana Pro (best model) for regeneration
-          result = await generateNightScene(base64, refinementPrompt, file.type, targetRatio, lightIntensity, beamAngle, colorPrompt, userPreferences);
+          const refinementNotes = [
+            `CRITICAL MODIFICATION REQUEST:\n${feedbackText.trim()}`,
+            lastUsedPrompt.trim()
+              ? `PRIOR DESIGN CONTEXT (preserve unless it conflicts with the modification):\n${lastUsedPrompt.trim()}`
+              : '',
+          ].filter(Boolean).join('\n\n');
+
+          result = await generateNightSceneEnhanced(
+            base64,
+            file.type,
+            selectedFixtures,
+            fixtureSubOptions,
+            fixtureCounts,
+            colorPrompt,
+            lightIntensity,
+            beamAngle,
+            targetRatio,
+            userPreferences,
+            (stage) => setGenerationStage(stage as typeof generationStage),
+            undefined,
+            refinementNotes
+          );
         }
 
         setGenerationStage('idle');
@@ -3569,7 +3459,7 @@ Notes: ${invoice.notes || 'N/A'}
                 </div>
                 <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
                   <p className="text-gray-300 text-sm leading-relaxed">
-                      To access the advanced <span className="text-[#F6B45A] font-bold">Gemini 3 Pro</span> model, please configure your API Key in the application settings.
+                      To access the advanced <span className="text-[#F6B45A] font-bold">2-stage generation pipeline</span> (Gemini 3.1 Pro to Nano Banana 2), please configure your API Key in the application settings.
                   </p>
                 </div>
                 {/* Only show the connect button if we are in a dev environment that supports it */}
@@ -11560,3 +11450,4 @@ const AppWithErrorBoundary: React.FC = () => (
 export default AppWithErrorBoundary;
 // deploy Wed Jan 28 20:58:49 UTC 2026
 // force rebuild 1769636127
+

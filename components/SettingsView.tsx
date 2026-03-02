@@ -172,7 +172,7 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                - *Hardscape*: For retaining walls/steps.
                - *Core Drill*: In-grade lights for driveways/concrete.
              - **Custom Notes**: Users can type specific instructions (e.g., "Make it spooky", "Focus on the oak tree").
-          3. **Generate**: Uses 'Gemini 3 Pro' to render the scene.
+          3. **Generate**: Uses a 2-stage pipeline: 'Gemini 3.1 Pro' then 'Nano Banana 2'.
           4. **Refine**: Users can dislike a result and provide feedback to re-generate (e.g., "Too bright", "Remove the light on the door").
           5. **Save**: Projects can be saved to the database.
 

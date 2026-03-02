@@ -1,4 +1,4 @@
-﻿
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, ThinkingLevel } from "@google/genai";
 import type { UserPreferences, PropertyAnalysis, SpatialMap, SpatialFixturePlacement } from "../types";
 // FixtureType and SystemPromptConfig imports removed (used by deleted Stages 2-4)
@@ -19,8 +19,8 @@ import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/house
 import type { LightFixture, GutterLine } from "../types/fixtures";
 import { rotationToDirectionLabel, hasCustomRotation } from "../utils/fixtureConverter";
 
-// The prompt specifically asks for "Gemini 3 Pro" (Nano Banana Pro 2), which maps to 'gemini-3-pro-image-preview'.
-const MODEL_NAME = 'gemini-3-pro-image-preview';
+// Stage 2 image model: Nano Banana 2 (mapped to 'gemini-3-pro-image-preview').
+const NANO_BANANA_2_MODEL_NAME = 'gemini-3-pro-image-preview';
 
 // Timeout for API calls (2 minutes)
 const API_TIMEOUT_MS = 120000;
@@ -40,9 +40,9 @@ const INITIAL_CANDIDATE_COUNT = (() => {
 
 // Non-selected fixture types, including soffit, are explicitly forbidden in prompt assembly.
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 // DEEP THINK OUTPUT TYPE
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 
 interface DeepThinkOutput {
   prompt: string;
@@ -51,9 +51,9 @@ interface DeepThinkOutput {
   analysisNotes?: string;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 // STANDALONE INTENSITY / BEAM ANGLE DESCRIPTIONS (used by Deep Think input)
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 
 function getIntensityDescription(val: number): string {
   if (val < 25) return `LIGHTING INTENSITY: SUBTLE (2-3W LED equivalent, 150-300 lumens)
@@ -335,7 +335,7 @@ Respond in exact JSON (no markdown):
 {"score": <0-100>, "passed": <true|false>, "issues": ["<issue1>", "<issue2>"]}`;
 
     const response = await ai.models.generateContent({
-      model: ANALYSIS_MODEL_NAME,
+      model: GEMINI_3_1_PRO_MODEL_NAME,
       contents: {
         parts: [
           { inlineData: { data: generatedImageBase64, mimeType: imageMimeType } },
@@ -571,7 +571,7 @@ Return exact JSON (no markdown):
 {"artifactScore": <0-100>, "passed": <true|false>, "issues": ["<issue1>", "<issue2>"]}`;
 
     const response = await ai.models.generateContent({
-      model: ANALYSIS_MODEL_NAME,
+      model: GEMINI_3_1_PRO_MODEL_NAME,
       contents: {
         parts: [
           { inlineData: { data: generatedImageBase64, mimeType: imageMimeType } },
@@ -886,7 +886,7 @@ function buildPreferenceContext(preferences: UserPreferences | null | undefined)
 }
 
 // Analysis model - Gemini 3.1 Pro with Deep Think for property analysis
-const ANALYSIS_MODEL_NAME = 'gemini-3.1-pro-preview';
+const GEMINI_3_1_PRO_MODEL_NAME = 'gemini-3.1-pro-preview';
 const ANALYSIS_TIMEOUT_MS = 120000; // 120 seconds for Deep Think analysis
 
 /**
@@ -1062,7 +1062,7 @@ Base your analysis on:
   // Wrap the API call with retry logic (3 attempts, exponential backoff starting at 2s)
   return withRetry(async () => {
     const analyzePromise = ai.models.generateContent({
-      model: ANALYSIS_MODEL_NAME,
+      model: GEMINI_3_1_PRO_MODEL_NAME,
       contents: {
         parts: [
           {
@@ -1183,7 +1183,7 @@ Only return the JSON array, no other text.`;
   try {
     const response = await withTimeout(
       ai.models.generateContent({
-        model: ANALYSIS_MODEL_NAME,
+        model: GEMINI_3_1_PRO_MODEL_NAME,
         contents: [{
           role: 'user',
           parts: [
@@ -1723,7 +1723,7 @@ ${preferenceContext}
     imageParts.push({ text: finalPromptText });
 
     const generatePromise = ai.models.generateContent({
-      model: MODEL_NAME,
+      model: NANO_BANANA_2_MODEL_NAME,
       contents: {
         parts: imageParts,
       },
@@ -1884,7 +1884,7 @@ const buildDirectPrompt = (
 
 /**
  * DIRECT GENERATION - Single API call, ~20-60 seconds
- * Uses Nano Banana Pro's built-in "thinking" for composition
+ * Uses Nano Banana 2's built-in "thinking" for composition
  * Skips analysis/planning/prompting/validation stages
  */
 export const generateNightSceneDirect = async (
@@ -1927,7 +1927,7 @@ export const generateNightSceneDirect = async (
   try {
     const runDirectGeneration = async (promptText: string): Promise<string> => {
       const generatePromise = ai.models.generateContent({
-        model: MODEL_NAME,
+        model: NANO_BANANA_2_MODEL_NAME,
         contents: {
           parts: [
             {
@@ -2002,7 +2002,7 @@ export const generateNightSceneDirect = async (
       }
     }
 
-    console.log('✓ Direct generation successful');
+    console.log('[Direct Mode] Direct generation successful');
     return result;
   } catch (error) {
     console.error("Direct Generation Error:", error);
@@ -2012,7 +2012,7 @@ export const generateNightSceneDirect = async (
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SPATIAL MAPPING UTILITIES (Ported from claudeService.ts)
-// Used for Enhanced Gemini Pro 3 Mode
+// Used for the enhanced 2-stage generation mode
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 /**
@@ -3010,9 +3010,9 @@ function ensureAutoGutterRailPlacements(
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 2-STAGE PIPELINE: Deep Think → Nano Banana Pro
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
+// 2-STAGE PIPELINE: Deep Think -> Nano Banana 2
+// -------------------------------------------------------------------------------
 
 /**
  * Assembles all reference data for Deep Think to generate its prompt.
@@ -3124,7 +3124,7 @@ function buildDeepThinkInput(
 
 /**
  * Stage 1 (New Pipeline): Deep Think analyzes the property photo and writes
- * the complete generation prompt for Nano Banana Pro.
+ * the complete generation prompt for Nano Banana 2.
  * Replaces: analyzePropertyArchitecture() + buildEnhancedPrompt() / buildManualPrompt()
  */
 export async function deepThinkGeneratePrompt(
@@ -3194,7 +3194,7 @@ export async function deepThinkGeneratePrompt(
   return withRetry(async () => {
     const response = await withTimeout(
       ai.models.generateContent({
-        model: ANALYSIS_MODEL_NAME, // gemini-3.1-pro-preview
+        model: GEMINI_3_1_PRO_MODEL_NAME, // gemini-3.1-pro-preview
         contents: { parts: imageParts },
         config: {
           thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
@@ -3246,7 +3246,7 @@ export async function deepThinkGeneratePrompt(
 }
 
 /**
- * Stage 2 (New Pipeline): Thin wrapper around Nano Banana Pro API.
+ * Stage 2 (New Pipeline): Thin wrapper around Nano Banana 2 API.
  * Takes the prompt from Deep Think + images and generates the night scene.
  */
 export async function executeGeneration(
@@ -3275,11 +3275,11 @@ export async function executeGeneration(
   // The prompt from Deep Think
   imageParts.push({ text: generationPrompt });
 
-  console.log(`[executeGeneration] Sending to Nano Banana Pro. Prompt: ${generationPrompt.length} chars, Images: ${imageParts.filter(p => 'inlineData' in p).length}`);
+  console.log(`[executeGeneration] Sending to Nano Banana 2. Prompt: ${generationPrompt.length} chars, Images: ${imageParts.filter(p => 'inlineData' in p).length}`);
 
   const response = await withTimeout(
     ai.models.generateContent({
-      model: MODEL_NAME, // gemini-3-pro-image-preview
+      model: NANO_BANANA_2_MODEL_NAME, // gemini-3-pro-image-preview
       contents: { parts: imageParts },
       config: {
         temperature: 0.1,
@@ -3802,7 +3802,7 @@ Respond in this EXACT JSON format (no markdown, no code blocks):
 {"count": <number>, "fixtures": [{"type": "<type>", "x": <number>, "y": <number>, "direction": "<direction|unknown>"}], "confidence": <0-100>}`;
 
     const response = await ai.models.generateContent({
-      model: ANALYSIS_MODEL_NAME,
+      model: GEMINI_3_1_PRO_MODEL_NAME,
       contents: {
         parts: [
           { inlineData: { data: generatedImageBase64, mimeType: imageMimeType } },
@@ -3900,7 +3900,7 @@ REQUIREMENTS:
 
   const response = await withTimeout(
     ai.models.generateContent({
-      model: MODEL_NAME,
+      model: NANO_BANANA_2_MODEL_NAME,
       contents: { parts: [
         { inlineData: { data: resized, mimeType: imageMimeType } },
         { text: prompt }
@@ -4133,9 +4133,9 @@ export const generateManualScene = async (
 };
 
 /**
- * Enhanced Night Scene Generation using Gemini Pro 3 Only
+ * Enhanced Night Scene Generation using the fixed 2-stage pipeline
  * This replaces the Claude + Gemini hybrid mode with a Gemini-only pipeline
- * 2-Stage Pipeline: Deep Think (analysis + prompt) → Nano Banana Pro (image generation)
+ * 2-Stage Pipeline: Deep Think (analysis + prompt) -> Nano Banana 2 (image generation)
  */
 export const generateNightSceneEnhanced = async (
   imageBase64: string,
@@ -4504,7 +4504,7 @@ Return ONLY valid JSON. No markdown code blocks.`;
 
   try {
     const analyzePromise = ai.models.generateContent({
-      model: ANALYSIS_MODEL_NAME,
+      model: GEMINI_3_1_PRO_MODEL_NAME,
       contents: {
         parts: [
           {
