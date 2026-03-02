@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "fixtures": {
+    "uplight": {
+      "displayName": "Uplight",
+      "typicalColorTempK": 2700,
+      "beamProfile": "spot",
+      "renderIntent": "Narrow-to-medium upward cone with realistic falloff and texture grazing on vertical surfaces.",
+      "intensityGuidance": {
+        "subtle": 0.75,
+        "balanced": 1.0,
+        "dramatic": 1.3
+      }
+    },
+    "downlight": {
+      "displayName": "Downlight",
+      "typicalColorTempK": 2700,
+      "beamProfile": "flood",
+      "renderIntent": "Downward cone from elevated mount point with soft ground wash and natural shadowing.",
+      "intensityGuidance": {
+        "subtle": 0.7,
+        "balanced": 1.0,
+        "dramatic": 1.25
+      }
+    },
+    "path_light": {
+      "displayName": "Path Light",
+      "typicalColorTempK": 2700,
+      "beamProfile": "flood",
+      "renderIntent": "Compact, low-height radial pool on ground with short throw and gentle edge feathering.",
+      "intensityGuidance": {
+        "subtle": 0.8,
+        "balanced": 1.0,
+        "dramatic": 1.2
+      }
+    },
+    "spot": {
+      "displayName": "Spot",
+      "typicalColorTempK": 2700,
+      "beamProfile": "spot",
+      "renderIntent": "Tight, focused cone highlighting a specific architectural or landscape focal point.",
+      "intensityGuidance": {
+        "subtle": 0.75,
+        "balanced": 1.0,
+        "dramatic": 1.35
+      }
+    },
+    "wall_wash": {
+      "displayName": "Wall Wash",
+      "typicalColorTempK": 2700,
+      "beamProfile": "wash",
+      "renderIntent": "Wide, even vertical wash with soft transitions and controlled overlap between adjacent fixtures.",
+      "intensityGuidance": {
+        "subtle": 0.7,
+        "balanced": 1.0,
+        "dramatic": 1.2
+      }
+    },
+    "well_light": {
+      "displayName": "Well Light",
+      "typicalColorTempK": 2700,
+      "beamProfile": "spot",
+      "renderIntent": "In-grade upward beam originating flush with hardscape or soil, clean source point with minimal fixture visibility.",
+      "intensityGuidance": {
+        "subtle": 0.8,
+        "balanced": 1.0,
+        "dramatic": 1.3
+      }
+    },
+    "bollard": {
+      "displayName": "Bollard",
+      "typicalColorTempK": 2700,
+      "beamProfile": "flood",
+      "renderIntent": "Omnidirectional low-level path illumination with contained circular spread and no excessive glare.",
+      "intensityGuidance": {
+        "subtle": 0.8,
+        "balanced": 1.0,
+        "dramatic": 1.15
+      }
+    },
+    "step_light": {
+      "displayName": "Step Light",
+      "typicalColorTempK": 2700,
+      "beamProfile": "wash",
+      "renderIntent": "Short horizontal wash across tread/riser surfaces to define steps without hotspot blowout.",
+      "intensityGuidance": {
+        "subtle": 0.75,
+        "balanced": 1.0,
+        "dramatic": 1.2
+      }
+    },
+    "gutter_uplight": {
+      "displayName": "Gutter Uplight",
+      "typicalColorTempK": 2700,
+      "beamProfile": "spot",
+      "renderIntent": "Line-mounted directional uplight creating narrow vertical cones up roofline features.",
+      "intensityGuidance": {
+        "subtle": 0.75,
+        "balanced": 1.0,
+        "dramatic": 1.35
+      }
+    },
+    "coredrill": {
+      "displayName": "Core Drill",
+      "typicalColorTempK": 2700,
+      "beamProfile": "spot",
+      "renderIntent": "Flush-mounted in-surface source emitting a tight upward accent beam with realistic concrete interaction.",
+      "intensityGuidance": {
+        "subtle": 0.8,
+        "balanced": 1.0,
+        "dramatic": 1.3
+      }
+    },
+    "flood": {
+      "displayName": "Flood",
+      "typicalColorTempK": 2700,
+      "beamProfile": "flood",
+      "renderIntent": "Broad cone for larger coverage with gentle overlap and controlled brightness rolloff.",
+      "intensityGuidance": {
+        "subtle": 0.7,
+        "balanced": 1.0,
+        "dramatic": 1.25
+      }
+    }
+  }
+}

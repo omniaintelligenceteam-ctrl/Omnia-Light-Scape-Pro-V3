@@ -9,6 +9,7 @@
 
 import type { LightFixture, FixtureCategory } from '../types/fixtures';
 import type { SpatialMap, SpatialFixturePlacement } from '../types';
+import { buildNormalizedFixturePlacements, validateNormalizedFixturePlacements } from '../src/lib/mockup/spec';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPE MAPPING
@@ -136,6 +137,9 @@ function generateDescription(fixture: LightFixture): string {
 export function convertFixturesToSpatialMap(
   fixtures: LightFixture[]
 ): SpatialMap {
+  // Hard preflight: all normalized coordinates must be valid before any API call.
+  validateNormalizedFixturePlacements(buildNormalizedFixturePlacements(fixtures));
+
   const placements: SpatialFixturePlacement[] = fixtures.map((f, index) => {
     const pipelineType = CATEGORY_TO_PIPELINE_TYPE[f.type];
     const subOption = inferSubOption(f);

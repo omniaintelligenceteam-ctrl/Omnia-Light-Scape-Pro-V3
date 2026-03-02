@@ -65,6 +65,8 @@ import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightSceneEnhanced, generateManualScene } from './services/geminiService';
+import { buildMockupRenderSpecFromManualFixtures, buildPricingQuantitiesFromMockupFixtures } from './src/lib/mockup/buildSpec';
+import type { MockupRenderSpec } from './src/lib/mockup/spec';
 // IC-Light dependency removed - using a fixed 2-stage pipeline for all generations
 import { Loader2, FolderPlus, FileText, Maximize2, Trash2, Search, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle, Wand2, ThumbsUp, ThumbsDown, X, RefreshCw, Image as ImageIcon, Check, CheckCircle2, Receipt, Calendar, CalendarDays, Download, Plus, Minus, Undo2, Phone, MapPin, User, Clock, ChevronRight, ChevronLeft, ChevronDown, Sun, Settings2, Mail, Users, Edit, Edit3, Save, Upload, Share2, Link2, Copy, ExternalLink, LayoutGrid, Columns, Building2, Hash, List, SplitSquareHorizontal, Crosshair } from 'lucide-react';
 import { FIXTURE_TYPES, VISIBLE_FIXTURE_TYPES, COLOR_TEMPERATURES, DEFAULT_PRICING, SYSTEM_PROMPT } from './constants';
@@ -117,6 +119,10 @@ const getClosestSupportedAspectRatio = (ratio: number): "16:9" | "4:3" | "1:1" |
 
   return closest.id;
 };
+
+const MOCKUP_V2_MARKERS_ENABLED = String(
+  (import.meta as any)?.env?.MOCKUP_V2_MARKERS ?? import.meta.env.VITE_MOCKUP_V2_MARKERS ?? ''
+).toLowerCase() === 'true';
 
 // Estimate fixture counts based on selected sub-options
 // Each sub-option represents a specific placement area that typically requires a certain number of fixtures
@@ -448,6 +454,8 @@ const App: React.FC = () => {
   const [customPricing, setCustomPricing] = useState<CustomPricingItem[]>([]);
 
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [lastMockupV2Spec, setLastMockupV2Spec] = useState<MockupRenderSpec | null>(null);
+  const [, setLastMockupV2QaResult] = useState<any>(null);
   const [nightBaseCache, setNightBaseCache] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -1314,6 +1322,8 @@ const App: React.FC = () => {
     setFile(selectedFile);
     setPreviewUrl(getPreviewUrl(selectedFile));
     setGeneratedImage(null);
+    setLastMockupV2Spec(null);
+    setLastMockupV2QaResult(null);
     setShowQaOverlay(false);
     setNightBaseCache(null);
     setGenerationHistory([]); // Clear history on new photo
@@ -1338,6 +1348,8 @@ const App: React.FC = () => {
     setFile(null);
     setPreviewUrl(null);
     setGeneratedImage(null);
+    setLastMockupV2Spec(null);
+    setLastMockupV2QaResult(null);
     setShowQaOverlay(false);
     setNightBaseCache(null);
     setGenerationHistory([]); // Clear history on clear
@@ -1355,6 +1367,8 @@ const App: React.FC = () => {
 
   const handleCloseResult = () => {
     setGeneratedImage(null);
+    setLastMockupV2Spec(null);
+    setLastMockupV2QaResult(null);
     setShowQaOverlay(false);
     setShowFeedback(false);
     setFeedbackText('');
@@ -1946,28 +1960,81 @@ const App: React.FC = () => {
         console.log(`  Types: ${[...new Set(manualFixtures.map(f => f.type))].join(', ')}`);
         console.log(`  Spatial map placements: ${manualSpatialMap.placements.length}`);
 
-        const manualResult = await generateManualScene(
-          base64,
-          mimeType,
-          manualSpatialMap,
-          effectiveFixtures,
-          effectiveSubOptions,
-          effectiveCounts,
-          colorPrompt,
-          lightIntensity,
-          beamAngle,
-          targetRatio,
-          userPreferences,
-          (stage) => setGenerationStage(stage as typeof generationStage),
-          manualFixtures,
-          nightBaseCache ?? undefined,
-          manualGutterLines.length > 0 ? manualGutterLines : undefined
-        );
-        result = manualResult.result;
-        setNightBaseCache(manualResult.nightBase);
+        if (MOCKUP_V2_MARKERS_ENABLED) {
+          setGenerationStage('generating');
+          if (!previewUrl) {
+            throw new Error('[MockupRenderSpec] Missing preview URL for marker-mode render.');
+          }
+          const sizeProbe = new Image();
+          sizeProbe.src = previewUrl;
+          await sizeProbe.decode();
+          const stylePreset = lightIntensity < 35 ? 'subtle' : lightIntensity > 70 ? 'dramatic' : 'balanced';
+          const mockupSpec = buildMockupRenderSpecFromManualFixtures({
+            fixtures: manualFixtures,
+            inputImageBase64: base64,
+            imageWidth: sizeProbe.width,
+            imageHeight: sizeProbe.height,
+            stylePreset,
+          });
+
+          const v2Response = await fetch('/api/mockup-v2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              spec: mockupSpec,
+              options: {
+                outputTier: 'preview',
+                aspectRatio: targetRatio,
+                qaRetryLimit: 1,
+              },
+            }),
+          });
+
+          const v2Payload = await v2Response.json();
+          if (!v2Response.ok) {
+            throw new Error(v2Payload?.error || `Mockup v2 request failed (${v2Response.status})`);
+          }
+          if (!v2Payload?.imageDataUri) {
+            throw new Error('[MockupRenderSpec] Mockup v2 returned no imageDataUri');
+          }
+
+          result = v2Payload.imageDataUri;
+          setLastMockupV2Spec(mockupSpec);
+          setLastMockupV2QaResult(v2Payload?.qa || null);
+          if (v2Payload?.qa) {
+            console.log('[Mockup V2] QA result:', v2Payload.qa);
+            if (v2Payload.qa.passed === false) {
+              showToast('warning', `Mockup QA warning: ${v2Payload.qa.details || 'constraint mismatch detected'}`);
+            }
+          }
+        } else {
+          const manualResult = await generateManualScene(
+            base64,
+            mimeType,
+            manualSpatialMap,
+            effectiveFixtures,
+            effectiveSubOptions,
+            effectiveCounts,
+            colorPrompt,
+            lightIntensity,
+            beamAngle,
+            targetRatio,
+            userPreferences,
+            (stage) => setGenerationStage(stage as typeof generationStage),
+            manualFixtures,
+            nightBaseCache ?? undefined,
+            manualGutterLines.length > 0 ? manualGutterLines : undefined
+          );
+          result = manualResult.result;
+          setNightBaseCache(manualResult.nightBase);
+          setLastMockupV2Spec(null);
+          setLastMockupV2QaResult(null);
+        }
       } else {
         console.log('Using AUTO MODE (Stage 1 Gemini 3.1 Pro -> Stage 2 Nano Banana 2)...');
         setGenerationStage('analyzing');
+        setLastMockupV2Spec(null);
+        setLastMockupV2QaResult(null);
 
         result = await generateNightSceneEnhanced(
           base64,
@@ -2044,6 +2111,12 @@ const App: React.FC = () => {
         setIsLoading(false);
         return;
       }
+      if (rawErrorMessage.includes('[MockupRenderSpec]')) {
+        setError(rawErrorMessage);
+        showToast('warning', rawErrorMessage);
+        setIsLoading(false);
+        return;
+      }
       if (
         rawErrorMessage.includes('STAGE_1_UNAVAILABLE:') ||
         errorMessage.includes('503') ||
@@ -2113,27 +2186,77 @@ const App: React.FC = () => {
 
         let result: string;
         if (isManualRegeneration && manualRegenerationSpatialMap) {
-          const manualSelections = deriveSelections(manualFixtures);
-          const manualResult = await generateManualScene(
-            base64,
-            file.type,
-            manualRegenerationSpatialMap,
-            manualSelections.selectedFixtures,
-            manualSelections.fixtureSubOptions,
-            manualSelections.fixtureCounts,
-            colorPrompt,
-            lightIntensity,
-            beamAngle,
-            targetRatio,
-            userPreferences,
-            (stage) => setGenerationStage(stage as typeof generationStage),
-            manualFixtures,
-            nightBaseCache ?? undefined,
-            manualGutterLines.length > 0 ? manualGutterLines : undefined,
-            feedbackText
-          );
-          result = manualResult.result;
-          setNightBaseCache(manualResult.nightBase);
+          if (MOCKUP_V2_MARKERS_ENABLED) {
+            if (!previewUrl) {
+              throw new Error('[MockupRenderSpec] Missing preview URL for marker-mode regeneration.');
+            }
+            const sizeProbe = new Image();
+            sizeProbe.src = previewUrl;
+            await sizeProbe.decode();
+            const stylePreset = lightIntensity < 35 ? 'subtle' : lightIntensity > 70 ? 'dramatic' : 'balanced';
+            const mockupSpec = buildMockupRenderSpecFromManualFixtures({
+              fixtures: manualFixtures,
+              inputImageBase64: base64,
+              imageWidth: sizeProbe.width,
+              imageHeight: sizeProbe.height,
+              stylePreset,
+            });
+
+            const v2Response = await fetch('/api/mockup-v2', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                spec: mockupSpec,
+                options: {
+                  outputTier: 'preview',
+                  aspectRatio: targetRatio,
+                  qaRetryLimit: 1,
+                },
+              }),
+            });
+
+            const v2Payload = await v2Response.json();
+            if (!v2Response.ok) {
+              throw new Error(v2Payload?.error || `Mockup v2 request failed (${v2Response.status})`);
+            }
+            if (!v2Payload?.imageDataUri) {
+              throw new Error('[MockupRenderSpec] Mockup v2 returned no imageDataUri');
+            }
+
+            result = v2Payload.imageDataUri;
+            setLastMockupV2Spec(mockupSpec);
+            setLastMockupV2QaResult(v2Payload?.qa || null);
+            if (v2Payload?.qa) {
+              console.log('[Mockup V2] QA result:', v2Payload.qa);
+              if (v2Payload.qa.passed === false) {
+                showToast('warning', `Mockup QA warning: ${v2Payload.qa.details || 'constraint mismatch detected'}`);
+              }
+            }
+          } else {
+            const manualSelections = deriveSelections(manualFixtures);
+            const manualResult = await generateManualScene(
+              base64,
+              file.type,
+              manualRegenerationSpatialMap,
+              manualSelections.selectedFixtures,
+              manualSelections.fixtureSubOptions,
+              manualSelections.fixtureCounts,
+              colorPrompt,
+              lightIntensity,
+              beamAngle,
+              targetRatio,
+              userPreferences,
+              (stage) => setGenerationStage(stage as typeof generationStage),
+              manualFixtures,
+              nightBaseCache ?? undefined,
+              manualGutterLines.length > 0 ? manualGutterLines : undefined,
+              feedbackText
+            );
+            result = manualResult.result;
+            setNightBaseCache(manualResult.nightBase);
+            setLastMockupV2Spec(null);
+            setLastMockupV2QaResult(null);
+          }
         } else {
           const refinementNotes = [
             `CRITICAL MODIFICATION REQUEST:\n${feedbackText.trim()}`,
@@ -2157,6 +2280,8 @@ const App: React.FC = () => {
             undefined,
             refinementNotes
           );
+          setLastMockupV2Spec(null);
+          setLastMockupV2QaResult(null);
         }
 
         setGenerationStage('idle');
@@ -2215,6 +2340,12 @@ const App: React.FC = () => {
                 : 'Gemini 3.1 Pro is temporarily overloaded (HTTP 503). Please retry in 15-30 seconds.';
             setError(userMessage);
             showToast('warning', userMessage);
+            setIsLoading(false);
+            return;
+        }
+        if (rawErrorMessage.includes('[MockupRenderSpec]')) {
+            setError(rawErrorMessage);
+            showToast('warning', rawErrorMessage);
             setIsLoading(false);
             return;
         }
@@ -2397,6 +2528,38 @@ const App: React.FC = () => {
 
   // Helper function to generate quote data based on selected fixtures
   const generateQuoteFromSelections = (): QuoteData => {
+    if (MOCKUP_V2_MARKERS_ENABLED && lastMockupV2Spec && lastMockupV2Spec.fixtures.length > 0) {
+      const exactCounts = buildPricingQuantitiesFromMockupFixtures(lastMockupV2Spec.fixtures);
+      const hasAnyFixture = Object.entries(exactCounts)
+        .some(([fixtureType, qty]) => fixtureType !== 'transformer' && (qty || 0) > 0);
+
+      const lineItems = pricing.map(def => {
+        if (def.fixtureType === 'transformer') {
+          return { ...def, quantity: hasAnyFixture ? 1 : 0 };
+        }
+        return { ...def, quantity: exactCounts[def.fixtureType] || 0 };
+      }).filter(item => item.quantity > 0);
+
+      return {
+        lineItems: lineItems.map(i => ({
+          id: i.id,
+          name: i.name,
+          description: i.description,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice
+        })),
+        taxRate: 0.07,
+        discount: 0,
+        clientDetails: {
+          name: "",
+          email: "",
+          phone: "",
+          address: ""
+        },
+        total: 0
+      };
+    }
+
     // 1. Parse prompt (custom notes) for explicit quantities
     const parsedCounts = parsePromptForQuantities(prompt);
     const hasParsedCounts = Object.keys(parsedCounts).length > 0;

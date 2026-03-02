@@ -8,6 +8,7 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
     "build": "vite build",
+    "test:mockup-v2": "tsx --test tests/mockup/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
@@ -44,6 +45,7 @@
     "concurrently": "^8.2.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
+    "tsx": "^4.20.6",
     "typescript": "^5.5.3",
     "vite": "^5.4.1"
   }

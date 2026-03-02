@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "presets": {
+    "subtle": {
+      "name": "Subtle",
+      "description": "Low-intensity, restrained look with minimal bloom and soft transitions.",
+      "globalIntensityMultiplier": 0.8,
+      "bloomStrength": 0.25,
+      "contrastBoost": 0.05,
+      "hotspotStrength": 0.7,
+      "shadowDepth": 0.9,
+      "falloffSoftness": 1.1
+    },
+    "balanced": {
+      "name": "Balanced",
+      "description": "Natural baseline with realistic fixture presence and moderate contrast.",
+      "globalIntensityMultiplier": 1.0,
+      "bloomStrength": 0.4,
+      "contrastBoost": 0.12,
+      "hotspotStrength": 1.0,
+      "shadowDepth": 1.0,
+      "falloffSoftness": 1.0
+    },
+    "dramatic": {
+      "name": "Dramatic",
+      "description": "Higher contrast and stronger hotspot definition while preserving realism.",
+      "globalIntensityMultiplier": 1.2,
+      "bloomStrength": 0.55,
+      "contrastBoost": 0.2,
+      "hotspotStrength": 1.25,
+      "shadowDepth": 1.1,
+      "falloffSoftness": 0.9
+    }
+  }
+}
