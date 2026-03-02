@@ -3144,6 +3144,57 @@ function buildDeepThinkInput(
   };
 }
 
+function buildStage1FallbackPrompt(
+  selectedFixtures: string[],
+  fixtureSubOptions: Record<string, string[]>,
+  fixtureCounts: Record<string, number | null>,
+  colorTemperaturePrompt: string,
+  lightIntensity: number,
+  beamAngle: number,
+  userPreferences?: UserPreferences | null,
+  spatialMap?: SpatialMap,
+  isManualMode?: boolean,
+  userInstructionNotes?: string
+): string {
+  let prompt = buildDirectPrompt(
+    selectedFixtures,
+    fixtureSubOptions,
+    fixtureCounts,
+    colorTemperaturePrompt,
+    lightIntensity,
+    beamAngle
+  );
+
+  const preferenceContext = buildPreferenceContext(userPreferences);
+  if (preferenceContext) {
+    prompt = `${preferenceContext}\n\n${prompt}`;
+  }
+
+  if (spatialMap?.placements?.length) {
+    prompt += '\n\n=== EXACT FIXTURE PLACEMENT MAP (MANDATORY) ===\n';
+    prompt += formatSpatialMapForPrompt(spatialMap);
+    prompt += '\nMANDATORY: Each listed fixture is required. Do not add fixtures. Do not remove fixtures. Do not move fixtures.\n';
+  }
+
+  const trimmedUserInstructionNotes = userInstructionNotes?.trim();
+  if (trimmedUserInstructionNotes) {
+    prompt += '\n\n=== USER DIRECTIVES (HIGHEST PRIORITY) ===\n';
+    prompt += '- Follow these directives exactly for placement scope and counts.\n';
+    prompt += '- Do not broaden placement beyond these directives.\n';
+    prompt += `${trimmedUserInstructionNotes}\n`;
+  }
+
+  if (isManualMode && spatialMap?.placements.some(p => p.fixtureType === 'gutter')) {
+    prompt += '\n\n=== MANUAL RAIL OVERRIDE (HIGHEST PRIORITY) ===\n';
+    prompt += '- fixtureType="gutter" is a user-defined line-mounted uplight and may appear anywhere in image.\n';
+    prompt += '- Keep every line-mounted light at its exact [X%, Y%] coordinate and rail anchor.\n';
+    prompt += '- Keep beam direction exactly as user rotation specifies.\n';
+    prompt += '- Do not redistribute or rebalance these placements.\n';
+  }
+
+  return prompt;
+}
+
 /**
  * Stage 1 (New Pipeline): Deep Think analyzes the property photo and writes
  * the complete generation prompt for Nano Banana 2.
@@ -3268,9 +3319,23 @@ export async function deepThinkGeneratePrompt(
     }, STAGE1_RETRY_MAX_ATTEMPTS, STAGE1_RETRY_INITIAL_DELAY_MS);
   } catch (error) {
     if (isRetryableProviderError(error)) {
-      throw new Error(
-        'STAGE_1_UNAVAILABLE: Gemini 3.1 Pro is temporarily overloaded (HTTP 503/UNAVAILABLE). Please retry in 15-30 seconds.'
+      const fallbackPrompt = buildStage1FallbackPrompt(
+        selectedFixtures,
+        fixtureSubOptions,
+        fixtureCounts,
+        colorTemperaturePrompt,
+        lightIntensity,
+        beamAngle,
+        userPreferences,
+        spatialMap,
+        isManualMode,
+        userInstructionNotes
       );
+      console.warn('[DeepThink] Stage 1 unavailable (retryable provider error). Falling back to deterministic prompt assembly.');
+      return {
+        prompt: fallbackPrompt,
+        analysisNotes: 'stage1_fallback_direct_prompt',
+      };
     }
     throw error;
   }
