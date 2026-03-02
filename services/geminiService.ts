@@ -30,6 +30,8 @@ const MAX_ARTIFACT_RETRY_ATTEMPTS = 1;
 const ANNOTATION_ARTIFACT_MAX_SCORE = 8;
 const MAX_AUTO_GUTTER_LINES = 3;
 const AUTO_PLACEMENT_CONFIDENCE_MIN_SCORE = 85;
+const STAGE1_RETRY_MAX_ATTEMPTS = 5;
+const STAGE1_RETRY_INITIAL_DELAY_MS = 2500;
 const DEFAULT_INITIAL_CANDIDATE_COUNT = 2;
 const MAX_INITIAL_CANDIDATE_COUNT = 3;
 const INITIAL_CANDIDATE_COUNT = (() => {
@@ -122,6 +124,30 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): 
   ]);
 }
 
+function normalizeErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message.toLowerCase();
+  if (typeof error === 'string') return error.toLowerCase();
+  try {
+    return JSON.stringify(error).toLowerCase();
+  } catch {
+    return String(error).toLowerCase();
+  }
+}
+
+function isRetryableProviderError(error: unknown): boolean {
+  const message = normalizeErrorMessage(error);
+  return (
+    message.includes('timed out') ||
+    message.includes('503') ||
+    message.includes('429') ||
+    message.includes('unavailable') ||
+    message.includes('service unavailable') ||
+    message.includes('high demand') ||
+    message.includes('econnreset') ||
+    message.includes('network')
+  );
+}
+
 /**
  * Retry helper with exponential backoff
  * @param fn - Async function to retry
@@ -141,16 +167,12 @@ async function withRetry<T>(
       return await fn();
     } catch (error) {
       lastError = error;
-      const isTimeout = error instanceof Error && error.message.includes('timed out');
-      const isRetryable = isTimeout || (error instanceof Error && (
-        error.message.includes('503') ||
-        error.message.includes('429') ||
-        error.message.includes('ECONNRESET') ||
-        error.message.includes('network')
-      ));
+      const isRetryable = isRetryableProviderError(error);
 
       if (attempt < maxAttempts && isRetryable) {
-        const delay = initialDelayMs * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+        const backoffDelay = initialDelayMs * Math.pow(2, attempt - 1);
+        const jitter = Math.round(backoffDelay * 0.2 * Math.random());
+        const delay = backoffDelay + jitter;
         console.warn(`[Retry] Attempt ${attempt}/${maxAttempts} failed, retrying in ${delay}ms...`,
           error instanceof Error ? error.message : error);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -3191,58 +3213,67 @@ export async function deepThinkGeneratePrompt(
 
   console.log(`[DeepThink] Sending to Deep Think (${mode} mode). Input prompt: ${deepThinkPrompt.length} chars`);
 
-  return withRetry(async () => {
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: GEMINI_3_1_PRO_MODEL_NAME, // gemini-3.1-pro-preview
-        contents: { parts: imageParts },
-        config: {
-          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
-        },
-      }),
-      ANALYSIS_TIMEOUT_MS,
-      'Deep Think prompt generation timed out. Please try again.'
-    );
+  try {
+    return await withRetry(async () => {
+      const response = await withTimeout(
+        ai.models.generateContent({
+          model: GEMINI_3_1_PRO_MODEL_NAME, // gemini-3.1-pro-preview
+          contents: { parts: imageParts },
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+          },
+        }),
+        ANALYSIS_TIMEOUT_MS,
+        'Deep Think prompt generation timed out. Please try again.'
+      );
 
-    if (response.candidates?.[0]?.content?.parts) {
-      // Skip thinking parts (thought: true) — grab the final output text
-      const textPart = response.candidates[0].content.parts
-        .filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought)
-        .pop();
+      if (response.candidates?.[0]?.content?.parts) {
+        // Skip thinking parts (thought: true) — grab the final output text
+        const textPart = response.candidates[0].content.parts
+          .filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought)
+          .pop();
 
-      if (textPart?.text) {
-        let jsonText = textPart.text.trim();
-        if (jsonText.startsWith('```')) {
-          jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-        }
-
-        try {
-          const output: DeepThinkOutput = JSON.parse(jsonText);
-          console.log(`[DeepThink] Prompt generated. Length: ${output.prompt.length} chars, Fixtures: ${output.fixtureCount}`);
-          if (output.analysisNotes) console.log(`[DeepThink] Notes: ${output.analysisNotes}`);
-          return output;
-        } catch (parseError) {
-          const embeddedJsonMatch = textPart.text.match(/\{[\s\S]*\}/);
-          if (embeddedJsonMatch) {
-            try {
-              const recovered = JSON.parse(embeddedJsonMatch[0]) as DeepThinkOutput;
-              if (typeof recovered.prompt === 'string' && recovered.prompt.trim().length > 0) {
-                console.warn('[DeepThink] Primary JSON parse failed; recovered embedded JSON object.');
-                return recovered;
-              }
-            } catch {
-              // Continue to raw-text fallback.
-            }
+        if (textPart?.text) {
+          let jsonText = textPart.text.trim();
+          if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
           }
 
-          console.warn('[DeepThink] JSON parse failed, using raw text as prompt:', parseError);
-          // Fallback: treat entire text as the prompt
-          return { prompt: textPart.text, analysisNotes: 'JSON parse failed, using raw text' };
+          try {
+            const output: DeepThinkOutput = JSON.parse(jsonText);
+            console.log(`[DeepThink] Prompt generated. Length: ${output.prompt.length} chars, Fixtures: ${output.fixtureCount}`);
+            if (output.analysisNotes) console.log(`[DeepThink] Notes: ${output.analysisNotes}`);
+            return output;
+          } catch (parseError) {
+            const embeddedJsonMatch = textPart.text.match(/\{[\s\S]*\}/);
+            if (embeddedJsonMatch) {
+              try {
+                const recovered = JSON.parse(embeddedJsonMatch[0]) as DeepThinkOutput;
+                if (typeof recovered.prompt === 'string' && recovered.prompt.trim().length > 0) {
+                  console.warn('[DeepThink] Primary JSON parse failed; recovered embedded JSON object.');
+                  return recovered;
+                }
+              } catch {
+                // Continue to raw-text fallback.
+              }
+            }
+
+            console.warn('[DeepThink] JSON parse failed, using raw text as prompt:', parseError);
+            // Fallback: treat entire text as the prompt
+            return { prompt: textPart.text, analysisNotes: 'JSON parse failed, using raw text' };
+          }
         }
       }
+      throw new Error('Deep Think returned no output. Please try again.');
+    }, STAGE1_RETRY_MAX_ATTEMPTS, STAGE1_RETRY_INITIAL_DELAY_MS);
+  } catch (error) {
+    if (isRetryableProviderError(error)) {
+      throw new Error(
+        'STAGE_1_UNAVAILABLE: Gemini 3.1 Pro is temporarily overloaded (HTTP 503/UNAVAILABLE). Please retry in 15-30 seconds.'
+      );
     }
-    throw new Error('Deep Think returned no output. Please try again.');
-  }, 3, 2000);
+    throw error;
+  }
 }
 
 /**
@@ -4252,8 +4283,13 @@ export const generateNightSceneEnhanced = async (
   } catch (autoConstraintError) {
     console.warn('[Enhanced Mode] Auto spatial map build failed:', autoConstraintError);
     onAutoConstraintsResolved?.({ expectedPlacements: [], gutterLines: undefined });
-    if (strictAutoLockRequired) {
+    if (strictAutoLockRequired && !isRetryableProviderError(autoConstraintError)) {
       throw autoConstraintError;
+    }
+    if (strictAutoLockRequired) {
+      console.warn(
+        '[Enhanced Mode] Continuing without strict auto spatial lock due to temporary Stage 1 provider unavailability.'
+      );
     }
     autoSpatialMap = undefined;
     autoGutterLines = undefined;
@@ -4503,31 +4539,33 @@ Analyze this property photo and return a comprehensive JSON analysis with:
 Return ONLY valid JSON. No markdown code blocks.`;
 
   try {
-    const analyzePromise = ai.models.generateContent({
-      model: GEMINI_3_1_PRO_MODEL_NAME,
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data: imageBase64,
-              mimeType: imageMimeType,
+    const response = await withRetry(async () => {
+      const analyzePromise = ai.models.generateContent({
+        model: GEMINI_3_1_PRO_MODEL_NAME,
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: imageBase64,
+                mimeType: imageMimeType,
+              },
             },
-          },
-          {
-            text: analysisPrompt,
-          },
-        ],
-      },
-      config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
-      },
-    });
+            {
+              text: analysisPrompt,
+            },
+          ],
+        },
+        config: {
+          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+        },
+      });
 
-    const response = await withTimeout(
-      analyzePromise,
-      ENHANCED_ANALYSIS_TIMEOUT_MS,
-      'Enhanced property analysis timed out. Please try again.'
-    );
+      return withTimeout(
+        analyzePromise,
+        ENHANCED_ANALYSIS_TIMEOUT_MS,
+        'Enhanced property analysis timed out. Please try again.'
+      );
+    }, STAGE1_RETRY_MAX_ATTEMPTS, STAGE1_RETRY_INITIAL_DELAY_MS);
 
     if (response.candidates && response.candidates.length > 0) {
       const candidate = response.candidates[0];

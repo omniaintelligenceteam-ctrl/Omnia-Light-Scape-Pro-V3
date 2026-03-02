@@ -2044,6 +2044,20 @@ const App: React.FC = () => {
         setIsLoading(false);
         return;
       }
+      if (
+        rawErrorMessage.includes('STAGE_1_UNAVAILABLE:') ||
+        errorMessage.includes('503') ||
+        errorMessage.includes('unavailable') ||
+        errorMessage.includes('high demand')
+      ) {
+        const userMessage = rawErrorMessage.includes('STAGE_1_UNAVAILABLE:')
+          ? rawErrorMessage.replace('STAGE_1_UNAVAILABLE:', '').trim()
+          : 'Gemini 3.1 Pro is temporarily overloaded (HTTP 503). Please retry in 15-30 seconds.';
+        setError(userMessage);
+        showToast('warning', userMessage);
+        setIsLoading(false);
+        return;
+      }
       if (errorMessage.includes('403') || errorMessage.includes('permission_denied') || errorMessage.includes('permission denied')) {
         setError("Permission denied. Please check your API Key configuration.");
         showToast('error', 'Permission denied. Check your API key.');
@@ -2187,8 +2201,23 @@ const App: React.FC = () => {
         showToast('success', 'Scene regenerated with your feedback!');
     } catch (err: any) {
         console.error(err);
-        const errorMessage = err.toString().toLowerCase();
+        const rawErrorMessage = err instanceof Error ? err.message : String(err);
+        const errorMessage = rawErrorMessage.toLowerCase();
         setGenerationStage('idle');
+        if (
+            rawErrorMessage.includes('STAGE_1_UNAVAILABLE:') ||
+            errorMessage.includes('503') ||
+            errorMessage.includes('unavailable') ||
+            errorMessage.includes('high demand')
+        ) {
+            const userMessage = rawErrorMessage.includes('STAGE_1_UNAVAILABLE:')
+                ? rawErrorMessage.replace('STAGE_1_UNAVAILABLE:', '').trim()
+                : 'Gemini 3.1 Pro is temporarily overloaded (HTTP 503). Please retry in 15-30 seconds.';
+            setError(userMessage);
+            showToast('warning', userMessage);
+            setIsLoading(false);
+            return;
+        }
         if (errorMessage.includes('403') || errorMessage.includes('permission_denied')) {
             setError("Permission denied. Please check your API Key configuration.");
             showToast('error', 'Permission denied. Check your API key.');
