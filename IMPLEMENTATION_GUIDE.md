@@ -1,6 +1,6 @@
-# Omnia Light Scape Pro - Implementation Guide
+﻿# Omnia Light Scape Pro - Implementation Guide
 
-## 🎯 Project Overview
+## ðŸŽ¯ Project Overview
 
 Transform Omnia Light Scape Pro into a production-ready SaaS platform for landscape lighting professionals.
 
@@ -9,18 +9,18 @@ Transform Omnia Light Scape Pro into a production-ready SaaS platform for landsc
 - **Yearly**: $2,000/year (save $1,000)
 - **Offering**: Unlimited AI-powered night scene renders with professional quote generation
 
-## ✅ Phase 1: Security Hardening (COMPLETED)
+## âœ… Phase 1: Security Hardening (COMPLETED)
 
-- ✅ Created `.env.example` template
-- ✅ Updated `.gitignore` to exclude sensitive files
-- ✅ Deleted `local-backup/` folder with exposed credentials
-- ✅ Created `.env` for local development
+- âœ… Created `.env.example` template
+- âœ… Updated `.gitignore` to exclude sensitive files
+- âœ… Deleted `local-backup/` folder with exposed credentials
+- âœ… Created `.env` for local development
 
-## 🚨 URGENT: Required Actions (YOU MUST DO)
+## ðŸš¨ URGENT: Required Actions (YOU MUST DO)
 
 ### 1. Revoke Exposed API Key (DO THIS NOW!)
 - Go to: https://aistudio.google.com/app/apikey
-- Find and delete key: `AIzaSyDqMYOdWHAH2shUysqNluJlOy6GNZjFteA`
+- Find and delete key: `[REDACTED_GEMINI_API_KEY]`
 - Generate NEW API key
 - Add to `.env`: `VITE_GEMINI_API_KEY=your_new_key_here`
 
@@ -28,61 +28,61 @@ Transform Omnia Light Scape Pro into a production-ready SaaS platform for landsc
 
 #### Clerk (Authentication)
 1. Go to: https://clerk.com
-2. Create account → New application
-3. Copy **Publishable Key** (pk_test_...)
-4. Add to `.env`: `VITE_CLERK_PUBLISHABLE_KEY=pk_test_...`
+2. Create account â†’ New application
+3. Copy **Publishable Key** ([REDACTED_CLERK_PUBLISHABLE_KEY])
+4. Add to `.env`: `VITE_CLERK_PUBLISHABLE_KEY=[REDACTED_CLERK_PUBLISHABLE_KEY]`
 
 #### Stripe (Payments)
 1. Go to: https://stripe.com
 2. Enable **Test Mode** toggle (top right)
-3. Go to Products → Add Product:
+3. Go to Products â†’ Add Product:
    - **Product 1**: "Omnia Pro Monthly"
      - Price: $250/month recurring
-     - Copy Price ID → Add to `.env`: `VITE_STRIPE_PRICE_ID_MONTHLY=price_...`
+     - Copy Price ID â†’ Add to `.env`: `VITE_STRIPE_PRICE_ID_MONTHLY=price_...`
    - **Product 2**: "Omnia Pro Yearly"
      - Price: $2000/year recurring
-     - Copy Price ID → Add to `.env`: `VITE_STRIPE_PRICE_ID_YEARLY=price_...`
-4. Go to Developers → API Keys
-5. Copy **Publishable Key** (pk_test_...)
-6. Add to `.env`: `VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...`
+     - Copy Price ID â†’ Add to `.env`: `VITE_STRIPE_PRICE_ID_YEARLY=price_...`
+4. Go to Developers â†’ API Keys
+5. Copy **Publishable Key** ([REDACTED_CLERK_PUBLISHABLE_KEY])
+6. Add to `.env`: `VITE_STRIPE_PUBLISHABLE_KEY=[REDACTED_CLERK_PUBLISHABLE_KEY]`
 
 #### Supabase (Database)
 1. Go to: https://supabase.com
-2. New Project → Choose name and password
+2. New Project â†’ Choose name and password
 3. Wait for database to provision (~2 minutes)
 4. Copy **Project URL** and **Service Role Key**
 5. Save for backend setup later
 
 #### Cloudflare R2 (Image Storage)
 1. Go to: https://cloudflare.com
-2. R2 Object Storage → Create Bucket
+2. R2 Object Storage â†’ Create Bucket
 3. Name: `omnia-images-production`
 4. Generate API Token (permissions: Object Read & Write)
 5. Copy: Account ID, Access Key ID, Secret Access Key
 6. Save for backend setup later
 
-## 📁 Current Project Structure
+## ðŸ“ Current Project Structure
 
 ```
 Omnia-Light-Scape-Pro-V3/
-├── .env                    ✅ Created (not committed)
-├── .env.example            ✅ Created (template)
-├── .gitignore              ✅ Updated (protects secrets)
-├── App.tsx                 (Main app - 1208 lines)
-├── components/
-│   ├── Header.tsx
-│   ├── Sidebar.tsx
-│   ├── ImageUpload.tsx
-│   ├── QuoteView.tsx
-│   └── SettingsView.tsx
-├── services/
-│   └── geminiService.ts    (Current: Direct API calls)
-├── types.ts
-├── constants.ts
-└── package.json
+â”œâ”€â”€ .env                    âœ… Created (not committed)
+â”œâ”€â”€ .env.example            âœ… Created (template)
+â”œâ”€â”€ .gitignore              âœ… Updated (protects secrets)
+â”œâ”€â”€ App.tsx                 (Main app - 1208 lines)
+â”œâ”€â”€ components/
+â”‚   â”œâ”€â”€ Header.tsx
+â”‚   â”œâ”€â”€ Sidebar.tsx
+â”‚   â”œâ”€â”€ ImageUpload.tsx
+â”‚   â”œâ”€â”€ QuoteView.tsx
+â”‚   â””â”€â”€ SettingsView.tsx
+â”œâ”€â”€ services/
+â”‚   â””â”€â”€ geminiService.ts    (Current: Direct API calls)
+â”œâ”€â”€ types.ts
+â”œâ”€â”€ constants.ts
+â””â”€â”€ package.json
 ```
 
-## 🏗️ Next Implementation Phases
+## ðŸ—ï¸ Next Implementation Phases
 
 ### Phase 2: Backend Infrastructure (Week 1)
 **Create separate repository**: `omnia-backend`
@@ -90,23 +90,23 @@ Omnia-Light-Scape-Pro-V3/
 **Directory Structure**:
 ```
 omnia-backend/
-├── src/
-│   ├── server.ts           # Express app entry
-│   ├── middleware/
-│   │   ├── auth.ts         # Clerk JWT verification
-│   │   └── rateLimiter.ts  # 10 renders per 10 min
-│   ├── routes/
-│   │   ├── auth.routes.ts
-│   │   ├── billing.routes.ts
-│   │   ├── projects.routes.ts
-│   │   └── gemini.routes.ts
-│   ├── services/
-│   │   ├── geminiService.ts   # Proxy to Gemini API
-│   │   ├── stripeService.ts   # Checkout + portal
-│   │   └── storageService.ts  # R2 image upload
-│   └── controllers/
-├── package.json
-└── .env
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ server.ts           # Express app entry
+â”‚   â”œâ”€â”€ middleware/
+â”‚   â”‚   â”œâ”€â”€ auth.ts         # Clerk JWT verification
+â”‚   â”‚   â””â”€â”€ rateLimiter.ts  # 10 renders per 10 min
+â”‚   â”œâ”€â”€ routes/
+â”‚   â”‚   â”œâ”€â”€ auth.routes.ts
+â”‚   â”‚   â”œâ”€â”€ billing.routes.ts
+â”‚   â”‚   â”œâ”€â”€ projects.routes.ts
+â”‚   â”‚   â””â”€â”€ gemini.routes.ts
+â”‚   â”œâ”€â”€ services/
+â”‚   â”‚   â”œâ”€â”€ geminiService.ts   # Proxy to Gemini API
+â”‚   â”‚   â”œâ”€â”€ stripeService.ts   # Checkout + portal
+â”‚   â”‚   â””â”€â”€ storageService.ts  # R2 image upload
+â”‚   â””â”€â”€ controllers/
+â”œâ”€â”€ package.json
+â””â”€â”€ .env
 ```
 
 ### Phase 3: Clerk Authentication (Week 2, Days 1-3)
@@ -161,7 +161,7 @@ omnia-backend/
 - Performance testing
 - Launch to beta users
 
-## 💰 Business Metrics
+## ðŸ’° Business Metrics
 
 **Break-Even**: 4 monthly subscribers ($1,000/month revenue)
 
@@ -172,7 +172,7 @@ omnia-backend/
 
 **Yearly Subscriptions**: $2,000 upfront provides instant cash flow!
 
-## 🎯 Target Market
+## ðŸŽ¯ Target Market
 
 **Primary**: Landscape lighting contractors and designers who need to:
 - Visualize lighting designs for client proposals
@@ -182,7 +182,7 @@ omnia-backend/
 
 **Value Proposition**: At $250/month, if the tool helps close just ONE additional lighting project per year, it pays for itself 20-40x over.
 
-## 📝 Development Checklist
+## ðŸ“ Development Checklist
 
 ### Immediate (Today)
 - [ ] Revoke old Gemini API key
@@ -226,7 +226,7 @@ omnia-backend/
 - [ ] Beta launch
 - [ ] Monitor usage and costs
 
-## 🔗 Useful Links
+## ðŸ”— Useful Links
 
 - **Plan Document**: `C:\Users\default.DESKTOP-ON29PVN\.claude\plans\humble-prancing-valley.md`
 - **Clerk Docs**: https://clerk.com/docs
@@ -234,7 +234,7 @@ omnia-backend/
 - **Supabase Docs**: https://supabase.com/docs
 - **Cloudflare R2 Docs**: https://developers.cloudflare.com/r2
 
-## 🆘 Support
+## ðŸ†˜ Support
 
 If you encounter issues during implementation, refer to:
 1. The detailed plan document (humble-prancing-valley.md)
@@ -244,3 +244,4 @@ If you encounter issues during implementation, refer to:
 ---
 
 **Next Step**: Complete the "URGENT: Required Actions" section above, then we'll move to Phase 2 (Backend Infrastructure).
+

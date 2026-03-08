@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 /**
  * Omnia Light Scape Pro - Setup Verification Script
@@ -27,15 +27,15 @@ function log(message, color = 'reset') {
 function checkEnvFile() {
   const envPath = path.join(__dirname, '.env');
 
-  log('\n🔍 Checking .env file...', 'cyan');
+  log('\nðŸ” Checking .env file...', 'cyan');
 
   if (!fs.existsSync(envPath)) {
-    log('❌ .env file not found!', 'red');
+    log('âŒ .env file not found!', 'red');
     log('   Run: cp .env.example .env', 'yellow');
     return false;
   }
 
-  log('✅ .env file exists', 'green');
+  log('âœ… .env file exists', 'green');
 
   const envContent = fs.readFileSync(envPath, 'utf-8');
   const envVars = {};
@@ -51,7 +51,7 @@ function checkEnvFile() {
 }
 
 function verifyRequiredVars(envVars) {
-  log('\n📋 Verifying required environment variables...', 'cyan');
+  log('\nðŸ“‹ Verifying required environment variables...', 'cyan');
 
   const required = {
     'VITE_GEMINI_API_KEY': {
@@ -61,12 +61,12 @@ function verifyRequiredVars(envVars) {
     },
     'VITE_CLERK_PUBLISHABLE_KEY': {
       description: 'Clerk Publishable Key',
-      example: 'pk_test_...',
+      example: '[REDACTED_CLERK_PUBLISHABLE_KEY]',
       url: 'https://clerk.com'
     },
     'VITE_STRIPE_PUBLISHABLE_KEY': {
       description: 'Stripe Publishable Key',
-      example: 'pk_test_...',
+      example: '[REDACTED_CLERK_PUBLISHABLE_KEY]',
       url: 'https://stripe.com'
     },
     'VITE_STRIPE_PRICE_ID_MONTHLY': {
@@ -88,7 +88,7 @@ function verifyRequiredVars(envVars) {
     const value = envVars[key];
 
     if (!value || value === '') {
-      log(`❌ ${key}`, 'red');
+      log(`âŒ ${key}`, 'red');
       log(`   Description: ${config.description}`, 'yellow');
       log(`   Example: ${config.example}`, 'yellow');
       log(`   Get it: ${config.url}`, 'blue');
@@ -96,7 +96,7 @@ function verifyRequiredVars(envVars) {
       allConfigured = false;
       missingCount++;
     } else {
-      log(`✅ ${key}`, 'green');
+      log(`âœ… ${key}`, 'green');
     }
   }
 
@@ -104,12 +104,12 @@ function verifyRequiredVars(envVars) {
 }
 
 function checkGitignore() {
-  log('\n🔒 Checking .gitignore security...', 'cyan');
+  log('\nðŸ”’ Checking .gitignore security...', 'cyan');
 
   const gitignorePath = path.join(__dirname, '.gitignore');
 
   if (!fs.existsSync(gitignorePath)) {
-    log('❌ .gitignore not found!', 'red');
+    log('âŒ .gitignore not found!', 'red');
     return false;
   }
 
@@ -120,9 +120,9 @@ function checkGitignore() {
 
   requiredEntries.forEach(entry => {
     if (gitignoreContent.includes(entry)) {
-      log(`✅ ${entry} is ignored`, 'green');
+      log(`âœ… ${entry} is ignored`, 'green');
     } else {
-      log(`❌ ${entry} is NOT ignored (security risk!)`, 'red');
+      log(`âŒ ${entry} is NOT ignored (security risk!)`, 'red');
       allPresent = false;
     }
   });
@@ -131,12 +131,12 @@ function checkGitignore() {
 }
 
 function checkPackageJson() {
-  log('\n📦 Checking dependencies...', 'cyan');
+  log('\nðŸ“¦ Checking dependencies...', 'cyan');
 
   const packagePath = path.join(__dirname, 'package.json');
 
   if (!fs.existsSync(packagePath)) {
-    log('❌ package.json not found!', 'red');
+    log('âŒ package.json not found!', 'red');
     return false;
   }
 
@@ -153,15 +153,15 @@ function checkPackageJson() {
 
   for (const [dep, description] of Object.entries(required)) {
     if (deps[dep]) {
-      log(`✅ ${dep} (${description})`, 'green');
+      log(`âœ… ${dep} (${description})`, 'green');
     } else {
-      log(`❌ ${dep} missing (${description})`, 'red');
+      log(`âŒ ${dep} missing (${description})`, 'red');
       allInstalled = false;
     }
   }
 
   if (!fs.existsSync(path.join(__dirname, 'node_modules'))) {
-    log('\n⚠️  node_modules not found. Run: npm install', 'yellow');
+    log('\nâš ï¸  node_modules not found. Run: npm install', 'yellow');
     return false;
   }
 
@@ -170,21 +170,21 @@ function checkPackageJson() {
 
 function printNextSteps(missingCount) {
   log('\n' + '='.repeat(60), 'cyan');
-  log('📝 NEXT STEPS', 'cyan');
+  log('ðŸ“ NEXT STEPS', 'cyan');
   log('='.repeat(60), 'cyan');
 
   if (missingCount > 0) {
-    log(`\n⚠️  ${missingCount} environment variable(s) need to be configured\n`, 'yellow');
+    log(`\nâš ï¸  ${missingCount} environment variable(s) need to be configured\n`, 'yellow');
 
-    log('1. 🚨 URGENT: Revoke exposed API key', 'red');
+    log('1. ðŸš¨ URGENT: Revoke exposed API key', 'red');
     log('   Go to: https://aistudio.google.com/app/apikey', 'blue');
-    log('   Delete key: AIzaSyDqMYOdWHAH2shUysqNluJlOy6GNZjFteA\n');
+    log('   Delete key: [REDACTED_GEMINI_API_KEY]\n');
 
     log('2. Generate NEW Gemini API key', 'yellow');
     log('   Add to .env: VITE_GEMINI_API_KEY=your_new_key\n');
 
     log('3. Sign up for Clerk (https://clerk.com)', 'yellow');
-    log('   Add to .env: VITE_CLERK_PUBLISHABLE_KEY=pk_test_...\n');
+    log('   Add to .env: VITE_CLERK_PUBLISHABLE_KEY=[REDACTED_CLERK_PUBLISHABLE_KEY]\n');
 
     log('4. Sign up for Stripe (https://stripe.com)', 'yellow');
     log('   Create products: $250/month and $2000/year');
@@ -192,20 +192,20 @@ function printNextSteps(missingCount) {
 
     log('5. Run this script again: node verify-setup.js\n', 'green');
   } else {
-    log('\n✅ All environment variables configured!', 'green');
+    log('\nâœ… All environment variables configured!', 'green');
     log('\nYou\'re ready to start development:', 'cyan');
     log('  1. npm install (if not done)', 'blue');
     log('  2. npm run dev', 'blue');
     log('  3. Open http://localhost:5173\n', 'blue');
 
-    log('📖 See IMPLEMENTATION_GUIDE.md for next phases', 'cyan');
+    log('ðŸ“– See IMPLEMENTATION_GUIDE.md for next phases', 'cyan');
   }
 }
 
 // Main execution
 function main() {
   log('\n' + '='.repeat(60), 'cyan');
-  log('🚀 Omnia Light Scape Pro - Setup Verification', 'cyan');
+  log('ðŸš€ Omnia Light Scape Pro - Setup Verification', 'cyan');
   log('='.repeat(60), 'cyan');
 
   const envVars = checkEnvFile();
@@ -220,12 +220,13 @@ function main() {
   printNextSteps(missingCount);
 
   if (!allConfigured) {
-    log('\n❌ Setup incomplete. Please configure missing variables.\n', 'red');
+    log('\nâŒ Setup incomplete. Please configure missing variables.\n', 'red');
     process.exit(1);
   } else {
-    log('\n✅ Setup complete! Ready to build.\n', 'green');
+    log('\nâœ… Setup complete! Ready to build.\n', 'green');
     process.exit(0);
   }
 }
 
 main();
+

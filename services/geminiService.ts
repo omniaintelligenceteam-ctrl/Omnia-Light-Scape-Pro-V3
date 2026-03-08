@@ -134,6 +134,27 @@ function normalizeErrorMessage(error: unknown): string {
   }
 }
 
+function parseProviderRetryDelayMs(error: unknown): number | null {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  if (!message) return null;
+
+  // Gemini API often includes RetryInfo like: "retryDelay":"34s"
+  const retryDelayMatch = message.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/i);
+  if (retryDelayMatch) {
+    const seconds = Number(retryDelayMatch[1]);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.round(seconds * 1000);
+  }
+
+  // Some messages include: "Please retry in 34.03s."
+  const pleaseRetryMatch = message.match(/please\s+retry\s+in\s+(\d+(?:\.\d+)?)s/i);
+  if (pleaseRetryMatch) {
+    const seconds = Number(pleaseRetryMatch[1]);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.round(seconds * 1000);
+  }
+
+  return null;
+}
+
 function isRetryableProviderError(error: unknown): boolean {
   const message = normalizeErrorMessage(error);
   return (
@@ -145,6 +166,17 @@ function isRetryableProviderError(error: unknown): boolean {
     message.includes('high demand') ||
     message.includes('econnreset') ||
     message.includes('network')
+  );
+}
+
+function isQuotaExceededError(error: unknown): boolean {
+  const message = normalizeErrorMessage(error);
+  return (
+    message.includes('resource_exhausted') ||
+    message.includes('quota exceeded') ||
+    message.includes('rate limit') ||
+    message.includes('input_token_count') ||
+    message.includes('generate_content_paid_tier_input_token_count')
   );
 }
 
@@ -171,8 +203,10 @@ async function withRetry<T>(
 
       if (attempt < maxAttempts && isRetryable) {
         const backoffDelay = initialDelayMs * Math.pow(2, attempt - 1);
-        const jitter = Math.round(backoffDelay * 0.2 * Math.random());
-        const delay = backoffDelay + jitter;
+        const providerDelay = parseProviderRetryDelayMs(error) ?? 0;
+        const baseDelay = Math.max(backoffDelay, providerDelay);
+        const jitter = Math.round(baseDelay * 0.2 * Math.random());
+        const delay = baseDelay + jitter;
         console.warn(`[Retry] Attempt ${attempt}/${maxAttempts} failed, retrying in ${delay}ms...`,
           error instanceof Error ? error.message : error);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -184,6 +218,60 @@ async function withRetry<T>(
   }
 
   throw lastError;
+}
+
+function looksLikeBase64Blob(value: string): boolean {
+  if (!value) return false;
+  if (value.length < 5000) return false;
+  if (/\s/.test(value)) return false;
+  if (!/^[A-Za-z0-9+/=]+$/.test(value)) return false;
+  return true;
+}
+
+function sanitizeGenerationPrompt(prompt: string): { prompt: string; removedBytes: number } {
+  if (!prompt) return { prompt, removedBytes: 0 };
+
+  let removedBytes = 0;
+  let next = prompt;
+
+  // Remove embedded data URIs (common accidental bug: pasting image data into prompt fields).
+  next = next.replace(/data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+/gi, (match) => {
+    removedBytes += match.length;
+    return '[EMBEDDED_IMAGE_DATA_REMOVED]';
+  });
+
+  // Remove large raw base64 blobs if they ended up in the prompt (heuristic).
+  // This is intentionally conservative to avoid stripping legitimate short tokens.
+  next = next.replace(/[A-Za-z0-9+/=]{20000,}/g, (match) => {
+    removedBytes += match.length;
+    return '[BASE64_BLOB_REMOVED]';
+  });
+
+  return { prompt: next, removedBytes };
+}
+
+const MAX_USER_DIRECTIVE_CHARS = 6_000;
+const MAX_MODIFICATION_REQUEST_CHARS = 1_500;
+const MAX_GENERATION_PROMPT_CHARS = 20_000;
+
+function sanitizeFreeformDirectiveText(
+  value: string | undefined,
+  maxChars: number,
+  label: string
+): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return '';
+
+  const { prompt: sanitized, removedBytes } = sanitizeGenerationPrompt(trimmed);
+  if (removedBytes > 0) {
+    console.warn(`[PromptSanitizer] Removed ${removedBytes} chars of embedded image/base64 data from ${label}.`);
+  }
+
+  if (sanitized.length <= maxChars) return sanitized;
+
+  const clipped = sanitized.slice(0, maxChars);
+  console.warn(`[PromptSanitizer] Truncated ${label} from ${sanitized.length} to ${maxChars} chars.`);
+  return `${clipped}\n[TRUNCATED_${label.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}]`;
 }
 
 interface PhotorealismVerificationResult {
@@ -1937,7 +2025,11 @@ const buildDeterministicPipelinePrompt = (
     prompt += '\nMANDATORY: Render exactly the listed fixtures at exactly listed [X%, Y%] coordinates. Do not add, remove, or move fixtures.\n';
   }
 
-  const trimmedUserInstructionNotes = userInstructionNotes?.trim();
+  const trimmedUserInstructionNotes = sanitizeFreeformDirectiveText(
+    userInstructionNotes,
+    MAX_USER_DIRECTIVE_CHARS,
+    'user directives'
+  );
   if (trimmedUserInstructionNotes) {
     prompt += '\n\n=== USER DIRECTIVES (HIGHEST PRIORITY) ===\n';
     prompt += '- Follow these directives exactly for fixture placement scope and count.\n';
@@ -1954,8 +2046,13 @@ const buildDeterministicPipelinePrompt = (
     prompt += `- Do not reinterpret, relocate, rebalance, or "improve" any line-mounted placement.\n`;
   }
 
-  const modificationSection = modificationRequest?.trim()
-    ? `\n\nCRITICAL MODIFICATION REQUEST: ${modificationRequest.trim()}\nKeep all fixture coordinates and beam directions exactly as specified above while applying this change.\n`
+  const sanitizedModificationRequest = sanitizeFreeformDirectiveText(
+    modificationRequest,
+    MAX_MODIFICATION_REQUEST_CHARS,
+    'modification request'
+  );
+  const modificationSection = sanitizedModificationRequest
+    ? `\n\nCRITICAL MODIFICATION REQUEST: ${sanitizedModificationRequest}\nKeep all fixture coordinates and beam directions exactly as specified above while applying this change.\n`
     : '';
 
   return `${prompt}${modificationSection}\n${buildPhotorealismLockAddendum()}`;
@@ -3246,7 +3343,11 @@ export async function deepThinkGeneratePrompt(
   if (input.spatialMapContext) {
     deepThinkPrompt += '\n\n## SPATIAL MAP DATA (exact coordinates for each fixture)\n' + input.spatialMapContext;
   }
-  const trimmedUserInstructionNotes = userInstructionNotes?.trim();
+  const trimmedUserInstructionNotes = sanitizeFreeformDirectiveText(
+    userInstructionNotes,
+    MAX_USER_DIRECTIVE_CHARS,
+    'user directives'
+  );
   if (trimmedUserInstructionNotes) {
     deepThinkPrompt += '\n\n## USER DIRECTIVES (HIGHEST PRIORITY)\n';
     deepThinkPrompt += '- Follow these directives exactly for fixture placement scope and count.\n';
@@ -3346,8 +3447,32 @@ export async function executeGeneration(
 ): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
+  const sanitizedImageBase64 = extractBase64Data(imageBase64);
+  const { prompt: sanitizedPrompt, removedBytes } = sanitizeGenerationPrompt(generationPrompt);
+  generationPrompt = sanitizedPrompt;
+
+  if (removedBytes > 0) {
+    console.warn(`[executeGeneration] Removed ${removedBytes} chars of embedded base64/image data from the prompt.`);
+  }
+
+  // Guard rails: a multi-megabyte prompt almost always means an image/base64 dump.
+  // Clip oversized prompts to avoid quota burn and return a best-effort result.
+  if (generationPrompt.length > MAX_GENERATION_PROMPT_CHARS) {
+    const originalLength = generationPrompt.length;
+    const likelyBase64 = looksLikeBase64Blob(generationPrompt);
+    generationPrompt = `${generationPrompt.slice(0, MAX_GENERATION_PROMPT_CHARS)}\n[TRUNCATED_OVERSIZED_PROMPT]`;
+    console.warn(
+      `[executeGeneration] Prompt truncated from ${originalLength} to ${MAX_GENERATION_PROMPT_CHARS} chars.` +
+      (likelyBase64 ? ' Detected potential base64-like content in prompt.' : '')
+    );
+  }
+
+  if (!sanitizedImageBase64 || sanitizedImageBase64.length < 1000) {
+    throw new Error('INVALID_IMAGE_DATA: Missing/invalid base64 image data for generation.');
+  }
+
   // Resize images to prevent timeouts
-  const resizedImage = await resizeImageBase64(imageBase64, imageMimeType);
+  const resizedImage = await resizeImageBase64(sanitizedImageBase64, imageMimeType);
 
   // Build parts array
   const imageParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
@@ -3365,29 +3490,47 @@ export async function executeGeneration(
 
   console.log(`[executeGeneration] Sending to Nano Banana 2. Prompt: ${generationPrompt.length} chars, Images: ${imageParts.filter(p => 'inlineData' in p).length}`);
 
-  const response = await withTimeout(
-    ai.models.generateContent({
-      model: NANO_BANANA_2_MODEL_NAME, // gemini-3-pro-image-preview
-      contents: { parts: imageParts },
-      config: {
-        temperature: 0.1,
-        responseModalities: ['TEXT', 'IMAGE'],
-        imageConfig: buildImageConfig(aspectRatio),
-        safetySettings: [
-          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        ],
-      },
-    }),
-    API_TIMEOUT_MS,
-    'Image generation timed out. Please try again.'
-  );
+  const response = await (async () => {
+    try {
+      return await withRetry(
+        () =>
+          withTimeout(
+            ai.models.generateContent({
+              model: NANO_BANANA_2_MODEL_NAME, // gemini-3-pro-image-preview
+              contents: { parts: imageParts },
+              config: {
+                temperature: 0.1,
+                responseModalities: ['TEXT', 'IMAGE'],
+                imageConfig: buildImageConfig(aspectRatio),
+                safetySettings: [
+                  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                ],
+              },
+            }),
+            API_TIMEOUT_MS,
+            'Image generation timed out. Please try again.'
+          ),
+        3,
+        2000
+      );
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        const retryDelayMs = parseProviderRetryDelayMs(error);
+        const retryHint = retryDelayMs
+          ? ` Please retry in about ${Math.max(1, Math.ceil(retryDelayMs / 1000))} seconds.`
+          : ' Please retry shortly.';
+        throw new Error(`STAGE_2_QUOTA_EXCEEDED: Gemini image quota exceeded.${retryHint}`);
+      }
+      throw error;
+    }
+  })();
 
   // Extract image from response
   if (response.candidates?.[0]?.content?.parts) {
-    const selectedImage = selectGeneratedImagePart(response.candidates[0].content.parts, [imageBase64, resizedImage]);
+    const selectedImage = selectGeneratedImagePart(response.candidates[0].content.parts, [sanitizedImageBase64, resizedImage]);
     if (selectedImage) {
       return `data:${selectedImage.mimeType};base64,${selectedImage.data}`;
     }

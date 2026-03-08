@@ -2131,6 +2131,20 @@ const App: React.FC = () => {
         setIsLoading(false);
         return;
       }
+      if (
+        rawErrorMessage.includes('STAGE_2_QUOTA_EXCEEDED:') ||
+        errorMessage.includes('resource_exhausted') ||
+        errorMessage.includes('quota exceeded') ||
+        errorMessage.includes('429')
+      ) {
+        const userMessage = rawErrorMessage.includes('STAGE_2_QUOTA_EXCEEDED:')
+          ? rawErrorMessage.replace('STAGE_2_QUOTA_EXCEEDED:', '').trim()
+          : 'Gemini image quota reached (HTTP 429). Wait for the retry window, then generate again.';
+        setError(userMessage);
+        showToast('warning', userMessage);
+        setIsLoading(false);
+        return;
+      }
       if (errorMessage.includes('403') || errorMessage.includes('permission_denied') || errorMessage.includes('permission denied')) {
         setError("Permission denied. Please check your API Key configuration.");
         showToast('error', 'Permission denied. Check your API key.');
@@ -2338,6 +2352,20 @@ const App: React.FC = () => {
             const userMessage = rawErrorMessage.includes('STAGE_1_UNAVAILABLE:')
                 ? rawErrorMessage.replace('STAGE_1_UNAVAILABLE:', '').trim()
                 : 'Gemini 3.1 Pro is temporarily overloaded (HTTP 503). Please retry in 15-30 seconds.';
+            setError(userMessage);
+            showToast('warning', userMessage);
+            setIsLoading(false);
+            return;
+        }
+        if (
+            rawErrorMessage.includes('STAGE_2_QUOTA_EXCEEDED:') ||
+            errorMessage.includes('resource_exhausted') ||
+            errorMessage.includes('quota exceeded') ||
+            errorMessage.includes('429')
+        ) {
+            const userMessage = rawErrorMessage.includes('STAGE_2_QUOTA_EXCEEDED:')
+                ? rawErrorMessage.replace('STAGE_2_QUOTA_EXCEEDED:', '').trim()
+                : 'Gemini image quota reached (HTTP 429). Wait for the retry window, then regenerate.';
             setError(userMessage);
             showToast('warning', userMessage);
             setIsLoading(false);
