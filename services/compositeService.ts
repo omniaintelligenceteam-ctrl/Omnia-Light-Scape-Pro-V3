@@ -10,7 +10,6 @@
 
 import {
   LightFixture,
-  FixtureCategory,
   GlowConfiguration,
   getFixturePreset,
   kelvinToRGB,
@@ -69,64 +68,12 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Screen blend mode: 1 - (1-a)(1-b)
- * Used for realistic light additive effects
- */
-function screenBlend(
-  baseData: ImageData,
-  overlayData: ImageData
-): ImageData {
-  const result = new ImageData(
-    new Uint8ClampedArray(baseData.data),
-    baseData.width,
-    baseData.height
-  );
-
-  for (let i = 0; i < result.data.length; i += 4) {
-    const baseR = baseData.data[i] / 255;
-    const baseG = baseData.data[i + 1] / 255;
-    const baseB = baseData.data[i + 2] / 255;
-
-    const overlayR = overlayData.data[i] / 255;
-    const overlayG = overlayData.data[i + 1] / 255;
-    const overlayB = overlayData.data[i + 2] / 255;
-    const overlayA = overlayData.data[i + 3] / 255;
-
-    // Screen blend with alpha
-    result.data[i] = Math.round((1 - (1 - baseR) * (1 - overlayR * overlayA)) * 255);
-    result.data[i + 1] = Math.round((1 - (1 - baseG) * (1 - overlayG * overlayA)) * 255);
-    result.data[i + 2] = Math.round((1 - (1 - baseB) * (1 - overlayB * overlayA)) * 255);
-    result.data[i + 3] = 255;
-  }
-
-  return result;
-}
-
-/**
- * Apply Gaussian-like blur to ImageData
- * Simplified box blur for performance
- */
-function applyBlur(
-  ctx: CanvasRenderingContext2D,
-  radius: number
-): void {
-  if (radius <= 0) return;
-  
-  // Use canvas filter if available (much faster)
-  ctx.filter = `blur(${radius}px)`;
-  ctx.drawImage(ctx.canvas, 0, 0);
-  ctx.filter = 'none';
-}
-
-/**
  * Draw a single uplight glow effect
  */
 function drawUplightGlow(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  width: number,
-  height: number,
   glow: GlowConfiguration,
   intensity: number,
   color: [number, number, number],
@@ -338,7 +285,7 @@ function drawFixtureGlow(
 
   switch (glow.direction) {
     case 'up':
-      drawUplightGlow(ctx, x, y, imgWidth, imgHeight, glow, intensity, color, imgWidth, imgHeight);
+      drawUplightGlow(ctx, x, y, glow, intensity, color, imgWidth, imgHeight);
       break;
     case 'down':
       drawDownlightGlow(ctx, x, y, glow, intensity, color, imgWidth, imgHeight);

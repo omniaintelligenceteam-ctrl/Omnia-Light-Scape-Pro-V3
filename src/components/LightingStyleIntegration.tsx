@@ -125,7 +125,6 @@ export const SidebarStyleSelector: React.FC<SidebarStyleSelectorProps> = ({
   const {
     selectedStyleId,
     overrides,
-    appliedStyle,
     setStyleId,
     setOverrides,
     getPromptAdditions

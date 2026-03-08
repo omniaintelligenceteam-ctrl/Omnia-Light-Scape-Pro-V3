@@ -5,14 +5,8 @@
 
 import { GoogleGenAI } from "@google/genai";
 import type { 
-  EnhancedHouseAnalysis, 
-  ArchitecturalStyle, 
-  FacadeWidth,
-  SuggestedFixture,
-  AvoidZone,
-  PlacementZone,
-  LIGHTING_APPROACH_BY_STYLE,
-  SPACING_BY_FACADE_WIDTH
+  EnhancedHouseAnalysis,
+  SuggestedFixture
 } from "../src/types/houseAnalysis";
 
 // Use Gemini 3.1 Pro for best analysis

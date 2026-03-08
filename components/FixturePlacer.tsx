@@ -338,10 +338,11 @@ export const FixturePlacer = forwardRef<FixturePlacerHandle, FixturePlacerProps>
   useEffect(() => {
     const previousType = prevActiveFixtureTypeRef.current;
     const nextType = activeFixtureType;
+    const gutterType = 'gutter_uplight' as FixtureCategory;
 
-    if (nextType === 'gutter_uplight') {
+    if (nextType === gutterType) {
       setShowAdvancedToolbar(true);
-    } else if (previousType === 'gutter_uplight' && !!nextType && nextType !== 'gutter_uplight') {
+    } else if (previousType === gutterType && !!nextType && nextType !== gutterType) {
       setShowAdvancedToolbar(false);
     }
 

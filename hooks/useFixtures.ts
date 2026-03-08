@@ -12,7 +12,6 @@ import {
   FixtureLayout,
   createFixture,
   generateFixtureId,
-  getFixturePreset
 } from '../types/fixtures';
 import { CompositeService, CompositeResult, CompositeConfig } from '../services/compositeService';
 

@@ -1,6 +1,33 @@
 
 import type { ColorTemperature, FixturePricing, SpatialMap } from "./types";
 
+// Prompts for FLUX Fill inpainting (mask-based fixture placement).
+// Keys can be either:
+// - `<fixtureType>` (e.g. "uplight")
+// - `<fixtureType>_<subOption>` (e.g. "uplight_columns")
+export const FLUX_FILL_PROMPTS: Record<string, string> = {
+  uplight:
+    "BRIGHT GLOWING professional landscape uplight fixture at ground level, VISIBLE warm 2700K light source, strong upward light beam washing the wall, intense luminous glow, photorealistic night exterior",
+  downlight:
+    "BRIGHT GLOWING professional exterior downlight fixture mounted above, VISIBLE warm 2700K light source, strong downward light cone, bright pool of light, photorealistic night exterior",
+  path_light:
+    "BRIGHT GLOWING professional path light fixture, VISIBLE warm 2700K light source, bright circular light pool on walkway, photorealistic night exterior",
+  spot:
+    "BRIGHT GLOWING professional landscape spotlight, VISIBLE warm 2700K light source, focused strong beam highlighting feature, photorealistic night exterior",
+  wall_wash:
+    "BRIGHT GLOWING professional wall wash landscape light, VISIBLE warm 2700K light source, wide smooth wash of light on wall, photorealistic night exterior",
+  well_light:
+    "BRIGHT GLOWING in-ground well light fixture, VISIBLE warm 2700K light source, strong upward beam, photorealistic night exterior",
+  bollard:
+    "BRIGHT GLOWING bollard path light fixture, VISIBLE warm 2700K light source, bright ground illumination, photorealistic night exterior",
+  step_light:
+    "BRIGHT GLOWING step light fixture, VISIBLE warm 2700K light source, bright illumination on steps, photorealistic night exterior",
+  gutter_uplight:
+    "BRIGHT GLOWING gutter-mounted uplight fixture inside gutter channel, VISIBLE warm 2700K light source, strong upward wall wash, photorealistic night exterior",
+  coredrill:
+    "BRIGHT GLOWING flush in-ground core drill light, VISIBLE warm 2700K light source, bright circular glow on hardscape, photorealistic night exterior",
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // constants.ts - Lighting Design System Configuration
 // ═══════════════════════════════════════════════════════════════════════════════

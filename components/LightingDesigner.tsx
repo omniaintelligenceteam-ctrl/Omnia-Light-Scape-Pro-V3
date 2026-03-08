@@ -14,13 +14,14 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, Sun, Moon, Sparkles, Download, Undo, Redo,
-  Settings, Play, Loader2, Check, X, Eye, Image as ImageIcon,
+  Play, Loader2, Check, X,
   Wand2, Layers
 } from 'lucide-react';
 import { FixturePlacer } from './FixturePlacer';
 import { useFixtures } from '../hooks/useFixtures';
 import { CompositeService } from '../services/compositeService';
 import { LightFixture, FIXTURE_PRESETS } from '../types/fixtures';
+import type { FixtureCategory } from '../types/fixtures';
 
 type WorkflowStep = 'upload' | 'place' | 'generate' | 'review';
 
@@ -28,6 +29,19 @@ interface LightingDesignerProps {
   onComplete?: (result: { originalImage: string; finalImage: string; fixtures: LightFixture[] }) => void;
   icLightEndpoint?: string;  // Optional IC-Light API endpoint
 }
+
+const MARKER_COLORS: Record<FixtureCategory, string> = {
+  uplight: '#f59e0b', // amber
+  downlight: '#3b82f6', // blue
+  path_light: '#10b981', // emerald
+  spot: '#ef4444', // red
+  wall_wash: '#8b5cf6', // purple
+  well_light: '#06b6d4', // cyan
+  bollard: '#84cc16', // lime
+  step_light: '#f97316', // orange
+  gutter_uplight: '#eab308', // yellow
+  coredrill: '#6366f1', // indigo
+};
 
 /**
  * LightingDesigner - Full workflow component
@@ -48,26 +62,27 @@ export const LightingDesigner: React.FC<LightingDesignerProps> = ({
   // Fixture management
   const {
     fixtures,
-    selectedId,
     activeType,
-    setActiveType,
-    addFixture,
-    removeFixture,
-    updateFixture,
-    selectFixture,
+    importLayout,
     clearAll,
     undo,
     redo,
     canUndo,
     canRedo,
-    exportToJson,
-    importFromJson,
-    hasUnsavedChanges
   } = useFixtures({ autoSave: true });
 
   // Preview mode state
-  const [showPreview, setShowPreview] = useState(true);
   const [previewMode, setPreviewMode] = useState<'original' | 'iclight' | 'final'>('original');
+
+  const handleFixturesChange = useCallback((newFixtures: LightFixture[]) => {
+    importLayout({
+      id: `layout-${Date.now()}`,
+      imageId: '',
+      fixtures: newFixtures,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }, [importLayout]);
 
   /**
    * Handle image upload
@@ -301,11 +316,10 @@ export const LightingDesigner: React.FC<LightingDesignerProps> = ({
             >
               <FixturePlacer
                 imageUrl={originalImage}
-                initialFixtures={fixtures}
-                onFixturesChange={(newFixtures) => {
-                  // Sync with hook
-                }}
-                showPreview={showPreview}
+                fixtures={fixtures}
+                onFixturesChange={handleFixturesChange}
+                activeFixtureType={activeType}
+                markerColors={MARKER_COLORS}
               />
             </motion.div>
           )}

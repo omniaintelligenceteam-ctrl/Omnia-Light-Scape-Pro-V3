@@ -3,7 +3,6 @@ import { Wand2, Sparkles, Loader2, Download, RefreshCw, ImagePlus, MousePointer2
 import { FixturePlacer, FixturePlacerHandle } from './FixturePlacer';
 import { LightFixture, FixtureCategory } from '../types/fixtures';
 import { analyzePropertyWithDeepThink, generateWithManualPlacement } from '../services/manualPlacementService';
-import { useAuth } from '@clerk/clerk-react';
 
 interface ManualPlacementGeneratorProps {
   initialImageUrl?: string;
@@ -27,7 +26,6 @@ export const ManualPlacementGenerator: React.FC<ManualPlacementGeneratorProps> =
   initialImageUrl,
   onGenerated,
 }) => {
-  const { getToken } = useAuth();
   const placerRef = useRef<FixturePlacerHandle>(null);
   
   // State

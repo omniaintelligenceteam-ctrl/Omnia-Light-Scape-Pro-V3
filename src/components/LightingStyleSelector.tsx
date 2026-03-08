@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  LIGHTING_PRESETS,
   CUSTOM_PRESET_TEMPLATE,
   getAllPresets,
   getPresetById,
