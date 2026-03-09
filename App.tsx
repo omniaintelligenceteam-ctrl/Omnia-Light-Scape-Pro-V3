@@ -2845,6 +2845,49 @@ const App: React.FC = () => {
       }
   };
 
+  const handleCreateQuoteFromProjects = () => {
+    setCurrentProjectId(null);
+    setCurrentQuote(null);
+    setCurrentProjectInternalNotes('');
+    setGeneratedImage(null);
+    setProjectsSubTab('quotes');
+  };
+
+  const handleCreateInvoiceFromProjects = () => {
+    const now = Date.now();
+    const today = new Date();
+    const dueDate = new Date(today);
+    dueDate.setDate(dueDate.getDate() + 30);
+
+    const draftInvoice: InvoiceData = {
+      id: `manual_inv_${now}`,
+      projectId: '',
+      projectName: 'New Invoice',
+      invoiceNumber: `INV-${now.toString(36).toUpperCase()}`,
+      invoiceDate: today.toISOString().split('T')[0],
+      dueDate: dueDate.toISOString().split('T')[0],
+      clientDetails: { name: '', email: '', phone: '', address: '' },
+      lineItems: [{
+        id: `item_${now}`,
+        description: 'New line item',
+        quantity: 1,
+        unitPrice: 0,
+        total: 0
+      }],
+      subtotal: 0,
+      taxRate: 0.07,
+      taxAmount: 0,
+      discount: 0,
+      total: 0,
+      notes: '',
+      status: 'draft'
+    };
+
+    setCurrentInvoice(draftInvoice);
+    setInvoices(prev => [draftInvoice, ...prev]);
+    setProjectsSubTab('invoicing');
+  };
+
   // Handle internal notes change - debounced auto-save
   const handleInternalNotesChange = async (notes: string) => {
     setCurrentProjectInternalNotes(notes);
@@ -5951,7 +5994,7 @@ Notes: ${invoice.notes || 'N/A'}
              <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
 
                  {/* High-End Header */}
-                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 mb-6 border-b border-white/5 pb-6">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 mb-6 border-b border-white/5 pb-6">
                      {/* Mobile: Title and Search in same row */}
                      <div className="flex items-start justify-between w-full md:w-auto gap-3">
                         <div className="flex-1 md:flex-none">
@@ -6027,7 +6070,24 @@ Notes: ${invoice.notes || 'N/A'}
                            </button>
                         )}
                      </div>
-                 </div>
+
+                     <div className="w-full md:w-auto flex items-center gap-2">
+                        <button
+                          onClick={handleCreateQuoteFromProjects}
+                          className="flex-1 md:flex-none px-3 py-2.5 rounded-xl bg-purple-500/10 text-purple-300 border border-purple-500/30 hover:bg-purple-500/20 transition-colors text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Create Quote
+                        </button>
+                        <button
+                          onClick={handleCreateInvoiceFromProjects}
+                          className="flex-1 md:flex-none px-3 py-2.5 rounded-xl bg-blue-500/10 text-blue-300 border border-blue-500/30 hover:bg-blue-500/20 transition-colors text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          Create Invoice
+                        </button>
+                     </div>
+                  </div>
 
 
                  {/* Simplified Navigation: 3 Main Tabs */}
@@ -6314,7 +6374,7 @@ Notes: ${invoice.notes || 'N/A'}
                                         {/* Action Buttons - Always visible */}
                                         <div className="flex items-center border-t border-white/5 divide-x divide-white/5">
                                             <button onClick={(e) => { e.stopPropagation(); handleDownloadImage(p); }} disabled={!p.image} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-gray-400 active:text-white active:bg-white/5 flex items-center justify-center gap-1.5 disabled:opacity-30"><ImageIcon className="w-3.5 h-3.5" />Save</button>
-                                            <button onClick={(e) => { e.stopPropagation(); setCurrentProjectId(p.id); if (p.image) setGeneratedImage(p.image); if (p.quote) setCurrentQuote(p.quote); else setCurrentQuote(null); setProjectsSubTab('quotes'); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-purple-400 active:text-purple-300 active:bg-purple-500/10 flex items-center justify-center gap-1.5"><FileText className="w-3.5 h-3.5" />Quote</button>
+                                            <button onClick={(e) => { e.stopPropagation(); setCurrentProjectId(p.id); setGeneratedImage(p.image || null); if (p.quote) setCurrentQuote(p.quote); else setCurrentQuote(null); setProjectsSubTab('quotes'); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-purple-400 active:text-purple-300 active:bg-purple-500/10 flex items-center justify-center gap-1.5"><FileText className="w-3.5 h-3.5" />Quote</button>
                                             {p.status === 'approved' ? (
                                                 <button onClick={(e) => { e.stopPropagation(); setScheduleProjectId(p.id); setScheduleDate(new Date()); setScheduleTimeSlot('morning'); setScheduleCustomTime('09:00'); setScheduleDuration(2); setScheduleNotes(''); setShowScheduleModal(true); }} className="flex-1 py-2.5 text-[10px] uppercase font-bold text-blue-400 active:text-blue-300 active:bg-blue-500/10 flex items-center justify-center gap-1.5"><Calendar className="w-3.5 h-3.5" />Schedule</button>
                                             ) : (
@@ -6359,7 +6419,7 @@ Notes: ${invoice.notes || 'N/A'}
                                         onSendQuote={handleSendQuoteToPortal}
                                         onGenerateQuote={(p) => {
                                             setCurrentProjectId(p.id);
-                                            if (p.image) setGeneratedImage(p.image);
+                                            setGeneratedImage(p.image || null);
 
                                             // Start with the project's existing quote or a default structure
                                             let quoteToUse = p.quote || null;
@@ -6685,7 +6745,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                         if (p.quote) {
                                                             setCurrentProjectId(p.id);
                                                             setCurrentQuote(p.quote);
-                                                            if (p.image) setGeneratedImage(p.image);
+                                                            setGeneratedImage(p.image || null);
                                                             setProjectsSubTab('quotes');
                                                         }
                                                     }}
@@ -6791,7 +6851,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                                 <button
                                                                     onClick={() => {
                                                                         setCurrentProjectId(p.id);
-                                                                        if (p.image) setGeneratedImage(p.image);
+                                                                        setGeneratedImage(p.image || null);
                                                                         setCurrentQuote(p.quote || null);
                                                                         setProjectsSubTab('quotes');
                                                                     }}
@@ -6851,7 +6911,7 @@ Notes: ${invoice.notes || 'N/A'}
                                                         <button
                                                             onClick={() => {
                                                                 setCurrentProjectId(p.id);
-                                                                if (p.image) setGeneratedImage(p.image);
+                                                                setGeneratedImage(p.image || null);
                                                                 setCurrentQuote(p.quote || null);
                                                                 setProjectsSubTab('quotes');
                                                             }}
@@ -9772,7 +9832,7 @@ Notes: ${invoice.notes || 'N/A'}
                           onClick={() => {
                             setShowProjectDetailModal(false);
                             setCurrentProjectId(project.id);
-                            if (project.image) setGeneratedImage(project.image);
+                            setGeneratedImage(project.image || null);
                             setCurrentQuote(null);
                             setProjectsSubTab('quotes');
                           }}
@@ -10246,7 +10306,7 @@ Notes: ${invoice.notes || 'N/A'}
                         if (nextStepProjectId) {
                           setCurrentProjectId(nextStepProjectId);
                           const project = projects.find(p => p.id === nextStepProjectId);
-                          if (project?.image) setGeneratedImage(project.image);
+                          setGeneratedImage(project?.image || null);
                           setProjectsSubTab('quotes');
                           handleTabChange('projects');
                         }
