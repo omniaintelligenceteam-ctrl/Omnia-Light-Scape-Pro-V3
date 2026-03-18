@@ -49,7 +49,7 @@ export interface MockupDryRunResult {
   stylePreset: MockupRenderSpec['stylePreset'];
 }
 
-const DEFAULT_IMAGE_MODEL = 'gemini-3-pro-image-preview';
+const DEFAULT_IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
 const DEFAULT_QA_MODEL = 'gemini-3.1-pro-preview';
 const PROMPT_PACK_DIR = 'src/prompts/mockup';
 const SKILLS_DIR = 'src/skills';

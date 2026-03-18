@@ -17,7 +17,6 @@ import { buildNormalizedFixturePlacements, validateNormalizedFixturePlacements }
 
 /**
  * Maps FixturePlacer's FixtureCategory to the pipeline's fixtureType IDs.
- * Pipeline mask shapes (maskService.ts) and prompts (FLUX_FILL_PROMPTS) use these keys.
  */
 const CATEGORY_TO_PIPELINE_TYPE: Record<FixtureCategory, string> = {
   uplight:        'up',

@@ -10,4 +10,3 @@ export { AnalyticsSection } from './AnalyticsSection';
 export { SupportSection } from './SupportSection';
 export { ReportsSection } from './ReportsSection';
 export { DunningSection } from './DunningSection';
-export { LightingQaSection } from './LightingQaSection';

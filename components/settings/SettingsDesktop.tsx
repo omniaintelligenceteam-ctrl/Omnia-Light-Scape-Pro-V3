@@ -21,7 +21,7 @@ import {
   DunningSection,
   SubscriptionSection,
   AnalyticsSection,
-  LightingQaSection,
+
   SupportSection,
   ReportsSection
 } from './sections';
@@ -110,7 +110,6 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
   teamPerformanceData,
   capacityPlanningData,
   onViewProject,
-  qaRecentGenerations = []
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const { isOwner, isAdmin } = useOrganization();
@@ -124,9 +123,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
     payoutsEnabled?: boolean;
   }>({ connected: false, status: null });
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
-  const sectionTitle: string = activeSection === 'lighting-qa'
-    ? 'Lighting QA'
-    : activeSection.replace(/-/g, ' ');
+  const sectionTitle: string = activeSection.replace(/-/g, ' ');
 
   // Fetch Stripe Connect status on mount
   useEffect(() => {
@@ -214,7 +211,7 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className={`p-8 pb-24 ${(activeSection === 'analytics' || activeSection === 'lighting-qa') ? 'max-w-7xl' : 'max-w-3xl'}`}>
+        <div className={`p-8 pb-24 ${activeSection === 'analytics' ? 'max-w-7xl' : 'max-w-3xl'}`}>
           <AnimatePresence mode="wait">
             {/* Profile Section */}
             {activeSection === 'profile' && profile && (
@@ -303,10 +300,6 @@ export const SettingsDesktop: React.FC<SettingsViewProps> = ({
               />
             )}
 
-            {/* Lighting QA Section */}
-            {activeSection === 'lighting-qa' && (
-              <LightingQaSection recentGenerations={qaRecentGenerations} />
-            )}
 
             {/* Follow-ups Section */}
             {activeSection === 'followups' && (
