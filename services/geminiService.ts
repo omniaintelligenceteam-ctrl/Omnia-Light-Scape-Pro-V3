@@ -199,11 +199,7 @@ function extractBase64Data(imageOrDataUri: string): string {
   return commaIndex >= 0 ? imageOrDataUri.slice(commaIndex + 1) : imageOrDataUri;
 }
 
-function extractMimeType(imageOrDataUri: string, fallback: string): string {
-  if (!imageOrDataUri.startsWith('data:')) return fallback;
-  const mimeMatch = imageOrDataUri.match(/^data:(.*?);base64,/);
-  return mimeMatch?.[1] || fallback;
-}
+
 
 type InlineImagePart = {
   inlineData?: {
@@ -254,6 +250,93 @@ const PHOTOREALISM_LOCK_ADDENDUM = `
 - Marker/guide annotations from reference images are placement guides only and must be invisible in final output.
 - If any requirement conflicts, prioritize photorealism and physical light behavior.
 `;
+
+/**
+ * Lightweight fixture type compliance check. Asks Gemini 3.1 Pro to identify
+ * visible fixture types in the generated image, then flags any that weren't selected.
+ */
+async function verifyFixtureCompliance(
+  generatedImage: string,
+  imageMimeType: string,
+  selectedFixtures: string[]
+): Promise<{ passed: boolean; violatingTypes: string[] }> {
+  const VALID_TYPES = ['up', 'path', 'gutter', 'soffit', 'hardscape', 'coredrill', 'well'];
+
+  const prompt = `Look at this landscape lighting image. List ONLY the lighting fixture types you can see:
+- up (ground-mounted uplights washing walls or trees upward)
+- path (short pathway bollard lights on ground)
+- gutter (uplights mounted inside rain gutter channel)
+- soffit (recessed downlights in roof eaves/overhangs)
+- hardscape (flush lights in concrete, steps, or retaining walls)
+- coredrill (flush in-ground lights in driveways or sidewalks)
+- well (in-ground well lights)
+- none (no lighting fixtures visible)
+
+Return ONLY valid JSON: { "visibleTypes": ["up", "path"] }
+Do not include types you are unsure about. Only include types you can clearly identify.`;
+
+  try {
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+    const imageData = extractBase64Data(generatedImage);
+
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: GEMINI_3_1_PRO_MODEL_NAME,
+        contents: { parts: [
+          { inlineData: { data: imageData, mimeType: imageMimeType } },
+          { text: prompt }
+        ]},
+        config: { temperature: 0.1 }
+      }),
+      30000,
+      'Fixture compliance check timed out'
+    );
+
+    const text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const jsonMatch = text.match(/\{[\s\S]*"visibleTypes"[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn('[FixtureCompliance] Could not parse response, assuming pass:', text);
+      return { passed: true, violatingTypes: [] };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    const visibleTypes: string[] = (parsed.visibleTypes || [])
+      .map((t: string) => t.toLowerCase().trim())
+      .filter((t: string) => VALID_TYPES.includes(t));
+
+    const violatingTypes = visibleTypes.filter(t => !selectedFixtures.includes(t));
+
+    if (violatingTypes.length > 0) {
+      console.warn(`[FixtureCompliance] VIOLATION: Found ${violatingTypes.join(', ')} but only ${selectedFixtures.join(', ')} were selected`);
+    } else {
+      console.log('[FixtureCompliance] Passed — no unauthorized fixture types detected');
+    }
+
+    return { passed: violatingTypes.length === 0, violatingTypes };
+  } catch (err) {
+    console.warn('[FixtureCompliance] Check failed, assuming pass:', err);
+    return { passed: true, violatingTypes: [] };
+  }
+}
+
+/**
+ * Builds a correction prompt that explicitly tells the AI to remove violating fixture types.
+ */
+function buildFixtureComplianceCorrectionPrompt(
+  originalPrompt: string,
+  violatingTypes: string[]
+): string {
+  const violatingLabels = violatingTypes
+    .map(id => FIXTURE_TYPES.find(f => f.id === id)?.label || id)
+    .join(', ');
+
+  const correction = `CRITICAL CORRECTION — FORBIDDEN FIXTURES DETECTED
+The previous generation incorrectly included: ${violatingLabels}.
+You MUST NOT render any ${violatingLabels} fixtures. Those areas must be PITCH BLACK with ZERO illumination.
+Re-generate following all instructions below, but with ABSOLUTELY ZERO ${violatingLabels}.\n\n`;
+
+  return correction + originalPrompt;
+}
 
 function clampScore(score: number): number {
   return Math.max(0, Math.min(100, score));
@@ -855,7 +938,42 @@ const buildGenerationPrompt = (
     ? `\n\nCRITICAL MODIFICATION REQUEST: ${sanitizedModificationRequest}\nKeep all fixture coordinates and beam directions exactly as specified above while applying this change.\n`
     : '';
 
-  return `${prompt}${modificationSection}\n${PHOTOREALISM_LOCK_ADDENDUM}`;
+  // Final fixture inventory checklist (recency bias — AI weights end of prompt most heavily)
+  const allowedLabels = selectedFixtures
+    .map(id => FIXTURE_TYPES.find(f => f.id === id)?.label)
+    .filter(Boolean);
+  const forbiddenLabels = FIXTURE_TYPES
+    .filter(f => !selectedFixtures.includes(f.id))
+    .map(f => f.label);
+
+  let inventoryCheck = '\n\n=== FINAL FIXTURE INVENTORY CHECK (LAST INSTRUCTION — HIGHEST PRIORITY) ===\n';
+  inventoryCheck += `ALLOWED fixture types in this image: ${allowedLabels.length > 0 ? allowedLabels.join(', ') : 'NONE'}\n`;
+  inventoryCheck += `FORBIDDEN fixture types (ZERO of these): ${forbiddenLabels.length > 0 ? forbiddenLabels.join(', ') : 'NONE'}\n`;
+  forbiddenLabels.forEach(label => {
+    inventoryCheck += `- ${label}: ZERO in image. These areas PITCH BLACK.\n`;
+  });
+  inventoryCheck += `Total allowed types: ${allowedLabels.length}. Any extra type = FAILURE.\n`;
+  inventoryCheck += `If you rendered ANY forbidden fixture type, you MUST remove it now.\n`;
+
+  // Exact count enforcement (recency bias)
+  const countLines: string[] = [];
+  selectedFixtures.forEach(fixtureId => {
+    const fixtureType = FIXTURE_TYPES.find(f => f.id === fixtureId);
+    if (!fixtureType) return;
+    const subOpts = fixtureSubOptions[fixtureId] || [];
+    subOpts.forEach(subOptId => {
+      const subOpt = fixtureType.subOptions?.find(s => s.id === subOptId);
+      const count = fixtureCounts[subOptId];
+      if (subOpt && count !== null && count !== undefined) {
+        countLines.push(`- ${fixtureType.label} > ${subOpt.label}: EXACTLY ${count}`);
+      }
+    });
+  });
+  if (countLines.length > 0) {
+    inventoryCheck += '\nEXACT COUNTS:\n' + countLines.join('\n') + '\n';
+  }
+
+  return `${prompt}${modificationSection}${inventoryCheck}\n${PHOTOREALISM_LOCK_ADDENDUM}`;
 };
 
 
@@ -2376,12 +2494,20 @@ export const generateManualScene = async (
   // Step 2: Generate with Gemini image model
   onStageUpdate?.('placing');
   console.log('[Manual Mode] Step 2/2: Generating final image with Gemini image model...');
-  const result = await executeGeneration(
+  let result = await executeGeneration(
     generationBaseImage,
     imageMimeType,
     lockedPrompt,
     manualAspectRatio
   );
+
+  // Fixture type compliance check — retry once if forbidden types detected
+  const compliance = await verifyFixtureCompliance(result, imageMimeType, selectedFixtures);
+  if (!compliance.passed) {
+    console.warn(`[Manual Mode] Fixture compliance failed, retrying without: ${compliance.violatingTypes.join(', ')}`);
+    const correctionPrompt = buildFixtureComplianceCorrectionPrompt(lockedPrompt, compliance.violatingTypes);
+    result = await executeGeneration(generationBaseImage, imageMimeType, correctionPrompt, manualAspectRatio);
+  }
 
   return { result, nightBase: generationBaseImage };
 };
@@ -2544,6 +2670,14 @@ export const generateNightSceneEnhanced = async (
     targetRatio
   );
 
+
+  // Fixture type compliance check — retry once if forbidden types detected
+  const compliance = await verifyFixtureCompliance(result, imageMimeType, selectedFixtures);
+  if (!compliance.passed) {
+    console.warn(`[Enhanced Mode] Fixture compliance failed, retrying without: ${compliance.violatingTypes.join(', ')}`);
+    const correctionPrompt = buildFixtureComplianceCorrectionPrompt(lockedPrompt, compliance.violatingTypes);
+    result = await executeGeneration(imageBase64, imageMimeType, correctionPrompt, targetRatio);
+  }
 
   console.log('[Enhanced Mode] Generation complete!');
   return result;
