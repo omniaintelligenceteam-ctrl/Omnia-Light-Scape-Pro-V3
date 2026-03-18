@@ -18,8 +18,8 @@ import type { EnhancedHouseAnalysis, SuggestedFixture } from "../src/types/house
 import type { LightFixture, GutterLine } from "../types/fixtures";
 import { rotationToDirectionLabel, hasCustomRotation } from "../utils/fixtureConverter";
 
-// Stage 2 image model: Nano Banana 2 (Gemini 3.1 Flash Image).
-const NANO_BANANA_2_MODEL_NAME = 'gemini-3.1-flash-image-preview';
+// Stage 2 image model: Nano Banana Pro (Gemini 3 Pro Image).
+const IMAGE_MODEL_NAME = 'gemini-3-pro-image-preview';
 
 // Timeout for API calls (2 minutes)
 const API_TIMEOUT_MS = 120000;
@@ -193,14 +193,6 @@ function sanitizeFreeformDirectiveText(
   return `${clipped}\n[TRUNCATED_${label.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}]`;
 }
 
-export interface PlacementVerificationResult {
-  verified: boolean;
-  confidence: number;
-  details: string;
-  gutterVerified: boolean;
-  unexpectedTypes: string[];
-}
-
 
 function extractBase64Data(imageOrDataUri: string): string {
   const commaIndex = imageOrDataUri.indexOf(',');
@@ -268,19 +260,7 @@ function clampScore(score: number): number {
 }
 
 
-function shouldAcceptPlacementRetryCandidate(
-  current: PlacementVerificationResult,
-  next: PlacementVerificationResult
-): boolean {
-  if (current.unexpectedTypes.length === 0 && next.unexpectedTypes.length > 0) {
-    return false;
-  }
 
-  if (next.verified) return true;
-  if (next.unexpectedTypes.length < current.unexpectedTypes.length) return true;
-  if (next.unexpectedTypes.length > current.unexpectedTypes.length) return false;
-  return next.confidence >= current.confidence;
-}
 function buildPreferenceContext(preferences: UserPreferences | null | undefined): string {
   if (!preferences) return '';
 
@@ -1946,7 +1926,7 @@ export async function executeGeneration(
         () =>
           withTimeout(
             ai.models.generateContent({
-              model: NANO_BANANA_2_MODEL_NAME, // gemini-3.1-flash-image-preview
+              model: IMAGE_MODEL_NAME, // gemini-3.1-flash-image-preview
               contents: { parts: imageParts },
               config: {
                 temperature: 0.1,
@@ -2005,7 +1985,6 @@ export async function executeGeneration(
  * Checks fixture types, coordinate ranges, and counts.
  */
 const GUTTER_LINE_TOLERANCE_PERCENT = 2.5;
-const GUTTER_VERIFICATION_TOLERANCE_PERCENT = 4.0;
 const DEFAULT_GUTTER_MOUNT_DEPTH_PERCENT = 0.6;
 const MIN_GUTTER_MOUNT_DEPTH_PERCENT = 0.2;
 const MAX_GUTTER_MOUNT_DEPTH_PERCENT = 2.0;
@@ -2273,286 +2252,6 @@ function validateManualPlacements(
 }
 
 /**
- * Post-generation verification: sends the generated image back to Gemini
- * for text-only analysis to count fixtures and compare against expected.
- * Returns a verification result (does NOT retry â€” just informs).
- */
-interface DetectedFixture {
-  type: string;
-  x: number;
-  y: number;
-  direction?: string;
-}
-
-function isGutterLikeType(type: string): boolean {
-  const normalized = (type || '').toLowerCase();
-  return normalized.includes('gutter') || (normalized.includes('roof') && normalized.includes('up'));
-}
-
-function normalizeDetectedFixtureType(type: string): string | null {
-  const normalized = (type || '').toLowerCase();
-  if (!normalized) return null;
-
-  if (
-    normalized.includes('soffit') ||
-    normalized.includes('eave') ||
-    normalized.includes('downlight')
-  ) return 'soffit';
-  if (
-    normalized.includes('gutter') ||
-    (normalized.includes('roof') && normalized.includes('up'))
-  ) return 'gutter';
-  if (normalized.includes('path') || normalized.includes('walk')) return 'path';
-  if (normalized.includes('well')) return 'well';
-  if (normalized.includes('hardscape') || normalized.includes('step')) return 'hardscape';
-  if (normalized.includes('core') || normalized.includes('drill')) return 'coredrill';
-  if (normalized.includes('holiday') || normalized.includes('string')) return 'holiday';
-  if (normalized.includes('up')) return 'up';
-
-  return null;
-}
-
-function evaluateUnexpectedFixtureTypes(
-  expectedPlacements: SpatialFixturePlacement[],
-  detectedFixtures: DetectedFixture[]
-): { verified: boolean; details: string; unexpectedTypes: string[] } {
-  const expectedTypes = new Set(expectedPlacements.map(p => p.fixtureType));
-  const unexpected = new Set<string>();
-
-  for (const fixture of detectedFixtures) {
-    const canonical = normalizeDetectedFixtureType(fixture.type);
-    if (!canonical) continue;
-    if (!expectedTypes.has(canonical)) {
-      unexpected.add(canonical);
-    }
-  }
-
-  const unexpectedTypes = [...unexpected];
-  if (unexpectedTypes.length > 0) {
-    return {
-      verified: false,
-      details: `Unexpected fixture types detected: ${unexpectedTypes.join(', ')}.`,
-      unexpectedTypes,
-    };
-  }
-
-  return {
-    verified: true,
-    details: 'No unexpected fixture types detected.',
-    unexpectedTypes: [],
-  };
-}
-
-function evaluateFixtureTypeCountVerification(
-  expectedPlacements: SpatialFixturePlacement[],
-  detectedFixtures: DetectedFixture[]
-): { verified: boolean; details: string; mismatches: string[] } {
-  const expectedCounts = new Map<string, number>();
-  expectedPlacements.forEach(placement => {
-    expectedCounts.set(placement.fixtureType, (expectedCounts.get(placement.fixtureType) || 0) + 1);
-  });
-
-  const detectedCounts = new Map<string, number>();
-  detectedFixtures.forEach(fixture => {
-    const canonical = normalizeDetectedFixtureType(fixture.type);
-    if (!canonical || !expectedCounts.has(canonical)) return;
-    detectedCounts.set(canonical, (detectedCounts.get(canonical) || 0) + 1);
-  });
-
-  const mismatches: string[] = [];
-  expectedCounts.forEach((expectedCount, type) => {
-    const detectedCount = detectedCounts.get(type) || 0;
-    if (detectedCount !== expectedCount) {
-      mismatches.push(`${type}: expected ${expectedCount}, detected ${detectedCount}`);
-    }
-  });
-
-  if (mismatches.length > 0) {
-    return {
-      verified: false,
-      details: `Type count mismatches: ${mismatches.join(' | ')}`,
-      mismatches,
-    };
-  }
-
-  return {
-    verified: true,
-    details: 'Per-type fixture counts matched expected values.',
-    mismatches: [],
-  };
-}
-
-function evaluateGutterVerification(
-  expectedPlacements: SpatialFixturePlacement[],
-  detectedFixtures: DetectedFixture[],
-  gutterLines?: GutterLine[]
-): { verified: boolean; details: string } {
-  const expectedGutters = expectedPlacements.filter(p => p.fixtureType === 'gutter');
-  if (expectedGutters.length === 0) {
-    return { verified: true, details: 'No gutter fixtures expected.' };
-  }
-
-  const detectedGutters = detectedFixtures.filter(f => isGutterLikeType(f.type));
-  if (detectedGutters.length < expectedGutters.length) {
-    return {
-      verified: false,
-      details: `Line-mounted fixture mismatch: expected ${expectedGutters.length}, detected ${detectedGutters.length}.`,
-    };
-  }
-
-  const usedDetected = new Set<number>();
-  const matched: Array<{ expected: SpatialFixturePlacement; actual: DetectedFixture; distance: number }> = [];
-
-  for (const expected of expectedGutters) {
-    let bestIdx = -1;
-    let bestDist = Infinity;
-    for (let i = 0; i < detectedGutters.length; i++) {
-      if (usedDetected.has(i)) continue;
-      const actual = detectedGutters[i];
-      const dist = Math.sqrt(
-        (expected.horizontalPosition - actual.x) ** 2 +
-        (expected.verticalPosition - actual.y) ** 2
-      );
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestIdx = i;
-      }
-    }
-    if (bestIdx === -1) {
-      return { verified: false, details: 'Unable to match all expected gutter fixtures.' };
-    }
-    usedDetected.add(bestIdx);
-    matched.push({ expected, actual: detectedGutters[bestIdx], distance: bestDist });
-  }
-
-  const maxPosDrift = Math.max(...matched.map(m => m.distance));
-  const avgPosDrift = matched.reduce((sum, m) => sum + m.distance, 0) / matched.length;
-  if (maxPosDrift > GUTTER_VERIFICATION_TOLERANCE_PERCENT) {
-    return {
-      verified: false,
-      details: `Line-mounted fixture position drift too high (max ${maxPosDrift.toFixed(2)}%, avg ${avgPosDrift.toFixed(2)}%).`,
-    };
-  }
-
-  if (gutterLines && gutterLines.length > 0) {
-    const maxLineDrift = Math.max(
-      ...matched.map(m => {
-        const nearest = findNearestGutterProjection(m.actual.x, m.actual.y, gutterLines);
-        return nearest ? nearest.distance : 100;
-      })
-    );
-    if (maxLineDrift > GUTTER_VERIFICATION_TOLERANCE_PERCENT) {
-      return {
-        verified: false,
-        details: `Detected line-mounted fixtures are off the user-defined rail (max ${maxLineDrift.toFixed(2)}%).`,
-      };
-    }
-  }
-
-  return {
-    verified: true,
-    details: `Line-mounted fixtures verified (max drift ${maxPosDrift.toFixed(2)}%, avg drift ${avgPosDrift.toFixed(2)}%).`,
-  };
-}
-
-async function verifyGeneratedImage(
-  generatedImageBase64: string,
-  imageMimeType: string,
-  expectedPlacements: SpatialFixturePlacement[],
-  gutterLines?: GutterLine[]
-): Promise<{ verified: boolean; confidence: number; details: string; gutterVerified: boolean; unexpectedTypes: string[] }> {
-  try {
-    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-
-    const expectedCount = expectedPlacements.length;
-    const expectedTypes = [...new Set(expectedPlacements.map(p => p.fixtureType))];
-
-    const verificationPrompt = `You are analyzing a nighttime landscape lighting photograph.
-Count EVERY visible light source or illuminated fixture in this image.
-
-For each light source found, report:
-- Type (uplight, gutter light, path light, well light, hardscape/step light, soffit downlight, core-drill light)
-- Approximate position as [X%, Y%] where 0%,0% is top-left
-- Beam direction (up, down, left, right, up-right, up-left, down-right, down-left, or unknown)
-- For gutter classification: label as "gutter light" for user-defined line-mounted uplights (they are not restricted to roof edges and may appear anywhere in the image).
-
-EXPECTED: ${expectedCount} fixtures of types: ${expectedTypes.join(', ')}
-
-Respond in this EXACT JSON format (no markdown, no code blocks):
-{"count": <number>, "fixtures": [{"type": "<type>", "x": <number>, "y": <number>, "direction": "<direction|unknown>"}], "confidence": <0-100>}`;
-
-    const response = await ai.models.generateContent({
-      model: GEMINI_3_1_PRO_MODEL_NAME,
-      contents: {
-        parts: [
-          { inlineData: { data: generatedImageBase64, mimeType: imageMimeType } },
-          { text: verificationPrompt }
-        ],
-      },
-      config: {
-        temperature: 0.1,
-      },
-    });
-
-    const text = response.text?.trim() || '';
-    console.log('[Manual Mode] Verification raw response:', text);
-
-    // Parse JSON response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.warn('[Manual Mode] Verification: Could not parse response as JSON');
-      return {
-        verified: false,
-        confidence: 0,
-        details: 'Could not parse verification response',
-        gutterVerified: false,
-        unexpectedTypes: [],
-      };
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]) as { count?: number; fixtures?: DetectedFixture[]; confidence?: number };
-    const fixtures = Array.isArray(parsed.fixtures) ? parsed.fixtures : [];
-    const actualCount = typeof parsed.count === 'number' ? parsed.count : fixtures.length;
-    const confidence = parsed.confidence || 0;
-    const countMatch = actualCount === expectedCount;
-    const gutterVerification = evaluateGutterVerification(expectedPlacements, fixtures, gutterLines);
-    const typeVerification = evaluateUnexpectedFixtureTypes(expectedPlacements, fixtures);
-    const typeCountVerification = evaluateFixtureTypeCountVerification(expectedPlacements, fixtures);
-    const verified = countMatch && gutterVerification.verified && typeVerification.verified && typeCountVerification.verified;
-
-    const details = `Expected ${expectedCount} fixtures, found ${actualCount}. Confidence: ${confidence}%. Types expected: [${expectedTypes.join(', ')}]. ${typeCountVerification.details} ${gutterVerification.details} ${typeVerification.details}`;
-
-    if (verified) {
-      console.log(`[Manual Mode] Verification PASSED: ${actualCount}/${expectedCount} fixtures confirmed (${confidence}% confidence). ${typeCountVerification.details} ${gutterVerification.details} ${typeVerification.details}`);
-    } else {
-      console.warn(`[Manual Mode] Verification WARNING: Expected ${expectedCount} fixtures but found ${actualCount} (${confidence}% confidence). ${typeCountVerification.details} ${gutterVerification.details} ${typeVerification.details}`);
-      if (fixtures) {
-        fixtures.forEach((f, i) => {
-          console.warn(`  Found fixture ${i + 1}: ${f.type} at [${f.x}%, ${f.y}%]`);
-        });
-      }
-    }
-
-    return {
-      verified,
-      confidence,
-      details,
-      gutterVerified: gutterVerification.verified,
-      unexpectedTypes: typeVerification.unexpectedTypes,
-    };
-  } catch (error) {
-    console.warn('[Manual Mode] Verification failed (non-blocking):', error);
-    return {
-      verified: false,
-      confidence: 0,
-      details: `Verification error: ${error}`,
-      gutterVerified: false,
-      unexpectedTypes: [],
-    };
-  }
-}
-
-/**
  * PASS 1: Convert daytime photo to clean nighttime base with NO lights.
  * Result is cached by the caller so subsequent generations skip this step.
  */
@@ -2580,7 +2279,7 @@ REQUIREMENTS:
 
   const response = await withTimeout(
     ai.models.generateContent({
-      model: NANO_BANANA_2_MODEL_NAME,
+      model: IMAGE_MODEL_NAME,
       contents: { parts: [
         { inlineData: { data: resized, mimeType: imageMimeType } },
         { text: prompt }
@@ -2611,110 +2310,6 @@ REQUIREMENTS:
   throw new Error('Night base generation returned no image.');
 }
 
-function buildGutterCorrectionPrompt(
-  basePrompt: string,
-  placements: SpatialFixturePlacement[],
-  gutterLines?: GutterLine[],
-  unexpectedTypes: string[] = []
-): string {
-  const gutterPlacements = placements
-    .filter(p => p.fixtureType === 'gutter')
-    .sort((a, b) => a.horizontalPosition - b.horizontalPosition);
-
-  if (gutterPlacements.length === 0 && unexpectedTypes.length === 0) return basePrompt;
-
-  let correction = '\n\n=== CORRECTION PASS: LINE-MOUNTED PLACEMENT LOCK ===\n';
-  correction += 'The previous output failed verification. Fix fixture compliance exactly without changing architecture.\n';
-  correction += 'MANDATORY RULES:\n';
-  correction += '- Keep exact fixture count and preserve all non-light pixels.\n';
-  correction += '- Do not add or remove any fixture type.\n';
-  correction += '- Final image must contain zero visible guide annotations, labels, coordinates, or UI overlays.\n';
-  if (unexpectedTypes.length > 0) {
-    correction += 'REMOVE UNEXPECTED FIXTURE TYPES:\n';
-    unexpectedTypes.forEach(type => {
-      correction += `- Remove ALL ${type.toUpperCase()} fixtures and light effects.\n`;
-    });
-    if (unexpectedTypes.includes('soffit')) {
-      correction += '- Soffits/eaves must be pitch black with zero downlighting.\n';
-    }
-  }
-  if (gutterPlacements.length > 0) {
-    correction += '- Treat fixtureType=gutter as USER-DEFINED LINE-MOUNTED uplights (not literal roof gutters).\n';
-    correction += '- They may appear anywhere in the image where the user drew rails.\n';
-    correction += '- Keep EACH fixture at its exact coordinate and honor its exact beam direction (rotation).\n';
-    correction += 'EXPECTED LINE-MOUNTED FIXTURES (exact coordinates):\n';
-    gutterPlacements.forEach((p, i) => {
-      const lineInfo =
-        typeof p.gutterLineX === 'number' && typeof p.gutterLineY === 'number'
-          ? `, rail=[${p.gutterLineX.toFixed(2)}%, ${p.gutterLineY.toFixed(2)}%]`
-          : '';
-      const depthInfo =
-        typeof p.gutterMountDepthPercent === 'number'
-          ? `, offset=${p.gutterMountDepthPercent.toFixed(2)}%`
-          : '';
-      const rotationInfo = typeof p.rotation === 'number'
-        ? `, rotation=${(((p.rotation % 360) + 360) % 360).toFixed(1)}°`
-        : '';
-      correction += `- RAIL LIGHT ${i + 1}: mount=[${p.horizontalPosition.toFixed(2)}%, ${p.verticalPosition.toFixed(2)}%]${lineInfo}${depthInfo}${rotationInfo}\n`;
-    });
-
-    if (gutterLines && gutterLines.length > 0) {
-      correction += 'REFERENCE USER-DRAWN RAILS:\n';
-      gutterLines.forEach((line, i) => {
-        correction += `- RAIL ${i + 1}: [${line.startX.toFixed(2)}%, ${line.startY.toFixed(2)}%] -> [${line.endX.toFixed(2)}%, ${line.endY.toFixed(2)}%]\n`;
-      });
-    }
-    correction += 'FINAL CHECK: All line-mounted fixtures must remain within 4% of expected mount coordinates.\n';
-  }
-  correction += 'FINAL CHECK: Output must match selected fixture types only and contain zero unselected fixture types.\n';
-  return basePrompt + correction;
-}
-
-function buildStrictPlacementCorrectionPrompt(
-  basePrompt: string,
-  expectedPlacements: SpatialFixturePlacement[],
-  verificationDetails: string,
-  userInstructionNotes?: string
-): string {
-  if (expectedPlacements.length === 0) return basePrompt;
-
-  const countsByGroup = new Map<string, number>();
-  expectedPlacements.forEach(placement => {
-    const key = `${placement.fixtureType}/${placement.subOption || 'general'}`;
-    countsByGroup.set(key, (countsByGroup.get(key) || 0) + 1);
-  });
-
-  let correction = '\n\n=== STRICT PLACEMENT CORRECTION PASS (HARD LOCK) ===\n';
-  correction += 'The previous output failed strict placement verification. Correct placement/count compliance exactly.\n';
-  correction += `VERIFICATION FINDINGS: ${verificationDetails}\n`;
-  correction += 'MANDATORY RULES:\n';
-  correction += '- Use ONLY fixture types/sub-options listed below.\n';
-  correction += '- Honor EXACT per-group counts. Do not add extras to "balance" the composition.\n';
-  correction += '- Keep all fixtures at the exact coordinates provided in the placement map.\n';
-  correction += '- If uncertain about a target area, omit that fixture instead of relocating it.\n';
-  correction += '- All non-allowed surfaces must remain dark.\n';
-  correction += 'EXACT EXPECTED COUNTS:\n';
-  [...countsByGroup.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .forEach(([group, count]) => {
-      correction += `- ${group.toUpperCase()}: EXACTLY ${count}\n`;
-    });
-
-  const mapContext = formatSpatialMapForPrompt({ features: [], placements: expectedPlacements });
-  if (mapContext) {
-    correction += '\nEXACT PLACEMENT MAP (SOURCE OF TRUTH):\n';
-    correction += `${mapContext}\n`;
-  }
-
-  const trimmedUserNotes = userInstructionNotes?.trim();
-  if (trimmedUserNotes) {
-    correction += '\nUSER-SPECIFIED PLACEMENT DIRECTIVES (HIGHEST PRIORITY):\n';
-    correction += `${trimmedUserNotes}\n`;
-  }
-
-  correction += 'FINAL CHECK: Output must satisfy both coordinate lock and count lock before finishing.\n';
-  return basePrompt + correction;
-}
 
 
 /**
@@ -2949,61 +2544,6 @@ export const generateNightSceneEnhanced = async (
     targetRatio
   );
 
-  // Placement verification is opt-in via VITE_VERIFY_PLACEMENT=true (saves 1-3 API calls + 30-90s)
-  const verifyPlacement = import.meta.env.VITE_VERIFY_PLACEMENT === 'true';
-  const expectedPlacements = autoSpatialMap?.placements ?? [];
-  if (verifyPlacement && expectedPlacements.length > 0) {
-    const initialVerification = await verifyGeneratedImage(
-      result,
-      extractMimeType(result, imageMimeType),
-      expectedPlacements,
-      autoGutterLines
-    );
-
-    if (!initialVerification.verified) {
-      console.warn('[Enhanced Mode] Placement verification failed (initial render):', initialVerification.details);
-      const correctionBase = buildGutterCorrectionPrompt(
-        lockedPrompt,
-        expectedPlacements,
-        autoGutterLines,
-        initialVerification.unexpectedTypes
-      );
-      const correctionPrompt = buildStrictPlacementCorrectionPrompt(
-        correctionBase,
-        expectedPlacements,
-        initialVerification.details,
-        userInstructionNotes
-      );
-
-      const retryResult = await executeGeneration(
-        imageBase64,
-        imageMimeType,
-        correctionPrompt,
-        targetRatio
-      );
-      const retryVerification = await verifyGeneratedImage(
-        retryResult,
-        extractMimeType(retryResult, imageMimeType),
-        expectedPlacements,
-        autoGutterLines
-      );
-
-      const acceptRetry = shouldAcceptPlacementRetryCandidate(initialVerification, retryVerification);
-      if (acceptRetry) {
-        result = retryResult;
-      }
-
-      const finalVerification = acceptRetry ? retryVerification : initialVerification;
-      if (!finalVerification.verified) {
-        if (strictAutoLockRequired) {
-          throw new Error(
-            `AUTO_PLACEMENT_UNCERTAIN: Strict auto-placement verification failed. ${finalVerification.details}`
-          );
-        }
-        console.warn('[Enhanced Mode] Placement verification did not fully pass; returning best candidate:', finalVerification.details);
-      }
-    }
-  }
 
   console.log('[Enhanced Mode] Generation complete!');
   return result;
