@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from '../lib/supabase.js';
 
-const FREE_TRIAL_LIMIT = 10;
+const FREE_TRIAL_LIMIT = 0;
 
 // Check if it's time for a monthly reset based on subscription anniversary
 function shouldResetMonthly(createdAt: Date, lastResetAt: Date | null): boolean {
@@ -116,9 +116,9 @@ async function handleStatus(req: VercelRequest, res: VercelResponse, supabase: S
                 canGenerate = remainingFreeGenerations > 0;
             }
         } else {
-            // No subscription, use free trial
-            remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
-            canGenerate = remainingFreeGenerations > 0;
+            // No subscription - pay-only
+            remainingFreeGenerations = 0;
+            canGenerate = false;
         }
 
         return res.json({
@@ -275,9 +275,9 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supaba
                 reason = canGenerate ? '' : 'FREE_TRIAL_EXHAUSTED';
             }
         } else {
-            // No subscription, use free trial
-            remainingFreeGenerations = Math.max(0, FREE_TRIAL_LIMIT - generationCount);
-            canGenerate = remainingFreeGenerations > 0;
+            // No subscription - pay-only
+            remainingFreeGenerations = 0;
+            canGenerate = false;
             reason = canGenerate ? '' : 'FREE_TRIAL_EXHAUSTED';
         }
 
@@ -287,7 +287,7 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supaba
                 reason,
                 message: reason === 'MONTHLY_LIMIT_REACHED'
                     ? 'Monthly generation limit reached. Upgrade or wait for next billing cycle.'
-                    : 'Free trial exhausted. Please subscribe to continue.',
+                    : 'Subscription required. Please subscribe to generate renders.',
                 generationCount,
                 freeTrialLimit: FREE_TRIAL_LIMIT,
                 monthlyLimit: subData?.monthly_limit || 0

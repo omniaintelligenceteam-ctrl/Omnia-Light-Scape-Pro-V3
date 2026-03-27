@@ -1478,9 +1478,9 @@ const App: React.FC = () => {
     const { canGenerate, reason } = await subscription.checkCanGenerate();
     if (!canGenerate) {
       setIsLoading(false);
-      if (reason === 'FREE_TRIAL_EXHAUSTED') {
+      if (reason === 'FREE_TRIAL_EXHAUSTED' || reason === 'NO_SUBSCRIPTION') {
         setShowPricing(true);
-        showToast('info', 'Upgrade to continue generating');
+        showToast('info', 'Subscription required to generate renders');
       } else if (reason === 'MONTHLY_LIMIT_REACHED') {
         showToast('warning', 'Monthly generation limit reached. Resets next billing cycle.');
       } else {
