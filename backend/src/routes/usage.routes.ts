@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase.js';
 const router = Router();
 
 const FREE_TRIAL_LIMIT = 0;
+const FREE_TRIAL_LEGACY_LIMIT = 10;
+const FREE_TRIAL_CUTOFF = '2026-03-27';
 
 interface UsageCheckRequest {
     userId: string;
@@ -31,10 +33,10 @@ async function handleStatus(req: Request, res: Response) {
             });
         }
 
-        // Get user's generation count
+        // Get user's generation count and created_at for legacy credit check
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, generation_count')
+            .select('id, generation_count, created_at')
             .eq('clerk_user_id', userId)
             .single();
 
@@ -72,9 +74,12 @@ async function handleStatus(req: Request, res: Response) {
                 canGenerate = remainingFreeGenerations > 0;
             }
         } else {
-            // No subscription - pay-only, no free trial
-            remainingFreeGenerations = 0;
-            canGenerate = false;
+            // No subscription — existing users keep their credits, new users get none
+            const effectiveLimit = new Date(userData.created_at) < new Date(FREE_TRIAL_CUTOFF)
+                ? FREE_TRIAL_LEGACY_LIMIT
+                : FREE_TRIAL_LIMIT;
+            remainingFreeGenerations = Math.max(0, effectiveLimit - generationCount);
+            canGenerate = remainingFreeGenerations > 0;
         }
 
         res.json({
@@ -212,7 +217,7 @@ async function handleCanGenerate(req: Request, res: Response) {
         // Get user
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, generation_count')
+            .select('id, generation_count, created_at')
             .eq('clerk_user_id', userId)
             .single();
 
@@ -253,10 +258,13 @@ async function handleCanGenerate(req: Request, res: Response) {
                 reason = canGenerate ? '' : 'FREE_TRIAL_EXHAUSTED';
             }
         } else {
-            // No subscription - pay-only, no free trial
-            remainingFreeGenerations = 0;
-            canGenerate = false;
-            reason = canGenerate ? '' : 'FREE_TRIAL_EXHAUSTED';
+            // No subscription — existing users keep their credits, new users get none
+            const effectiveLimit = new Date(userData.created_at) < new Date(FREE_TRIAL_CUTOFF)
+                ? FREE_TRIAL_LEGACY_LIMIT
+                : FREE_TRIAL_LIMIT;
+            remainingFreeGenerations = Math.max(0, effectiveLimit - generationCount);
+            canGenerate = remainingFreeGenerations > 0;
+            reason = canGenerate ? '' : 'NO_SUBSCRIPTION';
         }
 
         if (!canGenerate) {

@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from '../lib/supabase.js';
 
 const FREE_TRIAL_LIMIT = 0;
+const FREE_TRIAL_LEGACY_LIMIT = 10;
+const FREE_TRIAL_CUTOFF = '2026-03-27';
 
 // Check if it's time for a monthly reset based on subscription anniversary
 function shouldResetMonthly(createdAt: Date, lastResetAt: Date | null): boolean {
@@ -27,6 +29,11 @@ function shouldResetMonthly(createdAt: Date, lastResetAt: Date | null): boolean 
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // Prevent caching so clients always get fresh usage data
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+
     let supabase: SupabaseClient;
     try {
         supabase = getSupabase();
@@ -62,10 +69,10 @@ async function handleStatus(req: VercelRequest, res: VercelResponse, supabase: S
             return res.status(400).json({ error: 'Missing userId parameter' });
         }
 
-        // Get user's generation count
+        // Get user's generation count and created_at for legacy credit check
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, generation_count')
+            .select('id, generation_count, created_at')
             .eq('clerk_user_id', userId)
             .single();
 
@@ -116,9 +123,12 @@ async function handleStatus(req: VercelRequest, res: VercelResponse, supabase: S
                 canGenerate = remainingFreeGenerations > 0;
             }
         } else {
-            // No subscription - pay-only
-            remainingFreeGenerations = 0;
-            canGenerate = false;
+            // No subscription — existing users keep their credits, new users get none
+            const effectiveLimit = new Date(userData.created_at) < new Date(FREE_TRIAL_CUTOFF)
+                ? FREE_TRIAL_LEGACY_LIMIT
+                : FREE_TRIAL_LIMIT;
+            remainingFreeGenerations = Math.max(0, effectiveLimit - generationCount);
+            canGenerate = remainingFreeGenerations > 0;
         }
 
         return res.json({
@@ -221,7 +231,7 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supaba
         // Get user
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, generation_count')
+            .select('id, generation_count, created_at')
             .eq('clerk_user_id', userId)
             .single();
 
@@ -275,10 +285,13 @@ async function handleCanGenerate(req: VercelRequest, res: VercelResponse, supaba
                 reason = canGenerate ? '' : 'FREE_TRIAL_EXHAUSTED';
             }
         } else {
-            // No subscription - pay-only
-            remainingFreeGenerations = 0;
-            canGenerate = false;
-            reason = canGenerate ? '' : 'FREE_TRIAL_EXHAUSTED';
+            // No subscription — existing users keep their credits, new users get none
+            const effectiveLimit = new Date(userData.created_at) < new Date(FREE_TRIAL_CUTOFF)
+                ? FREE_TRIAL_LEGACY_LIMIT
+                : FREE_TRIAL_LIMIT;
+            remainingFreeGenerations = Math.max(0, effectiveLimit - generationCount);
+            canGenerate = remainingFreeGenerations > 0;
+            reason = canGenerate ? '' : 'NO_SUBSCRIPTION';
         }
 
         if (!canGenerate) {
