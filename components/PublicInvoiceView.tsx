@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, XCircle, DollarSign, Clock, Share2, Check } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { InvoiceStatusHero, getInvoiceStatus, PaymentSection } from './invoice';
+import { PaymentSection } from './invoice';
 import { InvoicePageSkeleton } from './shared/PremiumSkeleton';
+import { InvoicePDFLayout } from './pdf/InvoicePDFLayout';
+import { generateInvoicePDF } from '../services/export/pdfExportService';
 
 // Celebration confetti burst (blue theme for invoices)
 const triggerCelebration = () => {
@@ -130,6 +133,8 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
   const [showCelebration, setShowCelebration] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const celebrationTriggered = useRef(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const pdfLayoutRef = useRef<HTMLDivElement>(null);
 
   // Check for payment success/cancel query params and trigger celebration
   useEffect(() => {
@@ -236,6 +241,17 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (generatingPDF || !data) return;
+    setGeneratingPDF(true);
+    try {
+      const invoiceNumber = invoiceData?.invoiceNumber || `INV-${project.id.slice(0, 8).toUpperCase()}`;
+      await generateInvoicePDF(pdfLayoutRef, invoiceNumber);
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
+
   // Loading State - Premium Skeleton
   if (loading) {
     return <InvoicePageSkeleton />;
@@ -323,7 +339,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-4"
         >
           {company.logo ? (
             <img
@@ -367,21 +383,30 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
               </>
             )}
           </motion.button>
-        </motion.div>
 
-        {/* Premium Invoice Status Hero */}
-        <div className="mb-8">
-          <InvoiceStatusHero
-            status={getInvoiceStatus(invoiceData?.dueDate || project.invoiceExpiresAt || null, isPaid)}
-            amount={invoiceTotal}
-            dueDate={invoiceData?.dueDate || project.invoiceExpiresAt}
-            onPay={handlePay}
-            isPaying={paying}
-            canPay={canAcceptPayment && !isExpired && invoiceTotal > 0}
-            paidDate={project.invoicePaidAt}
-            invoiceNumber={invoiceData?.invoiceNumber || `INV-${project.id.slice(0, 8).toUpperCase()}`}
-          />
-        </div>
+          <motion.button
+            onClick={handleDownloadPDF}
+            disabled={generatingPDF}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            whileHover={{ scale: generatingPDF ? 1 : 1.02 }}
+            whileTap={{ scale: generatingPDF ? 1 : 0.98 }}
+            className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-50"
+          >
+            {generatingPDF ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Generating...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                <span className="text-sm">Download PDF</span>
+              </>
+            )}
+          </motion.button>
+        </motion.div>
 
         {/* Main Card */}
         <motion.div
@@ -448,7 +473,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
           )}
 
           {/* Invoice Details */}
-          <div className="p-6 border-b border-white/10">
+          <div className="p-4 border-b border-white/10">
             <div className="grid md:grid-cols-2 gap-6">
               {/* Invoice Info */}
               <div>
@@ -520,7 +545,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
 
           {/* Line Items Table */}
           {invoiceData?.lineItems && invoiceData.lineItems.length > 0 && (
-            <div className="p-6 border-b border-white/10">
+            <div className="p-4 border-b border-white/10">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-blue-500" />
                 Invoice Items
@@ -608,7 +633,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
 
           {/* Invoice Amount Summary (fallback if no line items) */}
           {(!invoiceData?.lineItems || invoiceData.lineItems.length === 0) && invoiceTotal > 0 && (
-            <div className="p-6 border-b border-white/10 bg-white/[0.02]">
+            <div className="p-4 border-b border-white/10 bg-white/[0.02]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -623,7 +648,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
 
           {/* Design Preview */}
           {project.generatedImageUrl && (
-            <div className="p-6 border-b border-white/10">
+            <div className="p-4 border-b border-white/10">
               <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-500" />
                 Project Design
@@ -639,7 +664,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
           )}
 
           {/* Company Contact */}
-          <div className="p-6 border-b border-white/10 bg-white/[0.02]">
+          <div className="p-4 border-b border-white/10 bg-white/[0.02]">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-blue-500" />
               Contact Us
@@ -670,7 +695,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
 
           {/* Payment Section */}
           {!isExpired && invoiceTotal > 0 && canAcceptPayment && (
-            <div className="p-6">
+            <div className="p-4">
               <PaymentSection
                 amount={invoiceTotal}
                 onPay={handlePay}
@@ -684,7 +709,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
 
           {/* Contact for Payment (when online payment not available) */}
           {!isPaid && !isExpired && invoiceTotal > 0 && !canAcceptPayment && (
-            <div className="p-6">
+            <div className="p-4">
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-center">
                 <p className="text-blue-300 mb-2">To pay this invoice, please contact:</p>
                 <a
@@ -707,7 +732,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
 
           {/* Expired Message */}
           {isExpired && !isPaid && (
-            <div className="p-6 text-center">
+            <div className="p-4 text-center">
               <p className="text-gray-400">
                 Contact{' '}
                 <a href={`mailto:${company.email}`} className="text-blue-400 hover:underline">
@@ -728,6 +753,36 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token }) =
         >
           Powered by Omnia LightScape
         </motion.p>
+
+        {/* Hidden PDF layout for invoice download */}
+        {data && invoiceData && (
+          <InvoicePDFLayout
+            ref={pdfLayoutRef}
+            invoiceNumber={invoiceData.invoiceNumber || `INV-${project.id.slice(0, 8).toUpperCase()}`}
+            invoiceDate={invoiceData.invoiceDate}
+            dueDate={invoiceData.dueDate}
+            projectName={project.name}
+            companyName={company.name}
+            companyEmail={company.email}
+            companyPhone={company.phone}
+            companyAddress={company.address}
+            companyLogo={company.logo}
+            clientName={client?.name}
+            clientEmail={client?.email}
+            clientPhone={client?.phone}
+            clientAddress={client?.address}
+            lineItems={invoiceData.lineItems}
+            subtotal={invoiceData.subtotal}
+            taxRate={invoiceData.taxRate}
+            taxAmount={invoiceData.taxAmount}
+            discount={invoiceData.discount}
+            total={invoiceData.total}
+            notes={invoiceData.notes}
+            isPaid={isPaid}
+            isExpired={!!isExpired}
+            paidDate={project.invoicePaidAt}
+          />
+        )}
       </div>
     </div>
   );
