@@ -1,3 +1,4 @@
+import React from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { SavedProject, CompanyProfile } from '../../types';
@@ -251,4 +252,101 @@ export function generatePDFReport(data: ReportData): void {
 // Helper function to format numbers with commas
 function formatNumber(num: number): string {
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export async function generateInvoicePDF(
+  layoutRef: React.RefObject<HTMLDivElement>,
+  invoiceNumber: string
+): Promise<void> {
+  const html2canvas = (await import('html2canvas')).default;
+
+  const element = layoutRef.current;
+  if (!element) return;
+
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: false,
+    backgroundColor: '#111827',
+    width: 816,
+    height: 1056,
+  });
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'px',
+    format: [816, 1056],
+  });
+
+  const imgData = canvas.toDataURL('image/png');
+  doc.addImage(imgData, 'PNG', 0, 0, 816, 1056);
+
+  // Blob URL approach for mobile compatibility (iOS Safari won't download with doc.save())
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `invoice-${invoiceNumber}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function generateQuotePDF(
+  layoutRef: React.RefObject<HTMLDivElement>,
+  projectName: string,
+  imageUrl: string,
+  thumbRef: React.RefObject<HTMLImageElement>
+): Promise<void> {
+  const html2canvas = (await import('html2canvas')).default;
+
+  const element = layoutRef.current;
+  if (!element) return;
+
+  // Capture thumbnail rect BEFORE canvas render (position relative to layout container)
+  let thumbX = 0, thumbY = 0, thumbW = 120, thumbH = 88;
+  if (thumbRef.current && element) {
+    const containerRect = element.getBoundingClientRect();
+    const thumbRect = thumbRef.current.getBoundingClientRect();
+    thumbX = thumbRect.left - containerRect.left;
+    thumbY = thumbRect.top - containerRect.top;
+    thumbW = thumbRect.width;
+    thumbH = thumbRect.height;
+  }
+
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: false,
+    backgroundColor: '#111827',
+    width: 816,
+    height: 1056,
+  });
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'px',
+    format: [816, 1056],
+  });
+
+  const imgData = canvas.toDataURL('image/png');
+  doc.addImage(imgData, 'PNG', 0, 0, 816, 1056);
+
+  // Overlay a hyperlink annotation over the thumbnail so it's clickable in the PDF
+  if (imageUrl && thumbW > 0) {
+    doc.link(thumbX, thumbY, thumbW, thumbH, { url: imageUrl });
+  }
+
+  // Blob URL approach for mobile compatibility
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const safeName = projectName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  a.download = `quote-${safeName}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
