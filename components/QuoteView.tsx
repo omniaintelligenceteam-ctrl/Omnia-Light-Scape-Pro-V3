@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Download, Calendar, User, MapPin, Plus, Trash2, Percent, Save, Phone, Tag, FileText, Loader2, ClipboardList, Send, X, MessageSquare, Check, Sparkles, Receipt, Hash, Pencil, Share2, ChevronDown } from 'lucide-react';
 import { DEFAULT_PRICING } from '../constants';
 import { LineItem, QuoteData, CompanyProfile, FixturePricing } from '../types';
 import { uploadImage } from '../services/uploadService';
+import { generateQuotePDF } from '../services/export/pdfExportService';
+import { QuotePDFLayout } from './pdf/QuotePDFLayout';
 import { SendQuoteModal, SharePortalModal, DeleteConfirmModal } from './quote';
 
 interface QuoteViewProps {
@@ -48,6 +50,8 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const [taxRate, setTaxRate] = useState<number>(initialData?.taxRate ?? 0.07);
   const [discount, setDiscount] = useState<number>(initialData?.discount || 0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const pdfLayoutRef = useRef<HTMLDivElement>(null);
+  const pdfThumbRef = useRef<HTMLImageElement>(null);
 
   // Send Quote Modal State
   const [showSendModal, setShowSendModal] = useState(false);
@@ -156,35 +160,16 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   };
 
   const handleDownloadPdf = async () => {
-    const element = document.getElementById(containerId);
-    if (!element) return;
-
     setIsGeneratingPdf(true);
 
-    // Apply specific class to container to force "Light Mode" styles defined in index.html
-    element.classList.add('pdf-mode');
-
-    const opt = {
-        margin: [0.3, 0.3, 0.3, 0.3], // top, left, bottom, right in inches
-        filename: `Omnia_Quote_${clientName.replace(/[^a-z0-9]/gi, '_').substring(0, 20)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
     try {
-        // html2pdf is loaded via CDN in index.html, so we access it via window
-        if ((window as any).html2pdf) {
-            await (window as any).html2pdf().set(opt).from(element).save();
-        } else {
-            console.error("html2pdf library not loaded");
-            alert("PDF generation library not loaded. Please refresh.");
-        }
+        const projectName = projectAddress.split('\n')[0]?.trim() || clientName || 'lighting-project';
+        const imageUrl = projectImage || '';
+        await generateQuotePDF(pdfLayoutRef, projectName, imageUrl, pdfThumbRef);
     } catch (e) {
         console.error("PDF Generation failed:", e);
         alert("Failed to generate PDF. Please try again.");
     } finally {
-        element.classList.remove('pdf-mode');
         setIsGeneratingPdf(false);
     }
   };
@@ -325,11 +310,25 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
   const handleCopyLink = async () => {
     if (!shareUrl) return;
     try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Quote from ${companyProfile.name}`,
+          text: 'View your quote',
+          url: shareUrl
+        });
+        return;
+      }
       await navigator.clipboard.writeText(shareUrl);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy link:', err);
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      } catch (clipboardErr) {
+        console.error('Failed to share/copy link:', clipboardErr);
+      }
     }
   };
 
@@ -1236,6 +1235,38 @@ export const QuoteView: React.FC<QuoteViewProps> = ({
         isOpen={showDeleteConfirmModal}
         onClose={() => setShowDeleteConfirmModal(false)}
         onConfirm={() => onDeleteProject?.()}
+      />
+
+      <QuotePDFLayout
+        ref={pdfLayoutRef}
+        projectName={projectAddress.split('\n')[0]?.trim() || clientName || 'Lighting Project'}
+        quoteDate={new Date().toISOString()}
+        expiresAt={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()}
+        companyName={companyProfile.name}
+        companyEmail={companyProfile.email}
+        companyPhone={companyProfile.phone}
+        companyAddress={companyProfile.address}
+        companyLogo={companyProfile.logo}
+        clientName={clientName}
+        clientEmail={clientEmail}
+        lineItems={lineItems.map((item, index) => ({
+          id: item.id || `item-${index}`,
+          name: item.name || 'Item',
+          quantity: item.quantity || 0,
+          unitPrice: item.unitPrice || 0,
+          total: (item.quantity || 0) * (item.unitPrice || 0)
+        }))}
+        subtotal={subtotal}
+        taxRate={taxRate}
+        taxAmount={tax}
+        discount={discount}
+        total={total}
+        notes={null}
+        isApproved={false}
+        isExpired={false}
+        approvedDate={null}
+        imageUrl={projectImage}
+        thumbRef={pdfThumbRef}
       />
     </div>
   );

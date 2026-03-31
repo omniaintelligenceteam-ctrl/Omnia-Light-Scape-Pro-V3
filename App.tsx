@@ -7,6 +7,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Sidebar } from './components/Sidebar';
 import { ImageUpload } from './components/ImageUpload';
 import { QuoteView } from './components/QuoteView';
+import { QuotePDFLayout } from './components/pdf/QuotePDFLayout';
+import { InvoicePDFLayout } from './components/pdf/InvoicePDFLayout';
 import { SettingsView } from './components/settings';
 import AuthWrapper from './components/AuthWrapper';
 // InventoryView - currently unused, can re-enable when needed
@@ -65,6 +67,7 @@ import DemoModeBanner from './components/DemoModeBanner';
 import { useOnboarding } from './hooks/useOnboarding';
 import { fileToBase64, getPreviewUrl } from './utils';
 import { generateNightSceneEnhanced, generateManualScene } from './services/geminiService';
+import { generateQuotePDF, generateInvoicePDF } from './services/export/pdfExportService';
 import { buildMockupRenderSpecFromManualFixtures, buildPricingQuantitiesFromMockupFixtures } from './src/lib/mockup/buildSpec';
 import type { MockupRenderSpec } from './src/lib/mockup/spec';
 // IC-Light dependency removed - using a fixed 2-stage pipeline for all generations
@@ -523,6 +526,10 @@ const App: React.FC = () => {
 
   // PDF Generation State for Projects Tab
   const [pdfProject, setPdfProject] = useState<SavedProject | null>(null);
+  const projectQuotePdfLayoutRef = useRef<HTMLDivElement>(null);
+  const projectQuotePdfThumbRef = useRef<HTMLImageElement>(null);
+  const invoicePdfLayoutRef = useRef<HTMLDivElement>(null);
+  const [pdfInvoice, setPdfInvoice] = useState<InvoiceData | null>(null);
 
   // Company Profile State
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile>({
@@ -950,34 +957,42 @@ const App: React.FC = () => {
 
   // Effect to handle invisible PDF generation from Projects List
   useEffect(() => {
-    if (pdfProject && pdfProject.quote) {
-        const timer = setTimeout(async () => {
-             const elementId = `quote-pdf-${pdfProject.id}`;
-             const element = document.getElementById(elementId);
-             
-             if (element && (window as any).html2pdf) {
-                 // Force light mode styles for PDF
-                 element.classList.add('pdf-mode');
-                 const opt = {
-                    margin: [0.3, 0.3, 0.3, 0.3],
-                    filename: `${pdfProject.name.replace(/\s+/g, '_')}_Quote.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false },
-                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-                };
-                
-                try {
-                    await (window as any).html2pdf().set(opt).from(element).save();
-                } catch (e) {
-                    console.error("PDF Fail", e);
-                } finally {
-                    element.classList.remove('pdf-mode');
-                    setPdfProject(null);
-                }
-             }
-        }, 500); // Wait for render
-        return () => clearTimeout(timer);
+    if (!pdfProject?.quote) {
+      return;
     }
+
+    let cancelled = false;
+
+    const runPdfExport = async () => {
+      try {
+        // Wait until hidden layout ref is mounted before capture.
+        for (let i = 0; i < 20 && !projectQuotePdfLayoutRef.current; i++) {
+          await new Promise(resolve => setTimeout(resolve, 25));
+        }
+        if (!projectQuotePdfLayoutRef.current) {
+          throw new Error('Quote PDF layout not available');
+        }
+        if (cancelled) return;
+        await generateQuotePDF(
+          projectQuotePdfLayoutRef,
+          pdfProject.name,
+          pdfProject.image || '',
+          projectQuotePdfThumbRef
+        );
+      } catch (e) {
+        console.error('PDF Fail', e);
+      } finally {
+        if (!cancelled) {
+          setPdfProject(null);
+        }
+      }
+    };
+
+    runPdfExport();
+
+    return () => {
+      cancelled = true;
+    };
   }, [pdfProject]);
 
   // Save presets to localStorage whenever they change
@@ -3227,28 +3242,21 @@ const App: React.FC = () => {
 
   // Download invoice as PDF
   const handleDownloadInvoicePDF = async (invoice: InvoiceData) => {
-      const elementId = `invoice-pdf-${invoice.id}`;
-      const element = document.getElementById(elementId);
+      setPdfInvoice(invoice);
 
-      if (element && (window as any).html2pdf) {
-          element.classList.add('pdf-mode');
-          const opt = {
-              margin: [0.3, 0.3, 0.3, 0.3],
-              filename: `${invoice.invoiceNumber}.pdf`,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { scale: 2, useCORS: true, logging: false },
-              jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-          };
-
-          try {
-              await (window as any).html2pdf().set(opt).from(element).save();
-          } catch (e) {
-              console.error("Invoice PDF Fail", e);
-          } finally {
-              element.classList.remove('pdf-mode');
+      try {
+          // Wait until hidden layout ref is mounted before capture.
+          for (let i = 0; i < 20 && !invoicePdfLayoutRef.current; i++) {
+              await new Promise(resolve => setTimeout(resolve, 25));
           }
-      } else {
-          // Fallback: Generate a simple text-based PDF download
+          if (!invoicePdfLayoutRef.current) {
+              throw new Error('Invoice PDF layout not available');
+          }
+          await generateInvoicePDF(invoicePdfLayoutRef, invoice.invoiceNumber);
+      } catch (e) {
+          console.error("Invoice PDF Fail", e);
+
+          // Fallback: Generate a simple text file download
           const content = `
 INVOICE: ${invoice.invoiceNumber}
 Project: ${invoice.projectName}
@@ -3281,6 +3289,8 @@ Notes: ${invoice.notes || 'N/A'}
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
+      } finally {
+          setPdfInvoice(null);
       }
   };
 
@@ -3338,11 +3348,25 @@ Notes: ${invoice.notes || 'N/A'}
   const handleCopyInvoiceLink = async () => {
     if (!invoiceShareUrl) return;
     try {
+      if (navigator.share) {
+        await navigator.share({
+          title: currentInvoice ? `Invoice ${currentInvoice.invoiceNumber}` : 'Invoice',
+          text: currentInvoice ? `View invoice ${currentInvoice.invoiceNumber}` : 'View invoice',
+          url: invoiceShareUrl
+        });
+        return;
+      }
       await navigator.clipboard.writeText(invoiceShareUrl);
       setInvoiceLinkCopied(true);
       setTimeout(() => setInvoiceLinkCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy invoice link:', err);
+      try {
+        await navigator.clipboard.writeText(invoiceShareUrl);
+        setInvoiceLinkCopied(true);
+        setTimeout(() => setInvoiceLinkCopied(false), 2000);
+      } catch (clipboardErr) {
+        console.error('Failed to share/copy invoice link:', clipboardErr);
+      }
     }
   };
 
@@ -3795,20 +3819,68 @@ Notes: ${invoice.notes || 'N/A'}
         onEndDemo={dismissDemoData}
       />
 
-      {/* Hidden PDF Generation Container */}
-      <div style={{ position: 'absolute', left: '-5000px', top: 0, width: '1000px', height: '0', overflow: 'hidden' }}>
-          {pdfProject && pdfProject.quote && (
-              <QuoteView
-                  onSave={() => {}}
-                  initialData={pdfProject.quote}
-                  companyProfile={companyProfile}
-                  defaultPricing={pricing}
-                  containerId={`quote-pdf-${pdfProject.id}`}
-                  hideToolbar={true}
-                  projectImage={pdfProject.image}
-              />
-          )}
-      </div>
+      {/* Hidden PDF Layouts (off-screen) */}
+      {pdfProject?.quote && (
+        <QuotePDFLayout
+          ref={projectQuotePdfLayoutRef}
+          projectName={pdfProject.name}
+          quoteDate={pdfProject.date || new Date().toISOString()}
+          expiresAt={null}
+          companyName={companyProfile.name}
+          companyEmail={companyProfile.email}
+          companyPhone={companyProfile.phone}
+          companyAddress={companyProfile.address}
+          companyLogo={companyProfile.logo}
+          clientName={pdfProject.quote.clientDetails?.name || null}
+          clientEmail={pdfProject.quote.clientDetails?.email || null}
+          lineItems={pdfProject.quote.lineItems.map((item, index) => ({
+            id: item.id || `item-${index}`,
+            name: item.name || 'Item',
+            quantity: item.quantity || 0,
+            unitPrice: item.unitPrice || 0,
+            total: (item.quantity || 0) * (item.unitPrice || 0)
+          }))}
+          subtotal={pdfProject.quote.lineItems.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0)}
+          taxRate={pdfProject.quote.taxRate || 0}
+          taxAmount={Math.max(0, pdfProject.quote.lineItems.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0) - (pdfProject.quote.discount || 0)) * (pdfProject.quote.taxRate || 0)}
+          discount={pdfProject.quote.discount || 0}
+          total={pdfProject.quote.total || 0}
+          notes={null}
+          isApproved={pdfProject.status === 'approved' || pdfProject.status === 'scheduled' || pdfProject.status === 'completed'}
+          isExpired={false}
+          approvedDate={null}
+          imageUrl={pdfProject.image || null}
+          thumbRef={projectQuotePdfThumbRef}
+        />
+      )}
+      {pdfInvoice && (
+        <InvoicePDFLayout
+          ref={invoicePdfLayoutRef}
+          invoiceNumber={pdfInvoice.invoiceNumber}
+          invoiceDate={pdfInvoice.invoiceDate}
+          dueDate={pdfInvoice.dueDate}
+          projectName={pdfInvoice.projectName}
+          companyName={companyProfile.name}
+          companyEmail={companyProfile.email}
+          companyPhone={companyProfile.phone}
+          companyAddress={companyProfile.address}
+          companyLogo={companyProfile.logo}
+          clientName={pdfInvoice.clientDetails?.name || null}
+          clientEmail={pdfInvoice.clientDetails?.email || null}
+          clientPhone={pdfInvoice.clientDetails?.phone || null}
+          clientAddress={pdfInvoice.clientDetails?.address || null}
+          lineItems={pdfInvoice.lineItems}
+          subtotal={pdfInvoice.subtotal}
+          taxRate={pdfInvoice.taxRate}
+          taxAmount={pdfInvoice.taxAmount}
+          discount={pdfInvoice.discount}
+          total={pdfInvoice.total}
+          notes={pdfInvoice.notes}
+          isPaid={pdfInvoice.status === 'paid' || !!pdfInvoice.paidDate}
+          isExpired={isInvoiceOverdue(pdfInvoice)}
+          paidDate={pdfInvoice.paidDate || null}
+        />
+      )}
 
       {/* Full Screen Image Modal - with swipe gesture support */}
       {isFullScreen && generatedImage && (
