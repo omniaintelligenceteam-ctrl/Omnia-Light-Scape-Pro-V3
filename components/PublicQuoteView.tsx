@@ -2,17 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2, MapPin, User, Mail, Phone, Building2, FileText, Loader2,
-  AlertCircle, Check, XCircle, Shield, ChevronDown, ChevronUp, Sparkles,
+  AlertCircle, Check, XCircle, Shield, ChevronDown, ChevronUp,
   CreditCard, Calendar, Play, FileText as DocumentIcon, Receipt, Clock, Package,
-  MessageCircle, Send
+  MessageCircle, Send, Download, Maximize2, X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { SignatureCapture } from './SignatureCapture';
-import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { QuoteVideoPlayer } from './remotion/QuoteVideoPlayer';
 import type { QuoteVideoProps } from './remotion/QuoteReveal';
-import { QuoteCoverSection, InteractivePricingTable, QuoteProgressStepper, ExpirationCountdown } from './quote';
+import { InteractivePricingTable, QuoteProgressStepper, ExpirationCountdown } from './quote';
 import { QuotePageSkeleton } from './shared/PremiumSkeleton';
+import { QuotePDFLayout } from './pdf/QuotePDFLayout';
+import { generateQuotePDF } from '../services/export/pdfExportService';
 
 interface QuoteProject {
   id: string;
@@ -133,6 +134,10 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
   const [clientQuestion, setClientQuestion] = useState('');
   const [sendingQuestion, setSendingQuestion] = useState(false);
   const [questionSent, setQuestionSent] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const pdfLayoutRef = useRef<HTMLDivElement>(null);
+  const pdfThumbRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     async function fetchQuote() {
@@ -255,6 +260,17 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
       // Show error but don't throw - questions are optional
     } finally {
       setSendingQuestion(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (generatingPDF || !data) return;
+    setGeneratingPDF(true);
+    try {
+      const imageUrl = data.project.generatedImageUrl || '';
+      await generateQuotePDF(pdfLayoutRef, data.project.name, imageUrl, pdfThumbRef);
+    } finally {
+      setGeneratingPDF(false);
     }
   };
 
@@ -404,6 +420,39 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
         )}
       </AnimatePresence>
 
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && project.generatedImageUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-4xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setLightboxOpen(false)}
+                className="absolute -top-10 right-0 text-white/70 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <img
+                src={project.generatedImageUrl}
+                alt="Lighting Design Full View"
+                className="w-full h-auto rounded-xl border border-white/10 shadow-2xl"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-3xl mx-auto relative z-10">
         {/* Premium Header */}
         <motion.div
@@ -473,6 +522,29 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
               </div>
             </motion.div>
           )}
+          {/* Download PDF button */}
+          <motion.button
+            onClick={handleDownloadPDF}
+            disabled={generatingPDF}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ scale: generatingPDF ? 1 : 1.02 }}
+            whileTap={{ scale: generatingPDF ? 1 : 0.98 }}
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all disabled:opacity-50"
+          >
+            {generatingPDF ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Generating...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                <span className="text-sm">Download PDF</span>
+              </>
+            )}
+          </motion.button>
         </motion.div>
 
         {/* Progress Stepper - Shows approval journey */}
@@ -579,21 +651,6 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Premium Cover Section - Shows project image as hero */}
-        {viewMode === 'document' && project.generatedImageUrl && (
-          <div className="mb-8">
-            <QuoteCoverSection
-              companyName={company.name}
-              companyLogo={company.logo}
-              clientName={client?.name}
-              projectName={project.name}
-              quoteDate={project.createdAt}
-              projectImage={project.generatedImageUrl}
-              expiresAt={project.quoteExpiresAt}
-            />
-          </div>
-        )}
 
         {/* Main Card */}
         <motion.div
@@ -703,40 +760,6 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
             </div>
           </div>
 
-          {/* Design Preview - Before/After or Single Image */}
-          {project.generatedImageUrl && (
-            <div className="p-6 md:p-8 border-b border-white/10">
-              <h2 className="text-lg font-bold text-white font-serif mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#F6B45A]" />
-                Your Lighting Design
-              </h2>
-
-              {project.originalImageUrl ? (
-                <BeforeAfterSlider
-                  beforeImage={project.originalImageUrl}
-                  afterImage={project.generatedImageUrl}
-                  beforeLabel="Before"
-                  afterLabel="With Lighting"
-                />
-              ) : (
-                <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/30">
-                  <img
-                    src={project.generatedImageUrl}
-                    alt="Lighting Design Preview"
-                    className="w-full h-auto object-cover"
-                  />
-                  {/* Corner Accents */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-3 left-3 w-6 h-6 border-l-2 border-t-2 border-[#F6B45A]/40 rounded-tl-sm" />
-                    <div className="absolute top-3 right-3 w-6 h-6 border-r-2 border-t-2 border-[#F6B45A]/40 rounded-tr-sm" />
-                    <div className="absolute bottom-3 left-3 w-6 h-6 border-l-2 border-b-2 border-[#F6B45A]/40 rounded-bl-sm" />
-                    <div className="absolute bottom-3 right-3 w-6 h-6 border-r-2 border-b-2 border-[#F6B45A]/40 rounded-br-sm" />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Interactive Pricing Table - Line Items */}
           {(() => {
             const quoteConfig = project.promptConfig?.quote || {};
@@ -766,6 +789,26 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
                     total={quoteTotal}
                     showAnimations={true}
                   />
+                  {/* Design thumbnail — expandable */}
+                  {project.generatedImageUrl && (
+                    <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/5">
+                      <button
+                        onClick={() => setLightboxOpen(true)}
+                        className="relative group flex-shrink-0 focus:outline-none"
+                        aria-label="View full lighting design"
+                      >
+                        <img
+                          src={project.generatedImageUrl}
+                          alt="Lighting Design"
+                          className="w-20 h-14 rounded-lg object-cover border border-white/10 group-hover:border-[#F6B45A]/40 transition-colors"
+                        />
+                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Maximize2 className="w-4 h-4 text-white" />
+                        </div>
+                      </button>
+                      <span className="text-xs text-gray-500">Your Lighting Design — click to expand</span>
+                    </div>
+                  )}
                 </div>
               );
             }
@@ -1084,6 +1127,40 @@ export const PublicQuoteView: React.FC<PublicQuoteViewProps> = ({ token }) => {
         >
           Powered by Omnia LightScape
         </motion.p>
+        {/* Hidden PDF layout for quote download */}
+        {data && (
+          <QuotePDFLayout
+            ref={pdfLayoutRef}
+            projectName={project.name}
+            quoteDate={project.createdAt}
+            expiresAt={project.quoteExpiresAt}
+            companyName={company.name}
+            companyEmail={company.email}
+            companyPhone={company.phone}
+            companyAddress={company.address}
+            companyLogo={company.logo}
+            clientName={client?.name}
+            clientEmail={client?.email}
+            lineItems={(data.project.promptConfig?.quote?.lineItems || []).map((item: any, i: number) => ({
+              id: item.id || `item-${i}`,
+              name: item.name || item.type || 'Item',
+              quantity: item.quantity || 1,
+              unitPrice: item.price || item.unitPrice || 0,
+              total: (item.price || item.unitPrice || 0) * (item.quantity || 1),
+            }))}
+            subtotal={data.project.promptConfig?.quote?.subtotal || quoteTotal}
+            taxRate={data.project.promptConfig?.quote?.taxRate || 0}
+            taxAmount={data.project.promptConfig?.quote?.tax || 0}
+            discount={data.project.promptConfig?.quote?.discount || 0}
+            total={quoteTotal}
+            notes={data.project.promptConfig?.quote?.notes || null}
+            isApproved={approved}
+            isExpired={!!isExpired}
+            approvedDate={approvalDate}
+            imageUrl={project.generatedImageUrl}
+            thumbRef={pdfThumbRef}
+          />
+        )}
       </div>
 
       {/* Floating Approve CTA - Mobile Only */}
