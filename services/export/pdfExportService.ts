@@ -338,15 +338,36 @@ export async function generateQuotePDF(
     doc.link(thumbX, thumbY, thumbW, thumbH, { url: imageUrl });
   }
 
-  // Blob URL approach for mobile compatibility
+  const safeName = projectName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+
+  // Download PDF
   const blob = doc.output('blob');
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  const safeName = projectName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
   a.download = `quote-${safeName}.pdf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
+  // Download full-size design image as a separate file
+  if (imageUrl) {
+    try {
+      const imgResponse = await fetch(imageUrl);
+      const imgBlob = await imgResponse.blob();
+      const ext = imgBlob.type.includes('png') ? 'png' : 'jpg';
+      const imgUrl = URL.createObjectURL(imgBlob);
+      const imgA = document.createElement('a');
+      imgA.href = imgUrl;
+      imgA.download = `quote-${safeName}-design.${ext}`;
+      document.body.appendChild(imgA);
+      imgA.click();
+      document.body.removeChild(imgA);
+      URL.revokeObjectURL(imgUrl);
+    } catch {
+      // If fetch fails (e.g. CORS), open the image in a new tab as fallback
+      window.open(imageUrl, '_blank');
+    }
+  }
 }
