@@ -254,6 +254,70 @@ function formatNumber(num: number): string {
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function isIOSDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+
+  if (isIOSDevice()) {
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return;
+  }
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function waitForCaptureAssets(element: HTMLElement, timeoutMs = 5000): Promise<void> {
+  // Wait for web fonts to settle so text layout is stable.
+  try {
+    if ('fonts' in document) {
+      await Promise.race([
+        (document as Document & { fonts: FontFaceSet }).fonts.ready,
+        new Promise(resolve => setTimeout(resolve, timeoutMs))
+      ]);
+    }
+  } catch {
+    // Continue even if fonts API is not available.
+  }
+
+  const images = Array.from(element.querySelectorAll('img'));
+  if (!images.length) return;
+
+  await Promise.all(images.map(img => {
+    if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>(resolve => {
+      const cleanup = () => {
+        img.removeEventListener('load', onDone);
+        img.removeEventListener('error', onDone);
+      };
+      const onDone = () => {
+        cleanup();
+        resolve();
+      };
+      img.addEventListener('load', onDone, { once: true });
+      img.addEventListener('error', onDone, { once: true });
+      setTimeout(() => {
+        cleanup();
+        resolve();
+      }, timeoutMs);
+    });
+  }));
+}
+
 export async function generateInvoicePDF(
   layoutRef: React.RefObject<HTMLDivElement>,
   invoiceNumber: string
@@ -263,6 +327,8 @@ export async function generateInvoicePDF(
   const element = layoutRef.current;
   if (!element) return;
 
+  await waitForCaptureAssets(element);
+
   const canvas = await html2canvas(element, {
     scale: 2,
     useCORS: true,
@@ -270,6 +336,25 @@ export async function generateInvoicePDF(
     backgroundColor: '#111827',
     width: 816,
     height: 1056,
+    imageTimeout: 8000,
+    onclone: clonedDocument => {
+      // Remove zero-sized media in the cloned tree to avoid createPattern crashes.
+      clonedDocument.querySelectorAll('canvas').forEach(node => {
+        const canvasElement = node as HTMLCanvasElement;
+        if (canvasElement.width <= 0 || canvasElement.height <= 0) {
+          node.remove();
+        }
+      });
+
+      clonedDocument.querySelectorAll('img').forEach(node => {
+        const image = node as HTMLImageElement;
+        const width = image.naturalWidth || image.width;
+        const height = image.naturalHeight || image.height;
+        if (!image.src || width <= 0 || height <= 0) {
+          image.style.display = 'none';
+        }
+      });
+    }
   });
 
   const doc = new jsPDF({
@@ -281,16 +366,8 @@ export async function generateInvoicePDF(
   const imgData = canvas.toDataURL('image/png');
   doc.addImage(imgData, 'PNG', 0, 0, 816, 1056);
 
-  // Blob URL approach for mobile compatibility (iOS Safari won't download with doc.save())
   const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `invoice-${invoiceNumber}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, `invoice-${invoiceNumber}.pdf`);
 }
 
 export async function generateQuotePDF(
@@ -315,6 +392,8 @@ export async function generateQuotePDF(
     thumbH = thumbRect.height;
   }
 
+  await waitForCaptureAssets(element);
+
   const canvas = await html2canvas(element, {
     scale: 2,
     useCORS: true,
@@ -322,6 +401,24 @@ export async function generateQuotePDF(
     backgroundColor: '#111827',
     width: 816,
     height: 1056,
+    imageTimeout: 8000,
+    onclone: clonedDocument => {
+      clonedDocument.querySelectorAll('canvas').forEach(node => {
+        const canvasElement = node as HTMLCanvasElement;
+        if (canvasElement.width <= 0 || canvasElement.height <= 0) {
+          node.remove();
+        }
+      });
+
+      clonedDocument.querySelectorAll('img').forEach(node => {
+        const image = node as HTMLImageElement;
+        const width = image.naturalWidth || image.width;
+        const height = image.naturalHeight || image.height;
+        if (!image.src || width <= 0 || height <= 0) {
+          image.style.display = 'none';
+        }
+      });
+    }
   });
 
   const doc = new jsPDF({
@@ -340,16 +437,8 @@ export async function generateQuotePDF(
 
   const safeName = projectName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
 
-  // Download PDF
   const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `quote-${safeName}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, `quote-${safeName}.pdf`);
 
   // Download full-size design image as a separate file
   if (imageUrl) {

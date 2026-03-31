@@ -12,7 +12,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     supabase = getSupabase();
   } catch {
-    return res.status(500).json({ error: 'Database not configured' });
+    if (req.method === 'GET') {
+      return res.status(200).json({ success: true, data: [], degraded: true });
+    }
+    return res.status(503).json({ error: 'Database not configured' });
   }
 
   try {
@@ -21,9 +24,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from('users')
       .select('id')
       .eq('clerk_user_id', clerkUserId)
-      .single();
+      .maybeSingle();
 
     if (userError || !userData) {
+      // Avoid hard failure for first-time users whose profile row is not synced yet.
+      if (req.method === 'GET') {
+        return res.status(200).json({ success: true, data: [] });
+      }
       return res.status(404).json({ error: 'User not found' });
     }
 
@@ -38,7 +45,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .order('year', { ascending: false })
         .order('month', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01') {
+          return res.status(200).json({ success: true, data: [], degraded: true });
+        }
+        throw error;
+      }
       return res.status(200).json({ success: true, data: data || [] });
     }
 
@@ -66,7 +78,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         query = query.eq('quarter', quarter);
       }
 
-      const { data: existingGoal } = await query.single();
+      const { data: existingGoal, error: existingGoalError } = await query.limit(1).maybeSingle();
+      if (existingGoalError && existingGoalError.code !== 'PGRST116') {
+        throw existingGoalError;
+      }
 
       if (existingGoal) {
         // Update existing goal

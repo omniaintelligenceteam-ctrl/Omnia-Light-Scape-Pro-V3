@@ -24,7 +24,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     supabase = getSupabase();
   } catch {
-    return res.status(500).json({ error: 'Database not configured' });
+    if (req.method === 'GET') {
+      return res.status(200).json({ preferences: null, degraded: true });
+    }
+    if (req.method === 'POST') {
+      return res.status(200).json({ success: true, skipped: true, degraded: true });
+    }
+    return res.status(503).json({ error: 'Database not configured' });
   }
 
   // POST: Save feedback
@@ -41,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('users')
         .select('id')
         .eq('clerk_user_id', clerkUserId)
-        .single();
+        .maybeSingle();
 
       if (userError || !userData) {
         // User not found - this is OK, just skip feedback storage
@@ -64,6 +70,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
       if (feedbackError) {
+        if (feedbackError.code === '42P01') {
+          return res.status(200).json({ success: true, skipped: true, degraded: true });
+        }
         console.error('Feedback insert error:', feedbackError);
         return res.status(500).json({ error: feedbackError.message });
       }
@@ -92,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('users')
         .select('id')
         .eq('clerk_user_id', clerkUserId)
-        .single();
+        .maybeSingle();
 
       if (userError || !userData) {
         // User not found - return null preferences
@@ -109,6 +118,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // PGRST116 = no rows found (not an error, just means no preferences yet)
       if (error && error.code !== 'PGRST116') {
+        if (error.code === '42P01') {
+          return res.status(200).json({ preferences: null, degraded: true });
+        }
         console.error('Preferences fetch error:', error);
         return res.status(500).json({ error: error.message });
       }
@@ -132,11 +144,15 @@ async function updateUserPreferences(
 ) {
   try {
     // Fetch existing preferences
-    let { data: prefs } = await supabase
+    let { data: prefs, error: prefsError } = await supabase
       .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
+
+    if (prefsError && prefsError.code === '42P01') {
+      return;
+    }
 
     // Initialize if doesn't exist
     if (!prefs) {
@@ -147,6 +163,9 @@ async function updateUserPreferences(
         .single();
 
       if (insertError) {
+        if (insertError.code === '42P01') {
+          return;
+        }
         console.error('Failed to create preferences:', insertError);
         return;
       }
