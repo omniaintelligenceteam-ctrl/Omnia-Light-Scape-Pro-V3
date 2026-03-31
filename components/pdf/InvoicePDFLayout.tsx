@@ -94,8 +94,8 @@ export const InvoicePDFLayout = React.forwardRef<HTMLDivElement, InvoicePDFLayou
           </div>
         </div>
 
-        {/* Blue divider */}
-        <div style={{ height: '2px', background: 'linear-gradient(90deg, #3b82f6, #1d4ed8)', marginBottom: '16px', borderRadius: '1px' }} />
+        {/* Blue divider - solid color avoids html2canvas createPattern crash on gradients */}
+        <div style={{ height: '2px', backgroundColor: '#3b82f6', marginBottom: '16px', borderRadius: '1px' }} />
 
         {/* Status bar */}
         <div style={{

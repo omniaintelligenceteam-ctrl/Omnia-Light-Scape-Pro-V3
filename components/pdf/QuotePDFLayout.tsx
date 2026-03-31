@@ -94,8 +94,8 @@ export const QuotePDFLayout = React.forwardRef<HTMLDivElement, QuotePDFLayoutPro
           </div>
         </div>
 
-        {/* Gold divider */}
-        <div style={{ height: '2px', background: 'linear-gradient(90deg, #F6B45A, #d97706)', marginBottom: '16px', borderRadius: '1px' }} />
+        {/* Gold divider - solid color avoids html2canvas createPattern crash on gradients */}
+        <div style={{ height: '2px', backgroundColor: '#F6B45A', marginBottom: '16px', borderRadius: '1px' }} />
 
         {/* Status bar */}
         <div style={{
