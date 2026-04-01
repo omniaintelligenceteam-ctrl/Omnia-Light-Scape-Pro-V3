@@ -50,11 +50,11 @@ export const InvoicePDFLayout = React.forwardRef<HTMLDivElement, InvoicePDFLayou
       isPaid, isExpired, paidDate,
     } = props;
 
-    const statusColor = isPaid ? '#10b981' : isExpired ? '#ef4444' : '#3b82f6';
+    const statusColor = isPaid ? '#10b981' : isExpired ? '#ef4444' : '#F6B45A';
     const statusLabel = isPaid
       ? `PAID${paidDate ? ` — ${fmtDate(paidDate)}` : ''}`
       : isExpired
-      ? 'EXPIRED'
+      ? 'EXPIRED — Contact us for an updated invoice'
       : `DUE: ${fmt(total)}${dueDate ? ` by ${fmtDate(dueDate)}` : ''}`;
 
     return (
@@ -89,13 +89,13 @@ export const InvoicePDFLayout = React.forwardRef<HTMLDivElement, InvoicePDFLayou
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '20px', fontWeight: 700, color: '#3b82f6' }}>INVOICE</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: '#F6B45A' }}>INVOICE</div>
             <div style={{ fontSize: '13px', color: '#9ca3af', marginTop: '4px' }}>{invoiceNumber}</div>
           </div>
         </div>
 
-        {/* Blue divider - solid color avoids html2canvas createPattern crash on gradients */}
-        <div style={{ height: '2px', backgroundColor: '#3b82f6', marginBottom: '16px', borderRadius: '1px' }} />
+        {/* Gold divider - solid color avoids html2canvas createPattern crash on gradients */}
+        <div style={{ height: '2px', backgroundColor: '#F6B45A', marginBottom: '16px', borderRadius: '1px' }} />
 
         {/* Status bar */}
         <div style={{
@@ -115,7 +115,7 @@ export const InvoicePDFLayout = React.forwardRef<HTMLDivElement, InvoicePDFLayou
         {/* Bill To / Invoice Details */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6b7280', marginBottom: '8px' }}>Bill To</div>
+            <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6b7280', marginBottom: '8px' }}>Prepared For</div>
             {clientName && <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>{clientName}</div>}
             {clientEmail && <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '2px' }}>{clientEmail}</div>}
             {clientPhone && <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '2px' }}>{clientPhone}</div>}
@@ -143,7 +143,7 @@ export const InvoicePDFLayout = React.forwardRef<HTMLDivElement, InvoicePDFLayou
         {lineItems.length > 0 && (
           <div style={{ marginBottom: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 100px 100px', gap: '8px', padding: '8px 0', borderBottom: '1px solid #374151', marginBottom: '4px' }}>
-              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280' }}>Description</div>
+              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280' }}>Item</div>
               <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280', textAlign: 'center' }}>Qty</div>
               <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280', textAlign: 'right' }}>Unit Price</div>
               <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280', textAlign: 'right' }}>Total</div>
@@ -167,7 +167,8 @@ export const InvoicePDFLayout = React.forwardRef<HTMLDivElement, InvoicePDFLayou
         )}
 
         {/* Totals */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
+          <div />
           <div style={{ width: '220px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '12px', color: '#9ca3af' }}>
               <span>Subtotal</span><span>{fmt(subtotal)}</span>
@@ -182,8 +183,8 @@ export const InvoicePDFLayout = React.forwardRef<HTMLDivElement, InvoicePDFLayou
                 <span>Tax {taxRate ? `(${(taxRate * 100).toFixed(1)}%)` : ''}</span><span>{fmt(taxAmount)}</span>
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '16px', fontWeight: 700, color: '#3b82f6', borderTop: '1px solid #374151', marginTop: '4px' }}>
-              <span>Total Due</span><span>{fmt(total)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '16px', fontWeight: 700, color: '#F6B45A', borderTop: '1px solid #374151', marginTop: '4px' }}>
+              <span>Total</span><span>{fmt(total)}</span>
             </div>
           </div>
         </div>
